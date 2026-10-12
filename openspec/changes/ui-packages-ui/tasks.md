@@ -63,8 +63,8 @@ Scenarios: Feedback states › "Empty state content", "Status message is polite"
 Failing tests: `src/empty-state.test.tsx` › "empty state content"; `src/status-message.test.tsx` › "status message is polite"; `src/page-header.test.tsx` › "page header"; `src/tab-nav.test.tsx` › "tab navigation landmark".
 Commits: `test: empty state, status message, page header and tab nav`, `feat: EmptyState, StatusMessage, PageHeader, TabNav`.
 
-- [ ] 6.1 Tests committed red
-- [ ] 6.2 Components green; all four gates green
+- [x] 6.1 Tests committed red
+- [x] 6.2 Components green; all four gates green
 
 ## 7. Figma token check
 
