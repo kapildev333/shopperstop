@@ -1,9 +1,8 @@
 # platform-P1-L11 - README.md and CLAUDE.md (OpenSpec change platform-readme-claude)
-Status: done (t1 README eb4080e, t2 CLAUDE.md a3b364a, review fixes committed on lane branch; base c5dd7fa)
+Status: done (README 1681463, CLAUDE.md cb0aaf4, review fixes 98a8169; base origin/main 6425f67; acceptance passed)
 ## Doing
-Review fixes (tasks 4.1 to 4.4) done: admin under /admin/, Postman present, prod-local wording. Waiting for acceptance (/opsx:verify) by the team lead.
+
 ## Found
-- Worktree was created on origin/main 6ae9c6b (one commit past the brief's 0daca74: core area plan chore #26); nothing in it touches README.md or CLAUDE.md.
 - The red step for both tasks is `sh openspec/changes/platform-readme-claude/check-docs.sh` (37 failures on the unchanged tree); it ends `docs check: ok` when both tasks are done.
 - `make dev` does not run `npm ci`; the README quick start says `npm ci` once first (design.md Decision 2).
 - t1 red (README.md absent, before writing it), `sh openspec/changes/platform-readme-claude/check-docs.sh`, README lines verbatim:
@@ -61,10 +60,21 @@ Review fixes (tasks 4.1 to 4.4) done: admin under /admin/, Postman present, prod
 - t2 green: `sh openspec/changes/platform-readme-claude/check-docs.sh` ends `docs check: ok`, exit 0.
 - t2 `openspec validate --all --strict`: 4 passed, 0 failed (spec/design-system, spec/platform, change/platform-ci-makefile, change/platform-readme-claude).
 - Review fixes (tasks 4.x): admin URLs carry `/admin/` (README quick start, demo table, e2e row; CLAUDE.md e2e and ci rows; spec scenario "README has the quick start" and the check in `check-docs.sh` now match `localhost:5174/admin/`). README says `docs/postman/` is present and `make postman` also runs `scripts/postman.test.mjs`; CLAUDE.md `make postman` row says so too. README `make prod-local` row drops "(macOS)".
-- Base: the brief said the lane branch is rebased on origin/main 8863c3c. It is not: the branch sits on c5dd7fa. 8863c3c adds only the platform-postman openspec archive and `openspec/specs/platform/spec.md`, outside this lane's scope and no overlap with its files. Not rebased, so the commit hashes above stay valid; the area manager can rebase at landing.
 - Screenshot table cells still read `pending` (apps not on main); the grep for `pending` therefore also lists them, as intended.
+
+- Acceptance (team lead, /opsx:verify platform-readme-claude) on 98a8169, base 6425f67: PASS.
+  - `sh openspec/changes/platform-readme-claude/check-docs.sh` -> `docs check: ok`, exit 0.
+  - `openspec validate --all --strict` -> 4 passed, 0 failed (spec/design-system, spec/platform, change/platform-ci-makefile, change/platform-readme-claude).
+  - `make -n` exits 0 for db, dev, test, test-core, test-web, e2e, gen, postman, prod-local (every `make` target either file names).
+  - Six scenarios: quick start, step-by-step fold and screenshots table, demo sign-ins, make targets, CI/e2e/Figma rules, relative links: each covered by check-docs.sh and read by hand.
+  - Tasks 1.x, 2.x, 4.x ticked. 3.1 left unticked in tasks.md: the brief limited this pass to the lane log; the manager ticks it (or tells the team lead to) before archive.
+  - Nothing extra: `git diff --stat 6425f67..HEAD` touches only README.md, CLAUDE.md, openspec/changes/platform-readme-claude/ and this log.
+  - Tree claims hold: `ls` shows no `apps/`; `scripts/postman.mjs`, `scripts/postman.test.mjs`, `docs/postman/` (collection, environment), `services/core` (cmd, internal, migrations, openapi.json), `packages/ui` present. README env exports equal the Makefile defaults; `make -n postman` runs `node --test scripts/postman.test.mjs` as both files say.
+  - CLAUDE.md carries D3, D9, D10, D11, D13, D14, D15, D16, D17, D19. D12 (line-strong hex) and D18 (TypeScript and openapi-typescript pins) are not in it: CLAUDE.md states no token hex or TypeScript version, so neither changes a rule it states (design.md Context lists only the decisions that do).
+  - No personal data: emails are the `.local` demo accounts, the DB URL user and the existing noreply commit identity.
+  - Process note: workers logged t1/t2 here instead of `.claude/lanes/platform-P1-L11-t1.md`/`-t2.md` as tasks.md named; red-step evidence is complete above, no effect on acceptance.
 
 ## Requests
 - to platform manager (backlog, Makefile owner): `make dev` runs `npm ci` when `node_modules` is absent, so the quick start is one command; README drops its `npm ci` line then.
-- to orchestrator: D14 says "Spec 1 §6 ... wording updated in Task 15", but Spec 1 is frozen (D6) and outside this lane's scope; recommend D14 plus the platform-ci-makefile requirements (living spec once archived) stand as the record, or an "Amended" note like the plan's, by the orchestrator.
+- to orchestrator: D14 says "Spec 1 §6 ... wording updated in Task 15", but Spec 1 is frozen (D6) and outside this lane's scope; recommend D14 plus the platform-ci-makefile requirements (living spec once archived) stand as the record, or an "Amended" note like the plan's, by the orchestrator. Answered: Spec 1 stays frozen; PLAN.md D14 plus the archived `platform-ci-makefile` requirements are the record.
 ## Blockers
