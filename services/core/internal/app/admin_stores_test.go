@@ -91,6 +91,7 @@ func TestCreateStoreValidation(t *testing.T) {
 		{"deliveryFeeCents", with("deliveryFeeCents", -1)},
 		{"freeDeliveryAboveCents", with("freeDeliveryAboveCents", 10000001)},
 		{"minOrderCents", with("minOrderCents", -1)},
+		{"deliveryFeeCents", with("deliveryFeeCents", nil)},
 		{"name", with("name", "  ")},
 		{"addressLine", with("addressLine", "")},
 		{"pincode", with("pincode", "5600")},

@@ -504,6 +504,8 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, "/api/core/v1/admin/stores/" + zeroID, nil, http.StatusNotFound},
 		{http.MethodPatch, "/api/core/v1/admin/stores/" + zeroID, map[string]string{}, http.StatusNotFound},
 		{http.MethodDelete, "/api/core/v1/admin/stores/" + zeroID, nil, http.StatusNotFound},
+		{http.MethodGet, "/api/core/v1/admin/stores/" + zeroID + "/service-areas", nil, http.StatusNotFound},
+		{http.MethodPut, "/api/core/v1/admin/stores/" + zeroID + "/service-areas", map[string]any{"pincodes": []string{}}, http.StatusNotFound},
 	}
 	for _, g := range adminGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
