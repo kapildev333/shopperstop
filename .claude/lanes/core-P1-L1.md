@@ -1,16 +1,15 @@
 # core-P1-L1 - core service foundation (OpenSpec change core-service-foundation)
-Status: started
+Status: done
 ## Doing
-Change validated on origin/main 6b63030; briefs for tasks 1 to 4 handed to the core manager, awaiting the owner's go.
+Acceptance passed (/opsx:verify core-service-foundation); handed back to the core manager for the PR. Archive after merge, by chore PR.
 ## Found
-- Change: `openspec/changes/core-service-foundation/` (proposal, `specs/platform/spec.md` ADDED-only, design, tasks). No `docs/design/core-P1-L1.md`: design.md carries interfaces, files and test strategy.
-- Delta adds to `platform`: Configured origins are normalised; Log level is configurable; Schema migrations apply once, in order; A failed migration leaves no trace; The OpenAPI file matches the router; Graceful shutdown. No name clash with the seeded `platform` spec (now on main) or `platform-deploy-db`. Branch rebased on origin/main 6b63030; `openspec validate --all --strict` 5 passed. Archive after `platform-seed-specs` and `platform-deploy-db`.
-- No `internal/pg` in Phase 1: `pgx.BeginFunc` is WithTx, error mapping waits for the first query (design Decision 9). Escalated.
-- `healthz`/`readyz` are listed in `openapi.json` (Spec 1 §11) despite Spec 2 §6 "outside the contract" (Decision 12). Escalated.
-- `SHOPPERSTOP_CORE_FILES_DIR` not read in Phase 1; harmless if the Makefile sets it.
-- Env contract for platform (Makefile, CI): required `SHOPPERSTOP_CORE_DATABASE_URL`, `_ADDR`, `_SESSION_PEPPER` (>= 32 bytes), `_WEB_ORIGINS`; optional `_LOG_LEVEL`; tests read `SHOPPERSTOP_CORE_TEST_DATABASE_URL` (default local `shopperstop_core_test`). `core-admin migrate` needs the full env.
-- Workers share this branch and worktree; suggested worker logs `.claude/lanes/core-P1-L1-t<N>.md` so this file keeps one writer.
+- Acceptance 2026-10-12 on the lane branch: `gofmt -l .` empty, `go vet ./...` ok, `go test -race -count=1 -v ./...` against `shopperstop_core_test` all pass (34 tests, 5 packages with tests); `openspec validate core-service-foundation --strict` valid; `openspec validate --all --strict` 4 passed; tasks 1.1 to 4.4 all ticked; diff from base f5c66d3 touches only `services/core/`, this change folder and `.claude/lanes/core-P1-L1*.md`; `core-admin seed-demo --reset` prints the stub line, exit 0; `core-admin bogus` exits 2.
+- Scenario coverage: every scenario in the seeded `platform` spec (6 requirements, 12 scenarios) and in this delta (6 requirements, 14 scenarios) maps to a passing test; map in the acceptance report.
+- Review fixes beyond the first design are now in design.md: duplicate migration numbers refused (D7), `ErrAbortHandler` re-panicked and `Vary: Origin` on every response (D2, D4), contract prefix from `servers[0].url` and an example on every response with content (D13), `ReadHeaderTimeout` 5 s (D15). Decision 1 now says exact match on the four level names.
+- Health routes in `openapi.json` are PLAN.md D16; settled.
+- Still out of scope, for Phase 2: `internal/pg` (error mapping, Decision 9), `SHOPPERSTOP_CORE_FILES_DIR`, demo data in `seed-demo`, `create-admin`.
+- Answered platform-P1-L9's request: `core-admin seed-demo [--reset]` stub landed in task 3.
 ## Requests
-- to platform (via core manager): Makefile `test` core step runs `gofmt -l`, `go vet ./...`, `go test -race ./...` in `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL`; `dev` runs `go run ./cmd/core-admin migrate` then `go run ./cmd/core`; CI core job sets the same env against its Postgres service. Postman task reads `openapi.json` with `servers: [{url: "/api/core/v1"}]` and tag `platform`.
+(none open) The Makefile and CI env request to platform is met by platform-P1-L9 (task 13, PLAN.md D13).
 ## Blockers
-(none) Postgres up and healthy per the core manager (2026-10-12); tasks 3 and 4 unblocked.
+(none)

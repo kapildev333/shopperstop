@@ -11,7 +11,7 @@
 - `internal/testdb`: one schema per test package on `shopperstop_core_test`.
 - `internal/app`: route registration, `GET /api/core/v1/healthz` and `/readyz`, the shared test server, the contract test against `services/core/openapi.json`.
 - `cmd/core` (serve with graceful shutdown) and `cmd/core-admin` with `migrate` and a placeholder `seed-demo [--reset]` that prints `seed-demo: no demo data yet` and exits 0, so platform's `make dev` and `make e2e` can call it now.
-- `services/core/openapi.json`: OpenAPI 3.1 with the two health routes.
+- `services/core/openapi.json`: OpenAPI 3.1 with the two health routes. Listing them, despite Spec 2 §6 calling them outside the contract, is PLAN.md D16.
 - Spec deltas on `platform` for behaviour the seed lacks: origin normalisation, log level, migrations, the OpenAPI contract, graceful shutdown.
 
 Area: core. Capabilities touched: `platform` (implements its six seeded requirements, adds five).
