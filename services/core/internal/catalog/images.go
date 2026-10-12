@@ -87,6 +87,7 @@ func readImage(w http.ResponseWriter, r *http.Request) ([]byte, string, error) {
 }
 
 // storeImage reads the upload and stores it as kind/id.ext, returning the key.
+// ponytail: files are never deleted; deleting a product or category leaves its file on disk. A core-admin sweep of unreferenced keys is the upgrade path.
 func (c *Catalog) storeImage(w http.ResponseWriter, r *http.Request, kind, id string) (string, error) {
 	data, ext, err := readImage(w, r)
 	if err != nil {
