@@ -24,7 +24,7 @@ export function Stepper({
         type="button"
         aria-label={`Add ${label}`}
         onClick={() => onChange(1)}
-        className="h-11 min-w-20 rounded-full border border-accent bg-surface px-4 text-button text-accent transition-colors hover:bg-accent-soft sm:h-9"
+        className="h-11 min-w-20 rounded-full border border-accent bg-surface px-4 text-button text-accent sm:h-9"
       >
         ADD
       </button>
