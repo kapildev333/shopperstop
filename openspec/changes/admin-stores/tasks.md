@@ -29,8 +29,8 @@ Failing tests: `src/store-form.test.tsx` › "create a store and open it", "edit
 Scope: `apps/admin/src/routes/_staff/_admin/stores/$storeId.tsx`, `src/store-delete.test.tsx` (new), this file's checkboxes, the worker's lane log.
 Scenarios: Store delete › Delete after confirming, Store in use.
 Failing tests: `src/store-delete.test.tsx` › "delete asks first, then removes the store", "a store in use cannot be deleted".
-- [ ] 3.1 Tests committed red (`test: store delete with confirmation`); Vitest shows both failing (no "Delete store" button)
-- [ ] 3.2 `DeleteStore` and the `PageHeader` `actions` per design.md (`feat: store delete with confirmation`); Vitest 43 passed; every gate green; `routeTree.gen.ts` unchanged
+- [x] 3.1 Tests committed red (`test: store delete with confirmation`); Vitest shows both failing (no "Delete store" button)
+- [x] 3.2 `DeleteStore` and the `PageHeader` `actions` per design.md (`feat: store delete with confirmation`); Vitest 43 passed; every gate green; `routeTree.gen.ts` unchanged
 
 ## 4. Pincode list editor
 Scope: `apps/admin/src/service-areas.tsx` (new), `src/routes/_staff/_admin/stores/$storeId.tsx` (the `ServiceAreas` card), `src/service-areas.test.tsx` (new), this file's checkboxes, the worker's lane log.
