@@ -293,6 +293,22 @@ func TestCreateStaffRoleStoreMismatch(t *testing.T) {
 	}
 }
 
+// TestCreateStaffUnknownStore: a store-staff user whose storeId names no store
+// is refused with 400 on storeId and nothing is written.
+func TestCreateStaffUnknownStore(t *testing.T) {
+	admin := adminToken(t)
+	email := uniqueEmail(t)
+	status, body := call(t, http.MethodPost, staffUsersPath, admin,
+		map[string]string{"email": email, "password": "staff12345", "name": "Ghost", "role": "store_staff", "storeId": "00000000-0000-4000-8000-000000000000"})
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "storeId" {
+		t.Fatalf("unknown store: got %d %s, want 400 validation field storeId", status, body)
+	}
+	var n int
+	if err := testPool.QueryRow(context.Background(), "select count(*) from staff_users where email = $1", email).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("staff rows for %s: %d (%v), want none", email, n, err)
+	}
+}
+
 func TestCreateStaffTakenEmail(t *testing.T) {
 	seedStaff(t)
 	admin := staffSignIn(t, adminStaffEmail)
