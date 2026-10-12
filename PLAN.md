@@ -22,6 +22,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - One task of the plan is one lane, `LANE-ID = <area>-P<phase>-L<n>`; the lane's directory scope is the task's **Files** list.
 - Contracts between areas are files: `services/core/openapi.json`, `packages/ui/src/tokens.css` and `@shopperstop/ui` exports, `openspec/specs/`.
 - Gates per PR: `make test`, `make e2e` where the task touches an app, `openspec validate --all --strict`, `make postman` clean. One `make e2e` runs at a time across all managers.
+- Root `package-lock.json` changes from workspace installs are expected in ui, web and admin PRs (npm workspaces).
+- `psql` is not installed on the owner's machine; ad-hoc checks use a Go pgx client.
 - Each manager verifies its own landings (suites, then real database / HTTP / browser) before the PR; the orchestrator verifies integration at phase close.
 - Only the orchestrator touches the root checkout and PLAN.md.
 
@@ -29,15 +31,15 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
 | platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | running (orchestrator session, D9) |
-| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | session ended 2026-10-12 before starting; restart with `/manage core` once platform-P1-L4 lands |
-| ui | `packages/ui/` | platform (`package.json` workspaces) | session ended 2026-10-12 before starting; Task 1 is on main, restart with `/manage ui` |
-| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | |
-| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | |
+| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | running (session shopperstop-ed); core-P1-L1 team lead on change core-service-foundation (tasks 5-8); unblocked by #4 |
+| ui | `packages/ui/` | platform (`package.json` workspaces) | running (session shopperstop-5c); ui-P1-L1 team lead on change ui-packages-ui |
+| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | no manager yet; start `/manage web` when packages/ui lands |
+| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | running (session shopperstop-75); waits on ui task 9 and core task 8 |
 
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
 |------|-----------|--------|
-| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | tasks 1 and 2 done 2026-10-12 (orchestrator; repo created private, origin/main pushed); 3 (platform-P1-L3) and 4 (platform-P1-L4) proposed, awaiting the owner's go on the workers; `openspec/config.yaml` fix landed as #1 |
+| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (platform-P1-L3, archived #5); 4 done #4 (platform-P1-L4, archived #6, `make db` verified); 13 running (platform-P1-L9); 12 waits on core task 8; 15 waits on 13 and 14 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | waits on platform task 4 |
 | ui | 9 packages/ui | waits on platform task 1 |
 | web | 10 apps/web | waits on ui task 9 |
@@ -53,3 +55,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: PRD written and approved (D7); guardrail hooks added (D8). Phase 1 may start.
 - 2026-10-12: OpenSpec initialised (`openspec/`, `/opsx:*` commands and skills); owner made it the only spec tool (D6). Plan Task 3 shrinks to seeding `openspec/specs/platform` and `design-system`.
 - 2026-10-12: repo `kapildev333/shopperstop` created private, Task 1 pushed as origin/main. Docker Desktop started by the orchestrator. The core and ui manager sessions ended before starting any lane; both restart once their dependencies are on main. Orchestrator and platform manager share one session (D9).
+- 2026-10-12: platform tasks 3 and 4 landed (#3, #4) and archived (#5, #6); `make db` verified against the real container. core, ui and admin managers running; CI and Makefile lane (platform-P1-L9) started so every later PR gets a `ci` check.
