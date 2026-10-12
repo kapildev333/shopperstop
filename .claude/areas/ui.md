@@ -25,6 +25,7 @@ Nothing running. Phase 1 ui work is complete (ui-P1-L1, ui-P1-L2). No `make e2e`
 - A phone-width render was not captured in Chrome (window would not resize below desktop); the `max-sm:`/`sm:` classes are pinned by tests.
 
 ## Backlog
+- `IconButton` accepts `type` (default `button` placed before the props spread) so an icon-only control can submit a form; web's search submits on Enter instead for now (orchestrator, 2026-10-12). Bundle into the next ui lane with a test.
 - Add `--text-*: initial` to the theme if default Tailwind font sizes leak into the apps.
 - Phase 2: new components only through a ui change with a test and a Figma component (CLAUDE.md); nothing queued.
 
