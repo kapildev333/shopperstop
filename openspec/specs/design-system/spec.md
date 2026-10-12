@@ -259,7 +259,7 @@ Every text and background token pair the components use SHALL measure at least 4
 - **THEN** a `status` named "Loading" holds 3 placeholders
 
 ### Requirement: Page header and tab navigation
-`PageHeader` SHALL render the page title as the only level-1 heading with optional description and actions; `TabNav` SHALL render a navigation landmark named by `label` around its links and style the link with `aria-current="page"` as current.
+`PageHeader` SHALL render the page title as the only level-1 heading with optional description and actions; `TabNav` SHALL render a navigation landmark named by `label` around its links, style the link with `aria-current="page"` as current, and SHALL scroll horizontally without wrapping when its links exceed the width.
 
 #### Scenario: Page header
 - **WHEN** a PageHeader renders with title "Orders" and an action
@@ -268,6 +268,10 @@ Every text and background token pair the components use SHALL measure at least 4
 #### Scenario: Tab navigation landmark
 - **WHEN** a TabNav labelled "Order views" wraps two links, one with `aria-current="page"`
 - **THEN** a navigation landmark named "Order views" holds both links and the current one keeps `aria-current="page"`
+
+#### Scenario: Tab navigation scrolls instead of wrapping
+- **WHEN** a TabNav renders seven links in a narrow container
+- **THEN** the nav has horizontal overflow scrolling, the links do not wrap or shrink, and the current-link styling and the landmark are unchanged
 
 ### Requirement: Figma token check
 `packages/ui/scripts/check-figma-tokens.mjs <export.json>` SHALL compare the colour variables of a Figma JSON export with the `:root` colours in `tokens.css`, print one line per mismatch, token missing in Figma and token missing in CSS, and exit 1 on any difference, 0 when they match and 2 on a usage error.
