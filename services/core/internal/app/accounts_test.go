@@ -442,6 +442,11 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, "/api/core/v1/me", nil, http.StatusOK},
 		{http.MethodPatch, "/api/core/v1/me", map[string]string{}, http.StatusOK},
 		{http.MethodPost, "/api/core/v1/auth/sign-out", nil, http.StatusNoContent},
+		{http.MethodGet, "/api/core/v1/me/addresses", nil, http.StatusOK},
+		{http.MethodPost, "/api/core/v1/me/addresses", map[string]string{"label": "Home", "line1": "12 Main Rd", "pincode": "560034"}, http.StatusCreated},
+		// No address has this id, so an allowed customer gets 404 past the gate.
+		{http.MethodPatch, "/api/core/v1/me/addresses/00000000-0000-4000-8000-0000000003ff", map[string]string{}, http.StatusNotFound},
+		{http.MethodDelete, "/api/core/v1/me/addresses/00000000-0000-4000-8000-0000000003ff", nil, http.StatusNotFound},
 	}
 	for _, g := range gates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
