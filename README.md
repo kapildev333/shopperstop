@@ -12,7 +12,9 @@ Phase 1 (foundation) is in progress. On `main` today:
 - `Makefile`, the CI workflow, and the living specs under `openspec/specs/`.
 - `docs/postman/`: the Postman collection and environment generated from `openapi.json`; `make postman` regenerates them and runs the generator tests.
 
-Pending: `apps/web` and `apps/admin` (the customer site and the admin panel) and demo data (`seed-demo` is a stub until Phase 2). Behaviour is specified in [openspec/specs/](openspec/specs/).
+- `apps/web` (customer site shell at `/`) and `apps/admin` (admin panel shell under `/admin/`), each with a Playwright smoke suite with axe.
+
+Pending: demo data (`seed-demo` is a stub until Phase 2) and the product pages themselves (Phase 2). Behaviour is specified in [openspec/specs/](openspec/specs/).
 
 ## Quick start
 
@@ -28,7 +30,7 @@ npm ci      # once, after cloning
 make dev
 ```
 
-`make dev` starts Postgres 16 as `shopperstop-postgres-1` with the roles and databases from `deploy/initdb.sql`, applies the migrations, runs `seed-demo --reset`, and then runs core on <http://localhost:8080>, the customer web on <http://localhost:5173> and the admin panel on <http://localhost:5174/admin/>, until Ctrl-C. Check core with `curl http://localhost:8080/api/core/v1/healthz`. The web and admin apps are not on `main` yet, so their targets print a skip line for now. Postgres keeps running after Ctrl-C; stop it with `docker compose -f deploy/docker-compose.yml stop`.
+`make dev` starts Postgres 16 as `shopperstop-postgres-1` with the roles and databases from `deploy/initdb.sql`, applies the migrations, runs `seed-demo --reset`, and then runs core on <http://localhost:8080>, the customer web on <http://localhost:5173> and the admin panel on <http://localhost:5174/admin/>, until Ctrl-C. Check core with `curl http://localhost:8080/api/core/v1/healthz`. Each target prints a skip line while its directory is absent. Postgres keeps running after Ctrl-C; stop it with `docker compose -f deploy/docker-compose.yml stop`.
 
 <details>
 <summary><b>Step by step, without make dev</b></summary>
@@ -46,7 +48,7 @@ make dev
 
 3. Migrate and seed: `cd services/core && go run ./cmd/core-admin migrate && go run ./cmd/core-admin seed-demo --reset`. The seed is a Phase 1 stub; the demo accounts below load with the Phase 2 seed.
 4. Run core: `go run ./cmd/core`, then check `curl http://localhost:8080/api/core/v1/healthz` from another terminal.
-5. From the repository root, build the shared UI and start the apps in two more terminals: `npm run build --workspace packages/ui`, then `npm run dev --workspace apps/web` and `npm run dev --workspace apps/admin`. Pending: the apps are not on `main` yet.
+5. From the repository root, build the shared UI and start the apps in two more terminals: `npm run build --workspace packages/ui`, then `npm run dev --workspace apps/web` and `npm run dev --workspace apps/admin`.
 6. Sign in with an account from [Demo sign-ins](#demo-sign-ins).
 7. To look at the data, use the client inside the container, `docker exec -it shopperstop-postgres-1 psql -U shopperstop_core shopperstop_core`, or any GUI client on `localhost:5432` with user and password `shopperstop_core`.
 
@@ -61,7 +63,7 @@ Local databases only. These accounts are loaded by `seed-demo --reset` from Phas
 | Admin panel (`localhost:5174/admin/`) | Admin | `admin@shopperstop.local` | `admin12345` |
 | Admin panel (`localhost:5174/admin/`) | Store staff, Koramangala | `koramangala@shopperstop.local` | `staff12345` |
 | Admin panel (`localhost:5174/admin/`) | Store staff, Indiranagar | `indiranagar@shopperstop.local` | `staff12345` |
-| Customer web (`localhost:5173`) | Customer | `demo@shopperstop.local` | `demo12345` |
+| Customer web (`localhost:5173/`) | Customer | `demo@shopperstop.local` | `demo12345` |
 
 The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008).
 
