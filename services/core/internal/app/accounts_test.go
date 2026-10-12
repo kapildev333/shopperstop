@@ -463,4 +463,29 @@ func TestAuthGates(t *testing.T) {
 			t.Fatalf("%s %s with a customer token: got %d %s, want %d", g.method, g.path, status, body, g.allowed)
 		}
 	}
+
+	// Staff routes: no token and a customer token get 401; store staff and admins
+	// are allowed. Each row signs in fresh, since sign-out ends the token it sends.
+	seedStaff(t)
+	staffGates := []struct {
+		method, path string
+		allowed      int
+	}{
+		{http.MethodPost, "/api/core/v1/admin/auth/sign-out", http.StatusNoContent},
+		{http.MethodGet, "/api/core/v1/admin/me", http.StatusOK},
+	}
+	for _, g := range staffGates {
+		if status, body := call(t, g.method, g.path, "", nil); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
+			t.Fatalf("%s %s anonymous: got %d %s, want 401 unauthorized", g.method, g.path, status, body)
+		}
+		customer := newCustomer(t)
+		if status, body := call(t, g.method, g.path, customer.Token, nil); status != http.StatusUnauthorized {
+			t.Fatalf("%s %s with a customer token: got %d %s, want 401", g.method, g.path, status, body)
+		}
+		for _, email := range []string{storeStaffEmail, adminStaffEmail} {
+			if status, body := call(t, g.method, g.path, staffSignIn(t, email), nil); status != g.allowed {
+				t.Fatalf("%s %s with the staff token of %s: got %d %s, want %d", g.method, g.path, email, status, body, g.allowed)
+			}
+		}
+	}
 }
