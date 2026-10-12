@@ -14,9 +14,9 @@ Scope: `openspec/changes/admin-stores/**`, `.claude/lanes/admin-P2-L2.md`. No te
 Scope: `apps/admin/src/stores.ts` (new), `src/fake-core.ts` (append fixtures, add the type import), `src/routes/_staff/_admin/stores/index.tsx` (replace the placeholder), `src/routes/_staff/_admin/stores/new.tsx` and `src/routes/_staff/_admin/stores/$storeId.tsx` (new, `PageHeader`-only placeholders so the table's typed links compile), `src/routeTree.gen.ts` (generated), `src/stores.test.tsx` (new), `apps/admin/e2e/stores.spec.ts` (new, written only), this file's checkboxes, the worker's lane log.
 Scenarios: Stores table › Stores listed; Stores table states › No stores, Stores loading, Stores load failure. (Stores against core: written here, run in task 5.)
 Failing tests: `src/stores.test.tsx` › "stores table lists every store", "no stores shows the empty state", "stores table shows a skeleton while loading", "stores load failure shows a retry that reloads".
-- [ ] 1.1 e2e written before the pages (`test: stores pages against core`): `e2e/stores.spec.ts` per design.md; `npm run typecheck --workspace apps/admin` and lint pass; not run (task 5)
-- [ ] 1.2 Tests committed red (`test: stores table`): the fixtures in `src/fake-core.ts` and `src/stores.test.tsx` per design.md; Vitest shows the four failing against the placeholder, L1's 31 green
-- [ ] 1.3 `src/stores.ts`, `stores/index.tsx` and the two placeholder routes per design.md (`feat: stores table`), `routeTree.gen.ts` regenerated and committed; Vitest 35 passed; every gate green
+- [x] 1.1 e2e written before the pages (`test: stores pages against core`): `e2e/stores.spec.ts` per design.md; `npm run typecheck --workspace apps/admin` and lint pass; not run (task 5)
+- [x] 1.2 Tests committed red (`test: stores table`): the fixtures in `src/fake-core.ts` and `src/stores.test.tsx` per design.md; Vitest shows the four failing against the placeholder, L1's 31 green
+- [x] 1.3 `src/stores.ts`, `stores/index.tsx` and the two placeholder routes per design.md (`feat: stores table`), `routeTree.gen.ts` regenerated and committed; Vitest 35 passed; every gate green
 
 ## 2. Store form: create and change
 Scope: `apps/admin/src/store-form.tsx` (new), `src/routes/_staff/_admin/stores/new.tsx` and `src/routes/_staff/_admin/stores/$storeId.tsx` (overwrite task 1's placeholders; `$storeId.tsx` in the task-2 shape in design.md), `src/routeTree.gen.ts` (generated), `src/store-form.test.tsx` (new), this file's checkboxes, the worker's lane log.
