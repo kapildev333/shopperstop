@@ -77,19 +77,19 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s --health-retries 30
     steps:
       - uses: actions/checkout@v4
-      - if: hashFiles('services/core/go.mod') == '' || hashFiles('apps/web/package.json') == ''
-        run: 'echo "e2e: services/core or apps/web absent, skipping"'
-      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+      - if: hashFiles('services/core/go.mod') == '' || (hashFiles('apps/web/package.json') == '' && hashFiles('apps/admin/package.json') == '')
+        run: 'echo "e2e: services/core, or both apps/web and apps/admin, absent, skipping"'
+      - if: hashFiles('services/core/go.mod') != '' && (hashFiles('apps/web/package.json') != '' || hashFiles('apps/admin/package.json') != '')
         uses: actions/setup-go@v5
         with:
           go-version-file: services/core/go.mod
           cache-dependency-path: services/core/go.sum
-      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+      - if: hashFiles('services/core/go.mod') != '' && (hashFiles('apps/web/package.json') != '' || hashFiles('apps/admin/package.json') != '')
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+      - if: hashFiles('services/core/go.mod') != '' && (hashFiles('apps/web/package.json') != '' || hashFiles('apps/admin/package.json') != '')
         run: |
           npm ci
           npx playwright install --with-deps chromium

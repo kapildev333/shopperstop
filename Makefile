@@ -57,10 +57,10 @@ test-web: ui
 	else echo "test-web: packages/ui absent, skipping"; fi
 
 e2e:
-	@if test -d services/core && test -d apps/web; then \
+	@if test -d services/core && { test -d apps/web || test -d apps/admin; }; then \
 	  (cd services/core && $(E2E_ENV) go run ./cmd/core-admin migrate && $(E2E_ENV) go run ./cmd/core-admin seed-demo --reset) && \
 	  npm run build --workspaces --if-present && $(E2E_ENV) npm run e2e --workspaces --if-present; \
-	else echo "e2e: services/core or apps/web absent, skipping"; fi
+	else echo "e2e: services/core, or both apps/web and apps/admin, absent, skipping"; fi
 
 gen:
 	@if test -f services/core/sqlc.yaml; then cd services/core && sqlc generate; \
