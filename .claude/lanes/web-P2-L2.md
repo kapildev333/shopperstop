@@ -1,7 +1,7 @@
 # web-P2-L2 - web-accounts: sign-in, register, account and addresses (team lead)
-Status: started
+Status: done
 ## Doing
-T3 (account, addresses, header, sign out): red `e201ca4`, feat committed; gates and e2e green; awaiting review.
+
 ## Found
 - 2026-10-12: core manager: core-P2-L1 (`core-accounts-auth`) owns `/auth/*`, `/me` and `/me/addresses` CRUD; this lane waits on that single merge. It also seeds the demo customer `demo@shopperstop.local` / `demo12345` via `core-admin seed-demo --reset` (D22); the web Playwright global setup runs `core-admin migrate` and `seed-demo --reset` on the e2e database.
 - `packages/ui/src/api/core.d.ts` on 5101344 has only `/healthz` and `/readyz`; no core-P2-L1 commits yet.
@@ -63,8 +63,15 @@ T3 (account, addresses, header, sign out): red `e201ca4`, feat committed; gates 
 
 - 2026-10-12 T3 review fix (worker, Haiku): red `test: sign out clears the session even when navigation fails` (fce08fe): `TypeError: signOutAndGoHome is not a function`. Fix `fix: sign out always clears the session`: `signOutAndGoHome(navigate)` in `src/auth.ts` awaits navigate in `try` and `signOut()` in `finally`; `routes/account.tsx` `onSignOut` calls it with `() => navigate({ to: '/' })`. Navigate-first ordering kept.
 
+- 2026-10-12 acceptance (team lead, `/opsx:verify web-accounts`): PASS.
+  - Completeness: tasks 1.1 to 3.3 ticked, review fixes recorded as 1.4 and 3.3. All 23 scenarios map to a named test per design.md: 12 Vitest (session 2, api 2, auth-forms 4, auth 1, account 2, address-dialog 3, all passing locally), 11 Playwright (auth 3, account 4 covering 8 scenarios; "Signed-in header" in "profile saved", "Address edited and deleted" in "addresses and default"), read against the spec and green in the worker's T3 run (11 passed, real core on :18080, `shopperstop_core_e2e`). Playwright not re-run here (admin holds the e2e ports); manager runs `make e2e`.
+  - Nothing extra: `git diff --stat origin/main...HEAD` is 30 files, all in the task scopes plus `src/auth.test.ts` sign-out tests (3.3) and the `_e2e` guard in `e2e/global-setup.ts` (T2 review finding, landed in T3's red commit).
+  - Coherence: design.md and tasks.md reconciled with the landed deviations (`useMe` in T3, `searchReturnTo`, register returns the session, storage guard, `signOutAndGoHome`, accent Default badge, first-page `useAddresses`, fixed list error text, `_e2e` guard).
+  - Gates: packages/ui build ok; lint clean; typecheck clean; Vitest 8 files, 20 tests passed; web build ok; `git status --porcelain` empty after build; `openspec validate web-accounts --strict` valid. `openspec validate --all --strict` fails only on `spec/accounts` and `spec/admin-staff` Purpose placeholders from base ba69715, fixed on origin/main by #67 (b586d55, no lane files touched): rebase before the PR.
+
 ## Requests
-- to core (core-P2-L1, via the web area plan): (1) does `POST /auth/register` return `{token, customer}`? (design handles both); (2) accept `""` to clear `phone` and address `line2` on PATCH, omit them in responses when unset; (3) document 401 `unauthorized` on `/me*` for an expired or unknown token; (4) validation `field` uses the JSON field name.
+- to core (core-P2-L1, via the web area plan): (1) does `POST /auth/register` return `{token, customer}`? (design handles both); (2) accept `""` to clear `phone` and address `line2` on PATCH, omit them in responses when unset; (3) document 401 `unauthorized` on `/me*` for an expired or unknown token; (4) validation `field` uses the JSON field name. Answered: core said yes to all five (relayed by the web manager).
 - to web-P2-L1 (via the manager): import `api`, `queryClient`, `call`, `splitError` from `apps/web/src/api.ts` and the session from `src/session.ts` instead of a second client.
+- Decision: no Checkbox in `packages/ui` for this change; "Set as default" on the list instead (ceiling in design.md).
 ## Blockers
-- Workers blocked until core-P2-L1 merges and `packages/ui/src/api/core.d.ts` on main carries `/auth/*`, `/me`, `/me/addresses`.
+- None. (core-P2-L1 merged in #63; types on main.)

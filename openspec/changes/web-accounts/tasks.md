@@ -12,7 +12,8 @@ Failing tests: `src/session.test.ts` › "token persisted and cleared", "token r
 
 - [x] 1.1 Pins added and installed (`chore: web client dependencies`): `@tanstack/react-query` 5.104.2, `openapi-fetch` 0.17.0, dev `@testing-library/user-event` 14.6.7
 - [x] 1.2 Tests committed red (`test: customer session token`)
-- [x] 1.3 `session.ts`, `api.ts`, provider in `__root.tsx`, `test-setup.ts` reset (`feat: customer session store and api client`); all gates green
+- [x] 1.3 `session.ts`, `api.ts`, provider in `__root.tsx`, `test-setup.ts` reset (`feat: customer session store and api client`); all gates green; `useMe` moved to 3.2 (no typed `/me` yet)
+- [x] 1.4 Review fix: storage guard (`test: session tolerates blocked storage`, `fix: session store tolerates blocked storage`)
 
 ## 2. Sign-in and register
 
@@ -30,8 +31,9 @@ Scenarios: Customer header account control › "Signed-out header", "Signed-in h
 Failing tests: `src/account.test.tsx` › "signed-out header", "signed-out account redirect"; `src/address-dialog.test.tsx` › "address dialog checks fields", "address dialog shows envelope field error", "edit dialog prefilled"; `e2e/account.spec.ts` › "sign in returns to where the customer was", "profile saved", "addresses and default", "sign out".
 
 - [x] 3.1 Tests committed red (`test: account, addresses and header`)
-- [x] 3.2 `account-link.tsx`, banner edit, `address-dialog.tsx`, `routes/account.tsx`, `signOut` (`feat: account page, addresses and header sign-in`); all gates green, e2e green, `shell.test.tsx` and `smoke.spec.ts` unchanged and green
+- [x] 3.2 `account-link.tsx`, banner edit, `address-dialog.tsx`, `routes/account.tsx`, `signOut` (`feat: account page, addresses and header sign-in`); all gates green, e2e green, `shell.test.tsx` and `smoke.spec.ts` unchanged and green; `useMe` in `api.ts`; `_e2e` guard in `e2e/global-setup.ts` (T2 review finding)
+- [x] 3.3 Review fix: `signOutAndGoHome` (`test: sign out clears the session even when navigation fails`, `fix: sign out always clears the session`)
 
 ## Workflow follow-up
-- Team lead runs `/opsx:verify web-accounts` after 3.2 lands.
+- [x] Team lead runs `/opsx:verify web-accounts` after 3.2 lands (passed 2026-10-12).
 - Area manager archives the change by PR after the feature PR merges.

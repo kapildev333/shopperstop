@@ -18,11 +18,11 @@ Add to `apps/web/package.json` `dependencies`: `"@tanstack/react-query": "5.104.
 |---|---|---|
 | `package.json` | 1 | the three pins above |
 | `src/session.ts` | 1 | token store |
-| `src/api.ts` | 1 | client, `authMiddleware`, `queryClient`, `ApiError`, `call`, `splitError`, `useMe` |
+| `src/api.ts` | 1, 3 | 1: client, `authMiddleware`, `queryClient`, `ApiError`, `call`, `splitError`; 3: `useMe` (`/me` is typed only once core-P2-L1 is on main) |
 | `src/routes/__root.tsx` | 1, 3 | 1: wrap the layout in `QueryClientProvider`; 3: `<AccountLink />` in the banner |
 | `src/test-setup.ts` | 1 | reset token and query cache after each test |
 | `src/session.test.ts`, `src/api.test.ts` | 1 | |
-| `src/auth.ts` | 2, 3 | 2: `safeReturnTo`, `signIn`, `register`, `startSession`; 3: `signOut` |
+| `src/auth.ts` | 2, 3 | 2: `safeReturnTo`, `searchReturnTo`, `signIn`, `register`, `startSession`; 3: `signOut`, `signOutAndGoHome` |
 | `src/auth-forms.tsx` | 2 | `SignInForm`, `RegisterForm` (no data fetching) |
 | `src/routes/sign-in.tsx`, `src/routes/register.tsx` | 2 | pages wiring forms to `auth.ts` |
 | `src/auth.test.ts`, `src/auth-forms.test.tsx` | 2 | |
@@ -65,6 +65,7 @@ export function useToken() {
   return useSyncExternalStore(subscribe, getToken)
 }
 ```
+As built, `localStorage` access is wrapped in `try`/`catch` and `setToken` updates memory and notifies before the write: with blocked or full storage the token lives in memory only for the page.
 Simplification: no `storage` event listener, so signing out in one tab leaves another tab holding the token until its next 401. Ceiling: add a `window.addEventListener('storage', ...)` when a customer reports it.
 
 ### Client (`src/api.ts`)
@@ -157,8 +158,8 @@ export async function signIn(body: { email: string; password: string }): Promise
 // POST /auth/sign-in through `call`-style try/catch; on data, startSession(data).
 
 export async function register(body: { email: string; password: string; name: string }): Promise<ApiError | undefined>
-// POST /auth/register; on error return it; if the 2xx body has `token`, startSession(it);
-// otherwise return signIn({ email, password }).
+// POST /auth/register answers a CustomerSession like sign-in; both go through one openSession helper.
+// Name and email are trimmed by the forms; the password is sent as typed.
 
 // task 3
 export async function signOut() {
@@ -166,7 +167,13 @@ export async function signOut() {
   setToken(undefined)
   queryClient.clear()
 }
+
+// Navigates first so the /account guard does not redirect to sign-in when the token drops; clears in `finally`.
+export async function signOutAndGoHome(navigate: () => Promise<unknown>) {
+  try { await navigate() } finally { await signOut() }
+}
 ```
+Both routes use `validateSearch: searchReturnTo` from `auth.ts`.
 
 ### Forms (`src/auth-forms.tsx`, task 2)
 Forms own no data fetching; each takes `submit: (values) => Promise<ApiError | undefined>` and calls it only after its own checks pass. That keeps the Vitest tests free of HTTP fakes; the real requests are covered by Playwright.
@@ -223,9 +230,10 @@ export function AccountLink() {
 - `export function useAddresses()`: `useQuery({ queryKey: ['addresses', token], enabled: !!token, queryFn: GET /me/addresses })`, returning the list (`data.items` if the contract wraps it in the list envelope, else the array; follow the types). Exported for web-P2-L4.
 - Layout: `PageHeader title="Your account" actions={<Button variant="secondary" onClick={onSignOut}>Sign out</Button>}`, then `<div className="grid gap-6 lg:grid-cols-2">` with two `Card className="p-6"`, each starting with an `h2` (`text-h2 text-ink`): "Profile" and "Addresses".
 - Profile: while `useMe` loads, two `Skeleton`s; on error `ErrorBanner` with `onRetry={refetch}`. Form (uncontrolled, `defaultValue` from `me.data`, `key={me.data.id}` or equivalent) with "Name" (required: "Enter your name") and "Phone" (`type="tel"`, `autoComplete="tel"`), "Save" button; `PATCH /me` with `{ name, phone }` (empty phone sent as `""`, see proposal request 2); errors via `splitError(error, ['name', 'phone'])`; on success `queryClient.setQueryData(['me', token], data)` or invalidate `['me']`, and `<StatusMessage tone="success">Saved</StatusMessage>` until the next edit or submit.
-- Addresses: loading `Skeleton`s; error `ErrorBanner` with retry; empty `EmptyState title="No addresses yet" description="Add one to check out faster." action={<Button onClick={openAdd}>Add address</Button>}`; otherwise a `ul` of rows (`border-t border-line` between them): label in `text-h3`, `<Badge variant="success">Default</Badge>` on the default, `line1`, `line2` when present, `pincode` in `text-body text-ink-muted`; actions `Button variant="ghost"`: "Edit", "Set as default" (hidden on the default), and `variant="ghost-danger"` "Delete"; each action button gets `aria-label` naming the address (`Edit Home`, `Set Home as default`, `Delete Home`) so repeated buttons are distinguishable. Below the list, `Button variant="secondary"` "Add address". Row action failures show one `ErrorBanner` at the top of the card.
+- Addresses: loading `Skeleton`s; error `ErrorBanner` with retry; empty `EmptyState title="No addresses yet" description="Add one to check out faster." action={<Button onClick={openAdd}>Add address</Button>}`; otherwise a `ul` of rows (`border-t border-line` between them): label in `text-h3`, `<Badge variant="accent">Default</Badge>` (success is a status colour; "Default" is not a status) on the default, `line1`, `line2` when present, `pincode` in `text-body text-ink-muted`; actions `Button variant="ghost"`: "Edit", "Set as default" (hidden on the default), and `variant="ghost-danger"` "Delete"; each action button gets `aria-label` naming the address (`Edit Home`, `Set Home as default`, `Delete Home`) so repeated buttons are distinguishable. Below the list, `Button variant="secondary"` "Add address". Row action failures show one `ErrorBanner` at the top of the card.
 - Mutations are plain `async` handlers through `call(...)`, then `queryClient.invalidateQueries({ queryKey: ['addresses'] })`; no `useMutation`. Set as default = `PATCH /me/addresses/{id}` `{ isDefault: true }`. Delete = `DELETE /me/addresses/{id}`, no confirm.
-- Sign out: `await signOut(); navigate({ to: '/' })`.
+- Sign out: `signOutAndGoHome(() => navigate({ to: '/' }))`.
+- `useAddresses` returns the first page only (`ponytail:`, API default 24); list load errors show fixed text with "Try again", since the query error is not typed as the envelope.
 
 ### Address dialog (`src/address-dialog.tsx`, task 3)
 ```tsx
@@ -249,6 +257,7 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 export default function globalSetup() {
+  // refuses unless SHOPPERSTOP_CORE_DATABASE_URL names an `_e2e` database: seed-demo --reset wipes what it points at
   const cwd = fileURLToPath(new URL('../../../services/core', import.meta.url))
   execFileSync('go', ['run', './cmd/core-admin', 'migrate'], { cwd, stdio: 'inherit' })
   execFileSync('go', ['run', './cmd/core-admin', 'seed-demo', '--reset'], { cwd, stdio: 'inherit' })
