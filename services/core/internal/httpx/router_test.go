@@ -147,6 +147,19 @@ func TestRequestIDEchoed(t *testing.T) {
 	})
 }
 
+func TestAbortHandlerPropagates(t *testing.T) {
+	captureLogs(t)
+	r := NewRouter(nil)
+	r.Get("/abort", func(http.ResponseWriter, *http.Request) { panic(http.ErrAbortHandler) })
+	defer func() {
+		if v := recover(); v != http.ErrAbortHandler {
+			t.Fatalf("recovered %v, want http.ErrAbortHandler re-panicked", v)
+		}
+	}()
+	do(t, r, httptest.NewRequest(http.MethodGet, "/abort", nil))
+	t.Fatal("ServeHTTP returned; the abort was answered instead of propagated")
+}
+
 func TestCORSAllowsConfiguredOrigin(t *testing.T) {
 	captureLogs(t)
 	r := NewRouter([]string{"http://a", "http://b"})
@@ -182,6 +195,21 @@ func TestCORSAllowsConfiguredOrigin(t *testing.T) {
 			t.Fatalf("Access-Control-Allow-Headers %q", got)
 		}
 	})
+
+	t.Run("unknown path is 404 with request id and CORS", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/nope", nil)
+		req.Header.Set("Origin", "http://b")
+		w := do(t, r, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("status %d, want 404", w.Code)
+		}
+		if got := w.Header().Get("X-Request-Id"); got == "" {
+			t.Fatal("404 response has no X-Request-Id")
+		}
+		if got := w.Header().Get("Access-Control-Allow-Origin"); got != "http://b" {
+			t.Fatalf("Access-Control-Allow-Origin %q, want http://b", got)
+		}
+	})
 }
 
 func TestCORSRejectsUnknownOrigin(t *testing.T) {
@@ -195,6 +223,9 @@ func TestCORSRejectsUnknownOrigin(t *testing.T) {
 		w := do(t, r, req)
 		if got := w.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Fatalf("Access-Control-Allow-Origin %q, want none", got)
+		}
+		if got := w.Header().Get("Vary"); !strings.Contains(got, "Origin") {
+			t.Fatalf("Vary %q, want Origin on the unknown-origin response", got)
 		}
 	})
 
