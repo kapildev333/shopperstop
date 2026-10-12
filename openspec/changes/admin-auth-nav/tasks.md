@@ -27,10 +27,10 @@ Failing tests (`src/shell.test.tsx`, rewritten): "dashboard renders in the shell
 Scope: `apps/admin/src/api.ts`, `src/api.test.ts` (3.1 and 3.2 only), `apps/admin/src/routes/sign-in.tsx`, `src/sign-in.test.tsx`, `src/routeTree.gen.ts` (generated, if it changes), this file's checkboxes, the worker's lane log.
 Scenarios: Lost session › 401 without a session changes nothing (amended), 401 to a replaced token keeps the new session; Staff sign-in › Sign-in form is labelled, Empty fields are flagged, Submit disabled while pending, Return to the page after sign-in, Outside redirect ignored; Sign-in errors › Wrong credentials or inactive staff, Rate limited, Any other error, Core unreachable, Field validation from core.
 Failing tests: `src/api.test.ts` › "a 401 to a signed-out request keeps a session set meanwhile" (replaces "401 without a session reports nothing"), "a 401 to a replaced token keeps the new session"; `src/sign-in.test.tsx`: "sign-in form has labelled fields and one h1", "empty fields are flagged without a request", "%s shows an error banner" (rows: wrong credentials, rate limited, any other error, network error), "validation error is shown on its field", "submit is disabled while signing in", "success stores the token and returns to the redirect", "an outside redirect is ignored".
-- [ ] 3.1 401 tests committed red (`test: 401 handling keys on the request's bearer header`): the two `api.test.ts` tests per design.md "Tests"; Vitest shows both failing against task 1's `onResponse`
-- [ ] 3.2 `onResponse` per design.md's `src/api.ts` block (`fix: 401 handling keys on the request's bearer header`); every gate green
-- [ ] 3.3 Tests committed red (`test: staff sign-in form states`); Vitest shows them failing against the stub
-- [ ] 3.4 The form per design.md (`feat: staff sign-in form`); every gate green
+- [x] 3.1 401 tests committed red (`test: 401 handling keys on the request's bearer header`): the two `api.test.ts` tests per design.md "Tests"; Vitest shows both failing against task 1's `onResponse`
+- [x] 3.2 `onResponse` per design.md's `src/api.ts` block (`fix: 401 handling keys on the request's bearer header`); every gate green
+- [x] 3.3 Tests committed red (`test: staff sign-in form states`); Vitest shows them failing against the stub
+- [x] 3.4 The form per design.md (`feat: staff sign-in form`); every gate green
 
 ## 4. Sign-in e2e against core
 Scope: `apps/admin/playwright.config.ts`, `apps/admin/e2e/global-setup.ts`, `apps/admin/e2e/auth.spec.ts`, `apps/admin/e2e/smoke.spec.ts`, this file's checkboxes, the worker's lane log.

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
-import { clearToken, getToken, setToken } from './session'
+import { clearToken, getToken } from './session'
 import { admin, apiError, fakeCore, json } from './fake-core'
 import { renderApp } from './render-app'
 
