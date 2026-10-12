@@ -3,11 +3,13 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-Nothing running. admin-P2-L1 landed (#71). admin-P2-L2 `admin-stores` waits on core-P2-L2 on main (stores and service-areas routes, regenerated `core.d.ts`, store-staff seeds per D22); its team lead prepares the change once core-P2-L2 is proposed. No `make e2e` here.
+admin-P2-L2 landed (#91). admin-P2-L3 `admin-catalog`: team lead designing against the admin-stores base (core-P2-L3 on main); workers start after the lane is rebased onto main. admin-P2-L4 `admin-stock` waits on core-P2-L4. No `make e2e` here right now.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
+| admin-P2-L2 | `admin-stores`: /stores table, store form, delete, pincode editor | `apps/admin/`, `openspec/changes/admin-stores/` | done 2026-10-12: PR #91 (cb7d0a9); tasks 0 to 5 + 4b, reviews approve with nits (closed in 4b, 4b approve clean), acceptance pass (22 scenarios); manager verified `make test` (admin 52 Vitest), `make e2e` (admin 6), `make postman`, openspec 10 passed, Chrome walk-through with real 409s and a create/delete round trip; archive PR chore/admin-archive-admin-stores |
+| admin-P2-L3 | `admin-catalog`: /categories tree, /products table and form, image upload | `apps/admin/`, `openspec/changes/admin-catalog/` | team lead proposing 2026-10-12 against core-P2-L3 and the admin-stores base |
 | admin-P2-L1 | `admin-auth-nav`: sign-in, session, role nav, protected routes, sign-out | `apps/admin/`, `openspec/changes/admin-auth-nav/` | done 2026-10-12: PR #71 (8242bbb); 4 tasks, 4 reviews approve with nits (all closed in task 4 or recorded), team-lead acceptance pass (11 requirements, 37 scenarios mapped); manager verified `make test` (admin 31 Vitest), `make e2e` (admin 4 passed), `make postman`, openspec 8 passed, Chrome walk-through against a real core; archive PR chore/admin-archive-admin-auth-nav |
 | admin-P1-L1 | Task 11 `apps/admin` shell (`@shopperstop/admin`) | `apps/admin/`, `openspec/changes/admin-apps-admin/` | done 2026-10-12: PR #41 merged (squash 1e4e08f); reviewer approve with nits (addressed), team-lead acceptance pass; manager verified `make test`, `make e2e` (3 passed), `make postman` clean, openspec valid, real core + preview over HTTP and Chrome; archive PR chore/admin-archive-admin-apps-admin |
 ## Requests
@@ -16,6 +18,8 @@ Nothing running. admin-P2-L1 landed (#71). admin-P2-L2 `admin-stores` waits on c
 - to platform: e2e guard for `apps/admin` and `admin-app` capability landed in #30; README names the admin dev URL `http://localhost:5174/admin/` (with platform-P1-L11).
 - to web (information): `TabNav` on `bg-brand` fails axe `color-contrast`; put the nav on a `surface` strip and keep only `on-brand` text on the brand band. `ink-muted` on `canvas` is 4.47:1, so `PageHeader`/`EmptyState` descriptions sit on a `Card` or are omitted.
 ## Found
+- admin-P2-L2 decisions under D13: Status as a ui `Select` (ceiling: a ui Switch if the Figma toggle is wanted); stores table unpaged at pageSize 100; nav overflow fixed in ui `TabNav` (ui-P2-L1, #82). Patterns worth reusing: typed `Link`s need placeholder routes before their targets exist; a created item's page refetches on mount, so fakes must answer the GET; a save writes `setQueryData` and lists refetch on mount at staleTime 0 (no invalidation); mutation-proven guard tests; e2e written in task 1, run last with the slot.
+- Admin e2e needs SHOPPERSTOP_CORE_FILES_DIR exported alongside the other four when run standalone (core requires it since core-P2-L3); `make e2e` sets it.
 - admin-P2-L1 ceilings (design.md): no client-side 12 h timer (next 401 ends the session); `GET /admin/me` cached per page load; retry banner and 403 not-found pages carry no nav or Sign out; `/sign-in` reachable while signed in; six placeholder pages (PageHeader only) until L2 to L6; store-staff nav and wrong-role deep link are unit tests until core-P2-L2 seeds store staff. 401 rule: the session is cleared only when the 401 answers a request carrying the current token (reviewer-found race). Safe redirect `/^\/(?![/\\])/`.
 - Local tooling: a worktree whose `npm install` ran with `--workspace` only lacks the other apps' nested binaries; `npm ci` at the root before `make test`/`make e2e`. The Chrome extension's pointer clicks missed the banner button in one session; Playwright clicks it for real.
 - Admin e2e: global setup runs core's migrate + seed-demo --reset against the env it is given; running `npm run e2e --workspace apps/admin` with a dev DATABASE_URL exported would reset dev demo accounts (D22 by design); use `make e2e`.
