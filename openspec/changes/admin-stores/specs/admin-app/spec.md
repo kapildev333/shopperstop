@@ -30,11 +30,19 @@ While the stores list loads, `/stores` SHALL show a loading status under its hea
 - **THEN** the status started at Closed, the request body is `{"name":"HSR Layout","addressLine":"27th Main, HSR Layout","pincode":"560102","isOpen":false,"deliveryFeeCents":2500,"freeDeliveryAboveCents":19950,"minOrderCents":0,"promisedMinutes":12}` and the new store's page opens at `/stores/<new id>`
 
 ### Requirement: Store change
-`/stores/{id}` SHALL show the store's name as the level-1 heading and the store form filled from `GET /admin/stores/{id}`, amounts in rupees. "Save changes" SHALL send `PATCH /admin/stores/{id}` with only the fields whose value differs from the loaded store, never `null`, and on success show "Store saved." and keep the saved values. An id core answers with 404 SHALL show the not-found page.
+`/stores/{id}` SHALL show the store's name as the level-1 heading and the store form filled from `GET /admin/stores/{id}`, amounts in rupees. "Save changes" SHALL send `PATCH /admin/stores/{id}` with only the fields whose value differs from the loaded store, never `null`, and on success show "Store saved.", keep the saved values as the base of the next change, and show them in the stores table. An id core answers with 404 SHALL show the not-found page.
 
 #### Scenario: Change sends only the changed fields
 - **WHEN** an admin on Koramangala's page (fee 2500, free above 19900) sees "Delivery fee (₹)" `25` and "Free delivery above (₹)" `199`, sets "Promised minutes" to `11` and "Status" to Closed, and presses "Save changes"
 - **THEN** the `PATCH` body is `{"promisedMinutes":11,"isOpen":false}`, "Store saved." is shown, and "Promised minutes" still reads `11`
+
+#### Scenario: A second save sends only its own change
+- **WHEN** an admin saves "Promised minutes" `11`, then changes only "Status" to Closed and saves again
+- **THEN** the second `PATCH` body is exactly `{"isOpen":false}`
+
+#### Scenario: Saved change shows in the table
+- **WHEN** an admin opens Koramangala from `/stores`, saves "Promised minutes" `11` and returns to "Stores" through the navigation
+- **THEN** the "Stores" table shows "11 min"
 
 #### Scenario: Unknown store
 - **WHEN** an admin opens `/stores/00000000-0000-4000-8000-000000000000` and core answers 404 `not_found`

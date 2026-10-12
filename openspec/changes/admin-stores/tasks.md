@@ -39,6 +39,13 @@ Failing tests: `src/service-areas.test.tsx` › "the store page lists its pincod
 - [x] 4.1 Tests committed red (`test: store pincode editor`); Vitest shows the seven failing (no "Delivery pincodes" section)
 - [x] 4.2 `service-areas.tsx` and the card in `$storeId.tsx` per design.md (`feat: store pincode editor with conflict naming the other store`); Vitest 50 passed; every gate green; `routeTree.gen.ts` unchanged
 
+## 4b. Store change follow-ups from the task 2 review
+Scope: `apps/admin/src/store-form.test.tsx`, `apps/admin/src/store-form.tsx`, this file's checkboxes, the worker's lane log. Runs after task 4, before task 5.
+Scenarios: Store change › A second save sends only its own change, Saved change shows in the table.
+Tests (`src/store-form.test.tsx`, appended with the `keepsStore()` fake per design.md): "a second save sends only its own change", "the stores table shows a saved change". Both pass against the landed code: they guard behaviour the reviewer's mutations removed without a red test.
+- [ ] 4b.1 Tests committed (`test: a second save sends only its change; the table shows a saved change`). Record in the lane log, then revert, both mutations: deleting the `setQueryData` line in `store-form.tsx` turns "a second save sends only its own change" red; adding `staleTime: Infinity` to `storesQuery` in `stores.ts` turns "the stores table shows a saved change" red. Vitest 52 passed
+- [ ] 4b.2 Drop the list `invalidateQueries` line and the then-unused `storesQuery` import from `store-form.tsx` (`refactor: a store save no longer invalidates the list`; design.md Decision 3); Vitest 52 passed; every gate green
+
 ## 5. Stores against core (needs the e2e slot)
 Scope: `apps/admin/e2e/stores.spec.ts` (fixes only, after a recorded failure), this file's checkboxes, the worker's lane log. Waits on: the e2e slot the manager holds.
 Scenarios: Stores against core › Admin edits a store and meets the pincode conflict, Store staff open the stores page.

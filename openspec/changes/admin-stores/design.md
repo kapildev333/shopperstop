@@ -30,7 +30,7 @@ Spike, 2026-10-12: a scratchpad copy of f42fb87 with core-P2-L2's `core.d.ts` an
 ## Decisions
 1. **Capability `admin-app`.** Same call as admin-P2-L1: the client side of a flow is app behaviour; `admin-stores` stays core's HTTP capability.
 2. **Three modules, three routes.** `src/stores.ts` (query options, the `AdminStore` alias, rupee/paise conversion), `src/store-form.tsx` (create and change in one component: `store` absent means create), `src/service-areas.tsx` (the pincode editor). Routes: `stores/index.tsx` (table), `stores/new.tsx`, `stores/$storeId.tsx` (form, delete, pincodes). The static `new` route wins over `$storeId` in TanStack Router.
-3. **Query keys.** List `['admin', 'stores']`, one store `['admin', 'stores', id]`, its pincodes `['admin', 'stores', id, 'service-areas']`. A save writes the answer into the store's key with `setQueryData` and invalidates only the list (`exact: true`); a pincode save writes its key. A delete invalidates the list; the deleted store's cache entry is left (a revisit refetches and shows not found). Sign-out's `queryClient.clear()` (L1) drops all of it.
+3. **Query keys.** List `['admin', 'stores']`, one store `['admin', 'stores', id]`, its pincodes `['admin', 'stores', id, 'service-areas']`. A save writes the answer into the store's key with `setQueryData`, which is also the base of the next PATCH diff. The list is not invalidated by a save (task 4b removed it): with the default `staleTime` 0 every mount of `/stores` refetches, so the invalidation changed nothing (reviewer mutation, task 2); "the stores table shows a saved change" guards it and turns red if `storesQuery` ever gets a `staleTime`, which is when an invalidation comes back. The delete's list invalidation in `$storeId.tsx` is the same no-op, left as landed (one line). A pincode save writes its key. Sign-out's `queryClient.clear()` (L1) drops all of it.
 4. **Reads in the component, no loaders.** Each page `useQuery`s what it shows, as L1 planned; L1's `throwOnError` sends a 403 to `RouteError` (not found). A 404 on the store is handled on the page (`NotFound`), other failures by an `ErrorBanner` with retry.
 5. **Rupees in, paise out.** Inputs are text with `inputMode="decimal"`; `toCents` accepts `^\d{1,7}(\.\d{1,2})?$` and rounds `Number × 100` (`199.50` → 19950, `19.99` → 1999); anything else is flagged on the field and nothing is sent. `toRupees` prints whole rupees without decimals and paise with two. Ranges (0 to 1,00,000 rupees, 1 to 240 minutes, name lengths, pincode pattern) are core's; the form maps core's `field` to its own message because core's messages speak in paise and JSON names.
 6. **PATCH carries only what changed.** `changed(body, store)` keeps the entries whose value differs from the loaded store with `!==`; nothing can be `null`. An unchanged form sends `{}` (core answers the store unchanged); not worth a disabled state. Ceiling: a name differing only by surrounding spaces is sent and core trims it back.
@@ -213,7 +213,7 @@ import { useState, type FormEvent } from 'react'
 import type { components } from '@shopperstop/ui/api'
 import { Button, ErrorBanner, FormField, Input, Select, StatusMessage } from '@shopperstop/ui'
 import { api, type ApiError } from './api'
-import { storeQuery, storesQuery, toCents, toRupees, type AdminStore } from './stores'
+import { storeQuery, toCents, toRupees, type AdminStore } from './stores'
 
 type StoreCreate = components['schemas']['StoreCreate']
 type Field = keyof StoreCreate
@@ -291,7 +291,6 @@ export function StoreForm({ store }: { store?: AdminStore }) {
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(storeQuery(saved.id).queryKey, saved)
-      void queryClient.invalidateQueries({ queryKey: storesQuery.queryKey, exact: true })
       if (!store) await navigate({ to: '/stores/$storeId', params: { storeId: saved.id } })
     },
   })
@@ -554,6 +553,8 @@ Every test file starts with L1's `afterEach(() => { clearToken(); vi.unstubAllGl
 | Stores table states › Stores load failure | `src/stores.test.tsx` › "stores load failure shows a retry that reloads" | 1 |
 | Store create › Create a store | `src/store-form.test.tsx` › "create a store and open it" | 2 |
 | Store change › Change sends only the changed fields | `src/store-form.test.tsx` › "edit sends only the changed fields and confirms" | 2 |
+| Store change › A second save sends only its own change | `src/store-form.test.tsx` › "a second save sends only its own change" | 4b |
+| Store change › Saved change shows in the table | `src/store-form.test.tsx` › "the stores table shows a saved change" | 4b |
 | Store change › Unknown store | `src/store-form.test.tsx` › "an unknown store shows not found" | 2 |
 | Store form errors › Value the form cannot send | `src/store-form.test.tsx` › "a value the form cannot send is flagged without a request" | 2 |
 | Store form errors › Field error from core | `src/store-form.test.tsx` › "a validation error from core is shown on its field" | 2 |
@@ -650,7 +651,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
-import { admin, apiError, fakeCore, json, koramangala } from './fake-core'
+import { admin, apiError, fakeCore, json, koramangala, storeList } from './fake-core'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -778,6 +779,52 @@ test('an unknown store shows not found', async () => {
   expect(router.state.location.pathname).toBe('/stores/00000000-0000-4000-8000-000000000000')
   const nav = screen.getByRole('navigation', { name: 'Admin' })
   expect(within(nav).getByRole('link', { name: 'Stores' })).toHaveAttribute('aria-current', 'page')
+})
+
+// A fake core that keeps the store: PATCH merges the body, GETs answer the current values.
+function keepsStore() {
+  let current = { ...koramangala }
+  return fakeCore({
+    ...signedIn,
+    'GET /admin/stores': () => storeList([current]),
+    [`GET ${storePath}`]: () => json(200, current),
+    [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
+    [`PATCH ${storePath}`]: async (request) => {
+      current = { ...current, ...(await request.clone().json()) }
+      return json(200, current)
+    },
+  })
+}
+
+test('a second save sends only its own change', async () => {
+  setToken('tok')
+  const calls = keepsStore()
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'closed')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await screen.findByText('Store saved.')
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(patches).toHaveLength(2)
+  expect(await patches[1].json()).toEqual({ isOpen: false })
+})
+
+test('the stores table shows a saved change', async () => {
+  setToken('tok')
+  keepsStore()
+
+  renderApp('/stores')
+  await userEvent.click(await screen.findByRole('link', { name: 'Koramangala' }))
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'Admin' })).getByRole('link', { name: 'Stores' }))
+
+  expect(await within(await screen.findByRole('table', { name: 'Stores' })).findByText('11 min')).toBeInTheDocument()
 })
 ```
 
@@ -1055,6 +1102,11 @@ test('store staff open the stores page', async ({ page }) => {
 - [Phone width: the admin nav overflowed] → measured in the spike at 375 px (axe flagged "Products" and "Staff"); fixed in `TabNav` by ui-P2-L1 (#82, horizontal scroll), so the admin shell needs no change.
 - [`ghost-danger` "Remove" and the `Badge` colours] → axe-clean in the spike at desktop width.
 - [The `fetchQuery` for the conflict's store] → reuses `storeQuery`, so a 403 or 401 there follows L1's rules; for an admin neither happens.
+
+## Accepted ceilings from review
+- `promisedMinutes` passes the form's `^\d{1,3}$`, so `0` and `999` reach core and come back as 400 `validation` field `promisedMinutes`, shown as "Enter 1 to 240 minutes." on the field. One range lives in core.
+- A failed store load on `/stores/{id}` shows only the `ErrorBanner` with "Try again", no level-1 heading (the name is what failed to load); same as L1's `RouteError` page. Ceiling: add `PageHeader title="Store"` above the banner if axe or the owner asks.
+- `pincode` is trimmed before sending and core rejects anything else, so dropping `.trim()` only moves a stray space from the form to core's 400 on the field.
 
 ## Migration Plan
 None: client pages only. Rollback is reverting the PR; the `/stores` placeholder returns.
