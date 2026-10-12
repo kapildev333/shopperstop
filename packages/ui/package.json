@@ -12,10 +12,14 @@
       "types": "./dist/testing/literal-colors.d.ts",
       "default": "./dist/testing/literal-colors.js"
     },
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./api": {
+      "types": "./src/api/core.d.ts"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "gen:api": "openapi-typescript ../../services/core/openapi.json -o src/api/core.d.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest"
@@ -40,10 +44,11 @@
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react-hooks": "7.1.1",
     "jsdom": "27.0.0",
+    "openapi-typescript": "7.13.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3",
+    "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
     "vite": "8.3.4",
     "vitest": "5.0.4"
