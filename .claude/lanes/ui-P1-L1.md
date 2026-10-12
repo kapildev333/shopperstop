@@ -11,6 +11,7 @@ Change proposed and validated (`openspec validate ui-packages-ui --strict` valid
 - Consumption contract for web/admin: `index.css` = `@import "tailwindcss"; @import "@shopperstop/ui/tokens.css";`; `@shopperstop/ui` must be built before app typecheck/test/build; matcher from `@shopperstop/ui/testing`.
 - Resolved: D10 (typescript-eslint and implied dev tooling approved), D11 (Node >= 22.12; lanes use `~/.local/node-v22.23.3/bin` on PATH), D12 (`line-strong` #868C94). Spec delta now says `line-strong` is #868C94; the contrast test also asserts line-strong on surface >= 3.
 - Task 2: `buttonVariantClass` stays exported (public, like `buttonClass`; no narrowing). `ref` is typed explicitly as a prop and `ButtonLink` destructures `children` for jsx-a11y; both accepted.
+- Task 7: confirmed, non-hex `$value` leaves (numbers, font families) are skipped (colours only; a token whose Figma value is not hex still surfaces as `missing in figma`); printed hex values are the normalised ones (upper-case, `FF` alpha dropped).
 ## Requests
 - to platform: CI and Makefile build `packages/ui` before app gates.
 - to core: `services/core/openapi.json` (unblocks the deferred `api/core.d.ts`).
