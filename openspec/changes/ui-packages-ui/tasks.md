@@ -83,8 +83,8 @@ Scenarios: Modal focus management (all three), DialogFooter puts Cancel first, S
 Failing tests: `src/dialog.test.tsx` › "dialog closes on Escape", "focus is trapped", "focus returns on close", "cancel comes first"; `src/sheet.test.tsx` › "sheet closes on Escape and on its close button", "placement classes"; `src/error-banner.test.tsx` › "error banner retries".
 Commits: `test: modal focus, dialog footer, sheet and error banner`, `feat: Dialog, DialogFooter, Sheet, ErrorBanner`.
 
-- [ ] 8.1 Tests committed red
-- [ ] 8.2 Components green; all four gates green
+- [x] 8.1 Tests committed red
+- [x] 8.2 Components green; all four gates green
 
 ## Seed scenarios (openspec/specs/design-system) and where they are tested
 - Literal colour fails the gate → task 1, `src/no-literal-colors.test.ts` and `src/testing/literal-colors.test.ts` (the apps add their own in web and admin)
