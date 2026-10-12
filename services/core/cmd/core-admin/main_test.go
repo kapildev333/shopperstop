@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
@@ -23,10 +22,48 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestCreateAdminFromStdin(t *testing.T) {
+// The argument refusals return before any config load or database call.
+func TestRunRefusesBadArguments(t *testing.T) {
+	for _, args := range [][]string{{"create-admin"}, {"bogus"}} {
+		var stderr strings.Builder
+		if code := run(args, io.Discard, &stderr); code != 2 || !strings.Contains(stderr.String(), "usage: core-admin") {
+			t.Fatalf("run %v: exit %d stderr %q, want exit 2 with the usage line", args, code, stderr.String())
+		}
+	}
+}
+
+// TestCreateAdminRefusesBadPasswordBeforeHashing: each refusal happens before
+// any hash, so nothing is stored.
+func TestCreateAdminRefusesBadPasswordBeforeHashing(t *testing.T) {
+	ctx := context.Background()
+	cases := []struct{ stdin, want string }{
+		{"", "password is required"},
+		{"\n", "password is required"},
+		{"abc\n", "password: must be 8 to 72 bytes"},
+	}
+	for _, c := range cases {
+		err := createAdmin(ctx, testPool, "short@example.com", strings.NewReader(c.stdin), io.Discard)
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Fatalf("stdin %q: got %v, want an error containing %q", c.stdin, err, c.want)
+		}
+	}
+	var n int
+	if err := testPool.QueryRow(ctx, "select count(*) from staff_users where email = 'short@example.com'").Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("rows for short@example.com: %d, want 0", n)
+	}
+}
+
+// TestCreateAdmin reads the password from stdin with a CRLF ending, creates the
+// active admin named Admin (one cost-12 hash), and refuses a second create of
+// the same email with a 409 that names the field (a second hash, then the
+// conflict), leaving one row.
+func TestCreateAdmin(t *testing.T) {
 	ctx := context.Background()
 	var out strings.Builder
-	if err := createAdmin(ctx, testPool, "root@example.com", strings.NewReader("rootpass123\n"), &out); err != nil {
+	if err := createAdmin(ctx, testPool, "root@example.com", strings.NewReader("rootpass123\r\n"), &out); err != nil {
 		t.Fatalf("createAdmin: %v", err)
 	}
 	if got := strings.TrimSpace(out.String()); got != "created admin root@example.com" {
@@ -41,27 +78,19 @@ func TestCreateAdminFromStdin(t *testing.T) {
 	if role != "admin" || name != "Admin" || !active {
 		t.Fatalf("row: role %q name %q active %v, want admin Admin true", role, name, active)
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte("rootpass123")) != nil {
-		t.Fatal("stored hash does not match the password read from stdin")
+	if !strings.HasPrefix(hash, "$2a$12$") {
+		t.Fatalf("stored hash %q is not bcrypt at cost 12", hash)
 	}
-}
 
-func TestCreateAdminEmailTaken(t *testing.T) {
-	ctx := context.Background()
-	run := func() error {
-		return createAdmin(ctx, testPool, "taken@example.com", strings.NewReader("rootpass123\n"), io.Discard)
-	}
-	if err := run(); err != nil {
-		t.Fatalf("first createAdmin: %v", err)
-	}
-	if err := run(); err == nil || !strings.Contains(err.Error(), "already registered") {
-		t.Fatalf("second createAdmin: got %v, want an error naming the taken email", err)
+	err := createAdmin(ctx, testPool, "root@example.com", strings.NewReader("rootpass123\n"), io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "email: email already registered") {
+		t.Fatalf("second createAdmin: got %v, want a 409 naming the email field", err)
 	}
 	var n int
-	if err := testPool.QueryRow(ctx, "select count(*) from staff_users where email = 'taken@example.com'").Scan(&n); err != nil {
+	if err := testPool.QueryRow(ctx, "select count(*) from staff_users where email = 'root@example.com'").Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 1 {
-		t.Fatalf("rows for taken@example.com: %d, want 1", n)
+		t.Fatalf("rows for root@example.com: %d, want 1", n)
 	}
 }

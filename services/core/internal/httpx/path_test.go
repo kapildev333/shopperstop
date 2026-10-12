@@ -62,3 +62,20 @@ func TestPathIDAcceptsCanonical(t *testing.T) {
 		}
 	}
 }
+
+func TestIsUUID(t *testing.T) {
+	for id, want := range map[string]bool{
+		"00000000-0000-4000-8000-000000000301":  true,
+		"0000ABCD-0000-4000-8000-000000000301":  true,
+		"0000abcd-0000-4000-8000-000000000301":  true,
+		"00000000-0000-4000-8000-00000000000":   false,
+		"00000000000040008000000000000301":      false,
+		"00000000-0000-4000-8000-0000000003010": false,
+		"abc":                                   false,
+		"":                                      false,
+	} {
+		if got := IsUUID(id); got != want {
+			t.Fatalf("IsUUID(%q) = %v, want %v", id, got, want)
+		}
+	}
+}

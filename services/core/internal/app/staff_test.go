@@ -225,8 +225,10 @@ func TestStoreStaffForbiddenOnStaffUsers(t *testing.T) {
 	}
 }
 
-// TestCreateStoreStaffUser is the one route test that pays cost 12 twice: the
-// create hashes the password and the sign-in checks it.
+// TestCreateStoreStaffUser creates a store-staff user through the router, signs
+// in with the password it was given, then resets that user's password: the old
+// one fails and the new one works. Cost 12 is paid for the create hash, the
+// sign-in, the reset hash, the refused old sign-in and the new sign-in.
 func TestCreateStoreStaffUser(t *testing.T) {
 	seedStaff(t)
 	admin := staffSignIn(t, adminStaffEmail)
@@ -243,6 +245,21 @@ func TestCreateStoreStaffUser(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("sign-in of the created user: got %d %s, want 200", status, body)
 	}
+
+	t.Run("password reset", func(t *testing.T) {
+		status, body := call(t, http.MethodPatch, staffUsersPath+"/"+got.ID, admin, map[string]string{"password": "newpass123"})
+		if status != http.StatusOK {
+			t.Fatalf("password reset: got %d %s, want 200", status, body)
+		}
+		status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+			map[string]string{"email": email, "password": "staff12345"})
+		assertStaffRefused(t, "old password after reset", status, body)
+		status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+			map[string]string{"email": email, "password": "newpass123"})
+		if status != http.StatusOK {
+			t.Fatalf("new password after reset: got %d %s, want 200", status, body)
+		}
+	})
 }
 
 func TestCreateStaffUnknownRole(t *testing.T) {
@@ -286,22 +303,44 @@ func TestCreateStaffTakenEmail(t *testing.T) {
 	}
 }
 
-// TestStaffPasswordReset patches a password, so the new hash costs 12 once.
-func TestStaffPasswordReset(t *testing.T) {
-	email := insertStaff(t, "store_staff", true)
+// TestPatchStaffUserRules uses cheap fixtures: every refusal happens before any hash.
+func TestPatchStaffUserRules(t *testing.T) {
+	seedStaff(t)
 	admin := staffSignIn(t, adminStaffEmail)
-	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), admin,
-		map[string]string{"password": "newpass123"})
-	if status != http.StatusOK {
-		t.Fatalf("password reset: got %d %s, want 200", status, body)
+	target := insertStaff(t, "store_staff", true)
+	path := staffUsersPath + "/" + staffID(t, target)
+	for _, c := range []struct {
+		name  string
+		body  any
+		field string
+	}{
+		{"null name", map[string]any{"name": nil}, "name"},
+		{"short password", map[string]string{"password": "short"}, "password"},
+		{"empty name", map[string]string{"name": ""}, "name"},
+	} {
+		status, body := call(t, http.MethodPatch, path, admin, c.body)
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
+			t.Fatalf("%s: got %d %s, want 400 validation field %s", c.name, status, body, c.field)
+		}
 	}
-	status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
-		map[string]string{"email": email, "password": testPassword})
-	assertStaffRefused(t, "old password after reset", status, body)
-	status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
-		map[string]string{"email": email, "password": "newpass123"})
-	if status != http.StatusOK {
-		t.Fatalf("new password after reset: got %d %s, want 200", status, body)
+	// role is not a patch member: it is ignored and the role does not change.
+	status, body := call(t, http.MethodPatch, path, admin, map[string]string{"role": "admin"})
+	if got := staffUserBody(t, body); status != http.StatusOK || got.Role != "store_staff" {
+		t.Fatalf("role in a patch: got %d %s, want 200 with role store_staff", status, body)
+	}
+}
+
+// TestAdminDeactivatesSelf: an admin may deactivate their own account, and the
+// session that did it then answers 401.
+func TestAdminDeactivatesSelf(t *testing.T) {
+	email := insertStaff(t, "admin", true)
+	token := staffSignIn(t, email)
+	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), token, map[string]bool{"isActive": false})
+	if got := staffUserBody(t, body); status != http.StatusOK || got.IsActive {
+		t.Fatalf("self-deactivation: got %d %s, want 200 with isActive false", status, body)
+	}
+	if status, body := call(t, http.MethodGet, "/api/core/v1/admin/me", token, nil); status != http.StatusUnauthorized {
+		t.Fatalf("own session after self-deactivation: got %d %s, want 401", status, body)
 	}
 }
 
@@ -349,6 +388,25 @@ func TestListStaff(t *testing.T) {
 	if list.Page != 1 || list.PageSize != 2 || list.Total != total || len(list.Items) != 2 {
 		t.Fatalf("list %s: want page 1, pageSize 2, total %d, two items", body, total)
 	}
+	// An admin has no storeId member in the list either.
+	var raw struct {
+		Items []map[string]json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatal(err)
+	}
+	adminFound := false
+	for _, item := range raw.Items {
+		if string(item["email"]) == `"`+adminStaffEmail+`"` {
+			adminFound = true
+			if _, ok := item["storeId"]; ok {
+				t.Fatalf("admin list item %s carries storeId", body)
+			}
+		}
+	}
+	if !adminFound {
+		t.Fatalf("admin %s is not on the first page: %s", adminStaffEmail, body)
+	}
 	// The expected order comes from the database, which compares citext emails.
 	rows, err := testPool.Query(context.Background(), "select email from staff_users order by email limit 2")
 	if err != nil {
@@ -383,25 +441,23 @@ func TestStaffSignOutEndsOnlyThatSession(t *testing.T) {
 	}
 }
 
-// TestSharedLimiterCountsStaffAndCustomer uses a limit of 3 per email. The
-// customer and staff routes share one limiter, so the 4th attempt across both is 429.
+// TestSharedLimiterCountsStaffAndCustomer uses a limit of 1 per email. The
+// customer and staff routes share one limiter, so the second attempt across
+// both is 429 and the staff route pays no compare.
 func TestSharedLimiterCountsStaffAndCustomer(t *testing.T) {
 	email := uniqueEmail(t)
-	a := auth.New(testPool, testPepper, auth.NewLimiter(3, 100, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1, 100, time.Hour, time.Now))
 	limited := httptest.NewServer(New(testPool, nil, a))
 	t.Cleanup(limited.Close)
-	attempts := []string{"/api/core/v1/auth/sign-in", "/api/core/v1/admin/auth/sign-in", "/api/core/v1/auth/sign-in"}
-	for i, path := range attempts {
-		status, body := callAt(t, limited.URL, http.MethodPost, path, "",
-			map[string]string{"email": email, "password": "wrong-password"})
-		if status != http.StatusUnauthorized {
-			t.Fatalf("attempt %d on %s: got %d %s, want 401", i+1, path, status, body)
-		}
+	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/sign-in", "",
+		map[string]string{"email": email, "password": "wrong-password"})
+	if status != http.StatusUnauthorized {
+		t.Fatalf("customer sign-in: got %d %s, want 401", status, body)
 	}
-	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+	status, body = callAt(t, limited.URL, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
 		map[string]string{"email": email, "password": "wrong-password"})
 	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
-		t.Fatalf("fourth attempt across both routes: got %d %s, want 429 rate_limited", status, body)
+		t.Fatalf("staff sign-in after one customer attempt: got %d %s, want 429 rate_limited", status, body)
 	}
 }
 
