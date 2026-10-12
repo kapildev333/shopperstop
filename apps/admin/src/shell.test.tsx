@@ -147,4 +147,5 @@ test('sign out ends the session', async () => {
   expect(getToken()).toBeNull()
   expect(localStorage.getItem('shopperstop:staff-token')).toBeNull()
   expect(screen.queryByRole('navigation', { name: 'Admin' })).not.toBeInTheDocument()
+  expect(router.options.context.queryClient.getQueryCache().getAll()).toEqual([])
 })

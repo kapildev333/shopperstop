@@ -115,10 +115,10 @@ test('success stores the token and returns to the redirect', async () => {
   expect(within(nav).getByRole('link', { name: 'Stock' })).toHaveAttribute('aria-current', 'page')
 })
 
-test('an outside redirect is ignored', async () => {
+test.each([['%2F%2Fevil.example'], ['%2F%5Cevil.example']])('an outside redirect is ignored: %s', async (redirect) => {
   fakeCore({ 'POST /admin/auth/sign-in': () => json(200, session) })
 
-  const router = renderApp('/sign-in?redirect=%2F%2Fevil.example')
+  const router = renderApp(`/sign-in?redirect=${redirect}`)
   await fillAndSubmit('admin@example.test', 'secret-test')
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument()
