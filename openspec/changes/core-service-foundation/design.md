@@ -7,7 +7,7 @@ Greenfield module; see proposal.md for why. Behaviour comes from the seeded `pla
 
 **Goals:** every scenario in the seeded `platform` spec and in this change's delta has a Go test; Phase 2 lanes get a router to mount on, a migration runner, a per-package test schema and a shared test server.
 
-**Non-Goals:** `internal/pg`, rate limiting, auth, `FILES_DIR`, `seed-demo`, `create-admin`, `sqlc.yaml`, Makefile targets, CI, Postman.
+**Non-Goals:** `internal/pg`, rate limiting, auth, `FILES_DIR`, demo data, `create-admin`, `sqlc.yaml`, Makefile targets, CI, Postman.
 
 ## Files (all inside `services/core/`)
 
@@ -17,7 +17,7 @@ openapi.json                         OpenAPI 3.1, servers [{url: /api/core/v1}],
 migrations/migrations.go             package migrations; //go:embed *.sql; var FS embed.FS
 migrations/0001_init.sql             baseline: a comment and `select 1;` (embed needs at least one file)
 cmd/core/main.go, main_test.go       run: config, logger, pool, router, serve; serve() tested
-cmd/core-admin/main.go               `core-admin migrate`; no test (wiring only, see Decisions)
+cmd/core-admin/main.go               `core-admin migrate | seed-demo [--reset]`; no test (wiring only, see Decisions)
 internal/config/config.go, config_test.go
 internal/httpx/errors.go, json.go, router.go, cors.go, json_test.go, router_test.go
 internal/migrate/migrate.go, migrate_test.go
@@ -82,7 +82,7 @@ func serve(ctx context.Context, srv *http.Server, ln net.Listener, grace time.Du
 13. **Contract test** (`contract_test.go`, package `app`): `contractProblems(routes chi.Routes, doc []byte) []string` collects `METHOD /api/core/v1<path>` from `doc.paths` (methods get, post, put, patch, delete) and from `chi.Walk`, reports each pair present on one side only, and each operation missing `summary`, `description`, a tag or a response example (`example` or non-empty `examples` on any response content). `TestContract` runs it on `New(pool, nil)` and `../../openapi.json` and fails listing every problem; two more tests feed it a toy router and a toy document to pin the scenarios. Ceiling: route patterns with chi regex (`{id:[0-9]+}`) would not match OpenAPI paths; convention is plain `{id}`.
 14. **Shared test server:** `app_test.go` TestMain opens `testdb.Open("app")`, builds `New(pool, []string{"http://localhost:5173"})`, starts `httptest.NewServer`, exposes it as package var `srv`; Phase 2 route tests reuse it.
 15. **Graceful shutdown in `serve`.** `serve` runs `srv.Serve(ln)` in a goroutine; on `ctx.Done()` it calls `srv.Shutdown` with a `grace` timeout and returns its error (`http.ErrServerClosed` from Serve is not an error). `main` uses `signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)`, `net.Listen("tcp", cfg.Addr)`, grace 10 s, then `pool.Close()`; a non-nil result logs and exits 1. The test drives `serve` by cancelling the context while a handler is blocked, which is what the signal does.
-16. **core-admin** parses `os.Args`: `migrate` loads `config.Load(os.Getenv)`, opens the pool, runs `migrate.Apply(ctx, pool, migrations.FS)`, prints each applied version (or `nothing to apply`); any other argument prints usage to stderr and exits 2. Simplification: migrate requires the full core env, not just the database URL; ceiling is an operator having to set a pepper to migrate, split when a deploy migrates from a job without app secrets. No test: it is argument wiring; `Apply` carries the behaviour and the manager runs `core-admin migrate` against the real database at verification.
+16. **core-admin** parses `os.Args`: `migrate` loads `config.Load(os.Getenv)`, opens the pool, runs `migrate.Apply(ctx, pool, migrations.FS)`, prints each applied version (or `nothing to apply`). `seed-demo` accepts an optional `--reset` (any other extra argument is a usage error), prints `seed-demo: no demo data yet` and exits 0; it loads no config and opens no pool, Phase 2 fills it in. Any other subcommand prints usage to stderr and exits 2. The Makefile (platform D13) runs `migrate`, then `seed-demo --reset`, then `cmd/core`. Simplification: migrate requires the full core env, not just the database URL; ceiling is an operator having to set a pepper to migrate, split when a deploy migrates from a job without app secrets. No test: it is argument wiring; `Apply` carries the behaviour and the manager runs `core-admin migrate` against the real database at verification.
 
 ## Test strategy
 One test per scenario, named in tasks.md. Packages `config`, `httpx` and `cmd/core` need no database; `migrate` and `app` open `testdb` in TestMain and fail when Postgres is unreachable. Every test runs under `go test -race ./...` from `services/core`. The `readyz` down case uses a `net.Listener` on `127.0.0.1:0` that accepts and never answers, so the 2-second timeout is exercised for real (the test takes about 2 s).
