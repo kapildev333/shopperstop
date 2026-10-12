@@ -15,6 +15,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D6 | OpenSpec is the only spec tool: `openspec/specs/` is normative, every feature is a change under `openspec/changes/<area>-<slug>/`, project rules in `openspec/config.yaml`; `docs/specs/` and `docs/plans/` are frozen after the two founding briefs and the Phase 1 plan. CLI is `openspec` via a `~/.local/bin` shim over `npx -y @fission-ai/openspec@latest` (global install needs root); initialised 2026-10-12 with the full workflow profile | Agreed (owner, 2026-10-12) |
 | D7 | PRD approved by the owner with every default: repo `kapildev333/shopperstop` private, module path `github.com/kapildev333/shopperstop/`; INR and Bengaluru demo pincodes; Figma file in the owner's Drafts; customers cancel only while placed or accepted; customer-facing stock capped at 10 as "10+ left"; store staff see the customer's phone; organisation by area (D5); OpenSpec only (D6). PRD: https://claude.ai/code/artifact/732c8ed8-6aa6-41d7-b4f6-df411135a0ea | Agreed (owner, 2026-10-12) |
 | D8 | Guardrails are hooks, not prose: `.claude/settings.json` denies docker compose and container commands in every session; the three lane agents carry hooks that deny push, pull, merge, fetch and `gh pr`, and edits to PLAN.md or an area plan (`.claude/hooks/guard.sh`). Marketplace plugins (code-review, commit-commands, feature-dev, frontend-design, output styles) are not adopted: they overlap or conflict with the lanes, OpenSpec and the PR rules | Orchestrator 2026-10-12 |
+| D9 | The owner runs the orchestrator and the platform manager in one Fable session (`/loop 10min /manage Platform /orchestrate`); orchestrator work (root checkout, PLAN.md, `make db`, repo) and platform-manager work (worktrees, lanes, PRs) keep their own rules inside it | Agreed (owner, 2026-10-12) |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -27,16 +28,16 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Areas
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
-| platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | |
-| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | |
-| ui | `packages/ui/` | platform (`package.json` workspaces) | |
+| platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | running (orchestrator session, D9) |
+| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | session ended 2026-10-12 before starting; restart with `/manage core` once platform-P1-L4 lands |
+| ui | `packages/ui/` | platform (`package.json` workspaces) | session ended 2026-10-12 before starting; Task 1 is on main, restart with `/manage ui` |
 | web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | |
 | admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | |
 
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
 |------|-----------|--------|
-| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | task 2 done 2026-10-12 (orchestrator, before the GitHub repo exists) |
+| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | tasks 1 and 2 done 2026-10-12 (orchestrator; repo created private, origin/main pushed); 3 (platform-P1-L3) and 4 (platform-P1-L4) proposed, awaiting the owner's go on the workers; `openspec/config.yaml` fix landed as #1 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | waits on platform task 4 |
 | ui | 9 packages/ui | waits on platform task 1 |
 | web | 10 apps/web | waits on ui task 9 |
@@ -51,3 +52,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: orchestration files written in the main session; owner changed the organisation to areas with Fable managers (D5).
 - 2026-10-12: PRD written and approved (D7); guardrail hooks added (D8). Phase 1 may start.
 - 2026-10-12: OpenSpec initialised (`openspec/`, `/opsx:*` commands and skills); owner made it the only spec tool (D6). Plan Task 3 shrinks to seeding `openspec/specs/platform` and `design-system`.
+- 2026-10-12: repo `kapildev333/shopperstop` created private, Task 1 pushed as origin/main. Docker Desktop started by the orchestrator. The core and ui manager sessions ended before starting any lane; both restart once their dependencies are on main. Orchestrator and platform manager share one session (D9).
