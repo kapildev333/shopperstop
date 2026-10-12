@@ -140,3 +140,24 @@ test('merge bodies in guest order', () => {
   ])
   expect(mergeBodies(emptyCart)).toEqual([])
 })
+
+test('free delivery at exactly the threshold', () => {
+  const fees = { deliveryFeeCents: 2500, freeDeliveryAboveCents: 19900, minOrderCents: 9900 }
+  const hamper = p({ id: 'p-hamper', name: 'Festive Hamper', priceCents: 19900 })
+  const one = set(emptyCart, storeA, hamper, 1)
+  expect(cartView(one, fees)).toMatchObject({
+    subtotalCents: 19900,
+    deliveryFeeCents: 0,
+    totalCents: 19900,
+    shortfallCents: 0,
+  })
+})
+
+test('non-numeric quantity is treated as zero', () => {
+  const taaza = p()
+  const butter = p({ id: 'p-butter', name: 'Amul Butter', priceCents: 5600 })
+  const cart = set(emptyCart, storeA, taaza, 2)
+  expect(set(cart, storeA, taaza, Number.NaN)).toEqual(emptyCart)
+  expect(set(cart, storeA, butter, Number.NaN)).toBe(cart)
+  expect(set(emptyCart, storeA, butter, Number.NaN)).toBe(emptyCart)
+})
