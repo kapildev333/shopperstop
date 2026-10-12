@@ -53,8 +53,8 @@ Scenarios: Card surface, Table stack mode (both), Feedback states › "Skeleton 
 Failing tests: `src/card.test.tsx` › "card classes"; `src/table.test.tsx` › "rows and headers render", "stack labels cells"; `src/skeleton.test.tsx` › "skeleton count".
 Commits: `test: card, table stack mode and skeleton`, `feat: Card, Table, Skeleton`.
 
-- [ ] 5.1 Tests committed red
-- [ ] 5.2 Components green; all four gates green
+- [x] 5.1 Tests committed red
+- [x] 5.2 Components green; all four gates green
 
 ## 6. EmptyState, StatusMessage, PageHeader, TabNav
 
