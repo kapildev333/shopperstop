@@ -12,10 +12,14 @@
       "types": "./dist/testing/literal-colors.d.ts",
       "default": "./dist/testing/literal-colors.js"
     },
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./api": {
+      "types": "./src/api/core.d.ts"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "gen:api": "openapi-typescript ../../services/core/openapi.json -o src/api/core.d.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest"
