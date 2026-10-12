@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -14,15 +15,24 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
 
-// srv is the shared test server every route test in this package uses.
-var srv *httptest.Server
+const testPepper = "test-pepper-test-pepper-test-pepper-00"
+
+// srv is the shared test server every route test in this package uses. Its
+// limiter is too large to trip, so only the rate-limit test sees a 429.
+var (
+	srv      *httptest.Server
+	testPool *pgxpool.Pool
+)
 
 func TestMain(m *testing.M) {
-	pool, cleanup := testdb.Open("app")
-	srv = httptest.NewServer(New(pool, []string{"http://localhost:5173"}))
+	var cleanup func()
+	testPool, cleanup = testdb.Migrated("app")
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
+	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a))
 	code := m.Run()
 	srv.Close()
 	cleanup()
@@ -41,6 +51,64 @@ func get(t *testing.T, base, path string) (int, string) {
 		t.Fatal(err)
 	}
 	return resp.StatusCode, strings.TrimSpace(string(body))
+}
+
+// callAt sends one request to base and returns its status and body. A nil
+// body sends none; any other body is marshalled as JSON.
+func callAt(t *testing.T, base, method, path, token string, body any) (int, []byte) {
+	t.Helper()
+	var r io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r = bytes.NewReader(b)
+	}
+	req, err := http.NewRequest(method, base+path, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out
+}
+
+// call is callAt against the shared server.
+func call(t *testing.T, method, path, token string, body any) (int, []byte) {
+	t.Helper()
+	return callAt(t, srv.URL, method, path, token, body)
+}
+
+// envelope is the error envelope every failure answers with.
+type envelope struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Field   string `json:"field"`
+	} `json:"error"`
+}
+
+func decodeError(t *testing.T, body []byte) envelope {
+	t.Helper()
+	var e envelope
+	if err := json.Unmarshal(body, &e); err != nil {
+		t.Fatalf("body %s is not the error envelope: %v", body, err)
+	}
+	return e
 }
 
 func TestHealthz(t *testing.T) {
@@ -88,7 +156,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil)))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.
