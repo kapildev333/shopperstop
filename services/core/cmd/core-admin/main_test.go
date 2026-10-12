@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
@@ -81,6 +82,9 @@ func TestCreateAdmin(t *testing.T) {
 	}
 	if !strings.HasPrefix(hash, "$2a$12$") {
 		t.Fatalf("stored hash %q is not bcrypt at cost 12", hash)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte("rootpass123")); err != nil {
+		t.Fatalf("stored hash does not match the stdin password: %v", err)
 	}
 
 	err := createAdmin(ctx, testPool, "root@example.com", strings.NewReader("rootpass123\n"), io.Discard)
