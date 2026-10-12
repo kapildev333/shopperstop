@@ -73,8 +73,8 @@ Scenarios: Figma token check (all three).
 Failing tests: `scripts/check-figma-tokens.test.ts` › "matching export", "drifted export", "usage error".
 Commits: `test: figma token check against fixtures`, `feat: check-figma-tokens script`.
 
-- [ ] 7.1 Fixtures and tests committed red
-- [ ] 7.2 Script green; all four gates green
+- [x] 7.1 Fixtures and tests committed red
+- [x] 7.2 Script green; all four gates green
 
 ## 8. Dialog, Sheet, ErrorBanner (after task 2 landed)
 
