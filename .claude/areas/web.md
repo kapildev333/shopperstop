@@ -3,7 +3,7 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-No web lane running; e2e ports free. Next: web-P2-L1 (serviceability, catalog) when core-P2-L2 and L4 are on main; web-P2-L3 (cart) when L4 is on main.
+web-P2-L1 task 1 worker running in `.worktrees/web-P2-L1` and RUNNING THE WEB E2E SUITE on 18080/15173 (admin: ask before yours); web-P2-L3 (cart) team lead proposing.
 
 ## Lanes
 | Lane | Task | Scope | Status |
