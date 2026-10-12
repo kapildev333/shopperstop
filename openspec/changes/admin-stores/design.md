@@ -555,6 +555,7 @@ Every test file starts with L1's `afterEach(() => { clearToken(); vi.unstubAllGl
 | Store change › Change sends only the changed fields | `src/store-form.test.tsx` › "edit sends only the changed fields and confirms" | 2 |
 | Store change › A second save sends only its own change | `src/store-form.test.tsx` › "a second save sends only its own change" | 4b |
 | Store change › Saved change shows in the table | `src/store-form.test.tsx` › "the stores table shows a saved change" | 4b |
+| (task 4 review guards, folded into existing tests) | `src/service-areas.test.tsx` › "the store page lists its pincodes" (remove then re-add: note gone, Save disabled), "add and remove pincodes, then save the list with one PUT" (list equals the saved answer), "a pincode served by another store names that store" (next edit clears the alert) | 4b |
 | Store change › Unknown store | `src/store-form.test.tsx` › "an unknown store shows not found" | 2 |
 | Store form errors › Value the form cannot send | `src/store-form.test.tsx` › "a value the form cannot send is flagged without a request" | 2 |
 | Store form errors › Field error from core | `src/store-form.test.tsx` › "a validation error from core is shown on its field" | 2 |
@@ -932,6 +933,15 @@ test('the store page lists its pincodes', async () => {
   await waitFor(() => expect(listed()).toEqual(['560034', '560095']))
   expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeDisabled()
   expect(screen.queryByText('Unsaved changes.')).not.toBeInTheDocument()
+
+  // The note and the button follow the difference from the saved list, not the fact of an edit.
+  await userEvent.click(screen.getByRole('button', { name: 'Remove 560095' }))
+  expect(screen.getByText('Unsaved changes.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeEnabled()
+  await addPincode('560095')
+  expect(listed()).toEqual(['560034', '560095'])
+  expect(screen.queryByText('Unsaved changes.')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeDisabled()
 })
 
 test('add and remove pincodes, then save the list with one PUT', async () => {
@@ -951,6 +961,7 @@ test('add and remove pincodes, then save the list with one PUT', async () => {
   const puts = calls.filter((call) => call.method === 'PUT')
   expect(puts).toHaveLength(1)
   expect(await puts[0].json()).toEqual({ pincodes: ['560034', '560047'] })
+  expect(listed()).toEqual(['560034', '560047'])
 })
 
 test('a pincode that is not 6 digits is not added', async () => {
@@ -981,6 +992,10 @@ test('a pincode served by another store names that store', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Pincode 560038 is served by Indiranagar.')
   expect(screen.getByText('Unsaved changes.')).toBeInTheDocument()
+
+  // The next edit clears the alert.
+  await userEvent.click(screen.getByRole('button', { name: 'Remove 560038' }))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
 test('the conflict shows the store id when its name cannot be read', async () => {
@@ -1106,6 +1121,7 @@ test('store staff open the stores page', async ({ page }) => {
 ## Accepted ceilings from review
 - `promisedMinutes` passes the form's `^\d{1,3}$`, so `0` and `999` reach core and come back as 400 `validation` field `promisedMinutes`, shown as "Enter 1 to 240 minutes." on the field. One range lives in core.
 - A failed store load on `/stores/{id}` shows only the `ErrorBanner` with "Try again", no level-1 heading (the name is what failed to load); same as L1's `RouteError` page. Ceiling: add `PageHeader title="Store"` above the banner if axe or the owner asks.
+- The pincode editor's "Enter a 6-digit pincode." stays under "Add pincode" while a corrected value is typed, until the next "Add". Cosmetic; ceiling: clear `entryError` in the field's `onChange` if asked.
 - `pincode` is trimmed before sending and core rejects anything else, so dropping `.trim()` only moves a stray space from the form to core's 400 on the field.
 
 ## Migration Plan
