@@ -10,7 +10,7 @@ Scope: `apps/web/src/guest-cart.ts`, `src/guest-cart.test.ts`, `src/test-setup.t
 Scenarios: Customer guest cart lines › all three; Customer guest cart storage › both; Customer cart totals › "Guest totals follow the store's fees"; Customer cart merge at sign-in › "Merge bodies in guest order".
 Failing tests: `src/guest-cart.test.ts` › "guest line set and removed", "guest line clamped", "another store replaces the guest cart", "guest cart persisted and restored", "guest cart with blocked storage", "guest totals follow the store's fees", "merge bodies in guest order".
 
-- [ ] 1.1 Tests committed red (`test: guest cart reducer, storage and totals`)
+- [x] 1.1 Tests committed red (`test: guest cart reducer, storage and totals`)
 - [ ] 1.2 `guest-cart.ts` and the `test-setup.ts` line (`feat: guest cart model`); lint, typecheck, Vitest, build green
 
 ## 2. Server cart, the cart hook and the merge at sign-in
