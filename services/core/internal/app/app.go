@@ -13,6 +13,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
+	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
 // New returns the core router. Routes are registered with their full path
@@ -21,6 +22,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/core/v1/healthz", healthz)
 	r.Get("/api/core/v1/readyz", readyz(pool))
+	r.Get("/api/core/v1/serviceability", store.Serviceability(pool))
+	r.Get("/api/core/v1/stores/{id}", store.PublicGet(pool))
 	r.Post("/api/core/v1/auth/register", a.Register)
 	r.Post("/api/core/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireCustomer).Post("/api/core/v1/auth/sign-out", a.SignOut)
@@ -36,6 +39,13 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/staff-users", a.ListStaff)
 	r.With(a.RequireAdmin).Post("/api/core/v1/admin/staff-users", a.CreateStaffUser)
 	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/staff-users/{id}", a.UpdateStaffUser)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores", store.List(pool))
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/stores", store.Create(pool))
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}", store.AdminGet(pool))
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/stores/{id}", store.Update(pool))
+	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/stores/{id}", store.Delete(pool))
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}/service-areas", store.ServiceAreas(pool))
+	r.With(a.RequireAdmin).Put("/api/core/v1/admin/stores/{id}/service-areas", store.ReplaceServiceAreas(pool))
 	return r
 }
 

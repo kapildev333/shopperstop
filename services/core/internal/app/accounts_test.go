@@ -499,6 +499,13 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, "/api/core/v1/admin/staff-users", nil, http.StatusOK},
 		{http.MethodPost, "/api/core/v1/admin/staff-users", map[string]string{}, http.StatusBadRequest},
 		{http.MethodPatch, "/api/core/v1/admin/staff-users/00000000-0000-4000-8000-0000000001ff", map[string]string{}, http.StatusNotFound},
+		{http.MethodGet, "/api/core/v1/admin/stores", nil, http.StatusOK},
+		{http.MethodPost, "/api/core/v1/admin/stores", map[string]string{}, http.StatusBadRequest},
+		{http.MethodGet, "/api/core/v1/admin/stores/" + zeroID, nil, http.StatusNotFound},
+		{http.MethodPatch, "/api/core/v1/admin/stores/" + zeroID, map[string]string{}, http.StatusNotFound},
+		{http.MethodDelete, "/api/core/v1/admin/stores/" + zeroID, nil, http.StatusNotFound},
+		{http.MethodGet, "/api/core/v1/admin/stores/" + zeroID + "/service-areas", nil, http.StatusNotFound},
+		{http.MethodPut, "/api/core/v1/admin/stores/" + zeroID + "/service-areas", map[string]any{"pincodes": []string{}}, http.StatusNotFound},
 	}
 	for _, g := range adminGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
