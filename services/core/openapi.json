@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ShopperStop core API",
-    "version": "0.1.0",
-    "description": "The core service: catalogue, carts, orders and accounts for the ShopperStop storefront and admin panel. Every error is the envelope {\"error\": {code, message, field?}}."
+    "version": "0.2.0",
+    "description": "The core service: catalogue, carts, orders and accounts for the ShopperStop storefront and admin panel. Every error is the envelope {\"error\": {code, message, field?}}. Routes that need a signed-in customer take Authorization: Bearer <token>, the token that sign-in or register returned."
   },
   "servers": [
     {
@@ -14,6 +14,10 @@
     {
       "name": "platform",
       "description": "Service health: liveness and readiness."
+    },
+    {
+      "name": "accounts",
+      "description": "Customer sign-up, sign-in, sign-out and profile."
     }
   ],
   "paths": {
@@ -78,9 +82,358 @@
           }
         }
       }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "postAuthRegister",
+        "summary": "Register a customer",
+        "description": "Creates a customer and a session, and answers with the token and the customer. The email is unique without regard to case; the password is 8 to 72 bytes and is stored as a bcrypt hash of cost 12. Every attempt counts against its email and its client IP: the eleventh attempt for one email within an hour, or the hundred and first from one IP, answers 429.",
+        "tags": ["accounts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "email": "new@example.com",
+                "password": "password123",
+                "name": "Asha"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The customer is registered and signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerSession"
+                },
+                "example": {
+                  "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                  "customer": {
+                    "id": "6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13",
+                    "email": "new@example.com",
+                    "name": "Asha"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is missing or invalid. The field names the JSON member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be 8 to 72 bytes",
+                    "field": "password"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The email is already registered, in any case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "email already registered",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this email or from this IP within the hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "operationId": "postAuthSignIn",
+        "summary": "Sign in a customer",
+        "description": "Creates a new session and answers with its token and the customer. Other sessions of the customer stay signed in. A wrong password and an unknown email answer the same 401. Shares the registration rate limit: attempts count per email and per client IP.",
+        "tags": ["accounts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              },
+              "example": {
+                "email": "demo@shopperstop.local",
+                "password": "demo12345"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The customer is signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerSession"
+                },
+                "example": {
+                  "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                  "customer": {
+                    "id": "00000000-0000-4000-8000-000000000201",
+                    "email": "demo@shopperstop.local",
+                    "name": "Demo Customer",
+                    "phone": "+919800000000"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email is not an email address, or the password is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The email is unknown or the password is wrong. The two cases look the same.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "wrong email or password"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this email or from this IP within the hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "postAuthSignOut",
+        "summary": "Sign out",
+        "description": "Ends the session of the bearer token and nothing else: the customer's other sessions stay signed in.",
+        "tags": ["accounts"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The session is ended. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Get the signed-in customer",
+        "description": "Answers the customer the bearer token belongs to. A customer session slides: each use after an hour moves its expiry 30 days on.",
+        "tags": ["accounts"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signed-in customer. phone is omitted when it is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000201",
+                  "email": "demo@shopperstop.local",
+                  "name": "Demo Customer",
+                  "phone": "+919800000000"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchMe",
+        "summary": "Change the signed-in customer's name or phone",
+        "description": "Changes only the fields present. An empty phone clears it, and a cleared phone is omitted from responses. A null value is refused with 400 naming the field; an empty object changes nothing.",
+        "tags": ["accounts"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerPatch"
+              },
+              "example": {
+                "name": "Asha R",
+                "phone": "+919800000001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated customer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000201",
+                  "email": "demo@shopperstop.local",
+                  "name": "Asha R",
+                  "phone": "+919800000001"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid, or a member is null. The field names the member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be empty or 10 to 15 digits, optionally after +",
+                    "field": "phone"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The token that register or sign-in returned, sent as Authorization: Bearer <token>."
+      }
+    },
     "schemas": {
       "Status": {
         "type": "object",
@@ -89,6 +442,98 @@
           "status": {
             "type": "string",
             "enum": ["ok"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Customer": {
+        "type": "object",
+        "required": ["id", "email", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Omitted when the customer has no phone."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerSession": {
+        "type": "object",
+        "required": ["token", "customer"],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Bearer token for the customer routes. Shown once; the server keeps only a hash."
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password", "name"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "One email address, unique without regard to case."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "8 to 72 bytes. Not trimmed."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "1 to 100 characters after trimming."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerPatch": {
+        "type": "object",
+        "description": "Every member is optional; a member that is present must not be null.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^(\\+?[0-9]{10,15})?$",
+            "description": "Empty clears the phone; otherwise an optional + and 10 to 15 digits."
           }
         },
         "additionalProperties": false
