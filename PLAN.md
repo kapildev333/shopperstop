@@ -29,6 +29,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D20 | `seed-demo` uses fixed, documented ids for the demo stores, products, addresses and orders, so `docs/postman/local.postman_environment.json` ships `storeId`, `productId`, `addressId`, `orderId` and the collection runs top to bottom against `make dev` (Spec 1 §11). Phase 2 core contract: `components.securitySchemes.bearer`, `security` on every authenticated operation, staff routes under `/admin/`, sign-in and register examples carry a string `token` | Orchestrator 2026-10-12 |
 | D21 | No web manager session was started; the orchestrator session runs the `web` area's lanes itself (acting web manager) so Phase 1 can close, with the same team-lead, worker, reviewer and PR rules. A `/manage web` session may take over any time by reading `.claude/areas/web.md` | Orchestrator 2026-10-12 under D13 |
 | D22 | `core-admin seed-demo --reset` grows with each core Phase 2 lane and stays idempotent: L1 seeds the demo admin and customer (fixed ids), L2 the two stores and the store-staff users, L3 categories and products with images, L4 stock, L5 the three past orders, L6 completes and documents the fixed ids. App e2e suites run `migrate` then `seed-demo --reset` on `shopperstop_core_e2e` in their global setup | Orchestrator 2026-10-12 |
+| D23 | D19 extends to `docs/postman/shopperstop-core.postman_collection.json`: a core lane that changes `openapi.json` runs `make gen postman` and commits the regenerated collection in the same PR as a mechanical change (CI requires a clean tree after `make gen postman`). The Postman folders test derives its expectations from the contract's tags. sqlc is pinned to v1.31.1 in CI | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -64,7 +65,6 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 
 ## Backlog
 - Makefile: `make dev` runs `npm ci` when `node_modules` is absent (L11 request).
-- Pin sqlc when `services/core/sqlc.yaml` lands (L9).
 - Lane guard hook: match `git merge` on a word boundary so `merge-base` is allowed to reviewers.
 - Figma: Orders board column badges show counts; IconButton icons; Code Connect (next MCP call budget).
 - Running `make db` from a second checkout (different compose file path) recreates `shopperstop-postgres-1`; the data volume persists. Use one checkout for `make db`.
@@ -93,3 +93,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-12: admin shell landed (#41). D21: orchestrator runs the web lanes. CI still blocked by billing (latest runs start no steps).
 - 2026-10-12: web shell landed (#50). Phase 1 closed: `make test`, `make e2e`, `openspec validate --all --strict`, `make postman` clean on main, `make dev` on a fresh clone reached core, web and admin; tagged v0.1.0 with release notes. CI remains blocked by billing.
 - 2026-10-12: Phase 2 started: core-P2-L1, admin-P2-L1 and web-P2-L2 team leads proposing; D22 incremental seed.
+- 2026-10-12: core-accounts-auth proposed, worker 1 running; platform unblocked its final gate (#58: Postman folders test by tags, sqlc pin); D23.
