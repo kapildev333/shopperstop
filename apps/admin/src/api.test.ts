@@ -32,12 +32,37 @@ test('401 with a session clears it and reports the loss', async () => {
   expect(lost).toHaveBeenCalledOnce()
 })
 
-test('401 without a session reports nothing', async () => {
+test('a 401 to a signed-out request keeps a session set meanwhile', async () => {
   const lost = vi.fn()
   onUnauthorized(lost)
-  fakeCore({ 'POST /admin/auth/sign-in': () => apiError(401, 'unauthorized') })
+  const calls = fakeCore({
+    'POST /admin/auth/sign-in': () => {
+      setToken('fresh')
+      return apiError(401, 'unauthorized')
+    },
+  })
 
   await api.POST('/admin/auth/sign-in', { body: { email: 'admin@example.test', password: 'wrong' } })
 
+  expect(calls[0].headers.has('Authorization')).toBe(false)
+  expect(getToken()).toBe('fresh')
+  expect(lost).not.toHaveBeenCalled()
+})
+
+test('a 401 to a replaced token keeps the new session', async () => {
+  setToken('old')
+  const lost = vi.fn()
+  onUnauthorized(lost)
+  fakeCore({
+    'GET /admin/me': () => {
+      setToken('new')
+      return apiError(401, 'unauthorized')
+    },
+  })
+
+  await api.GET('/admin/me')
+
+  expect(getToken()).toBe('new')
+  expect(localStorage.getItem('shopperstop:staff-token')).toBe('new')
   expect(lost).not.toHaveBeenCalled()
 })
