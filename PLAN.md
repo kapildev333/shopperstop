@@ -50,7 +50,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
 |------|-----------|--------|
-| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done; 3 done #3 (archived #5); 4 done #4 (archived #6); 12 done #36 (platform-P1-L8, archived #38); 13 done #15 (CI gate open until Actions billing is fixed); 15 in review fixes (platform-P1-L11); docs/figma.md done #25 |
+| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | all done: 1, 2 (orchestrator); 3 #3; 4 #4; 12 #36; 13 #15 (CI gate open until Actions billing is fixed, change `platform-ci-makefile` stays unarchived until then); 15 #42; docs/figma.md #25 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
 | ui | 9 packages/ui | done #20 (ui-P1-L1) and #33 (ui-P1-L2 api types, archived #34) |
 | web | 10 apps/web | waits on ui task 9 |
@@ -80,3 +80,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: core tasks 5 to 8 done (#23); `make test` on main green across core and ui (orchestrator); D18, D19 recorded; ui-P1-L2 (api types) running.
 - 2026-10-12: D20; admin-P1-L1 approved; e2e guard chore (#29) so admin's suite runs without web; platform-P1-L8 (Postman) and platform-P1-L11 (README, CLAUDE.md) workers running.
 - 2026-10-12: Postman generator landed (#36) and archived (#38); ui api types landed (#33); README and CLAUDE.md in review fixes.
+- 2026-10-12: README and CLAUDE.md landed (#42, archived #43). Platform Phase 1 complete except the first green CI run. Phase 1 close waits on apps/admin (lane running) and apps/web (no manager yet).
