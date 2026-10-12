@@ -112,13 +112,20 @@ func TestContract(t *testing.T) {
 }
 
 // toyDoc is one documented operation with summary, description, tag and example.
-const toyDoc = `{"openapi":"3.1.0","paths":{"/extra":{"get":{
+const toyDoc = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
   "summary":"s","description":"d","tags":["platform"],
   "responses":{"200":{"description":"ok","content":{"application/json":{"example":{"ok":true}}}}}}}}}`
 
-const toyDocNoExample = `{"openapi":"3.1.0","paths":{"/extra":{"get":{
+const toyDocNoExample = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
   "summary":"s","description":"d","tags":["platform"],
   "responses":{"200":{"description":"ok"}}}}}}`
+
+// toyDocMissing503Example documents a 200 example but no example on the 503.
+const toyDocMissing503Example = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
+  "summary":"s","description":"d","tags":["platform"],
+  "responses":{
+    "200":{"description":"ok","content":{"application/json":{"example":{"ok":true}}}},
+    "503":{"description":"down","content":{"application/json":{"schema":{"type":"object"}}}}}}}}}`
 
 func toyRouter() chi.Router {
 	r := chi.NewRouter()
@@ -127,7 +134,7 @@ func toyRouter() chi.Router {
 }
 
 func TestContractNamesUndocumentedRoute(t *testing.T) {
-	problems := contractProblems(toyRouter(), []byte(`{"openapi":"3.1.0","paths":{}}`))
+	problems := contractProblems(toyRouter(), []byte(`{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{}}`))
 	if !containsProblem(problems, "GET /api/core/v1/extra") {
 		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
 	}
@@ -154,4 +161,24 @@ func containsProblem(problems []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// TestContractUsesServersURL joins paths with servers[0].url, not a fixed prefix.
+func TestContractUsesServersURL(t *testing.T) {
+	r := chi.NewRouter()
+	r.Get("/api/other/v1/extra", http.NotFound)
+	doc := `{"openapi":"3.1.0","servers":[{"url":"/api/other/v1"}],"paths":{"/extra":{"get":{
+  "summary":"s","description":"d","tags":["platform"],
+  "responses":{"200":{"description":"ok","content":{"application/json":{"example":{"ok":true}}}}}}}}}`
+	if problems := contractProblems(r, []byte(doc)); len(problems) > 0 {
+		t.Fatalf("want no problems with servers /api/other/v1, got %q", problems)
+	}
+}
+
+// TestContractNamesMissing503Example: every response that declares content needs an example.
+func TestContractNamesMissing503Example(t *testing.T) {
+	problems := contractProblems(toyRouter(), []byte(toyDocMissing503Example))
+	if !containsProblem(problems, "GET /api/core/v1/extra") || !containsProblem(problems, "503") {
+		t.Fatalf("want a problem naming GET /api/core/v1/extra and response 503, got %q", problems)
+	}
 }

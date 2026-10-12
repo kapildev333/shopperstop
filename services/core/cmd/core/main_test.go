@@ -76,3 +76,11 @@ func TestServeDrainsInFlightRequest(t *testing.T) {
 		t.Fatal("serve did not return")
 	}
 }
+
+// TestServerReadHeaderTimeout bounds a client that trickles request headers,
+// so it cannot hold a graceful shutdown for the whole grace period.
+func TestServerReadHeaderTimeout(t *testing.T) {
+	if got := newHTTPServer(http.NotFoundHandler()).ReadHeaderTimeout; got != 5*time.Second {
+		t.Fatalf("ReadHeaderTimeout = %v, want 5s", got)
+	}
+}

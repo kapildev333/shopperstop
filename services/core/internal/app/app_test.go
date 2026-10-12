@@ -90,6 +90,11 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 	down := httptest.NewServer(New(pool, nil))
 	t.Cleanup(down.Close)
 
+	// healthz never touches the database, so it answers 200 with the pool down.
+	if status, body := get(t, down.URL, "/api/core/v1/healthz"); status != http.StatusOK || body != `{"status":"ok"}` {
+		t.Fatalf("healthz with database down: got %d %s, want 200 {\"status\":\"ok\"}", status, body)
+	}
+
 	start := time.Now()
 	status, body := get(t, down.URL, "/api/core/v1/readyz")
 	elapsed := time.Since(start)
