@@ -69,7 +69,7 @@ gen:
 	else echo "gen: packages/ui absent, skipping"; fi
 
 postman:
-	@if test -f scripts/postman.mjs; then npm run postman; \
+	@if test -f scripts/postman.mjs; then npm run postman && node --test scripts/postman.test.mjs; \
 	else echo "postman: scripts/postman.mjs absent, skipping"; fi
 
 prod-local:
