@@ -1,5 +1,6 @@
-// Package blob stores uploaded and demo files under keys such as
-// "products/<name>.png". Disk is the only implementation; S3 comes later.
+// Package blob stores uploaded and demo files under keys of the form
+// "<kind>/<name>", such as "products/<id>.png". Disk is the only
+// implementation; S3 comes later.
 package blob
 
 import (
@@ -8,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -19,12 +21,13 @@ type Store interface {
 	Open(ctx context.Context, key string) (io.ReadSeekCloser, time.Time, error)
 }
 
-// Disk keeps each key as the file Dir/<key>.
+// Disk keeps each key as the file Dir/<kind>/<name>.
 type Disk struct{ Dir string }
 
 // Put writes data to the key's file. It writes a temp file in the same
-// directory and renames it over the target, so a reader never sees half a
-// file and a re-upload replaces the old bytes in one step.
+// directory, makes it world-readable, and renames it over the target, so a
+// reader never sees half a file and a re-upload replaces the old bytes in one
+// step.
 // ponytail: whole file in memory; the 5 MiB upload cap is the ceiling.
 func (d Disk) Put(_ context.Context, key string, data []byte) error {
 	path, err := d.path(key)
@@ -40,6 +43,11 @@ func (d Disk) Put(_ context.Context, key string, data []byte) error {
 	}
 	defer os.Remove(tmp.Name()) // no-op once the rename has moved it
 	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return fmt.Errorf("blob put %s: %w", key, err)
+	}
+	// CreateTemp makes 0600; the web server reads these files.
+	if err := tmp.Chmod(0o644); err != nil {
 		tmp.Close()
 		return fmt.Errorf("blob put %s: %w", key, err)
 	}
@@ -70,10 +78,17 @@ func (d Disk) Open(_ context.Context, key string) (io.ReadSeekCloser, time.Time,
 	return f, info.ModTime(), nil
 }
 
-// path maps a key to a file under Dir and refuses keys that escape it.
+// path maps a key of exactly the form <kind>/<name> to a file under Dir.
+// Each part is one plain path element: no separators of either kind, no
+// leading dot (so no "." or ".."), and neither part empty.
 func (d Disk) path(key string) (string, error) {
-	if !filepath.IsLocal(filepath.FromSlash(key)) {
-		return "", fmt.Errorf("blob key %q is not a local path", key)
+	kind, name, ok := strings.Cut(key, "/")
+	if !ok || !plainElement(kind) || !plainElement(name) || !filepath.IsLocal(filepath.FromSlash(key)) {
+		return "", fmt.Errorf("blob key %q is not <kind>/<name>", key)
 	}
-	return filepath.Join(d.Dir, filepath.FromSlash(key)), nil
+	return filepath.Join(d.Dir, kind, name), nil
+}
+
+func plainElement(s string) bool {
+	return s != "" && !strings.HasPrefix(s, ".") && !strings.ContainsAny(s, `/\`)
 }
