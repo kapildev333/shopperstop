@@ -27,3 +27,6 @@ Nothing running. Phase 1 ui work is complete (ui-P1-L1, ui-P1-L2). No `make e2e`
 ## Backlog
 - Add `--text-*: initial` to the theme if default Tailwind font sizes leak into the apps.
 - Phase 2: new components only through a ui change with a test and a Figma component (CLAUDE.md); nothing queued.
+
+## Phase 2 work package (orchestrator, 2026-10-12)
+Spec: Spec 1 §8, §10; Spec 2 §7, §8 (what the pages need). No scheduled lane: `packages/ui/src/api/core.d.ts` is regenerated inside each core PR (D19), and the Phase 1 component set covers the Spec 2 screens drawn in Figma. The ui manager stays on the loop and opens a lane only on a request under `## Requests` in `.claude/areas/web.md` or `admin.md`: a new pattern an app needs (it goes into `packages/ui` with a test and a Figma component, never as a one-off in an app), a token or component fix from an axe finding, or a change to `Price`/`formatInr`, `Stepper`, `Sheet` or `Table` behaviour. Before any design PR, run `scripts/check-figma-tokens.mjs` against a Figma variables export (Color, Light).
