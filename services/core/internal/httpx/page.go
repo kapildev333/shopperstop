@@ -26,7 +26,8 @@ func NewList[T any](items []T, page, pageSize int, total int64) List[T] {
 
 // Page reads page (default 1, at least 1) and pageSize (default 24, 1 to 100)
 // from the query string. A value that is not a whole number, or is out of
-// range, is 400 validation naming the parameter in Field.
+// range, is 400 validation naming the parameter in Field. A page whose offset
+// (page-1)*pageSize would exceed MaxInt32 is 400 validation on page, "too large".
 func Page(r *http.Request) (page, pageSize int, err error) {
 	q := r.URL.Query()
 	if page, err = intParam(q, "page", 1); err != nil {
@@ -40,6 +41,8 @@ func Page(r *http.Request) (page, pageSize int, err error) {
 		return 0, 0, badParam("page", "must be at least 1")
 	case pageSize < 1 || pageSize > 100:
 		return 0, 0, badParam("pageSize", "must be from 1 to 100")
+	case page-1 > math.MaxInt32/pageSize: // (page-1)*pageSize > MaxInt32, without overflow
+		return 0, 0, badParam("page", "too large")
 	}
 	return page, pageSize, nil
 }

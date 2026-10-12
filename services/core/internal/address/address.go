@@ -6,7 +6,6 @@ package address
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
 	"regexp"
 	"strings"
@@ -123,17 +122,15 @@ func List(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, pg.Map(err))
 			return
 		}
+		// httpx.Page bounds (page-1)*pageSize to int32, so the casts are safe.
+		rows, err := q.ListAddresses(ctx, db.ListAddressesParams{CustomerID: customer, Limit: int32(size), Offset: int32((page - 1) * size)})
+		if err != nil {
+			httpx.WriteError(w, r, pg.Map(err))
+			return
+		}
 		var items []Address
-		// An offset past int32 has no rows; the int32 cast must not wrap.
-		if offset := (page - 1) * size; offset <= math.MaxInt32 {
-			rows, err := q.ListAddresses(ctx, db.ListAddressesParams{CustomerID: customer, Limit: int32(size), Offset: int32(offset)})
-			if err != nil {
-				httpx.WriteError(w, r, pg.Map(err))
-				return
-			}
-			for _, row := range rows {
-				items = append(items, Address(row))
-			}
+		for _, row := range rows {
+			items = append(items, Address(row))
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.NewList(items, page, size, total))
 	}
