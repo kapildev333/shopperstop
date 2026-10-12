@@ -24,8 +24,10 @@ api.use({
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
     return request
   },
-  onResponse({ response }) {
-    if (response.status === 401 && getToken()) {
+  onResponse({ request, response }) {
+    // Only a 401 to the current token ends the session: not one to a signed-out request or to a token since replaced.
+    const token = getToken()
+    if (response.status === 401 && token && request.headers.get('Authorization') === `Bearer ${token}`) {
       clearToken()
       unauthorized()
     }
