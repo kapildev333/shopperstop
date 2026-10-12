@@ -3,16 +3,21 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-Nothing running. Phase 1 admin work is complete (admin-P1-L1, #41); Phase 2 (Spec 2 §8) starts when the orchestrator writes the work package. No `make e2e` here.
+admin-P2-L1: change `admin-auth-nav` proposed and validated, four worker briefs ready; blocked until core-P2-L1 (`core-accounts-auth`) is on main, then task 0 (recheck assumptions against `core.d.ts`) and workers. No `make e2e` here.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
+| admin-P2-L1 | `admin-auth-nav`: sign-in, session, role nav, protected routes, sign-out | `apps/admin/`, `openspec/changes/admin-auth-nav/` | team lead done 2026-10-12 (0f8f39f): admin-app deltas 4 MODIFIED + 7 ADDED, 33 scenarios, `openspec validate --all --strict` 6 passed, scratch build 28 Vitest + Playwright/axe green; 4 sequential tasks; blocked on core-P2-L1 |
 | admin-P1-L1 | Task 11 `apps/admin` shell (`@shopperstop/admin`) | `apps/admin/`, `openspec/changes/admin-apps-admin/` | done 2026-10-12: PR #41 merged (squash 1e4e08f); reviewer approve with nits (addressed), team-lead acceptance pass; manager verified `make test`, `make e2e` (3 passed), `make postman` clean, openspec valid, real core + preview over HTTP and Chrome; archive PR chore/admin-archive-admin-apps-admin |
 ## Requests
+- to core (core-P2-L1): keep schema names `Staff` and `StaffSession`; `GET /admin/me` returns the Staff object unwrapped (`id`, `email`, `name`, `role`, `isActive`, `storeId` omitted for admins); sign-in 200 `{token, staff}`; inactive staff 401 `unauthorized`; sign-out 204.
+- to web (information): relative `baseUrl` fails under Vitest/jsdom; use `${location.origin}/api/core/v1` and `fetch: (r) => globalThis.fetch(r)`. Admin sign-in page contract for web-P2-L5's cross-app e2e: labels "Email"/"Password", buttons "Sign in"/"Sign out", `redirect` query.
 - to platform: e2e guard for `apps/admin` and `admin-app` capability landed in #30; README names the admin dev URL `http://localhost:5174/admin/` (with platform-P1-L11).
 - to web (information): `TabNav` on `bg-brand` fails axe `color-contrast`; put the nav on a `surface` strip and keep only `on-brand` text on the brand band. `ink-muted` on `canvas` is 4.47:1, so `PageHeader`/`EmptyState` descriptions sit on a `Card` or are omitted.
 ## Found
+- admin-P2-L1 pins (D10 tooling per the package): `openapi-fetch` 0.17.0, `@tanstack/react-query` 5.104.2, dev `@testing-library/user-event` 14.6.7. Capability stays `admin-app` (no separate `admin-auth`). Ceilings: `GET /admin/me` cached per page load; no client-side 12-hour timer (next 401 ends the session); admin-only rule is a route folder.
+- Core rate limit (10 sign-ins per email per hour per process) caps local admin e2e runs against one reused core; restart core to clear.
 - Decisions taken by the orchestrator for admin (D13): `@vitejs/plugin-react` 6.1.2 is D10 implied tooling; TypeScript pinned 5.9.3 per D18 ahead of ui's follow-up; `@tanstack/react-router` 1.170.42, `@tanstack/router-plugin` 1.168.43, `@tailwindcss/vite` 4.3.3, `@playwright/test` 1.64.0, `@axe-core/playwright` 4.13.0 recorded as in-stack.
 - The app is served under `/admin/` (Vite `base`, router `basepath`) to match `deploy/Caddyfile`; dev `http://localhost:5174/admin/`, preview `http://localhost:15174/admin/`.
 - Playwright 1.64.0 needs Chromium 1248; installed in the user cache on this machine.
