@@ -1,0 +1,16 @@
+{
+  "name": "shopperstop",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "engines": { "node": ">=22.11.0" },
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present -- --run",
+    "build": "npm run build --workspace packages/ui && npm run build --workspace apps/web && npm run build --workspace apps/admin",
+    "postman": "node scripts/postman.mjs"
+  },
+  "devDependencies": {
+    "openapi-to-postmanv2": "6.4.0"
+  }
+}
