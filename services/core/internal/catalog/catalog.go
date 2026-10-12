@@ -51,12 +51,36 @@ type CategoryTree struct {
 	Items []CategoryNode `json:"items"`
 }
 
+// Product is a product as the admin routes show it. Description and Brand are
+// omitted when empty, ImageURL when there is no image.
+type Product struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Description string `json:"description,omitempty"`
+	Brand       string `json:"brand,omitempty"`
+	UnitLabel   string `json:"unitLabel"`
+	MrpCents    int64  `json:"mrpCents"`
+	PriceCents  int64  `json:"priceCents"`
+	CategoryID  string `json:"categoryId"`
+	IsActive    bool   `json:"isActive"`
+	ImageURL    string `json:"imageUrl,omitempty"`
+}
+
 // imageURL is the path the file route serves key at; "" when there is no image.
 func imageURL(key string) string {
 	if key == "" {
 		return ""
 	}
 	return "/api/core/v1/files/" + key
+}
+
+func toProduct(p db.Product) Product {
+	return Product{
+		ID: p.ID, Name: p.Name, Slug: p.Slug, Description: p.Description, Brand: p.Brand,
+		UnitLabel: p.UnitLabel, MrpCents: p.MrpCents, PriceCents: p.PriceCents,
+		CategoryID: p.CategoryID, IsActive: p.IsActive, ImageURL: imageURL(p.ImageKey),
+	}
 }
 
 func toCategory(c db.Category) Category {
@@ -91,11 +115,19 @@ func tree(rows []db.Category) []CategoryNode {
 }
 
 // mapErr turns a write's database error into the API error. The category
-// parent foreign key gets its own message; everything else is pg.Map's.
+// parent and product category foreign keys, and the product price checks, get
+// their own messages; everything else is pg.Map's.
 func mapErr(err error) error {
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "categories_parent_id_fkey" {
-		return invalid("parentId", "unknown category")
+	if errors.As(err, &pgErr) {
+		switch {
+		case pgErr.Code == "23503" && pgErr.ConstraintName == "categories_parent_id_fkey":
+			return invalid("parentId", "unknown category")
+		case pgErr.Code == "23503" && pgErr.ConstraintName == "products_category_id_fkey":
+			return invalid("categoryId", "unknown category")
+		case pgErr.Code == "23514":
+			return invalid("priceCents", "must be between 1 and mrpCents")
+		}
 	}
 	return pg.Map(err)
 }

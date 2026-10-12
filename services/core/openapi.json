@@ -1753,6 +1753,604 @@
           }
         }
       }
+    },
+    "/admin/products": {
+      "get": {
+        "operationId": "getAdminProducts",
+        "summary": "List products",
+        "description": "Admins only. The paged list of active and inactive products ordered by name, filtered by q, categoryId (with its children) and isActive. total counts every match, not just this page. A bad q, categoryId or isActive answers 400 naming the field. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "example": "banana"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "That category and its children.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "required": false,
+            "description": "true or false: only active or only inactive products. Absent lists both.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "example": "true"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "slug": "banana-robusta",
+                      "description": "Ripe robusta bananas, sold by the kilogram.",
+                      "unitLabel": "1 kg",
+                      "mrpCents": 6000,
+                      "priceCents": 5500,
+                      "categoryId": "00000000-0000-4000-8000-000000000521",
+                      "isActive": true
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A filter or page parameter is invalid. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be true or false",
+                    "field": "isActive"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAdminProduct",
+        "summary": "Create a product",
+        "description": "Admins only. Creates an active product unless isActive is false. The slug is derived from the name; a clash gets a short suffix. priceCents must be from 1 to mrpCents. An unknown categoryId answers 400 naming it. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreate"
+              },
+              "example": {
+                "name": "Banana Robusta",
+                "categoryId": "00000000-0000-4000-8000-000000000521",
+                "unitLabel": "1 kg",
+                "mrpCents": 6000,
+                "priceCents": 5500,
+                "description": "Ripe robusta bananas, sold by the kilogram."
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new product, with its server-made slug and isActive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. The field names it; a price outside 1 to mrpCents names priceCents.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between 1 and mrpCents",
+                    "field": "priceCents"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Two attempts at a unique slug clashed; retry the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "already exists"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products/{id}": {
+      "get": {
+        "operationId": "getAdminProduct",
+        "summary": "Read a product",
+        "description": "Admins only. The product with this id, active or not. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchAdminProduct",
+        "summary": "Change a product",
+        "description": "Admins only. Changes each member that is present; the slug never changes. Only an empty brand or description clears it. The price rule holds after every patch, including one that changes only mrpCents or priceCents; a violation answers 400 naming priceCents and leaves the product unchanged. A null value is refused with 400 naming the field. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPatch"
+              },
+              "example": {
+                "priceCents": 4500,
+                "isActive": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 4500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid or null, or the price rule fails. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between 1 and mrpCents",
+                    "field": "priceCents"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminProduct",
+        "summary": "Delete a product",
+        "description": "Admins only. Deletes a product no order line refers to. A product that an order refers to answers 409 and stays: set isActive to false instead. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The product is deleted."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An order line refers to the product; it is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "product was ordered; set isActive to false instead"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2204,8 +2802,7 @@
           "type": "string",
           "description": "Path of the category image. Omitted until one is uploaded."
         }
-      },
-      "additionalProperties": false
+      }
     },
     "CategoryNode": {
       "description": "A parent category with its children.",
@@ -2283,6 +2880,211 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 9999
+        }
+      }
+    },
+    "Product": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "unitLabel",
+        "mrpCents",
+        "priceCents",
+        "categoryId",
+        "isActive"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "slug": {
+          "type": "string",
+          "description": "Derived from the name on create, never changed."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Omitted when empty."
+        },
+        "brand": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Omitted when empty."
+        },
+        "unitLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "mrpCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "maximum": 100000000,
+          "description": "Maximum retail price in paise."
+        },
+        "priceCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "description": "Selling price in paise: at least 1 and at most mrpCents."
+        },
+        "categoryId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Inactive products stay in the admin list."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Path of the product image. Omitted until one is uploaded."
+        }
+      }
+    },
+    "ProductList": {
+      "type": "object",
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/Product"
+          }
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Every product that matches the filters, not just this page."
+        }
+      }
+    },
+    "ProductCreate": {
+      "type": "object",
+      "required": [
+        "name",
+        "categoryId",
+        "unitLabel",
+        "mrpCents",
+        "priceCents"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Trimmed; 1 to 100 characters. The slug is derived from it."
+        },
+        "categoryId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "A category: a parent or a child."
+        },
+        "unitLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Trimmed; for example 1 kg or 500 ml."
+        },
+        "mrpCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "maximum": 100000000,
+          "description": "Maximum retail price in paise."
+        },
+        "priceCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "description": "At least 1 and at most mrpCents."
+        },
+        "brand": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Optional; trimmed."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Optional; trimmed."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Defaults to true."
+        }
+      }
+    },
+    "ProductPatch": {
+      "type": "object",
+      "description": "Every member is optional; a member that is present must not be null. An empty brand or description clears it.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Trimmed; 1 to 100 characters. The slug is derived from it."
+        },
+        "categoryId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "A category: a parent or a child."
+        },
+        "unitLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Trimmed; for example 1 kg or 500 ml."
+        },
+        "mrpCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "maximum": 100000000,
+          "description": "Maximum retail price in paise."
+        },
+        "priceCents": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "description": "At least 1 and at most mrpCents."
+        },
+        "brand": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Optional; trimmed. An empty string clears it."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Optional; trimmed. An empty string clears it."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Defaults to true."
         }
       }
     }

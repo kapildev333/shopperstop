@@ -44,6 +44,11 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireAdmin).Post("/api/core/v1/admin/categories", c.CreateCategory)
 	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/categories/{id}", c.UpdateCategory)
 	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/categories/{id}", c.DeleteCategory)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/products", c.ListProducts)
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/products", c.CreateProduct)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/products/{id}", c.GetProduct)
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/products/{id}", c.UpdateProduct)
+	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/products/{id}", c.DeleteProduct)
 	return r
 }
 
