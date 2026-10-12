@@ -3,6 +3,7 @@ import { Outlet, createLink, createRootRoute } from '@tanstack/react-router'
 import { Button, ButtonLink, Card, EmptyState, PageHeader } from '@shopperstop/ui'
 import { MapPin } from 'lucide-react'
 import { queryClient } from '../api'
+import { AccountLink } from '../account-link'
 
 const RouterButtonLink = createLink(ButtonLink)
 
@@ -11,10 +12,13 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <header className="flex items-center justify-between gap-4 bg-brand px-4 py-3 sm:px-6">
         <div className="text-h2 text-on-brand">ShopperStop</div>
-        <Button variant="secondary">
-          <MapPin size={16} aria-hidden />
-          Enter pincode
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary">
+            <MapPin size={16} aria-hidden />
+            Enter pincode
+          </Button>
+          <AccountLink />
+        </div>
       </header>
       <main className="px-4 py-6 sm:px-6">
         <Outlet />

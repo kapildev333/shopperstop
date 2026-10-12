@@ -42,3 +42,9 @@ export function signIn(body: { email: string; password: string }) {
 export function register(body: { name: string; email: string; password: string }) {
   return openSession(() => api.POST('/auth/register', { body }))
 }
+
+export async function signOut() {
+  await call(() => api.POST('/auth/sign-out'))
+  setToken(undefined)
+  queryClient.clear()
+}

@@ -30,7 +30,7 @@ Scenarios: Customer header account control › "Signed-out header", "Signed-in h
 Failing tests: `src/account.test.tsx` › "signed-out header", "signed-out account redirect"; `src/address-dialog.test.tsx` › "address dialog checks fields", "address dialog shows envelope field error", "edit dialog prefilled"; `e2e/account.spec.ts` › "sign in returns to where the customer was", "profile saved", "addresses and default", "sign out".
 
 - [x] 3.1 Tests committed red (`test: account, addresses and header`)
-- [ ] 3.2 `account-link.tsx`, banner edit, `address-dialog.tsx`, `routes/account.tsx`, `signOut` (`feat: account page, addresses and header sign-in`); all gates green, e2e green, `shell.test.tsx` and `smoke.spec.ts` unchanged and green
+- [x] 3.2 `account-link.tsx`, banner edit, `address-dialog.tsx`, `routes/account.tsx`, `signOut` (`feat: account page, addresses and header sign-in`); all gates green, e2e green, `shell.test.tsx` and `smoke.spec.ts` unchanged and green
 
 ## Workflow follow-up
 - Team lead runs `/opsx:verify web-accounts` after 3.2 lands.
