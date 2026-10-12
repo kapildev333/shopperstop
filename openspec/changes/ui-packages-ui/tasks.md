@@ -23,8 +23,8 @@ Scenarios: Button variants and loading (all three), ButtonLink looks like a Butt
 Failing tests: `src/button.test.tsx` › "default type is button", "loading blocks clicks", "primary uses the accent", "link keeps href and button style"; `src/icon-button.test.tsx` › "name comes from aria-label", "missing label does not compile".
 Commits: `test: button variants, loading and icon button name`, `feat: Button, ButtonLink, IconButton`.
 
-- [ ] 2.1 Tests committed red
-- [ ] 2.2 Components green; all four gates green
+- [x] 2.1 Tests committed red
+- [x] 2.2 Components green; all four gates green
 
 ## 3. Input, FormField, Select
 
