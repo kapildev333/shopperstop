@@ -1,7 +1,7 @@
 # admin-P2-L1 - admin sign-in, session, role-based nav (OpenSpec change admin-auth-nav)
-Status: started
+Status: done
 ## Doing
-Tasks 0 to 3 landed (task 3 at 9769814). Task 4 (review follow-ups, then the e2e) is briefed in tasks.md; its e2e needs the slot.
+Acceptance passed 2026-10-12 on dfdcb38 (`/opsx:verify admin-auth-nav`). Ready for the PR.
 ## Found
 - Capability: `admin-app` only (4 MODIFIED, 7 ADDED requirements). No `admin-auth` capability: `admin-staff` and `accounts` are core's HTTP capabilities (core-P2-L1), and the client side of one flow belongs to the app.
 - Spike 2026-10-12 (scratchpad copy of 5101344, Node 22.23.3, staff routes added to a scratch `openapi.json` as assumed): workspace install clean; lint, typecheck, Vitest 5 files / 28 tests, `vite build` with `routeTree.gen.ts` stable; Playwright + axe on a scratch preview port (25174, not 15174/18080): sign-in, error banner, Dashboard, not-found signed out, store-staff not-found on `/stores`, reload restores the session, `/admin/stock` round trip through sign-in, sign-out: all clean.
@@ -22,6 +22,15 @@ Tasks 0 to 3 landed (task 3 at 9769814). Task 4 (review follow-ups, then the e2e
   - The task 3 worker's validation fallback is accepted (field error only for `email`/`password`, banner otherwise); design.md's sign-in block is now the landed file plus the `safeRedirect` change.
   - The ceilings are noted in design.md: the retry and 403 pages are a dead end without Sign out; the Sign out button's contrast is checked by task 4's axe; the sign-out-answered-401 path gets a look in the manager's Chrome walk-through.
   - All of this is folded into task 4 (4.1 to 4.3 unit, 4.4 to 4.5 e2e). Expected: Vitest 31, e2e 4.
+
+- Acceptance (`/opsx:verify admin-auth-nav`, team lead, 2026-10-12, on dfdcb38 rebased onto origin/main): pass.
+  - Tasks 0.1 to 4.5 (17 boxes) are ticked and true. Commit order: test before feat or fix in every task; `refactor:` 562dab4 lands with the suite green.
+  - Every scenario in the delta (4 MODIFIED and 7 ADDED requirements, 37 scenarios) maps to a named passing test, per design.md "Tests". Two "sign-in page shows" checks assert the router path `/sign-in` plus the `redirect` search instead of the heading; the e2e checks the heading.
+  - Team-lead re-run (unit only; the orchestrator held the e2e ports): ui build, lint, typecheck, Vitest `Test Files 5 passed (5)` / `Tests 31 passed (31)` with all 31 names as briefed, `vite build`, `git status` clean (no `routeTree.gen.ts` drift), `openspec validate --all --strict` `Totals: 8 passed, 0 failed`.
+  - e2e evidence is the manager's `make e2e` on dfdcb38: admin 4 passed (auth "admin signs in, reloads and signs out", "wrong password shows the error"; smoke "not found passes axe", "preview proxies to core").
+  - 4.4's red was not reproducible because the e2e database was already seeded (recorded in the T4 log); accepted, as `globalSetup` is present and runs core's seed command.
+  - Diff origin/main..HEAD: `apps/admin/**`, `openspec/changes/admin-auth-nav/**`, lane logs admin-P2-L1 and -T1 to -T4, `package-lock.json` (additions only: `openapi-fetch`, `openapi-typescript-helpers`, `@tanstack/react-query`, `@tanstack/query-core`, and the `user-event` entry for apps/admin). Nothing extra.
+- Deferred, for the PR: the retry and 403 pages have no Sign out or nav (no `_staff` match); no client-side 12 h timer (the next 401 ends the session); store-staff and wrong-role e2e wait for core-P2-L2's seeded store staff; the sign-out-answered-401 path is unit-tested only for 204 (manager's Chrome walk-through); `/sign-in` stays reachable when already signed in; `GET /admin/me` is cached per page load (role changes show on reload or the next 401); the placeholder pages are a `PageHeader` until L2 to L6; a reused local core on 18080 can hit the 10-per-email-per-hour sign-in limit after about ten runs.
 
 ## Requests
 - to web (information, via the admin area plan): `createClient({ baseUrl: '/api/core/v1' })` throws `TypeError: Failed to parse URL` in Vitest/jsdom on the first real call through the client (middleware-only tests do not hit it); `${location.origin}/api/core/v1` plus `fetch: (r) => globalThis.fetch(r)` fixes it and stays same-origin in the browser.
