@@ -68,7 +68,7 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 ## Backlog
 - Makefile: `make dev` runs `npm ci` when `node_modules` is absent (L11 request).
 - Lane guard hook: match `git merge` on a word boundary so `merge-base` is allowed to reviewers.
-- Figma: Orders board column badges show counts; IconButton icons; Code Connect (next MCP call budget).
+- Figma (next MCP call budget): Orders board column badges show counts; IconButton icons; TabNav component note "scrolls horizontally, never wraps" (ui-P2-L1, #82); Code Connect.
 - Running `make db` from a second checkout (different compose file path) recreates `shopperstop-postgres-1`; the data volume persists. Use one checkout for `make db`.
 
 ## Blockers needing the owner
@@ -100,3 +100,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-12: core-P2-L1 merged (#63, archived #64): auth, accounts, addresses, staff users, bearer security; admin-P2-L1 workers started; web-P2-L2 T2 running. Postman env ids: all four shipped (#78).
 - 2026-10-12: web-P2-L2 customer accounts merged (#68, archived #69); admin-P2-L1 at its walk-through and PR; core L2 and L3 building. web-P2-L1 (browsing) team lead proposing against core L2 and L4 designs.
 - 2026-10-12: core-P2-L2 merged (#76, archived #77); admin-P2-L1 merged (#71); web-P2-L2 merged (#68); web-P2-L1 task 1 and admin-stores started; D25.
+- 2026-10-12: ui-P2-L1 TabNav scroll fix (#82) from admin's axe finding; web-P2-L1 task 1 (pincode, store gate) and web-P2-L3 task 1 (guest cart model) landed and reviewed on their branches; admin-P2-L2 building; core L3 at its last task, L4 next.
