@@ -50,9 +50,9 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
 |------|-----------|--------|
-| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (archived #5); 4 done #4 (archived #6); 13 done #15 (platform-P1-L9; CI gate open until Actions billing is fixed); 12 waits on core task 8; 15 waits on 13 and 14 |
+| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done; 3 done #3 (archived #5); 4 done #4 (archived #6); 12 done #36 (platform-P1-L8, archived #38); 13 done #15 (CI gate open until Actions billing is fixed); 15 in review fixes (platform-P1-L11); docs/figma.md done #25 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
-| ui | 9 packages/ui | done #20 (ui-P1-L1); `api/core.d.ts` follows core's openapi.json |
+| ui | 9 packages/ui | done #20 (ui-P1-L1) and #33 (ui-P1-L2 api types, archived #34) |
 | web | 10 apps/web | waits on ui task 9 |
 | admin | 11 apps/admin | admin-P1-L1 change `admin-apps-admin` seen, worker running (served under `/admin/`, dev 5174, preview 15174) |
 | orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#25) |
@@ -79,3 +79,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: Figma file built (Task 14, D17); packages/ui landed (#20); web manager still to be started by the owner.
 - 2026-10-12: core tasks 5 to 8 done (#23); `make test` on main green across core and ui (orchestrator); D18, D19 recorded; ui-P1-L2 (api types) running.
 - 2026-10-12: D20; admin-P1-L1 approved; e2e guard chore (#29) so admin's suite runs without web; platform-P1-L8 (Postman) and platform-P1-L11 (README, CLAUDE.md) workers running.
+- 2026-10-12: Postman generator landed (#36) and archived (#38); ui api types landed (#33); README and CLAUDE.md in review fixes.
