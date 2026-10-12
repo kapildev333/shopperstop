@@ -18,25 +18,31 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"sessions", "addresses", "customers", "staff_users"}
+var truncateTables = []string{"sessions", "addresses", "customers", "staff_users", "store_service_areas", "stores"}
 
 // Fixed ids and values of design Decision 22. Later lanes take their ids from
 // the ranges Decision 22 reserves.
 const (
-	adminID       = "00000000-0000-4000-8000-000000000101"
-	customerID    = "00000000-0000-4000-8000-000000000201"
-	homeID        = "00000000-0000-4000-8000-000000000301"
-	workID        = "00000000-0000-4000-8000-000000000302"
-	adminEmail    = "admin@shopperstop.local"
-	adminPass     = "admin12345"
-	customerEmail = "demo@shopperstop.local"
-	customerPass  = "demo12345"
+	adminID          = "00000000-0000-4000-8000-000000000101"
+	customerID       = "00000000-0000-4000-8000-000000000201"
+	homeID           = "00000000-0000-4000-8000-000000000301"
+	workID           = "00000000-0000-4000-8000-000000000302"
+	storeKoramangala = "00000000-0000-4000-8000-000000000401"
+	storeIndiranagar = "00000000-0000-4000-8000-000000000402"
+	staffKoramangala = "00000000-0000-4000-8000-000000000102"
+	staffIndiranagar = "00000000-0000-4000-8000-000000000103"
+	adminEmail       = "admin@shopperstop.local"
+	adminPass        = "admin12345"
+	customerEmail    = "demo@shopperstop.local"
+	customerPass     = "demo12345"
+	staffPass        = "staff12345"
 )
 
 // hashes are the bcrypt hashes of the demo passwords, computed before any
 // transaction opens so the truncate lock is not held during the hashing.
+// The two store-staff users share one hash (design Decision 12).
 type hashes struct {
-	admin, customer string
+	admin, customer, staff string
 }
 
 func hashDemo() (hashes, error) {
@@ -48,7 +54,11 @@ func hashDemo() (hashes, error) {
 	if err != nil {
 		return hashes{}, fmt.Errorf("hash demo customer password: %w", err)
 	}
-	return hashes{admin: admin, customer: customer}, nil
+	staff, err := auth.HashPassword(staffPass)
+	if err != nil {
+		return hashes{}, fmt.Errorf("hash demo store staff password: %w", err)
+	}
+	return hashes{admin: admin, customer: customer, staff: staff}, nil
 }
 
 // Reset empties the demo tables and loads the demo rows, in one transaction.
@@ -97,6 +107,23 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		($2, $3, 'Work', '100 Feet Rd, Indiranagar', '560038', false)`,
 		homeID, workID, customerID); err != nil {
 		return fmt.Errorf("insert demo addresses: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `insert into stores (id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes) values
+		($1, 'Koramangala', '80 Feet Rd, Koramangala', '560034', true, 2500, 19900, 9900, 10),
+		($2, 'Indiranagar', '100 Feet Rd, Indiranagar', '560038', true, 2500, 19900, 9900, 12)`,
+		storeKoramangala, storeIndiranagar); err != nil {
+		return fmt.Errorf("insert demo stores: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `insert into store_service_areas (store_id, pincode) values
+		($1, '560034'), ($1, '560095'), ($2, '560038'), ($2, '560008')`,
+		storeKoramangala, storeIndiranagar); err != nil {
+		return fmt.Errorf("insert demo service areas: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `insert into staff_users (id, email, password_hash, name, role, store_id) values
+		($1, 'koramangala@shopperstop.local', $3, 'Koramangala Staff', 'store_staff', $4),
+		($2, 'indiranagar@shopperstop.local', $3, 'Indiranagar Staff', 'store_staff', $5)`,
+		staffKoramangala, staffIndiranagar, h.staff, storeKoramangala, storeIndiranagar); err != nil {
+		return fmt.Errorf("insert demo store staff: %w", err)
 	}
 	return nil
 }
