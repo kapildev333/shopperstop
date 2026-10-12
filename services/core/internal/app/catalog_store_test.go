@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -202,5 +203,153 @@ func TestStoreProductBySlugInactiveOrUnknown(t *testing.T) {
 		if e := decodeError(t, resp); status != http.StatusNotFound || e.Error.Code != "not_found" {
 			t.Errorf("slug %s: got %d %s, want 404 not_found", slug, status, resp)
 		}
+	}
+}
+
+// storeCategoryView is a category in a store's tree (catalog.CategoryNode).
+type storeCategoryView struct {
+	ID       string              `json:"id"`
+	Name     string              `json:"name"`
+	Children []storeCategoryView `json:"children"`
+}
+
+// storeCategories reads GET /stores/{store}/categories and returns the 200 tree.
+func storeCategories(t *testing.T, storeID string) []storeCategoryView {
+	t.Helper()
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+storeID+"/categories", "", nil)
+	var tree struct {
+		Items []storeCategoryView `json:"items"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &tree) != nil {
+		t.Fatalf("GET store categories: got %d %s, want 200", status, body)
+	}
+	return tree.Items
+}
+
+// findParent returns the parent with id in items, and whether it is listed.
+func findParent(items []storeCategoryView, id string) (storeCategoryView, bool) {
+	for _, p := range items {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	return storeCategoryView{}, false
+}
+
+func TestStoreCategoriesHideOutOfStockChild(t *testing.T) {
+	token := adminToken(t)
+	storeID := insertStore(t, true)
+	parent := createCategory(t, token, map[string]any{"name": "Catstock Dairy"})
+	milk := createCategory(t, token, map[string]any{"name": "Catstock Milk", "parentId": parent.ID})
+	curd := createCategory(t, token, map[string]any{"name": "Catstock Curd", "parentId": parent.ID})
+	setStock(t, storeID, createProduct(t, token, productBody(milk.ID, "Zcatstock milk")).ID, 0)
+	setStock(t, storeID, createProduct(t, token, productBody(curd.ID, "Zcatstock curd")).ID, 4)
+
+	got, listed := findParent(storeCategories(t, storeID), parent.ID)
+	if !listed {
+		t.Fatalf("parent with stocked child not listed")
+	}
+	if len(got.Children) != 1 || got.Children[0].ID != curd.ID {
+		t.Fatalf("children: got %+v, want only Curd", got.Children)
+	}
+}
+
+func TestStoreCategoriesIgnoreInactiveStock(t *testing.T) {
+	token := adminToken(t)
+	storeID := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Catinactive Dairy"})
+	body := productBody(cat.ID, "Zcatinactive milk")
+	body["isActive"] = false
+	setStock(t, storeID, createProduct(t, token, body).ID, 9)
+
+	if _, listed := findParent(storeCategories(t, storeID), cat.ID); listed {
+		t.Fatalf("parent whose only stocked product is inactive is listed")
+	}
+}
+
+func TestStoreCategoriesStockAtOtherStoreDoesNotCount(t *testing.T) {
+	token := adminToken(t)
+	stocked := insertStore(t, true)
+	other := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Catother Dairy"})
+	setStock(t, stocked, createProduct(t, token, productBody(cat.ID, "Zcatother milk")).ID, 5)
+
+	if _, listed := findParent(storeCategories(t, stocked), cat.ID); !listed {
+		t.Fatalf("category stocked at this store not listed")
+	}
+	if _, listed := findParent(storeCategories(t, other), cat.ID); listed {
+		t.Fatalf("stock at another store makes the category listed")
+	}
+}
+
+func TestStoreCategoriesUnknownStore(t *testing.T) {
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+missingProductID+"/categories", "", nil)
+	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+		t.Fatalf("got %d %s, want 404 not_found", status, body)
+	}
+}
+
+func TestStoreProductsStockIsPerStore(t *testing.T) {
+	token := adminToken(t)
+	storeA := insertStore(t, true)
+	storeB := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Perstore Dairy"})
+	x := createProduct(t, token, productBody(cat.ID, "Zperstore x"))
+	setStock(t, storeB, x.ID, 5)
+
+	p := byName(storeProducts(t, storeA, url.Values{"q": {"Zperstore"}}))["Zperstore x"]
+	if p.InStock || p.Quantity != 0 {
+		t.Errorf("store A list: got inStock %v quantity %d, want false 0", p.InStock, p.Quantity)
+	}
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+storeA+"/products/"+x.Slug, "", nil)
+	var slug storeProductView
+	if status != http.StatusOK || json.Unmarshal(body, &slug) != nil {
+		t.Fatalf("store A slug: got %d %s, want 200", status, body)
+	}
+	if slug.InStock || slug.Quantity != 0 {
+		t.Errorf("store A slug: got inStock %v quantity %d, want false 0", slug.InStock, slug.Quantity)
+	}
+	if b := byName(storeProducts(t, storeB, url.Values{"q": {"Zperstore"}}))["Zperstore x"]; !b.InStock || b.Quantity != 5 {
+		t.Errorf("store B list: got inStock %v quantity %d, want true 5", b.InStock, b.Quantity)
+	}
+}
+
+func TestStoreProductsSearchEscapesAndMatchesBrand(t *testing.T) {
+	token := adminToken(t)
+	storeID := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Escape Dairy"})
+	percent := createProduct(t, token, productBody(cat.ID, "Zesc 100% pure"))
+	plain := createProduct(t, token, productBody(cat.ID, "Zesc 100 pure"))
+	brandBody := productBody(cat.ID, "Zesc brand only")
+	brandBody["brand"] = "Zbrand Nimbus"
+	brand := createProduct(t, token, brandBody)
+	lower := createProduct(t, token, productBody(cat.ID, "zesc lowercase name"))
+
+	ids := func(list storeProductListView) map[string]bool {
+		out := map[string]bool{}
+		for _, p := range list.Items {
+			out[p.ID] = true
+		}
+		return out
+	}
+
+	// q=% matches the literal percent sign only: every hit carries one.
+	all := storeProducts(t, storeID, url.Values{"q": {"%"}, "pageSize": {"100"}})
+	for _, p := range all.Items {
+		if !strings.Contains(p.Name, "%") {
+			t.Errorf("q=%%: %q has no percent sign", p.Name)
+		}
+	}
+	if got := ids(all); !got[percent.ID] || got[plain.ID] {
+		t.Errorf("q=%%: got percent %v plain %v, want true false", got[percent.ID], got[plain.ID])
+	}
+	if got := ids(storeProducts(t, storeID, url.Values{"q": {"_"}, "pageSize": {"100"}})); got[percent.ID] {
+		t.Errorf("q=_: matched the product with a percent sign, want no match")
+	}
+	if got := ids(storeProducts(t, storeID, url.Values{"q": {"zbrand nimbus"}})); !got[brand.ID] {
+		t.Errorf("brand-only match: product with brand Zbrand Nimbus not listed")
+	}
+	if got := ids(storeProducts(t, storeID, url.Values{"q": {"ZESC LOWERCASE"}})); !got[lower.ID] {
+		t.Errorf("upper-case q: lower-case name not matched")
 	}
 }
