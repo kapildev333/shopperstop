@@ -32,4 +32,4 @@ Commit: one commit, `docs: admin url under /admin/, postman collection present, 
 
 ## 3. Acceptance (team lead)
 
-- [ ] 3.1 `/opsx:verify platform-readme-claude`: `check-docs.sh` ok, every scenario covered, both tasks ticked, nothing outside `README.md`, `CLAUDE.md` and this change landed
+- [x] 3.1 `/opsx:verify platform-readme-claude`: `check-docs.sh` ok, every scenario covered, both tasks ticked, nothing outside `README.md`, `CLAUDE.md` and this change landed
