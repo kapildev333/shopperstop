@@ -21,7 +21,7 @@ Scenarios: Customer sign-in and register › "Required fields checked", "Short p
 Failing tests: `src/auth-forms.test.tsx` › "required fields checked", "short password on register", "field error from the envelope", "non-field error in a banner"; `src/auth.test.ts` › "unsafe returnTo ignored"; `e2e/auth.spec.ts` › "register signs in", "demo customer signs in", "wrong password against core".
 
 - [x] 2.1 Tests committed red (`test: sign-in and register`), with `e2e/global-setup.ts` and the `globalSetup` line (test infrastructure); a red test that cannot compile without the module is acceptable when the failure is "module not found"
-- [ ] 2.2 `auth.ts` (`safeReturnTo`, `signIn`, `register`, `startSession`), `auth-forms.tsx`, the two routes (`feat: sign-in and register pages`); all gates green, e2e green
+- [x] 2.2 `auth.ts` (`safeReturnTo`, `signIn`, `register`, `startSession`), `auth-forms.tsx`, the two routes (`feat: sign-in and register pages`); all gates green, e2e green
 
 ## 3. Account, addresses, header and sign out
 
