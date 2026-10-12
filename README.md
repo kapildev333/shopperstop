@@ -11,7 +11,6 @@ Phase 1 (foundation) is in progress. On `main` today:
 - `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`.
 - `Makefile`, the CI workflow, and the living specs under `openspec/specs/`.
 - `docs/postman/`: the Postman collection and environment generated from `openapi.json`; `make postman` regenerates them and runs the generator tests.
-
 - `apps/web` (customer site shell at `/`) and `apps/admin` (admin panel shell under `/admin/`), each with a Playwright smoke suite with axe.
 
 Pending: demo data (`seed-demo` is a stub until Phase 2) and the product pages themselves (Phase 2). Behaviour is specified in [openspec/specs/](openspec/specs/).
