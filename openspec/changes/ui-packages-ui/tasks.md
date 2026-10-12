@@ -1,6 +1,6 @@
 # Tasks
 
-Every task: work in your own worktree, read `design.md` (it fixes every interface and class list), test first. Commit order `test: <scenario>` (red) then `feat: <what>` (green on all gates); task 1 starts with one `chore:` scaffold commit because no test can run before the package exists. Gates, from the worktree root, Node 22.12 or newer:
+Every task: work in your own worktree, read `design.md` (it fixes every interface and class list), test first. Commit order `test: <scenario>` (red) then `feat: <what>` (green on all gates); task 1 starts with one `chore:` scaffold commit because no test can run before the package exists. Gates, from the worktree root, Node 22.12 or newer (D11: `export PATH=~/.local/node-v22.23.3/bin:$PATH`):
 `npm run lint --workspace packages/ui`, `npm run typecheck --workspace packages/ui`, `npm run test --workspace packages/ui -- --run`, `npm run build --workspace packages/ui`.
 
 Waves: task 1 alone; then tasks 2 to 7 in parallel, each on a branch from task 1's landed commit; then task 8 after task 2 has landed (it imports Button and IconButton). Every task owns its files exclusively; `src/index.ts` is written once by task 1 and never edited again.

@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Token stylesheet is the Tailwind preset
-`packages/ui/src/tokens.css` SHALL define each semantic colour as a `:root` custom property with the Spec 1 §8.1 value, map it into Tailwind 4 so `bg-<token>`, `text-<token>` and `border-<token>` exist, define the type scale, radii `control` 8 px and `card` 12 px, and the shadows `card` and `sheet`, and SHALL switch off Tailwind's default colours (white and black included) and default shadows.
+`packages/ui/src/tokens.css` SHALL define each semantic colour as a `:root` custom property with the Spec 1 §8.1 value (`line-strong` #868C94 per PLAN.md D12), map it into Tailwind 4 so `bg-<token>`, `text-<token>` and `border-<token>` exist, define the type scale, radii `control` 8 px and `card` 12 px, and the shadows `card` and `sheet`, and SHALL switch off Tailwind's default colours (white and black included) and default shadows.
 
 #### Scenario: Token values match the palette
 - **WHEN** `tokens.css` is read
-- **THEN** each of the 20 semantic tokens has a `:root` property whose value equals the Spec 1 §8.1 hex value
+- **THEN** each of the 20 semantic tokens has a `:root` property whose value equals the Spec 1 §8.1 hex value, except `line-strong`, which is `#868C94`
 
 #### Scenario: Semantic utilities compile
 - **WHEN** Tailwind compiles `tokens.css` for the candidates `bg-brand`, `text-ink`, `border-line-strong`, `shadow-card`, `shadow-sheet`, `rounded-control`, `rounded-card` and `text-display`

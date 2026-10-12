@@ -16,7 +16,7 @@
   - scripts: `"build": "tsc -p tsconfig.build.json"`, `"typecheck": "tsc -p tsconfig.json"`, `"lint": "eslint ."`, `"test": "vitest"` (the gates pass `-- --run`).
   - `dependencies` (exact): `lucide-react` 1.55.0, `@fontsource-variable/inter` 5.3.0. `peerDependencies`: `react` and `react-dom` `^19.0.0`.
   - `devDependencies` (exact): `react` 19.3.0, `react-dom` 19.3.0, `@types/react` 19.3.0, `@types/react-dom` 19.3.0, `@types/node` 22.20.5, `typescript` 6.0.3, `tailwindcss` 4.3.3, `vitest` 5.0.4, `vite` 8.3.4, `jsdom` 27.0.0, `@testing-library/react` 16.3.3, `@testing-library/dom` 10.4.2, `@testing-library/jest-dom` 7.0.1, `@testing-library/user-event` 14.6.7, `eslint` 9.39.5, `eslint-plugin-jsx-a11y` 6.10.2, `eslint-plugin-react-hooks` 7.1.1, `typescript-eslint` 8.71.2.
-  - Version reasons: TypeScript 7 is out but `typescript-eslint` needs `<6.1` (and `openapi-typescript` 7.13 wants `^5`); ESLint 10 is out but `eslint-plugin-jsx-a11y` 6.10.2 declares only `^9`. `@testing-library/dom` is a required peer of `@testing-library/react`; `vite` is a required peer of `vitest`; `@types/*` type the allowed packages. `typescript-eslint` is the parser ESLint needs for TS and is escalated for a PLAN.md decision (see the lane report).
+  - Version reasons: TypeScript 7 is out but `typescript-eslint` needs `<6.1` (and `openapi-typescript` 7.13 wants `^5`); ESLint 10 is out but `eslint-plugin-jsx-a11y` 6.10.2 declares only `^9`. `@testing-library/dom` is a required peer of `@testing-library/react`; `vite` is a required peer of `vitest`; `@types/*` type the allowed packages. `typescript-eslint` is the parser ESLint needs for TS; it and the implied dev tooling above are approved by PLAN.md D10.
 - `tsconfig.json` (typecheck, no emit): `target` ES2022, `lib` [ES2022, DOM, DOM.Iterable], `module` ESNext, `moduleResolution` bundler, `jsx` react-jsx, `strict`, `noEmit`, `skipLibCheck`, `types` [node], `include` [src, scripts, vitest.config.ts].
 - `tsconfig.build.json`: extends it; `noEmit` false, `declaration` true, `outDir` dist, `rootDir` src, `include` [src], `exclude` [src/**/*.test.ts, src/**/*.test.tsx, src/test-setup.ts].
 - `vitest.config.ts`: `environment: 'jsdom'`, `setupFiles: ['./src/test-setup.ts']`, `include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts']`; no globals (tests import from `vitest`). `src/test-setup.ts`: `import '@testing-library/jest-dom/vitest'` and `afterEach(cleanup)`.
@@ -53,7 +53,7 @@ and each listed component file as a placeholder containing only `export {}`. A l
 
 ### Tokens (`src/tokens.css`)
 Order inside the file:
-1. `:root { --brand: #F8CB46; ... }`, the 20 tokens with the Spec 1 §8.1 values, one per line, names exactly as the seed spec.
+1. `:root { --brand: #F8CB46; ... }`, the 20 tokens with the Spec 1 §8.1 values except `--line-strong: #868C94` (PLAN.md D12 overrides §8.1's #C9CDD2), one per line, names exactly as the seed spec.
 2. `@theme inline { --color-*: initial; --color-<token>: var(--<token>); ... }` for all 20. `inline` makes utilities read `var(--brand)` directly, so a later dark block only overrides `:root` values.
 3. `@theme { ... }`:
    - `--shadow-*: initial; --inset-shadow-*: initial; --drop-shadow-*: initial; --text-shadow-*: initial;`
@@ -83,10 +83,10 @@ async function build(candidates: string[]) {
   return c.build(candidates)
 }
 ```
-Contrast is computed in the same test from the `:root` values with the WCAG formula (`L = 0.2126 R + 0.7152 G + 0.0722 B` on linearised channels, ratio `(L1 + 0.05) / (L2 + 0.05)`). The test file holds the expected hex values, so it is on the ignore list of the package's own literal-colour test.
+The "token values match the palette" expectation table uses `#868C94` for `line-strong` (D12). Contrast is computed in the same test from the `:root` values with the WCAG formula (`L = 0.2126 R + 0.7152 G + 0.0722 B` on linearised channels, ratio `(L1 + 0.05) / (L2 + 0.05)`). The "used pairs pass" test also asserts `line-strong` on `surface` is at least 3 (border rule; 3.39 with D12). The test file holds the expected hex values, so it is on the ignore list of the package's own literal-colour test.
 
 ### Colour use in components (contrast rule)
-Measured: accent on accent-soft 4.36, success on success-soft 4.36, danger on danger-soft 4.01, ink-muted on canvas 4.47, line-strong on surface 1.60. So: text on a `*-soft` surface is `ink` (or `accent-hover` on `accent-soft`, 5.97); status colours appear on soft surfaces only as icons and borders; `ink-muted` text sits on `surface` only; ghost buttons do not change background on hover (they underline). The `line-strong` border failure is escalated (owner's palette); components use the token as is.
+Measured: accent on accent-soft 4.36, success on success-soft 4.36, danger on danger-soft 4.01, ink-muted on canvas 4.47, line-strong on surface 3.39 and on canvas 3.14 (D12 value #868C94; the original #C9CDD2 measured 1.60). So: text on a `*-soft` surface is `ink` (or `accent-hover` on `accent-soft`, 5.97); status colours appear on soft surfaces only as icons and borders; `ink-muted` text sits on `surface` only; ghost buttons do not change background on hover (they underline).
 
 ### `cn` (`src/cn.ts`)
 `export function cn(...parts: (string | false | null | undefined)[]): string { return parts.filter(Boolean).join(' ') }`. Ceiling: no class conflict merging (no `tailwind-merge`); a caller `className` that sets the same property as a base class wins only by CSS order. Callers pass layout classes (margin, width), not colours.
@@ -154,8 +154,8 @@ Usage `node scripts/check-figma-tokens.mjs <export.json> [tokens.css]`, the CSS 
 All in area ui (`packages/ui/`): `package.json`, `tsconfig.json`, `tsconfig.build.json`, `vitest.config.ts`, `eslint.config.js`, `src/index.ts`, `src/test-setup.ts`, `src/tokens.css`, `src/tokens.test.ts`, `src/cn.ts`, `src/cn.test.ts`, `src/no-literal-colors.test.ts`, `src/testing/literal-colors.ts`, `src/testing/literal-colors.test.ts`, `src/use-modal.ts`, `src/{button,icon-button,input,form-field,select,price,stepper,badge,chip,card,table,skeleton,empty-state,status-message,page-header,tab-nav,dialog,sheet,error-banner}.tsx` and a `.test.tsx` beside each, `scripts/check-figma-tokens.mjs`, `scripts/check-figma-tokens.test.ts`, `scripts/fixtures/figma-tokens-{match,drift}.json`. Plus `openspec/changes/ui-packages-ui/**`. Root `package-lock.json` changes mechanically on `npm install`. Differences from the plan's file list: `cn.ts` not `cn.tsx` (no JSX); `use-modal.ts` and `error-banner.tsx`/`tokens.test.ts` added; `api/core.d.ts` deferred.
 
 ## Risks / Trade-offs
-- [Vite 8, Vitest 5 and jsdom need Node 22.12 or newer; this machine has 22.11.0, where npm skips Rolldown's native binding and jsdom fails on `require(esm)`] → blocking; escalated (owner upgrades Node, platform raises `engines`). Spike ran green on Node 22.23.3.
-- [`line-strong` borders measure 1.60:1, below the spec's 3:1] → escalated; components use the token unchanged.
+- [Vite 8, Vitest 5 and jsdom need Node 22.12 or newer; on 22.11 npm skips Rolldown's native binding and jsdom fails on `require(esm)`] → resolved by PLAN.md D11: root `engines.node` is `>=22.12.0`; lanes put `~/.local/node-v22.23.3/bin` first on PATH. Spike ran green on Node 22.23.3.
+- [`line-strong` borders measured 1.60:1 with #C9CDD2] → resolved by PLAN.md D12: #868C94, 3.39:1 on surface, pinned by the contrast test.
 - [ESLint 9.39.5 is end of life] → pinned until `eslint-plugin-jsx-a11y` supports ESLint 10.
 - [`@source "./"` inside an imported stylesheet] → apps verify that package classes are generated (web and admin build checks).
 - [The seed's "Axe on every e2e page"] → not testable in this package; web and admin Playwright suites own it.
