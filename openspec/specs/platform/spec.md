@@ -327,3 +327,10 @@ The request log line SHALL carry `subjectType` (`customer` or `staff`) and `subj
 #### Scenario: Public route with security
 - **WHEN** an operation carries `security` and the router answers it without a token with a status other than 401
 - **THEN** the contract test fails naming that operation
+
+### Requirement: Files directory is configured
+The core service SHALL read `SHOPPERSTOP_CORE_FILES_DIR`, the directory that holds uploaded and demo images, as required configuration and refuse to start without it, naming it with every other missing variable.
+
+#### Scenario: Files directory unset
+- **WHEN** the service starts with `SHOPPERSTOP_CORE_FILES_DIR` unset
+- **THEN** it refuses to start with a message that names `SHOPPERSTOP_CORE_FILES_DIR`
