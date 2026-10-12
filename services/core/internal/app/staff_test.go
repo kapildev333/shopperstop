@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 )
 
 // The staff fixtures are inserted directly (there is no staff route to create
@@ -143,7 +144,7 @@ func TestStaffSignInCustomerCredentials(t *testing.T) {
 func TestStaffSignInRateLimited(t *testing.T) {
 	seedStaff(t)
 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
-	limited := httptest.NewServer(New(testPool, nil, a))
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	for i := range 10 {
 		status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
@@ -463,7 +464,7 @@ func TestStaffSignOutEndsOnlyThatSession(t *testing.T) {
 func TestSharedLimiterCountsStaffAndCustomer(t *testing.T) {
 	email := uniqueEmail(t)
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1, 100, time.Hour, time.Now))
-	limited := httptest.NewServer(New(testPool, nil, a))
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": email, "password": "wrong-password"})

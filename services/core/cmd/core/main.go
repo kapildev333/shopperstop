@@ -17,6 +17,7 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/core/internal/app"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 	"github.com/kapildev333/shopperstop/services/core/internal/config"
 )
 
@@ -54,7 +55,7 @@ func run(cfg config.Config) error {
 	slog.Info("core listening", "addr", ln.Addr().String())
 	// Sign-in and registration share one limiter: 10 attempts per email and 100 per IP per hour.
 	a := auth.New(pool, cfg.SessionPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
-	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a))
+	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, blob.Disk{Dir: cfg.FilesDir}))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err
 	}

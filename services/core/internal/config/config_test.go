@@ -21,6 +21,7 @@ func valid() map[string]string {
 		"SHOPPERSTOP_CORE_ADDR":           ":8080",
 		"SHOPPERSTOP_CORE_SESSION_PEPPER": pepper32,
 		"SHOPPERSTOP_CORE_WEB_ORIGINS":    "http://localhost:5173",
+		"SHOPPERSTOP_CORE_FILES_DIR":      "/var/lib/shopperstop/files",
 	}
 }
 
@@ -34,10 +35,29 @@ func TestLoadNamesEveryMissingVariable(t *testing.T) {
 		"SHOPPERSTOP_CORE_ADDR",
 		"SHOPPERSTOP_CORE_SESSION_PEPPER",
 		"SHOPPERSTOP_CORE_WEB_ORIGINS",
+		"SHOPPERSTOP_CORE_FILES_DIR",
 	} {
 		if !strings.Contains(err.Error(), name) {
 			t.Errorf("error does not name %s: %v", name, err)
 		}
+	}
+}
+
+func TestLoadFilesDir(t *testing.T) {
+	vars := valid()
+	vars["SHOPPERSTOP_CORE_FILES_DIR"] = "  /srv/files  "
+	cfg, err := config.Load(env(vars))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.FilesDir != "/srv/files" {
+		t.Errorf("FilesDir = %q, want %q", cfg.FilesDir, "/srv/files")
+	}
+
+	vars["SHOPPERSTOP_CORE_FILES_DIR"] = "   "
+	_, err = config.Load(env(vars))
+	if err == nil || !strings.Contains(err.Error(), "SHOPPERSTOP_CORE_FILES_DIR is required") {
+		t.Errorf("blank files dir: want error naming SHOPPERSTOP_CORE_FILES_DIR as required, got %v", err)
 	}
 }
 

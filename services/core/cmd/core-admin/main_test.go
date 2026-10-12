@@ -130,6 +130,7 @@ func TestSeedDemoExitCodes(t *testing.T) {
 	t.Setenv("SHOPPERSTOP_CORE_ADDR", ":8080")
 	t.Setenv("SHOPPERSTOP_CORE_SESSION_PEPPER", "test-pepper-test-pepper-test-pepper-00")
 	t.Setenv("SHOPPERSTOP_CORE_WEB_ORIGINS", "http://localhost:5173")
+	t.Setenv("SHOPPERSTOP_CORE_FILES_DIR", t.TempDir())
 
 	var stdout, stderr strings.Builder
 	if code := run([]string{"seed-demo", "--reset"}, &stdout, &stderr); code != 0 {

@@ -12,13 +12,16 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
+	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
 // New returns the core router. Routes are registered with their full path
 // so chi.Walk yields the paths openapi.json documents.
-func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
+// Uploaded files go to files.
+func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/core/v1/healthz", healthz)
 	r.Get("/api/core/v1/readyz", readyz(pool))
@@ -39,6 +42,19 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/staff-users", a.ListStaff)
 	r.With(a.RequireAdmin).Post("/api/core/v1/admin/staff-users", a.CreateStaffUser)
 	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/staff-users/{id}", a.UpdateStaffUser)
+	c := catalog.New(pool, files)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/categories", c.ListCategories)
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/categories", c.CreateCategory)
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/categories/{id}", c.UpdateCategory)
+	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/categories/{id}", c.DeleteCategory)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/products", c.ListProducts)
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/products", c.CreateProduct)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/products/{id}", c.GetProduct)
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/products/{id}", c.UpdateProduct)
+	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/products/{id}", c.DeleteProduct)
+	r.With(a.RequireAdmin).Put("/api/core/v1/admin/categories/{id}/image", c.PutCategoryImage)
+	r.With(a.RequireAdmin).Put("/api/core/v1/admin/products/{id}/image", c.PutProductImage)
+	r.Get("/api/core/v1/files/{kind}/{name}", c.File)
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores", store.List(pool))
 	r.With(a.RequireAdmin).Post("/api/core/v1/admin/stores", store.Create(pool))
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}", store.AdminGet(pool))

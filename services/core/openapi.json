@@ -30,6 +30,14 @@
     {
       "name": "admin-stores",
       "description": "Admin management of stores and the pincodes they serve."
+    },
+    {
+      "name": "admin-catalog",
+      "description": "Admin catalog: the two-level category tree, then products and images."
+    },
+    {
+      "name": "catalog",
+      "description": "Public catalog files: the product and category images, served without a token."
     }
   ],
   "paths": {
@@ -38,7 +46,9 @@
         "operationId": "getHealthz",
         "summary": "Liveness",
         "description": "Answers 200 whenever the process is up. Does not touch the database.",
-        "tags": ["platform"],
+        "tags": [
+          "platform"
+        ],
         "responses": {
           "200": {
             "description": "The process is up.",
@@ -61,7 +71,9 @@
         "operationId": "getReadyz",
         "summary": "Readiness",
         "description": "Answers 200 when the database answers a ping within 2 seconds. Answers 503 with code internal otherwise.",
-        "tags": ["platform"],
+        "tags": [
+          "platform"
+        ],
         "responses": {
           "200": {
             "description": "The database answers.",
@@ -100,7 +112,9 @@
         "operationId": "postAuthRegister",
         "summary": "Register a customer",
         "description": "Creates a customer and a session, and answers with the token and the customer. The email is unique without regard to case; the password is 8 to 72 bytes and is stored as a bcrypt hash of cost 12. Every attempt counts against its email and its client IP: the eleventh attempt for one email within an hour, or the hundred and first from one IP, answers 429.",
-        "tags": ["accounts"],
+        "tags": [
+          "accounts"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -193,7 +207,9 @@
         "operationId": "postAuthSignIn",
         "summary": "Sign in a customer",
         "description": "Creates a new session and answers with its token and the customer. Other sessions of the customer stay signed in. A wrong password and an unknown email answer the same 401. Shares the registration rate limit: attempts count per email and per client IP.",
-        "tags": ["accounts"],
+        "tags": [
+          "accounts"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -285,7 +301,9 @@
         "operationId": "postAuthSignOut",
         "summary": "Sign out",
         "description": "Ends the session of the bearer token and nothing else: the customer's other sessions stay signed in.",
-        "tags": ["accounts"],
+        "tags": [
+          "accounts"
+        ],
         "security": [
           {
             "bearer": []
@@ -319,7 +337,9 @@
         "operationId": "getMe",
         "summary": "Get the signed-in customer",
         "description": "Answers the customer the bearer token belongs to. A customer session slides: each use after an hour moves its expiry 30 days on.",
-        "tags": ["accounts"],
+        "tags": [
+          "accounts"
+        ],
         "security": [
           {
             "bearer": []
@@ -364,7 +384,9 @@
         "operationId": "patchMe",
         "summary": "Change the signed-in customer's name or phone",
         "description": "Changes only the fields present. An empty phone clears it, and a cleared phone is omitted from responses. A null value is refused with 400 naming the field; an empty object changes nothing.",
-        "tags": ["accounts"],
+        "tags": [
+          "accounts"
+        ],
         "security": [
           {
             "bearer": []
@@ -980,7 +1002,6 @@
         }
       }
     },
-
     "/admin/staff-users": {
       "get": {
         "operationId": "listStaffUsers",
@@ -2280,6 +2301,1346 @@
           }
         }
       }
+    },
+    "/admin/categories": {
+      "get": {
+        "operationId": "getAdminCategories",
+        "summary": "List the category tree",
+        "description": "Admins only. Answers every category as a tree: each parent with its children array, parents and children ordered by sortOrder then name. The tree is not paged. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The category tree.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryTree"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000501",
+                      "name": "Fruits & Vegetables",
+                      "slug": "fruits-vegetables",
+                      "sortOrder": 10,
+                      "children": [
+                        {
+                          "id": "00000000-0000-4000-8000-000000000521",
+                          "name": "Fresh Fruits",
+                          "slug": "fresh-fruits",
+                          "sortOrder": 10,
+                          "parentId": "00000000-0000-4000-8000-000000000501"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postAdminCategory",
+        "summary": "Create a category",
+        "description": "Admins only. Creates a category, optionally as a child of a parent. The slug is derived from the name and never changes afterwards; a clash gets a random hex suffix. parentId must name a category that has no parent, so the tree has two levels: an unknown parent, or one that is itself a child, answers 400 with field parentId. name is trimmed and 1 to 100 characters; sortOrder is 0 to 9999 and defaults to 0.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreate"
+              },
+              "example": {
+                "name": "Fresh Fruits",
+                "parentId": "00000000-0000-4000-8000-000000000501",
+                "sortOrder": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000521",
+                  "name": "Fresh Fruits",
+                  "slug": "fresh-fruits",
+                  "sortOrder": 10,
+                  "parentId": "00000000-0000-4000-8000-000000000501"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. The field names it: parentId for an unknown parent or a third level, name for a blank or long name, sortOrder out of range.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "categories have two levels",
+                    "field": "parentId"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The slug could not be made unique in three attempts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "already exists"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/categories/{id}": {
+      "patch": {
+        "operationId": "patchAdminCategory",
+        "summary": "Change a category",
+        "description": "Admins only. Changes the name and sortOrder when present; the slug and the parent never change. A null value is refused with 400 naming the field. An id that is not one answers 404.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryPatch"
+              },
+              "example": {
+                "name": "Fresh Fruits",
+                "sortOrder": 20
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000521",
+                  "name": "Fresh Fruits",
+                  "slug": "fresh-fruits",
+                  "sortOrder": 20,
+                  "parentId": "00000000-0000-4000-8000-000000000501"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid or null. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100 characters",
+                    "field": "name"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminCategory",
+        "summary": "Delete a category",
+        "description": "Admins only. Deletes a category that has no children and no products. A category with either answers 409 and stays. An id that is not one, or no category, answers 404.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The category has a child or a product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "category has products or subcategories"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products": {
+      "get": {
+        "operationId": "getAdminProducts",
+        "summary": "List products",
+        "description": "Admins only. The paged list of active and inactive products ordered by name, filtered by q, categoryId (with its children) and isActive. total counts every match, not just this page. A bad q, categoryId or isActive answers 400 naming the field. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "example": "banana"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "That category and its children.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "required": false,
+            "description": "true or false: only active or only inactive products. Absent lists both.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "example": "true"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "slug": "banana-robusta",
+                      "description": "Ripe robusta bananas, sold by the kilogram.",
+                      "unitLabel": "1 kg",
+                      "mrpCents": 6000,
+                      "priceCents": 5500,
+                      "categoryId": "00000000-0000-4000-8000-000000000521",
+                      "isActive": true
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A filter or page parameter is invalid. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be true or false",
+                    "field": "isActive"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAdminProduct",
+        "summary": "Create a product",
+        "description": "Admins only. Creates an active product unless isActive is false. The slug is derived from the name; a clash gets a short suffix. priceCents must be from 1 to mrpCents. An unknown categoryId answers 400 naming it. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreate"
+              },
+              "example": {
+                "name": "Banana Robusta",
+                "categoryId": "00000000-0000-4000-8000-000000000521",
+                "unitLabel": "1 kg",
+                "mrpCents": 6000,
+                "priceCents": 5500,
+                "description": "Ripe robusta bananas, sold by the kilogram."
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new product, with its server-made slug and isActive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. The field names it; a price outside 1 to mrpCents names priceCents.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between 1 and mrpCents",
+                    "field": "priceCents"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Two attempts at a unique slug clashed; retry the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "already exists"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products/{id}": {
+      "get": {
+        "operationId": "getAdminProduct",
+        "summary": "Read a product",
+        "description": "Admins only. The product with this id, active or not. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchAdminProduct",
+        "summary": "Change a product",
+        "description": "Admins only. Changes each member that is present; the slug never changes. Only an empty brand or description clears it. The price rule holds after every patch, including one that changes only mrpCents or priceCents; a violation answers 400 naming priceCents and leaves the product unchanged. A null value is refused with 400 naming the field. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPatch"
+              },
+              "example": {
+                "priceCents": 4500,
+                "isActive": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 4500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid or null, or the price rule fails. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between 1 and mrpCents",
+                    "field": "priceCents"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminProduct",
+        "summary": "Delete a product",
+        "description": "Admins only. Deletes a product no order line refers to. A product that an order refers to answers 409 and stays: set isActive to false instead. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The product is deleted."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An order line refers to the product; it is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "product was ordered; set isActive to false instead"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/categories/{id}/image": {
+      "put": {
+        "operationId": "putAdminCategoryImage",
+        "summary": "Upload a category image",
+        "description": "Admins only. Stores one image for the category, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The category with its new image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000501",
+                  "name": "Fruits & Vegetables",
+                  "slug": "fruits-vegetables",
+                  "sortOrder": 10,
+                  "imageUrl": "/api/core/v1/files/categories/00000000-0000-4000-8000-000000000501.png"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "image must be PNG, JPEG or WebP",
+                    "field": "file"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products/{id}/image": {
+      "put": {
+        "operationId": "putAdminProductImage",
+        "summary": "Upload a product image",
+        "description": "Admins only. Stores one image for the product, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The product with its new image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true,
+                  "imageUrl": "/api/core/v1/files/products/00000000-0000-4000-8000-000000000601.png"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "image must be PNG, JPEG or WebP",
+                    "field": "file"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{kind}/{name}": {
+      "get": {
+        "operationId": "getFile",
+        "summary": "Read a catalog image",
+        "description": "Public, no token. Serves a stored product or category image. kind is products or categories and name is a lowercase file name ending in png, jpg or webp; any other shape, and a file that is not stored, answers 404. The Content-Type comes from the extension. Cache-Control is no-cache, so a re-upload that keeps the URL is seen at once. If-Modified-Since answers 304 without a body when the file has not changed.",
+        "tags": [
+          "catalog"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "description": "products or categories.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "products",
+                "categories"
+              ]
+            },
+            "example": "products"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "The file name: lowercase letters, digits and hyphens, then .png, .jpg or .webp.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+\\.(png|jpg|webp)$"
+            },
+            "example": "seed-fruits-vegetables.png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "<PNG image bytes>"
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The file has not changed since If-Modified-Since. No body."
+          },
+          "404": {
+            "description": "The name or kind is not a catalog image shape, or no such file is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2293,18 +3654,26 @@
     "schemas": {
       "Status": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ok"]
+            "enum": [
+              "ok"
+            ]
           }
         },
         "additionalProperties": false
       },
       "Customer": {
         "type": "object",
-        "required": ["id", "email", "name"],
+        "required": [
+          "id",
+          "email",
+          "name"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -2326,7 +3695,10 @@
       },
       "CustomerSession": {
         "type": "object",
-        "required": ["token", "customer"],
+        "required": [
+          "token",
+          "customer"
+        ],
         "properties": {
           "token": {
             "type": "string",
@@ -2340,7 +3712,11 @@
       },
       "RegisterRequest": {
         "type": "object",
-        "required": ["email", "password", "name"],
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -2364,7 +3740,10 @@
       },
       "SignInRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -2393,15 +3772,30 @@
       },
       "Error": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message"],
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
               "code": {
                 "type": "string",
-                "enum": ["validation", "unauthorized", "forbidden", "not_found", "conflict", "out_of_stock", "not_serviceable", "rate_limited", "internal"]
+                "enum": [
+                  "validation",
+                  "unauthorized",
+                  "forbidden",
+                  "not_found",
+                  "conflict",
+                  "out_of_stock",
+                  "not_serviceable",
+                  "rate_limited",
+                  "internal"
+                ]
               },
               "message": {
                 "type": "string"
@@ -2604,7 +3998,6 @@
         },
         "additionalProperties": false
       },
-
       "StaffCreate": {
         "type": "object",
         "required": [
@@ -3010,6 +4403,342 @@
           }
         },
         "additionalProperties": false
+      },
+      "Category": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "sortOrder"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "description": "Derived from the name on create, never changed."
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Omitted for a parent category."
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Path of the category image. Omitted until one is uploaded."
+          }
+        }
+      },
+      "CategoryNode": {
+        "description": "A parent category with its children.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Category"
+          },
+          {
+            "type": "object",
+            "required": [
+              "children"
+            ],
+            "properties": {
+              "children": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "description": "Its children, ordered by sortOrder then name; empty when it has none."
+              }
+            }
+          }
+        ]
+      },
+      "CategoryTree": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryNode"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoryCreate": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Trimmed; 1 to 100 characters."
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A category that has no parent. Omit for a parent category."
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999,
+            "description": "Defaults to 0."
+          }
+        }
+      },
+      "CategoryPatch": {
+        "type": "object",
+        "description": "Every member is optional; a member that is present must not be null.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "unitLabel",
+          "mrpCents",
+          "priceCents",
+          "categoryId",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "description": "Derived from the name on create, never changed."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Omitted when empty."
+          },
+          "brand": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Omitted when empty."
+          },
+          "unitLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "mrpCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100000000,
+            "description": "Maximum retail price in paise."
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Selling price in paise: at least 1 and at most mrpCents."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Inactive products stay in the admin list."
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Path of the product image. Omitted until one is uploaded."
+          }
+        }
+      },
+      "ProductList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every product that matches the filters, not just this page."
+          }
+        }
+      },
+      "ProductCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "categoryId",
+          "unitLabel",
+          "mrpCents",
+          "priceCents"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Trimmed; 1 to 100 characters. The slug is derived from it."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A category: a parent or a child."
+          },
+          "unitLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30,
+            "description": "Trimmed; for example 1 kg or 500 ml."
+          },
+          "mrpCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100000000,
+            "description": "Maximum retail price in paise."
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "At least 1 and at most mrpCents."
+          },
+          "brand": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Optional; trimmed."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional; trimmed."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Defaults to true."
+          }
+        }
+      },
+      "ImageUpload": {
+        "type": "object",
+        "description": "The body of an image upload: multipart/form-data with one part named file.",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "One PNG, JPEG or WebP image of at most 5 MiB. The type comes from the content; the client's Content-Type and file name are ignored."
+          }
+        }
+      },
+      "ProductPatch": {
+        "type": "object",
+        "description": "Every member is optional; a member that is present must not be null. An empty brand or description clears it.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Trimmed; 1 to 100 characters. The slug is derived from it."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A category: a parent or a child."
+          },
+          "unitLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30,
+            "description": "Trimmed; for example 1 kg or 500 ml."
+          },
+          "mrpCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100000000,
+            "description": "Maximum retail price in paise."
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "At least 1 and at most mrpCents."
+          },
+          "brand": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Optional; trimmed. An empty string clears it."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional; trimmed. An empty string clears it."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Unchanged when omitted."
+          }
+        }
       }
     }
   }

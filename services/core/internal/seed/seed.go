@@ -19,7 +19,10 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"sessions", "addresses", "customers", "staff_users", "store_service_areas", "stores"}
+var truncateTables = []string{"sessions", "addresses", "customers", "staff_users", "store_service_areas", "stores",
+	// catalog (core-P2-L3)
+	"products", "categories",
+}
 
 // Fixed ids and values of design Decision 22. Later lanes take their ids from
 // the ranges Decision 22 reserves.
@@ -129,5 +132,6 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		staffKoramangala, staffIndiranagar, h.staff, storeKoramangala, storeIndiranagar); err != nil {
 		return fmt.Errorf("insert demo store staff: %w", err)
 	}
-	return nil
+	// catalog (core-P2-L3)
+	return loadCatalog(ctx, tx)
 }

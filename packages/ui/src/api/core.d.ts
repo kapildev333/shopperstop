@@ -396,6 +396,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the category tree
+         * @description Admins only. Answers every category as a tree: each parent with its children array, parents and children ordered by sortOrder then name. The tree is not paged. A missing or customer token answers 401; store staff answer 403.
+         */
+        get: operations["getAdminCategories"];
+        put?: never;
+        /**
+         * Create a category
+         * @description Admins only. Creates a category, optionally as a child of a parent. The slug is derived from the name and never changes afterwards; a clash gets a random hex suffix. parentId must name a category that has no parent, so the tree has two levels: an unknown parent, or one that is itself a child, answers 400 with field parentId. name is trimmed and 1 to 100 characters; sortOrder is 0 to 9999 and defaults to 0.
+         */
+        post: operations["postAdminCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a category
+         * @description Admins only. Deletes a category that has no children and no products. A category with either answers 409 and stays. An id that is not one, or no category, answers 404.
+         */
+        delete: operations["deleteAdminCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a category
+         * @description Admins only. Changes the name and sortOrder when present; the slug and the parent never change. A null value is refused with 400 naming the field. An id that is not one answers 404.
+         */
+        patch: operations["patchAdminCategory"];
+        trace?: never;
+    };
+    "/admin/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List products
+         * @description Admins only. The paged list of active and inactive products ordered by name, filtered by q, categoryId (with its children) and isActive. total counts every match, not just this page. A bad q, categoryId or isActive answers 400 naming the field. A missing or customer token answers 401; store staff answer 403.
+         */
+        get: operations["getAdminProducts"];
+        put?: never;
+        /**
+         * Create a product
+         * @description Admins only. Creates an active product unless isActive is false. The slug is derived from the name; a clash gets a short suffix. priceCents must be from 1 to mrpCents. An unknown categoryId answers 400 naming it. A missing or customer token answers 401; store staff answer 403.
+         */
+        post: operations["createAdminProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a product
+         * @description Admins only. The product with this id, active or not. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.
+         */
+        get: operations["getAdminProduct"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a product
+         * @description Admins only. Deletes a product no order line refers to. A product that an order refers to answers 409 and stays: set isActive to false instead. An id that is not one answers 404. A missing or customer token answers 401; store staff answer 403.
+         */
+        delete: operations["deleteAdminProduct"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a product
+         * @description Admins only. Changes each member that is present; the slug never changes. Only an empty brand or description clears it. The price rule holds after every patch, including one that changes only mrpCents or priceCents; a violation answers 400 naming priceCents and leaves the product unchanged. A null value is refused with 400 naming the field. A missing or customer token answers 401; store staff answer 403.
+         */
+        patch: operations["patchAdminProduct"];
+        trace?: never;
+    };
+    "/admin/categories/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a category image
+         * @description Admins only. Stores one image for the category, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.
+         */
+        put: operations["putAdminCategoryImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/products/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a product image
+         * @description Admins only. Stores one image for the product, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.
+         */
+        put: operations["putAdminProductImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/files/{kind}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a catalog image
+         * @description Public, no token. Serves a stored product or category image. kind is products or categories and name is a lowercase file name ending in png, jpg or webp; any other shape, and a file that is not stored, answers 404. The Content-Type comes from the extension. Cache-Control is no-cache, so a re-upload that keeps the URL is seen at once. If-Modified-Since answers 304 without a body when the file has not changed.
+         */
+        get: operations["getFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -646,6 +806,143 @@ export interface components {
         };
         Serviceability: {
             store: components["schemas"]["Store"];
+        };
+        Category: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Derived from the name on create, never changed. */
+            slug: string;
+            /**
+             * Format: uuid
+             * @description Omitted for a parent category.
+             */
+            parentId?: string;
+            sortOrder: number;
+            /** @description Path of the category image. Omitted until one is uploaded. */
+            imageUrl?: string;
+        };
+        /** @description A parent category with its children. */
+        CategoryNode: components["schemas"]["Category"] & {
+            /** @description Its children, ordered by sortOrder then name; empty when it has none. */
+            children: components["schemas"]["Category"][];
+        };
+        CategoryTree: {
+            items: components["schemas"]["CategoryNode"][];
+        };
+        CategoryCreate: {
+            /** @description Trimmed; 1 to 100 characters. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description A category that has no parent. Omit for a parent category.
+             */
+            parentId?: string;
+            /** @description Defaults to 0. */
+            sortOrder?: number;
+        };
+        /** @description Every member is optional; a member that is present must not be null. */
+        CategoryPatch: {
+            name?: string;
+            sortOrder?: number;
+        };
+        Product: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Derived from the name on create, never changed. */
+            slug: string;
+            /** @description Omitted when empty. */
+            description?: string;
+            /** @description Omitted when empty. */
+            brand?: string;
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Maximum retail price in paise.
+             */
+            mrpCents: number;
+            /**
+             * Format: int64
+             * @description Selling price in paise: at least 1 and at most mrpCents.
+             */
+            priceCents: number;
+            /** Format: uuid */
+            categoryId: string;
+            /** @description Inactive products stay in the admin list. */
+            isActive: boolean;
+            /** @description Path of the product image. Omitted until one is uploaded. */
+            imageUrl?: string;
+        };
+        ProductList: {
+            items: components["schemas"]["Product"][];
+            page: number;
+            pageSize: number;
+            /** @description Every product that matches the filters, not just this page. */
+            total: number;
+        };
+        ProductCreate: {
+            /** @description Trimmed; 1 to 100 characters. The slug is derived from it. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description A category: a parent or a child.
+             */
+            categoryId: string;
+            /** @description Trimmed; for example 1 kg or 500 ml. */
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Maximum retail price in paise.
+             */
+            mrpCents: number;
+            /**
+             * Format: int64
+             * @description At least 1 and at most mrpCents.
+             */
+            priceCents: number;
+            /** @description Optional; trimmed. */
+            brand?: string;
+            /** @description Optional; trimmed. */
+            description?: string;
+            /** @description Defaults to true. */
+            isActive?: boolean;
+        };
+        /** @description The body of an image upload: multipart/form-data with one part named file. */
+        ImageUpload: {
+            /**
+             * Format: binary
+             * @description One PNG, JPEG or WebP image of at most 5 MiB. The type comes from the content; the client's Content-Type and file name are ignored.
+             */
+            file: string;
+        };
+        /** @description Every member is optional; a member that is present must not be null. An empty brand or description clears it. */
+        ProductPatch: {
+            /** @description Trimmed; 1 to 100 characters. The slug is derived from it. */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description A category: a parent or a child.
+             */
+            categoryId?: string;
+            /** @description Trimmed; for example 1 kg or 500 ml. */
+            unitLabel?: string;
+            /**
+             * Format: int64
+             * @description Maximum retail price in paise.
+             */
+            mrpCents?: number;
+            /**
+             * Format: int64
+             * @description At least 1 and at most mrpCents.
+             */
+            priceCents?: number;
+            /** @description Optional; trimmed. An empty string clears it. */
+            brand?: string;
+            /** @description Optional; trimmed. An empty string clears it. */
+            description?: string;
+            /** @description Unchanged when omitted. */
+            isActive?: boolean;
         };
     };
     responses: never;
@@ -2734,6 +3031,1209 @@ export interface operations {
                 };
             };
             /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The category tree. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000501",
+                     *           "name": "Fruits & Vegetables",
+                     *           "slug": "fruits-vegetables",
+                     *           "sortOrder": 10,
+                     *           "children": [
+                     *             {
+                     *               "id": "00000000-0000-4000-8000-000000000521",
+                     *               "name": "Fresh Fruits",
+                     *               "slug": "fresh-fruits",
+                     *               "sortOrder": 10,
+                     *               "parentId": "00000000-0000-4000-8000-000000000501"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CategoryTree"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Fresh Fruits",
+                 *       "parentId": "00000000-0000-4000-8000-000000000501",
+                 *       "sortOrder": 10
+                 *     }
+                 */
+                "application/json": components["schemas"]["CategoryCreate"];
+            };
+        };
+        responses: {
+            /** @description The created category. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000521",
+                     *       "name": "Fresh Fruits",
+                     *       "slug": "fresh-fruits",
+                     *       "sortOrder": 10,
+                     *       "parentId": "00000000-0000-4000-8000-000000000501"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description A field is invalid. The field names it: parentId for an unknown parent or a third level, name for a blank or long name, sortOrder out of range. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "categories have two levels",
+                     *         "field": "parentId"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The slug could not be made unique in three attempts. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "already exists"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The category has a child or a product. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "category has products or subcategories"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Fresh Fruits",
+                 *       "sortOrder": 20
+                 *     }
+                 */
+                "application/json": components["schemas"]["CategoryPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated category. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000521",
+                     *       "name": "Fresh Fruits",
+                     *       "slug": "fresh-fruits",
+                     *       "sortOrder": 20,
+                     *       "parentId": "00000000-0000-4000-8000-000000000501"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description A field is invalid or null. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be from 1 to 100 characters",
+                     *         "field": "name"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminProducts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.
+                 * @example banana
+                 */
+                q?: string;
+                /**
+                 * @description That category and its children.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                categoryId?: string;
+                /**
+                 * @description true or false: only active or only inactive products. Absent lists both.
+                 * @example true
+                 */
+                isActive?: "true" | "false";
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of products. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "slug": "banana-robusta",
+                     *           "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *           "unitLabel": "1 kg",
+                     *           "mrpCents": 6000,
+                     *           "priceCents": 5500,
+                     *           "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *           "isActive": true
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProductList"];
+                };
+            };
+            /** @description A filter or page parameter is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be true or false",
+                     *         "field": "isActive"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Banana Robusta",
+                 *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                 *       "unitLabel": "1 kg",
+                 *       "mrpCents": 6000,
+                 *       "priceCents": 5500,
+                 *       "description": "Ripe robusta bananas, sold by the kilogram."
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProductCreate"];
+            };
+        };
+        responses: {
+            /** @description The new product, with its server-made slug and isActive. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "isActive": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description A field is invalid. The field names it; a price outside 1 to mrpCents names priceCents. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be between 1 and mrpCents",
+                     *         "field": "priceCents"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Two attempts at a unique slug clashed; retry the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "already exists"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The product id.
+                 * @example 00000000-0000-4000-8000-000000000601
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The product. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "isActive": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The product id.
+                 * @example 00000000-0000-4000-8000-000000000601
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The product is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An order line refers to the product; it is kept. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "product was ordered; set isActive to false instead"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchAdminProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The product id.
+                 * @example 00000000-0000-4000-8000-000000000601
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "priceCents": 4500,
+                 *       "isActive": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProductPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated product. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 4500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "isActive": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description A field is invalid or null, or the price rule fails. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be between 1 and mrpCents",
+                     *         "field": "priceCents"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAdminCategoryImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUpload"];
+            };
+        };
+        responses: {
+            /** @description The category with its new image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000501",
+                     *       "name": "Fruits & Vegetables",
+                     *       "slug": "fruits-vegetables",
+                     *       "sortOrder": 10,
+                     *       "imageUrl": "/api/core/v1/files/categories/00000000-0000-4000-8000-000000000501.png"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "image must be PNG, JPEG or WebP",
+                     *         "field": "file"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAdminProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The product id.
+                 * @example 00000000-0000-4000-8000-000000000601
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUpload"];
+            };
+        };
+        responses: {
+            /** @description The product with its new image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "isActive": true,
+                     *       "imageUrl": "/api/core/v1/files/products/00000000-0000-4000-8000-000000000601.png"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "image must be PNG, JPEG or WebP",
+                     *         "field": "file"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description products or categories.
+                 * @example products
+                 */
+                kind: "products" | "categories";
+                /**
+                 * @description The file name: lowercase letters, digits and hyphens, then .png, .jpg or .webp.
+                 * @example seed-fruits-vegetables.png
+                 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example <PNG image bytes> */
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description The file has not changed since If-Modified-Since. No body. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The name or kind is not a catalog image shape, or no such file is stored. */
             404: {
                 headers: {
                     [name: string]: unknown;
