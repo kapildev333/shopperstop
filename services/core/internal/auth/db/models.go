@@ -112,6 +112,17 @@ type Address struct {
 	UpdatedAt  pgtype.Timestamptz
 }
 
+type Category struct {
+	ID        string
+	Name      string
+	Slug      string
+	ParentID  *string
+	SortOrder int32
+	ImageKey  string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type Customer struct {
 	ID           string
 	Email        string
@@ -120,6 +131,22 @@ type Customer struct {
 	Phone        string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+}
+
+type Product struct {
+	ID          string
+	CategoryID  string
+	Name        string
+	Slug        string
+	Description string
+	Brand       string
+	UnitLabel   string
+	MrpCents    int64
+	PriceCents  int64
+	IsActive    bool
+	ImageKey    string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
 }
 
 type Session struct {
