@@ -20,6 +20,9 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D11 | Node floor is >=22.12.0 (Vite 8, Vitest 5, jsdom 27 require it; Spec 1 §4 said 22.11+). Root `package.json` engines and CI use it; lanes on this machine use a user-space Node 22.23.3 under `~/.local`, nothing global changed | Orchestrator 2026-10-12 |
 | D12 | Palette: `line-strong` #C9CDD2 measures 1.60:1 on surface, below §8.1's 3:1 rule for borders; decided #868C94 (3.39:1), the spec's own rule wins over the drawn value; Figma token updated in Task 14 | Orchestrator 2026-10-12 under D13 |
 | D13 | The owner delegated every decision to the orchestrator ("Decide everything by yourself", 2026-10-12): the orchestrator decides what the specs leave open and records it here; managers no longer wait for the owner's go before launching workers once the orchestrator has seen the change; the owner can override any row | Agreed (owner, 2026-10-12) |
+| D14 | CI's `sqlc diff` step is replaced by `make gen postman` leaving `git status` clean (covers sqlc output, generated API types and the Postman collection); sqlc is installed only while `services/core/sqlc.yaml` exists. Spec 1 §6 and CLAUDE.md wording updated in Task 15 | Orchestrator 2026-10-12 |
+| D15 | End-to-end runs use `shopperstop_core_e2e` (plan, `initdb.sql`, Spec 2 §13), not `_test` as Spec 1 §6 says: core on :18080, web preview 15173, admin preview 15174, e2e-only pepper, set by `make e2e`; each app's Playwright config starts core and `vite preview`; Chromium only. core adds a Phase 1 `seed-demo --reset` stub so `make dev` reaches the three servers | Orchestrator 2026-10-12 |
+| D16 | Core Phase 1 defaults: `healthz` and `readyz` are listed in `openapi.json` (every served route, Spec 1 §11, so no skip list in the contract test); `internal/pg` deferred to Phase 2 (`pgx.BeginFunc` covers `WithTx` until the first query); `core-admin migrate` loads the full core env, `SHOPPERSTOP_CORE_FILES_DIR` unread in Phase 1 | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -43,7 +46,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
 |------|-----------|--------|
-| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (platform-P1-L3, archived #5); 4 done #4 (platform-P1-L4, archived #6, `make db` verified); 13 running (platform-P1-L9); 12 waits on core task 8; 15 waits on 13 and 14 |
+| platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (archived #5); 4 done #4 (archived #6); 13 done #15 (platform-P1-L9; CI gate open until Actions billing is fixed); 12 waits on core task 8; 15 waits on 13 and 14 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | waits on platform task 4 |
 | ui | 9 packages/ui | waits on platform task 1 |
 | web | 10 apps/web | waits on ui task 9 |
@@ -52,6 +55,9 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 
 ## Backlog
 -
+
+## Blockers needing the owner
+- 2026-10-12: GitHub Actions cannot run on the private repo. Every job of the first `ci` run (PR #15, run 38300525970) failed with zero steps and the annotation "The job was not started because recent account payments have failed or your spending limit needs to be increased." Fix: GitHub Settings, Billing & plans (payment method or Actions spending limit). Until then PR checks show failed for every area; managers verify locally, paste the gates in the PR and merge, noting the blocker under Deferred. The repo stays private (D2). The orchestrator re-runs CI on main once Actions work.
 
 ## Journal
 - 2026-10-12: specs 1 and 2 approved by the owner; plan 1 written.
@@ -62,3 +68,6 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: platform tasks 3 and 4 landed (#3, #4) and archived (#5, #6); `make db` verified against the real container. core, ui and admin managers running; CI and Makefile lane (platform-P1-L9) started so every later PR gets a `ci` check.
 - 2026-10-12: ui raised typescript-eslint (D10), the Node 22.12 floor (D11) and the line-strong contrast (D12, pending owner). CI and Makefile (platform-P1-L9) told to build packages/ui before app gates and to use Node >= 22.12.
 - 2026-10-12: owner delegated decisions (D13); D12 decided for #868C94.
+- 2026-10-12: platform-P1-L9 (CI and Makefile) change seen and workers launched under D13; D14, D15 recorded; root build script chore (#13).
+- 2026-10-12: first CI run blocked by account billing (see Blockers); managers told to verify locally and merge without `ci` until fixed.
+- 2026-10-12: CI workflow and Makefile landed (#15); core defaults recorded (D16); core workers started under D13.

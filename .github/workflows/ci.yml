@@ -1,0 +1,107 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      SHOPPERSTOP_CORE_TEST_DATABASE_URL: postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('services/core/go.mod') == ''
+        run: 'echo "core: services/core absent, skipping"'
+      - if: hashFiles('services/core/go.mod') != ''
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/core/go.mod
+          cache-dependency-path: services/core/go.sum
+      - if: hashFiles('services/core/go.mod') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: hashFiles('services/core/go.mod') != ''
+        run: npm ci
+      - if: hashFiles('services/core/go.mod') != ''
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -f deploy/initdb.sql
+        env:
+          PGPASSWORD: postgres
+      - if: hashFiles('services/core/go.mod') != ''
+        run: make test-core
+      - if: hashFiles('services/core/sqlc.yaml') != ''
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - if: hashFiles('services/core/go.mod') != ''
+        run: |
+          make gen postman
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('packages/ui/package.json') == ''
+        run: 'echo "web: packages/ui absent, skipping"'
+      - if: hashFiles('packages/ui/package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: hashFiles('packages/ui/package.json') != ''
+        run: npm ci
+      - if: hashFiles('packages/ui/package.json') != ''
+        run: make test-web
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('services/core/go.mod') == '' || hashFiles('apps/web/package.json') == ''
+        run: 'echo "e2e: services/core or apps/web absent, skipping"'
+      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/core/go.mod
+          cache-dependency-path: services/core/go.sum
+      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: hashFiles('services/core/go.mod') != '' && hashFiles('apps/web/package.json') != ''
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres -f deploy/initdb.sql
+          make e2e
+
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i -g @fission-ai/openspec@latest
+      - run: openspec validate --all --strict
