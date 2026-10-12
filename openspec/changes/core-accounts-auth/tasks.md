@@ -13,7 +13,7 @@ Scope: `services/core/migrations/`, `services/core/internal/testdb/`, `services/
 
 Scope: `services/core/sqlc.yaml`, `services/core/queries/`, `services/core/internal/auth/db/`, `services/core/internal/address/db/`. Scenarios: none; generated data access whose behaviour tasks 4 to 9 test (no test: generated code, `go vet ./...` compiles it). Commit: `feat: sqlc config, account and address queries, generated code`.
 
-- [ ] 2.1 `sqlc.yaml`, `queries/auth.sql`, `queries/address.sql` verbatim from design; run `make gen` with sqlc v1.31.1 (`sqlc version`); verify the generated header says `sqlc v1.31.1`, a second `make gen` leaves `git status` clean, the gates pass; commit
+- [x] 2.1 `sqlc.yaml`, `queries/auth.sql`, `queries/address.sql` verbatim from design; run `make gen` with sqlc v1.31.1 (`sqlc version`); verify the generated header says `sqlc v1.31.1`, a second `make gen` leaves `git status` clean, the gates pass; commit
 
 ## 3. HTTP helpers: PATCH, paging, path ids, subject in the log
 
