@@ -61,8 +61,8 @@ Scope: `services/core/internal/auth/staff.go`, `services/core/internal/app/`, `s
 
 Scope: `services/core/internal/seed/`, `services/core/cmd/core-admin/main.go`. Scenarios: accounts "Demo customer", admin-staff "Demo admin". Start from `internal/seed/seed_test.go` `TestResetTwiceLeavesDemoAccounts`. Commits: `test: seed-demo reset twice leaves the demo accounts`, then `feat: seed-demo loads the demo admin, customer and addresses`.
 
-- [ ] 9.1 `seed_test.go` (package `seed_test`, `testdb.Migrated("seed")`): insert another customer, another staff user and a session; `seed.Reset` twice; assert exactly the fixed rows of design Decision 22 (ids, emails, roles, two addresses with Home default), no session left, and `POST /auth/sign-in` with `demo12345` and `POST /admin/auth/sign-in` with `admin12345` both answer 200 through `app.New` on an `httptest` server; `TestLoadTwiceFails` (`Load` on a seeded database returns an error); verify they fail, commit
-- [ ] 9.2 `seed.go` per Decision 21; `seed-demo [--reset]` loads config, opens the pool, runs `Reset` or `Load`, prints `seed-demo: demo accounts loaded`, exits 1 on error; verify the gates and the e2e command of Decision 22 against `shopperstop_core_e2e` twice in a row, commit
+- [x] 9.1 `seed_test.go` (package `seed_test`, `testdb.Migrated("seed")`): insert another customer, another staff user and a session; `seed.Reset` twice; assert exactly the fixed rows of design Decision 22 (ids, emails, roles, two addresses with Home default), no session left, and `POST /auth/sign-in` with `demo12345` and `POST /admin/auth/sign-in` with `admin12345` both answer 200 through `app.New` on an `httptest` server; `TestLoadTwiceFails` (`Load` on a seeded database returns an error); verify they fail, commit
+- [x] 9.2 `seed.go` per Decision 21; `seed-demo [--reset]` loads config, opens the pool, runs `Reset` or `Load`, prints `seed-demo: demo accounts loaded`, exits 1 on error; verify the gates and the e2e command of Decision 22 against `shopperstop_core_e2e` twice in a row, commit
 
 ## 10. Generated types, Postman and the full gate
 
