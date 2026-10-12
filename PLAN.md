@@ -23,6 +23,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D14 | CI's `sqlc diff` step is replaced by `make gen postman` leaving `git status` clean (covers sqlc output, generated API types and the Postman collection); sqlc is installed only while `services/core/sqlc.yaml` exists. Spec 1 §6 and CLAUDE.md wording updated in Task 15 | Orchestrator 2026-10-12 |
 | D15 | End-to-end runs use `shopperstop_core_e2e` (plan, `initdb.sql`, Spec 2 §13), not `_test` as Spec 1 §6 says: core on :18080, web preview 15173, admin preview 15174, e2e-only pepper, set by `make e2e`; each app's Playwright config starts core and `vite preview`; Chromium only. core adds a Phase 1 `seed-demo --reset` stub so `make dev` reaches the three servers | Orchestrator 2026-10-12 |
 | D16 | Core Phase 1 defaults: `healthz` and `readyz` are listed in `openapi.json` (every served route, Spec 1 §11, so no skip list in the contract test); `internal/pg` deferred to Phase 2 (`pgx.BeginFunc` covers `WithTx` until the first query); `core-admin migrate` loads the full core env, `SHOPPERSTOP_CORE_FILES_DIR` unread in Phase 1 | Orchestrator 2026-10-12 |
+| D17 | The owner's Figma plan is Starter: three pages per file and a daily MCP tool-call cap. The ShopperStop file (https://www.figma.com/design/pUvvBVQbwM8287Q3Fji8G1) therefore has three pages (`Tokens & Components`, `Customer web`, `Admin web`) with sections instead of the five in Spec 1 §9; the Mobile page is added with the mobile spec. Code Connect and small nits wait for the next call budget | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -39,8 +40,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 |------|-------|------------|----------------|
 | platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | running (orchestrator session, D9) |
 | core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | running (session shopperstop-ed); core-P1-L1 team lead on change core-service-foundation (tasks 5-8); unblocked by #4 |
-| ui | `packages/ui/` | platform (`package.json` workspaces) | running (session shopperstop-5c); ui-P1-L1 team lead on change ui-packages-ui |
-| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | no manager yet; start `/manage web` when packages/ui lands |
+| ui | `packages/ui/` | platform (`package.json` workspaces) | ui-P1-L1 landed #20; archive and plan PRs follow; no further Phase 1 tasks |
+| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | **no manager session; packages/ui is on main, so the owner can start `claude --model claude-fable-5-1` then `/manage web` now** |
 | admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | running (session shopperstop-75); waits on ui task 9 and core task 8 |
 
 ## Phase 1 - Foundation and design system
@@ -48,15 +49,16 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 |------|-----------|--------|
 | platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (archived #5); 4 done #4 (archived #6); 13 done #15 (platform-P1-L9; CI gate open until Actions billing is fixed); 12 waits on core task 8; 15 waits on 13 and 14 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | waits on platform task 4 |
-| ui | 9 packages/ui | waits on platform task 1 |
+| ui | 9 packages/ui | done #20 (ui-P1-L1); `api/core.d.ts` follows core's openapi.json |
 | web | 10 apps/web | waits on ui task 9 |
 | admin | 11 apps/admin | waits on ui task 9 |
-| orchestrator | 14 Figma (Figma tools live in the main session) | |
+| orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#21) |
 
 ## Backlog
 -
 
 ## Blockers needing the owner
+- 2026-10-12: `apps/web` has no manager session. Start one in a new terminal at the repo root: `claude --model claude-fable-5-1`, then `/manage web`. Its work package is `.claude/areas/web.md` (plan task 10, the e2e contract under Requests).
 - 2026-10-12: GitHub Actions cannot run on the private repo. Every job of the first `ci` run (PR #15, run 38300525970) failed with zero steps and the annotation "The job was not started because recent account payments have failed or your spending limit needs to be increased." Fix: GitHub Settings, Billing & plans (payment method or Actions spending limit). Until then PR checks show failed for every area; managers verify locally, paste the gates in the PR and merge, noting the blocker under Deferred. The repo stays private (D2). The orchestrator re-runs CI on main once Actions work.
 
 ## Journal
@@ -71,3 +73,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: platform-P1-L9 (CI and Makefile) change seen and workers launched under D13; D14, D15 recorded; root build script chore (#13).
 - 2026-10-12: first CI run blocked by account billing (see Blockers); managers told to verify locally and merge without `ci` until fixed.
 - 2026-10-12: CI workflow and Makefile landed (#15); core defaults recorded (D16); core workers started under D13.
+- 2026-10-12: Figma file built (Task 14, D17); packages/ui landed (#20); web manager still to be started by the owner.
