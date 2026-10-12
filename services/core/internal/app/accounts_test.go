@@ -504,6 +504,11 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodPost, categoriesPath, map[string]string{}, http.StatusBadRequest},
 		{http.MethodPatch, categoriesPath + "/" + missingCategoryID, map[string]string{}, http.StatusNotFound},
 		{http.MethodDelete, categoriesPath + "/" + missingCategoryID, nil, http.StatusNotFound},
+		{http.MethodGet, productsPath, nil, http.StatusOK},
+		{http.MethodPost, productsPath, map[string]string{}, http.StatusBadRequest},
+		{http.MethodGet, productsPath + "/" + missingProductID, nil, http.StatusNotFound},
+		{http.MethodPatch, productsPath + "/" + missingProductID, map[string]string{}, http.StatusNotFound},
+		{http.MethodDelete, productsPath + "/" + missingProductID, nil, http.StatusNotFound},
 	}
 	for _, g := range adminGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
