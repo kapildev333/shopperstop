@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth/db"
@@ -163,6 +164,10 @@ func CreateStaff(ctx context.Context, pool *pgxpool.Pool, in NewStaff) (Staff, e
 	row, err := db.New(pool).CreateStaff(ctx, db.CreateStaffParams{
 		Email: email, PasswordHash: hash, Name: name, Role: db.StaffRole(in.Role), StoreID: storeID,
 	})
+	var fk *pgconn.PgError
+	if errors.As(err, &fk) && fk.ConstraintName == "staff_users_store_id_fkey" {
+		return Staff{}, &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Message: "no such store", Field: "storeId"}
+	}
 	if pg.IsUnique(err) {
 		return Staff{}, &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "email already registered", Field: "email"}
 	}

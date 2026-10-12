@@ -38,6 +38,12 @@ func TestMain(m *testing.M) {
 	if filesDir, err = os.MkdirTemp("", "core-app-files-"); err != nil {
 		panic(err)
 	}
+	// staff_users.store_id references stores (core-P2-L2): the staff fixtures' store exists.
+	if _, err := testPool.Exec(context.Background(),
+		"insert into stores (id, name, address_line, pincode, promised_minutes) values ($1, 'Test store', '1 Test Rd', '560001', 10)",
+		testStoreID); err != nil {
+		panic(err)
+	}
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()

@@ -185,5 +185,7 @@ test('environment holds the seven variables', () => {
   assert.deepEqual(env.values.map((v) => v.key), ['baseUrl', 'customerToken', 'staffToken', 'storeId', 'productId', 'addressId', 'orderId']);
   const byKey = Object.fromEntries(env.values.map((v) => [v.key, v.value]));
   assert.equal(byKey.baseUrl, 'http://localhost:8080/api/core/v1');
-  for (const key of Object.keys(byKey).filter((k) => k !== 'baseUrl')) assert.equal(byKey[key], '', `${key} must be empty`);
+  for (const key of ['customerToken', 'staffToken']) assert.equal(byKey[key], '', `${key} must be empty`);
+  // D20: the ids are the core seed's fixed uuids so the collection runs top to bottom against make dev.
+  for (const key of ['storeId', 'productId', 'addressId', 'orderId']) assert.match(byKey[key], /^00000000-0000-4000-8000-0000000007?0[0-9]{2}$|^00000000-0000-4000-8000-[0-9a-f]{12}$/, `${key} must be a fixed seed uuid`);
 });

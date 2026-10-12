@@ -4,6 +4,7 @@ const reuseExistingServer = !process.env.CI
 
 export default defineConfig({
   testDir: 'e2e',
+  globalSetup: './e2e/global-setup.ts',
   forbidOnly: !!process.env.CI,
   use: { baseURL: 'http://localhost:15174/admin/' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

@@ -171,3 +171,25 @@ type StaffUser struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
+
+type Store struct {
+	ID                     string
+	Name                   string
+	AddressLine            string
+	Pincode                string
+	IsOpen                 bool
+	DeliveryFeeCents       int64
+	FreeDeliveryAboveCents int64
+	MinOrderCents          int64
+	PromisedMinutes        int32
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+}
+
+type StoreServiceArea struct {
+	ID        string
+	StoreID   string
+	Pincode   string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}

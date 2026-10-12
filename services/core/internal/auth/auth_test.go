@@ -26,8 +26,7 @@ import (
 
 const testPepper = "test-pepper-test-pepper-test-pepper-00"
 
-// testStoreID names a store that does not exist yet: staff_users.store_id has
-// no foreign key until core-P2-L2.
+// testStoreID is the store the fixtures' store staff belong to; TestMain inserts it.
 const testStoreID = "00000000-0000-4000-8000-000000000401"
 
 var testPool *pgxpool.Pool
@@ -35,6 +34,12 @@ var testPool *pgxpool.Pool
 func TestMain(m *testing.M) {
 	var cleanup func()
 	testPool, cleanup = testdb.Migrated("auth")
+	// staff_users.store_id references stores (core-P2-L2): the staff fixtures' store exists.
+	if _, err := testPool.Exec(context.Background(),
+		"insert into stores (id, name, address_line, pincode, promised_minutes) values ($1, 'Test store', '1 Test Rd', '560001', 10)",
+		testStoreID); err != nil {
+		panic(err)
+	}
 	code := m.Run()
 	cleanup()
 	os.Exit(code)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"image"
 	_ "image/png"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,10 +38,12 @@ func TestMain(m *testing.M) {
 
 // Fixed ids of design Decision 22.
 const (
-	adminID    = "00000000-0000-4000-8000-000000000101"
-	customerID = "00000000-0000-4000-8000-000000000201"
-	homeID     = "00000000-0000-4000-8000-000000000301"
-	workID     = "00000000-0000-4000-8000-000000000302"
+	adminID          = "00000000-0000-4000-8000-000000000101"
+	customerID       = "00000000-0000-4000-8000-000000000201"
+	homeID           = "00000000-0000-4000-8000-000000000301"
+	workID           = "00000000-0000-4000-8000-000000000302"
+	storeKoramangala = "00000000-0000-4000-8000-000000000401"
+	storeIndiranagar = "00000000-0000-4000-8000-000000000402"
 )
 
 // addOtherRows puts a customer with an address, a staff user and a session in
@@ -105,14 +108,14 @@ func TestResetTwiceLeavesDemoAccounts(t *testing.T) {
 		}
 	}
 
-	assertCount(t, "staff_users", 1)
+	assertCount(t, "staff_users", 3)
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
 	assertCount(t, "sessions", 0)
 
 	var id, email, role string
 	var active bool
-	if err := testPool.QueryRow(ctx, "select id::text, email::text, role::text, is_active from staff_users").Scan(&id, &email, &role, &active); err != nil {
+	if err := testPool.QueryRow(ctx, "select id::text, email::text, role::text, is_active from staff_users where role = 'admin'").Scan(&id, &email, &role, &active); err != nil {
 		t.Fatal(err)
 	}
 	if id != adminID || email != "admin@shopperstop.local" || role != "admin" || !active {
@@ -174,7 +177,7 @@ func TestLoadTwiceFails(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "duplicate key") {
 		t.Fatalf("load on a seeded database: %v, want a duplicate key error", err)
 	}
-	assertCount(t, "staff_users", 1)
+	assertCount(t, "staff_users", 3)
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
 }
@@ -198,6 +201,104 @@ func TestLoadRollsBackWhenCustomerInsertFails(t *testing.T) {
 	assertCount(t, "staff_users", 0)
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
+}
+
+// postJSON posts body as JSON and returns the status and the raw answer.
+func postJSON(t *testing.T, url string, body any) (int, []byte) {
+	t.Helper()
+	raw, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.Post(url, "application/json", bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out
+}
+
+// getJSON reads url and returns the status and the raw answer.
+func getJSON(t *testing.T, url string) (int, []byte) {
+	t.Helper()
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out
+}
+
+// TestResetTwiceLeavesDemoStores: two resets over a database holding another
+// store leave exactly the two demo stores, and their pincodes answer them.
+func TestResetTwiceLeavesDemoStores(t *testing.T) {
+	ctx := context.Background()
+	if _, err := testPool.Exec(ctx, `with s as (
+		insert into stores (name, address_line, pincode, promised_minutes) values ('Stray', '1 Stray Rd', '110001', 10) returning id)
+		insert into store_service_areas (store_id, pincode) select id, '110001' from s`); err != nil {
+		t.Fatalf("add stray store: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := seed.Reset(ctx, testPool); err != nil {
+			t.Fatalf("reset %d: %v", i+1, err)
+		}
+	}
+
+	assertCount(t, "stores", 2)
+	assertCount(t, "store_service_areas", 4)
+
+	base := server(t)
+	for pincode, want := range map[string]string{"560095": storeKoramangala, "560008": storeIndiranagar} {
+		status, body := getJSON(t, base+"/api/core/v1/serviceability?pincode="+pincode)
+		var s struct {
+			Store struct {
+				ID     string `json:"id"`
+				IsOpen bool   `json:"isOpen"`
+			} `json:"store"`
+		}
+		if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Store.ID != want || !s.Store.IsOpen {
+			t.Fatalf("serviceability %s: got %d %s, want 200 open store %s", pincode, status, body, want)
+		}
+	}
+	if status, body := getJSON(t, base+"/api/core/v1/serviceability?pincode=110001"); status != http.StatusNotFound {
+		t.Fatalf("stray pincode 110001: got %d %s, want 404 not_serviceable", status, body)
+	}
+}
+
+// TestResetLeavesDemoStoreStaff: after a reset the two demo store-staff users
+// sign in with the demo password and carry their store.
+func TestResetLeavesDemoStoreStaff(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	base := server(t)
+	for _, c := range []struct{ id, email, storeID string }{
+		{"00000000-0000-4000-8000-000000000102", "koramangala@shopperstop.local", storeKoramangala},
+		{"00000000-0000-4000-8000-000000000103", "indiranagar@shopperstop.local", storeIndiranagar},
+	} {
+		status, body := postJSON(t, base+"/api/core/v1/admin/auth/sign-in", map[string]string{"email": c.email, "password": "staff12345"})
+		var s struct {
+			Staff struct {
+				ID       string `json:"id"`
+				Role     string `json:"role"`
+				StoreID  string `json:"storeId"`
+				IsActive bool   `json:"isActive"`
+			} `json:"staff"`
+		}
+		if status != http.StatusOK || json.Unmarshal(body, &s) != nil ||
+			s.Staff.ID != c.id || s.Staff.Role != "store_staff" || s.Staff.StoreID != c.storeID || !s.Staff.IsActive {
+			t.Fatalf("sign-in %s: got %d %s, want 200 store staff %s of store %s", c.email, status, body, c.id, c.storeID)
+		}
+	}
 }
 
 // assertSQL runs a query that returns one integer and fails unless it equals want.

@@ -28,13 +28,6 @@ type categoryNodeView struct {
 	Children []categoryView `json:"children"`
 }
 
-// adminToken signs the shared admin in and returns the token.
-func adminToken(t *testing.T) string {
-	t.Helper()
-	seedStaff(t)
-	return staffSignIn(t, adminStaffEmail)
-}
-
 // createCategory posts body as the admin and returns the 201 category.
 func createCategory(t *testing.T, token string, body map[string]any) categoryView {
 	t.Helper()
