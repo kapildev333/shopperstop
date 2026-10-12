@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 )
@@ -25,6 +26,10 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireCustomer).Post("/api/core/v1/auth/sign-out", a.SignOut)
 	r.With(a.RequireCustomer).Get("/api/core/v1/me", a.Me)
 	r.With(a.RequireCustomer).Patch("/api/core/v1/me", a.UpdateMe)
+	r.With(a.RequireCustomer).Get("/api/core/v1/me/addresses", address.List(pool))
+	r.With(a.RequireCustomer).Post("/api/core/v1/me/addresses", address.Create(pool))
+	r.With(a.RequireCustomer).Patch("/api/core/v1/me/addresses/{id}", address.Update(pool))
+	r.With(a.RequireCustomer).Delete("/api/core/v1/me/addresses/{id}", address.Delete(pool))
 	return r
 }
 

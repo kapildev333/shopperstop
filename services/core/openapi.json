@@ -424,6 +424,368 @@
           }
         }
       }
+    },
+    "/me/addresses": {
+      "get": {
+        "operationId": "getMeAddresses",
+        "summary": "List the customer's addresses",
+        "description": "Answers one page of the signed-in customer's addresses, the default first, then newest first. total counts every address, not just this page. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter.",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of addresses. items is [] when the customer has none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000301",
+                      "label": "Home",
+                      "line1": "12 80 Feet Rd, Koramangala",
+                      "pincode": "560034",
+                      "isDefault": true
+                    },
+                    {
+                      "id": "00000000-0000-4000-8000-000000000302",
+                      "label": "Work",
+                      "line1": "100 Feet Rd, Indiranagar",
+                      "pincode": "560038",
+                      "isDefault": false
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page or pageSize is out of range or not a whole number. The field names the parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100",
+                    "field": "pageSize"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postMeAddresses",
+        "summary": "Add an address",
+        "description": "Creates an address for the signed-in customer and answers 201 with it. isDefault true makes it the only default: the previous default is cleared in the same transaction. A new address is never made default by itself. An empty line2 is omitted from responses.",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressCreate"
+              },
+              "example": {
+                "label": "Home",
+                "line1": "12 80 Feet Rd, Koramangala",
+                "pincode": "560034",
+                "isDefault": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The address that was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000301",
+                  "label": "Home",
+                  "line1": "12 80 Feet Rd, Koramangala",
+                  "pincode": "560034",
+                  "isDefault": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. The field names it: label, line1, line2 or pincode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be six digits, not starting with 0",
+                    "field": "pincode"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/addresses/{id}": {
+      "patch": {
+        "operationId": "patchMeAddress",
+        "summary": "Change an address",
+        "description": "Changes only the fields present. An empty line2 clears it and it is then omitted. isDefault true clears the customer's previous default in the same transaction. A null value is refused with 400 naming the field. Another customer's address, or an id that is not one, answers 404.",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The address id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressPatch"
+              },
+              "example": {
+                "label": "Work",
+                "isDefault": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000302",
+                  "label": "Work",
+                  "line1": "100 Feet Rd, Indiranagar",
+                  "pincode": "560038",
+                  "isDefault": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid, or a member is null. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must not be null",
+                    "field": "line2"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No address with this id belongs to the customer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMeAddress",
+        "summary": "Delete an address",
+        "description": "Deletes the address. Deleting the default address is allowed; the customer then has no default until one is set. Another customer's address, or an id that is not one, answers 404.",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The address id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000301"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The address is deleted. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No address with this id belongs to the customer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -558,6 +920,141 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "Address": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "line1",
+          "pincode",
+          "isDefault"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "line1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "line2": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Omitted when empty."
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "true for the customer's default address. At most one address is true."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddressCreate": {
+        "type": "object",
+        "required": [
+          "label",
+          "line1",
+          "pincode"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "line1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "line2": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Optional; empty or absent means no line2."
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddressPatch": {
+        "type": "object",
+        "description": "Every member is optional; a member that is present must not be null.",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "line1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "line2": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Empty clears line2."
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddressList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every address the customer has, not just this page."
           }
         },
         "additionalProperties": false
