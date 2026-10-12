@@ -29,10 +29,10 @@ Scope: `services/core/go.mod`, `go.sum`, `services/core/internal/migrate/`, `ser
 
 Scope: `services/core/openapi.json`, `services/core/internal/app/`, `services/core/cmd/core/`. Scenarios: platform "Health endpoints" (both), "The OpenAPI file matches the router" (all three), "Graceful shutdown". Start from `internal/app/app_test.go` `TestReadyzWhenDatabaseAnswers`. Commits: `test: health endpoints and OpenAPI contract`, `feat: core app routes, health endpoints, openapi.json`, `test: graceful shutdown drains in-flight requests`, `feat: cmd/core serve with graceful shutdown`.
 
-- [ ] 4.1 `app_test.go` (TestMain and shared `srv` per Decision 14): `TestHealthz`, `TestReadyzWhenDatabaseAnswers`, `TestReadyzWhenDatabaseIsDown` (pool to a silent listener per Test strategy: 503 `internal` within about 2 s); `contract_test.go` per Decision 13: `TestContract`, `TestContractNamesUndocumentedRoute`, `TestContractNamesUnservedPath`, `TestContractNamesMissingExample`; verify they fail, commit
-- [ ] 4.2 `app.go` per Decision 11, `openapi.json` per Decision 12 (OpenAPI 3.1, `servers` `/api/core/v1`, tag `platform`, both routes with summary, description, 200 example, and for `readyz` the 503 envelope example; `components.schemas.Error`); verify 4.1 passes, commit
-- [ ] 4.3 `cmd/core/main_test.go`: `TestServeDrainsInFlightRequest` (handler blocks on a channel; cancel the context while the request is in flight; release; response is 200 with its body and `serve` returns nil); verify it fails, commit
-- [ ] 4.4 `cmd/core/main.go` per Decision 15; verify the gates pass, and with the dev env `go run ./cmd/core` answers `curl -s localhost:8080/api/core/v1/readyz` with `{"status":"ok"}` and exits 0 on Ctrl-C, commit
+- [x] 4.1 `app_test.go` (TestMain and shared `srv` per Decision 14): `TestHealthz`, `TestReadyzWhenDatabaseAnswers`, `TestReadyzWhenDatabaseIsDown` (pool to a silent listener per Test strategy: 503 `internal` within about 2 s); `contract_test.go` per Decision 13: `TestContract`, `TestContractNamesUndocumentedRoute`, `TestContractNamesUnservedPath`, `TestContractNamesMissingExample`; verify they fail, commit
+- [x] 4.2 `app.go` per Decision 11, `openapi.json` per Decision 12 (OpenAPI 3.1, `servers` `/api/core/v1`, tag `platform`, both routes with summary, description, 200 example, and for `readyz` the 503 envelope example; `components.schemas.Error`); verify 4.1 passes, commit
+- [x] 4.3 `cmd/core/main_test.go`: `TestServeDrainsInFlightRequest` (handler blocks on a channel; cancel the context while the request is in flight; release; response is 200 with its body and `serve` returns nil); verify it fails, commit
+- [x] 4.4 `cmd/core/main.go` per Decision 15; verify the gates pass, and with the dev env `go run ./cmd/core` answers `curl -s localhost:8080/api/core/v1/readyz` with `{"status":"ok"}` and exits 0 on Ctrl-C, commit
 
 ## Workflow follow-up
 
