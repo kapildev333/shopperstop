@@ -2,6 +2,8 @@
 Status: done
 ## Doing
 Task 10 landed on `lane/core-P2-L1-accounts-auth`: `01a079d` (test: seed load rollback, seed-demo command exit codes), `733990b` (chore: regenerate api types and postman collection), then the tick commit (`chore: tick task 10`). Gates: `GOFLAGS=-count=1 make test-core` exit 0; `make gen postman` leaves `git status` clean; `openspec validate --all --strict` 6 passed; `npm run test --workspace packages/ui` 53 passed (`core.test.ts` 2 passed); `make postman` (`node --test scripts/postman.test.mjs`) 11 of 11 passed.
+## Doing
+Acceptance follow-up: `98cb6ed` (test: create-admin stores a hash that matches the stdin password) adds a bcrypt compare of the stored hash against `rootpass123` to `TestCreateAdmin`. Mutation (CRLF strip removed) fails it with "does not match"; `go test -race -count=1 ./cmd/core-admin/` ok 17.68 s.
 ## Found
 - Postman collection: 3 folders, 17 requests: `platform` (2), `accounts` (9), `admin-staff` (6). Environment file holds the seven variables (checked by the postman test).
 - `make gen` regenerated only `packages/ui/src/api/core.d.ts` (+1525 lines, the five accounts, the staff routes and the schemas); sqlc output unchanged, `sqlc v1.31.1`.
