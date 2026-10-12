@@ -101,3 +101,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-12: web-P2-L2 customer accounts merged (#68, archived #69); admin-P2-L1 at its walk-through and PR; core L2 and L3 building. web-P2-L1 (browsing) team lead proposing against core L2 and L4 designs.
 - 2026-10-12: core-P2-L2 merged (#76, archived #77); admin-P2-L1 merged (#71); web-P2-L2 merged (#68); web-P2-L1 task 1 and admin-stores started; D25.
 - 2026-10-12: ui-P2-L1 TabNav scroll fix (#82) from admin's axe finding; web-P2-L1 task 1 (pincode, store gate) and web-P2-L3 task 1 (guest cart model) landed and reviewed on their branches; admin-P2-L2 building; core L3 at its last task, L4 next.
+- 2026-10-12: core-P2-L3 catalog merged (#87, archived #88): admin categories and products, images, /files, seed with 148 products; SHOPPERSTOP_CORE_FILES_DIR now required. core L4 (stock, cart, browsing routes) building; admin-stores at its e2e; web browsing and cart lanes wait on L4.
