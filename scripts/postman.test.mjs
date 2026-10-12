@@ -88,9 +88,9 @@ const testScript = (item) => (item.event ?? []).filter((e) => e.listen === 'test
 
 test('folders follow the contract tags', async () => {
   const c = JSON.parse(await generate(realSpec));
-  assert.equal(c.item.length, 1);
-  assert.equal(c.item[0].name, 'platform');
-  const folder = c.item[0].item;
+  const tags = new Set(Object.values(realSpec.paths).flatMap((ops) => Object.values(ops).flatMap((op) => op.tags ?? [])));
+  assert.deepEqual(new Set(c.item.map((f) => f.name)), tags);
+  const folder = c.item.find((f) => f.name === 'platform').item;
   assert.deepEqual(folder.map((r) => r.name), ['Liveness', 'Readiness']);
   assert.deepEqual(folder.map((r) => [r.request.method, r.request.url.host, r.request.url.path]), [
     ['GET', ['{{baseUrl}}'], ['healthz']],

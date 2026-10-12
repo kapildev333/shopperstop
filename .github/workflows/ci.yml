@@ -42,7 +42,7 @@ jobs:
       - if: hashFiles('services/core/go.mod') != ''
         run: make test-core
       - if: hashFiles('services/core/sqlc.yaml') != ''
-        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
       - if: hashFiles('services/core/go.mod') != ''
         run: |
           make gen postman
