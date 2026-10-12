@@ -20,8 +20,8 @@ Scope: `services/core/queries/catalog.sql` (append), `services/core/internal/cat
 
 Scope: `services/core/queries/catalog.sql` (append), `services/core/internal/catalog/store.go`, `services/core/internal/catalog/db/` (regenerated), `services/core/internal/app/` (`app.go`, `catalog_store_test.go`), `services/core/openapi.json`, generated `core.d.ts` and Postman collection. Scenarios: catalog "Store categories list only what is in stock" (all three). Start from `internal/app/catalog_store_test.go` `TestStoreCategoriesHideOutOfStockChild`. Commits: `test: store categories need an active product in stock`, then `feat: store categories route`.
 
-- [ ] 3.1 `catalog_store_test.go`: `TestStoreCategoriesHideOutOfStockChild` (parent with `Milk` all at 0 and `Curd` with 4: parent listed with `Curd` only), `TestStoreCategoriesIgnoreInactiveStock` (parent whose only stocked product is inactive: absent), `TestStoreCategoriesUnknownStore` (404); verify they fail, commit
-- [ ] 3.2 append `StoreCategories` verbatim from design; `make gen`; `StoreCategories(pool)` per Decision 14 reusing L3's tree assembly; public route; `openapi.json` operation under tag `catalog` answering L3's `CategoryTree`, 404 example; `make gen postman`; verify the gates, commit
+- [x] 3.1 `catalog_store_test.go`: `TestStoreCategoriesHideOutOfStockChild` (parent with `Milk` all at 0 and `Curd` with 4: parent listed with `Curd` only), `TestStoreCategoriesIgnoreInactiveStock` (parent whose only stocked product is inactive: absent), `TestStoreCategoriesUnknownStore` (404); verify they fail, commit
+- [x] 3.2 append `StoreCategories` verbatim from design; `make gen`; `StoreCategories(pool)` per Decision 14 reusing L3's tree assembly; public route; `openapi.json` operation under tag `catalog` answering L3's `CategoryTree`, 404 example; `make gen postman`; verify the gates, commit
 
 ## 4. Staff stock routes and demo stock
 
