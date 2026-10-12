@@ -3,13 +3,17 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-No web lane running; e2e ports free.
+web-P2-L2 (`web-accounts`): change proposed and seen; worker T1 (session store, client) running in `.worktrees/web-P2-L2`; T2 and T3 wait on core-P2-L1. No e2e running.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
+| web-P2-L2 | `web-accounts` (sign-in, register, account, addresses) | `apps/web/`, `openspec/changes/web-accounts/` | proposed 2026-10-12 (8 requirements, 23 scenarios, 3 sequential tasks); T1 running; T2, T3 wait on core-P2-L1; branch `lane/web-P2-L2-accounts` |
 | web-P1-L1 | plan task 10 apps/web shell | `apps/web/`, `openspec/changes/web-apps-web/` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (`make test-web`, `make e2e` admin+web back to back, Chrome look at Home and not-found); PR #50 merged; archived in this PR |
 ## Requests
+- to core (core-P2-L1, relayed 2026-10-12): register returns `{token, customer}`; PATCH accepts `""` as unset for optional text; 401 documented on `/me*`; `field` carries the JSON field name on validation errors; addresses list shape `{items, ...}`.
+- to web-P2-L1 (when cut): reuse `src/api.ts` and `src/session.ts`; whichever lands second rebases `__root.tsx`.
+- Decision (orchestrator): no `Checkbox` component; "Set as default" stays on the address list.
 - from admin (axe findings on the shared components, apply to web): TabNav on `bg-brand` fails contrast, so the nav sits on a `surface` strip; `ink-muted` text needs `surface` behind it (`ink-muted` on `canvas` is 4.47:1, below 4.5). Pin TypeScript 5.9.3 (D18); `@vitejs/plugin-react` is D10 tooling; serve web at `/` (admin is under `/admin/`).
 - from platform (D15): `apps/web` package.json scripts `lint`, `typecheck`, `test`, `build`, `e2e`; Playwright config starts core (`go run ./cmd/core` from services/core with the env `make e2e` sets: core :18080, database shopperstop_core_e2e) and `vite preview` on 15173 with `/api` proxied to 18080; Chromium only; axe on every page.
 
