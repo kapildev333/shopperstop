@@ -1,50 +1,9 @@
 # Spec Delta
 
 ## Purpose
-What customers read of the catalog: a store's category tree, its products and one product by slug, the images served without a session, the image URL each category and product carries, and the demo catalog loaded for local use.
+What customers and every client read of the catalog: images served without a session, the image URL each category and product carries, and the demo catalog loaded for local use. core-P2-L4 adds the store-facing category and product reads with stock.
 
 ## ADDED Requirements
-
-### Requirement: Customers read a store's category tree
-`GET /api/core/v1/stores/{id}/categories` SHALL answer without a session with `{items}`, where each item is a parent category with a `children` array, parents and children each ordered by `sortOrder`, then `name`; an unknown store id SHALL answer 404 `not_found`.
-
-#### Scenario: Tree order
-- **WHEN** a client reads the categories of a store and the catalog holds parents `B` (sortOrder 1) and `A` (sortOrder 2) with children `y` and `x` (both sortOrder 0) under `B`
-- **THEN** `B` comes before `A` and `B.children` lists `x` before `y`
-
-#### Scenario: Unknown store
-- **WHEN** a client reads the categories of a store id that does not exist
-- **THEN** the response is 404 with code `not_found`
-
-### Requirement: Customers list a store's products
-`GET /api/core/v1/stores/{id}/products` SHALL answer without a session with the paged list of active products only, ordered by `name`, filtered by `q` (case-insensitive substring of name or brand, `%` and `_` literal) and `categoryId` (that category and its children); each product SHALL carry `id`, `name`, `slug`, `unitLabel`, `mrpCents`, `priceCents`, `categoryId`, and `description`, `brand`, `imageUrl` when set, and no `isActive`.
-
-#### Scenario: Inactive products are hidden
-- **WHEN** a client lists a store's products and the catalog holds an active and an inactive product in the same category
-- **THEN** only the active product is listed and no product carries `isActive`
-
-#### Scenario: Search and category
-- **WHEN** a client lists a store's products with `q=farm` and the `categoryId` of a parent whose child holds an active product of brand `Daily Farm`
-- **THEN** that product is listed
-
-#### Scenario: Paging
-- **WHEN** a client lists a store's products without `page` and `pageSize`, and again with `pageSize=101`
-- **THEN** the first response has `page` 1 and `pageSize` 24, and the second is 400 with code `validation` and field `pageSize`
-
-#### Scenario: Unknown store or bad filter
-- **WHEN** a client lists the products of a store id that does not exist, or passes a `categoryId` that is not a uuid
-- **THEN** the response is 404 `not_found`, or 400 `validation` with field `categoryId`
-
-### Requirement: Customers read one product by slug
-`GET /api/core/v1/stores/{id}/products/{slug}` SHALL answer without a session with the active product whose slug matches, in the same shape as the list, and 404 `not_found` for an unknown or inactive slug or an unknown store.
-
-#### Scenario: Active product
-- **WHEN** a client reads a store's product by the slug of an active product
-- **THEN** the response is 200 with that product
-
-#### Scenario: Inactive or unknown slug
-- **WHEN** a client reads a store's product by the slug of an inactive product, or by a slug that no product has
-- **THEN** the response is 404 with code `not_found`
 
 ### Requirement: Catalog images are served publicly
 `GET /api/core/v1/files/{kind}/{name}` SHALL answer without a session with the stored file for kind `products` or `categories` and the content type of its extension (`png` image/png, `jpg` image/jpeg, `webp` image/webp), with `Cache-Control: no-cache` and `X-Content-Type-Options: nosniff`.
