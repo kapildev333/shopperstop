@@ -10,6 +10,7 @@ test('tab navigation landmark', () => {
     </TabNav>,
   )
   const nav = screen.getByRole('navigation', { name: 'Order views' })
+  expect(nav).toHaveClass('[&_a[aria-current=page]]:text-accent')
   expect(within(nav).getByRole('link', { name: 'Live' })).toHaveAttribute('href', '/orders/live')
   const current = within(nav).getByRole('link', { name: 'History' })
   expect(current).toHaveAttribute('aria-current', 'page')
