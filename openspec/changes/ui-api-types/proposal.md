@@ -24,4 +24,4 @@ None.
 ## Impact
 - Files: `packages/ui/package.json`, `packages/ui/src/api/core.d.ts`, `packages/ui/src/api/core.test.ts`, and this change folder. Root `package-lock.json` changes mechanically on install.
 - Cross-area contracts relied on: `services/core/openapi.json` (core) as the single input. Contract created: the `@shopperstop/ui/api` export (`paths`, `components`, `operations`) for `apps/web` and `apps/admin`.
-- Coupling created: any change to `services/core/openapi.json` makes this package's test fail until `src/api/core.d.ts` is regenerated (`make gen`). That is the point of the gate; who regenerates in a core PR is an orchestrator call (see design.md, Risks).
+- Coupling created: any change to `services/core/openapi.json` makes this package's test fail until `src/api/core.d.ts` is regenerated (`make gen`). That is the point of the gate; a core PR that changes the contract regenerates the file in the same PR (PLAN.md D19).
