@@ -29,7 +29,7 @@ Scope: `apps/web/src/account-link.tsx`, `apps/web/src/routes/__root.tsx` (banner
 Scenarios: Customer header account control › "Signed-out header", "Signed-in header"; Customer account page requires sign-in › "Signed-out account redirect"; Customer sign-in and register › "Sign in returns to where the customer was"; Customer address dialog › "Address dialog checks fields", "Address dialog shows envelope field error", "Edit dialog prefilled"; Customer profile and sign out › "Profile saved", "Sign out"; Customer address list › "Addresses and default", "Address edited and deleted".
 Failing tests: `src/account.test.tsx` › "signed-out header", "signed-out account redirect"; `src/address-dialog.test.tsx` › "address dialog checks fields", "address dialog shows envelope field error", "edit dialog prefilled"; `e2e/account.spec.ts` › "sign in returns to where the customer was", "profile saved", "addresses and default", "sign out".
 
-- [ ] 3.1 Tests committed red (`test: account, addresses and header`)
+- [x] 3.1 Tests committed red (`test: account, addresses and header`)
 - [ ] 3.2 `account-link.tsx`, banner edit, `address-dialog.tsx`, `routes/account.tsx`, `signOut` (`feat: account page, addresses and header sign-in`); all gates green, e2e green, `shell.test.tsx` and `smoke.spec.ts` unchanged and green
 
 ## Workflow follow-up
