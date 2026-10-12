@@ -13,8 +13,8 @@ Scope: `services/core/migrations/0004_catalog.sql`, `services/core/sqlc.yaml`, `
 
 Scope: `services/core/internal/config/`, `services/core/internal/blob/`. Scenarios: platform "Files directory is configured"; the storage half of admin-catalog "Re-upload replaces". Start from `internal/blob/blob_test.go` `TestDiskPutOpen`. Commits: `test: files dir config and disk blob store`, then `feat: SHOPPERSTOP_CORE_FILES_DIR and internal/blob disk store`.
 
-- [ ] 2.1 `blob_test.go` (`t.TempDir()`): `TestDiskPutOpen` (`Put("products/a.png")` creates the directory; `Open` returns the bytes and a modification time within a minute of now), `TestDiskPutReplaces` (second `Put` on the same key: `Open` returns the second bytes; no other file left in the directory), `TestDiskOpenMissing` (`errors.Is(err, fs.ErrNotExist)`), `TestDiskRefusesNonLocalKey` (`../x.png` and `/abs.png`: `Put` errors, nothing written outside `Dir`); `config_test.go`: add `SHOPPERSTOP_CORE_FILES_DIR` to `valid()` and to `TestLoadNamesEveryMissingVariable`, `TestLoadFilesDir` (value trimmed into `cfg.FilesDir`; blank is named as missing); verify they fail, commit
-- [ ] 2.2 `blob.go` per Decision 10 and the Interfaces; `Config.FilesDir` per Decision 16; verify the gates, commit
+- [x] 2.1 `blob_test.go` (`t.TempDir()`): `TestDiskPutOpen` (`Put("products/a.png")` creates the directory; `Open` returns the bytes and a modification time within a minute of now), `TestDiskPutReplaces` (second `Put` on the same key: `Open` returns the second bytes; no other file left in the directory), `TestDiskOpenMissing` (`errors.Is(err, fs.ErrNotExist)`), `TestDiskRefusesNonLocalKey` (`../x.png` and `/abs.png`: `Put` errors, nothing written outside `Dir`); `config_test.go`: add `SHOPPERSTOP_CORE_FILES_DIR` to `valid()` and to `TestLoadNamesEveryMissingVariable`, `TestLoadFilesDir` (value trimmed into `cfg.FilesDir`; blank is named as missing); verify they fail, commit
+- [x] 2.2 `blob.go` per Decision 10 and the Interfaces; `Config.FilesDir` per Decision 16; verify the gates, commit
 
 ## 3. Admin categories
 
