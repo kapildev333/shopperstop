@@ -5,6 +5,8 @@ package stock
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +33,10 @@ func (e *OutOfStockError) Error() string { return "out of stock" }
 // taking nothing. The lines hold distinct product ids; no lines is a no-op.
 // Other errors come back unchanged.
 func Reserve(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error {
+	lines, err := merge(lines)
+	if err != nil {
+		return err
+	}
 	if len(lines) == 0 {
 		return nil
 	}
@@ -68,6 +74,10 @@ func Reserve(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error
 // Release adds the lines' quantities back to the store's stock, for an order
 // that is cancelled. A product with no stock row at the store is skipped.
 func Release(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error {
+	lines, err := merge(lines)
+	if err != nil {
+		return err
+	}
 	if len(lines) == 0 {
 		return nil
 	}
@@ -93,4 +103,28 @@ func Quantity(ctx context.Context, d db.DBTX, storeID, productID string) (int32,
 // store; a product with no row counts as 0.
 func LowCount(ctx context.Context, d db.DBTX, storeID string) (int64, error) {
 	return db.New(d).CountStock(ctx, db.CountStockParams{StoreID: storeID, LowStock: true})
+}
+
+// merge sums the quantities of lines naming the same product, keeping the
+// first-seen order, so one row update takes the whole amount. A quantity below
+// 1 is a caller bug and is refused before any query runs.
+func merge(lines []Line) ([]Line, error) {
+	at := make(map[string]int, len(lines))
+	var out []Line
+	for _, l := range lines {
+		if l.Quantity < 1 {
+			return nil, fmt.Errorf("stock: quantity %d for product %s, want at least 1", l.Quantity, l.ProductID)
+		}
+		i, seen := at[l.ProductID]
+		if !seen {
+			at[l.ProductID] = len(out)
+			out = append(out, l)
+			continue
+		}
+		if out[i].Quantity > math.MaxInt32-l.Quantity {
+			return nil, fmt.Errorf("stock: quantity for product %s overflows", l.ProductID)
+		}
+		out[i].Quantity += l.Quantity
+	}
+	return out, nil
 }
