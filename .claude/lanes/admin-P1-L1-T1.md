@@ -1,7 +1,7 @@
 # admin-P1-L1-T1 - apps/admin scaffold, shell and dashboard placeholder (tasks 1.1 to 1.3)
-Status: started
+Status: done
 ## Doing
-Commit 2 (test, red) done; next: commit 3 (feat) with __root.tsx and index.tsx per design.md.
+Tasks 1.1 to 1.3 landed (scaffold, red tests, shell and dashboard placeholder); gates green, routeTree.gen.ts stable.
 ## Found
 - Pinned typescript 5.9.3 (orchestrator override of design.md's 6.0.3, PLAN.md D18).
 - Red run (Vitest): "dashboard renders in the shell" and "unknown path" fail, the root route renders nothing; "no literal colours in src" passes (guard).
@@ -20,3 +20,6 @@ Playwright (\`CI=1 npm run e2e --workspace apps/admin\`): 2 failed, 1 passed (13
 - FAIL e2e/smoke.spec.ts:4 dashboard passes axe: getByRole('heading', { name: 'Dashboard', level: 1 }) element(s) not found
 - FAIL e2e/smoke.spec.ts:14 not found passes axe: getByRole('heading', { name: 'Page not found', level: 1 }) element(s) not found
 - PASS e2e/smoke.spec.ts:24 preview proxies to core
+
+## Gates (commit 3)
+- build packages/ui, lint, typecheck, vitest (3 passed), build apps/admin, e2e (3 passed, CI=1) all green; git status clean after the build.
