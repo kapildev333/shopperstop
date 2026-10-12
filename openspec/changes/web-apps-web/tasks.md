@@ -12,7 +12,7 @@ Scenarios: Customer site shell › "Home renders in the shell"; Customer site no
 Failing tests: `src/shell.test.tsx` › "home renders in the shell", "unknown customer path"; `src/no-literal-colors.test.ts` › "no literal colours in src" (a guard, green from the start); `e2e/smoke.spec.ts` › "home passes axe", "not found passes axe", "not found link returns home", "web preview proxies to core" (the proxy test passes once the config exists; it is committed with the red tests because the config is test infrastructure).
 
 - [x] 1.1 Scaffold committed (`chore:`): `package.json`, `vite.config.ts`, `tsconfig.json`, `eslint.config.js`, `index.html`, `src/main.tsx`, `src/index.css`, `src/test-setup.ts`, `src/routes/__root.tsx` as `createRootRoute()` only, `src/routes/index.tsx` as `createFileRoute('/')({})` only, `src/routeTree.gen.ts` from `vite build`; root `npm install` run; lint, typecheck and build green (no test file yet)
-- [ ] 1.2 Tests committed red (`test:`): `src/no-literal-colors.test.ts`, `src/shell.test.tsx`, `playwright.config.ts`, `e2e/smoke.spec.ts`; Vitest shows the two shell tests failing, Playwright the three page tests failing
+- [x] 1.2 Tests committed red (`test:`): `src/no-literal-colors.test.ts`, `src/shell.test.tsx`, `playwright.config.ts`, `e2e/smoke.spec.ts`; Vitest shows the two shell tests failing, Playwright the three page tests failing
 - [ ] 1.3 Shell and Home placeholder (`feat:`): `__root.tsx` and `index.tsx` per design.md; lint, typecheck, test (3 passed), build and e2e (4 passed) green; `git status` clean after the build (no `routeTree.gen.ts` drift)
 
 ## Workflow follow-up
