@@ -1,0 +1,16 @@
+# web-P2-L1 - web-serviceability-catalog: pincode, serviceability, Home, Category, Product, Search (team lead)
+Status: started
+## Doing
+Change proposed and valid (`openspec validate web-serviceability-catalog --strict`; `--all --strict` 8 passed). Waiting for core-P2-L2 on main (task 1) and core-P2-L3, core-P2-L4 on main (tasks 2 to 4); the manager launches workers.
+## Found
+- Change: `openspec/changes/web-serviceability-catalog/` (proposal; `web-app` delta: MODIFIED "Customer site shell", 10 ADDED requirements, 30 scenarios; design with the scenario → test map; tasks 1 to 4). No `docs/design/web-P2-L1.md`: design.md is enough.
+- Reuses `src/api.ts` (`api`, `queryClient`) and the `session.ts` storage-guard pattern from web-P2-L2; neither file changes.
+- New shared web pieces later lanes use: `src/pincode.ts` (`setPincode` is the single place a pincode changes; web-P2-L3 wraps it for the store-change confirm), `src/catalog.ts` (`keys`, `useServiceability`, ...), `StoreGate`, `ProductCard` / `ProductGrid`, and `src/cart.ts` `useCartQuantity(product)`: a local-count stub web-P2-L3 replaces, signature kept.
+- Vitest seeds TanStack Query's cache (`staleTime` 60 s, no refetch) instead of mocking HTTP; the error-path test relies on the relative `baseUrl` failing under jsdom (admin's finding) as "core unreachable".
+- E2e uses the D22 demo seed; only the closed store is created (seeded admin, pincode 560076, created only when serviceability answers 404).
+- The first-visit sheet opens on `/` for a fresh browser: task 1 adds a `beforeEach` init script storing `560034` to web-P2-L2's `e2e/auth.spec.ts` and `e2e/account.spec.ts`.
+- For ui (finding, no request): `IconButton` spreads props and then forces `type="button"`, so it cannot be a submit button; the search form submits on Enter instead.
+## Requests
+- to core (via the web area plan): confirm generated schema names `Serviceability`, `Store`, `CategoryTree`, `CategoryNode`, `StoreProduct`, `StoreProductList`; `pageSize` default 24, max 100 on `GET /stores/{id}/products`; the 404s of `/serviceability` and `/stores/{id}/products/{slug}` documented in `openapi.json`.
+## Blockers
+- Workers wait on core: task 1 on core-P2-L2 on main with regenerated `packages/ui/src/api/core.d.ts`; tasks 2 to 4 on core-P2-L3 and core-P2-L4.
