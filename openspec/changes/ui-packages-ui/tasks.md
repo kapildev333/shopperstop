@@ -12,9 +12,9 @@ Scenarios: Token stylesheet is the Tailwind preset (all three), Inter is bundled
 Failing tests: `src/tokens.test.ts` › "token values match the palette", "semantic utilities compile", "default palette and shadows are off", "font comes from the package", "reduced motion turns transitions off", "focus ring uses the focus token", "used pairs pass"; `src/cn.test.ts` › "falsy parts are dropped"; `src/testing/literal-colors.test.ts` › "each literal kind is matched", "token utilities are not matched", "directory scan names the file"; `src/no-literal-colors.test.ts` › "no literal colours in src".
 Commits: `chore: packages/ui scaffold`, `test: tokens, cn and literal-colour matcher`, `feat: tokens, cn and literal-colour matcher`.
 
-- [ ] 1.1 Scaffold committed: package files per design.md "Packaging", `npm install` run, index and placeholders; typecheck, lint and build green
-- [ ] 1.2 The four test files committed red
-- [ ] 1.3 `tokens.css`, `cn.ts`, `testing/literal-colors.ts` make them green; all four gates green
+- [x] 1.1 Scaffold committed: package files per design.md "Packaging", `npm install` run, index and placeholders; typecheck, lint and build green
+- [x] 1.2 The four test files committed red
+- [x] 1.3 `tokens.css`, `cn.ts`, `testing/literal-colors.ts` make them green; all four gates green
 
 ## 2. Button, ButtonLink, IconButton
 
