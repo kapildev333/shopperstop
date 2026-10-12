@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"regexp"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,8 +109,6 @@ type staffPatch struct {
 	IsActive *bool   `json:"isActive"`
 }
 
-var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
-
 // checkRole returns the store id to store (nil for an admin) when role and storeId agree.
 func checkRole(role, storeID string) (*string, error) {
 	switch role {
@@ -121,7 +118,7 @@ func checkRole(role, storeID string) (*string, error) {
 		}
 		return nil, nil
 	case "store_staff":
-		if !uuidPattern.MatchString(storeID) {
+		if !httpx.IsUUID(storeID) {
 			return nil, invalid("storeId", "must be a store id for store staff")
 		}
 		return &storeID, nil

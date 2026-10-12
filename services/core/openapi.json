@@ -1418,8 +1418,7 @@
             "maxLength": 100,
             "description": "1 to 100 characters after trimming."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "SignInRequest": {
         "type": "object",
@@ -1432,8 +1431,7 @@
           "password": {
             "type": "string"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "CustomerPatch": {
         "type": "object",
@@ -1449,8 +1447,7 @@
             "pattern": "^(\\+?[0-9]{10,15})?$",
             "description": "Empty clears the phone; otherwise an optional + and 10 to 15 digits."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "Error": {
         "type": "object",
@@ -1547,8 +1544,7 @@
             "type": "boolean",
             "default": false
           }
-        },
-        "additionalProperties": false
+        }
       },
       "AddressPatch": {
         "type": "object",
@@ -1576,8 +1572,7 @@
           "isDefault": {
             "type": "boolean"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "AddressList": {
         "type": "object",
@@ -1704,8 +1699,7 @@
             "format": "uuid",
             "description": "Required for store_staff; refused for admin."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "StaffPatch": {
         "type": "object",
@@ -1726,8 +1720,7 @@
             "type": "boolean",
             "description": "false ends the user's signed-in sessions at their next request."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "StaffList": {
         "type": "object",
@@ -1758,8 +1751,7 @@
             "minimum": 0,
             "description": "Every staff user, not just this page."
           }
-        },
-        "additionalProperties": false
+        }
       }
     }
   }
