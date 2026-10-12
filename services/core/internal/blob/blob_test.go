@@ -38,6 +38,13 @@ func TestDiskPutOpen(t *testing.T) {
 	if info, err := os.Stat(filepath.Join(dir, "products")); err != nil || !info.IsDir() {
 		t.Fatalf("Put did not create products directory: %v", err)
 	}
+	info, err := os.Stat(filepath.Join(dir, "products", "a.png"))
+	if err != nil {
+		t.Fatalf("stat stored file: %v", err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Errorf("stored file mode = %v, want 0644 so the web server can read it", info.Mode().Perm())
+	}
 
 	f, mod, err := s.Open(ctx, "products/a.png")
 	if err != nil {
@@ -97,7 +104,17 @@ func TestDiskRefusesNonLocalKey(t *testing.T) {
 	s := blob.Disk{Dir: dir}
 	ctx := context.Background()
 
-	for _, key := range []string{"../x.png", "/abs.png"} {
+	for _, key := range []string{
+		"../x.png",
+		"/abs.png",
+		"products/../products/x",
+		"a//b",
+		"a\\b",
+		"products/.hidden",
+		"products/a/b/c",
+		"products",
+		"",
+	} {
 		if err := s.Put(ctx, key, []byte("x")); err == nil {
 			t.Errorf("Put %q: want error, got nil", key)
 		}
