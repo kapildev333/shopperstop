@@ -15,6 +15,7 @@ test('zero rupees', () => {
 test('price uses tabular numerals', () => {
   const { container } = render(<Price cents={9900} />)
   expect(container.firstElementChild).toHaveClass('tabular-nums')
+  expect(screen.getByText('₹99')).toHaveClass('text-accent')
 })
 
 test('discounted price shows MRP', () => {

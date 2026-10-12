@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { Stepper } from './stepper'
@@ -9,6 +9,12 @@ test('stepper at zero stock', async () => {
   const out = screen.getByRole('button', { name: 'Out of stock' })
   expect(out).toBeDisabled()
   await userEvent.click(out)
+  expect(onChange).not.toHaveBeenCalled()
+  cleanup()
+  render(<Stepper value={2} max={0} label="Milk" onChange={onChange} />)
+  const outAbove = screen.getByRole('button', { name: 'Out of stock' })
+  expect(outAbove).toBeDisabled()
+  await userEvent.click(outAbove)
   expect(onChange).not.toHaveBeenCalled()
 })
 
