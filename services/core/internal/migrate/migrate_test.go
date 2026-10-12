@@ -80,24 +80,26 @@ func tableExists(t *testing.T, name string) bool {
 }
 
 func TestApplyRecordsVersions(t *testing.T) {
-	reset(t, "t1", "t2")
+	reset(t, "t1", "t2", "t3")
 	fsys := fstest.MapFS{
 		"0001_a.sql": {Data: []byte("create table t1 (id int);")},
 		"0002_b.sql": {Data: []byte("create table t2 (id int);")},
+		"0010_c.sql": {Data: []byte("create table t3 (id int);")},
 	}
 	ctx := context.Background()
+	want := []string{"0001_a", "0002_b", "0010_c"}
 
 	got, err := migrate.Apply(ctx, pool, fsys)
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	if want := []string{"0001_a", "0002_b"}; !reflect.DeepEqual(got, want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("applied %v, want %v", got, want)
 	}
-	if want := []string{"0001_a", "0002_b"}; !reflect.DeepEqual(recorded(t), want) {
+	if !reflect.DeepEqual(recorded(t), want) {
 		t.Fatalf("recorded %v, want %v", recorded(t), want)
 	}
-	if !tableExists(t, "t1") || !tableExists(t, "t2") {
+	if !tableExists(t, "t1") || !tableExists(t, "t2") || !tableExists(t, "t3") {
 		t.Fatal("migrations did not create their tables")
 	}
 
@@ -108,7 +110,7 @@ func TestApplyRecordsVersions(t *testing.T) {
 	if len(again) != 0 {
 		t.Fatalf("second run applied %v, want nothing", again)
 	}
-	if want := []string{"0001_a", "0002_b"}; !reflect.DeepEqual(recorded(t), want) {
+	if !reflect.DeepEqual(recorded(t), want) {
 		t.Fatalf("recorded after second run %v, want %v", recorded(t), want)
 	}
 }
@@ -164,6 +166,30 @@ func TestApplyRejectsMisnamedFile(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "add-stores.sql") {
 		t.Fatalf("error does not name add-stores.sql: %v", err)
+	}
+	if got := recorded(t); len(got) != 0 {
+		t.Fatalf("recorded %v, want nothing", got)
+	}
+	if tableExists(t, "t1") {
+		t.Fatal("t1 exists: a file was applied before the refusal")
+	}
+}
+
+func TestApplyRejectsDuplicateVersion(t *testing.T) {
+	reset(t, "t1", "t2")
+	fsys := fstest.MapFS{
+		"0001_a.sql": {Data: []byte("create table t1 (id int);")},
+		"0002_a.sql": {Data: []byte("create table t2 (id int);")},
+		"0002_b.sql": {Data: []byte("create table t2 (id int);")},
+	}
+
+	_, err := migrate.Apply(context.Background(), pool, fsys)
+	if err == nil {
+		t.Fatal("Apply with two 0002 files: want error, got nil")
+	}
+	want := "migrate 0002_b.sql: version 0002 already used by 0002_a.sql"
+	if err.Error() != want {
+		t.Fatalf("error %q, want %q", err.Error(), want)
 	}
 	if got := recorded(t); len(got) != 0 {
 		t.Fatalf("recorded %v, want nothing", got)
