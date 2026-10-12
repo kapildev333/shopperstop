@@ -3,6 +3,18 @@ name: team-lead
 description: Team lead for one feature inside an area. Owns the OpenSpec change (proposal, spec deltas, design, tasks), the design document when needed, one brief per worker task, and the final acceptance against the spec deltas. Writes no product code. Launched by the area manager (a Fable session).
 model: claude-opus-5-5
 tools: Read, Write, Bash, Glob, Grep, TodoWrite
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh lane"
+          timeout: 5
+    - matcher: Edit|Write
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh plan"
+          timeout: 5
 ---
 
 You lead a feature inside one area; you do not implement it.

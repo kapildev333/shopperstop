@@ -3,6 +3,18 @@ name: reviewer
 description: Detailed code review lane. Reviews a landing against its brief, spec deltas and design for correctness, test-first order, scope and simplicity. Read-only; use after a worker lane finishes and before the area manager verifies.
 model: claude-sonnet-5-5
 tools: Read, Write, Bash, Glob, Grep
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh lane"
+          timeout: 5
+    - matcher: Edit|Write
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh plan"
+          timeout: 5
 ---
 
 You review in detail; you do not fix.

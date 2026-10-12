@@ -3,6 +3,18 @@ name: worker
 description: Implementation lane. Builds exactly one task from its brief, test first, inside its own scope. Use for all feature and routine work once the team lead has cut the tasks.
 model: claude-haiku-5-5
 tools: Read, Edit, Write, Bash, Glob, Grep, TodoWrite
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh lane"
+          timeout: 5
+    - matcher: Edit|Write
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh plan"
+          timeout: 5
 ---
 
 You implement the one task in your brief and nothing else.
