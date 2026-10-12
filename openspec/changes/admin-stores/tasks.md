@@ -36,8 +36,8 @@ Failing tests: `src/store-delete.test.tsx` › "delete asks first, then removes 
 Scope: `apps/admin/src/service-areas.tsx` (new), `src/routes/_staff/_admin/stores/$storeId.tsx` (the `ServiceAreas` card), `src/service-areas.test.tsx` (new), this file's checkboxes, the worker's lane log.
 Scenarios: Store pincode editor › Pincodes listed, Add, remove and save, Pincode not six digits; Pincode conflict names the other store › Pincode served by another store, Other store's name unavailable, Other pincode save failure.
 Failing tests: `src/service-areas.test.tsx` › "the store page lists its pincodes", "add and remove pincodes, then save the list with one PUT", "a pincode that is not 6 digits is not added", "a pincode served by another store names that store", "the conflict shows the store id when its name cannot be read", "a pincode save failure with %s asks to try again" (rows: an error answer, no answer).
-- [ ] 4.1 Tests committed red (`test: store pincode editor`); Vitest shows the seven failing (no "Delivery pincodes" section)
-- [ ] 4.2 `service-areas.tsx` and the card in `$storeId.tsx` per design.md (`feat: store pincode editor with conflict naming the other store`); Vitest 50 passed; every gate green; `routeTree.gen.ts` unchanged
+- [x] 4.1 Tests committed red (`test: store pincode editor`); Vitest shows the seven failing (no "Delivery pincodes" section)
+- [x] 4.2 `service-areas.tsx` and the card in `$storeId.tsx` per design.md (`feat: store pincode editor with conflict naming the other store`); Vitest 50 passed; every gate green; `routeTree.gen.ts` unchanged
 
 ## 5. Stores against core (needs the e2e slot)
 Scope: `apps/admin/e2e/stores.spec.ts` (fixes only, after a recorded failure), this file's checkboxes, the worker's lane log. Waits on: the e2e slot the manager holds.

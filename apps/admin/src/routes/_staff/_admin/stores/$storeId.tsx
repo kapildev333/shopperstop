@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button, Card, Dialog, DialogFooter, ErrorBanner, PageHeader, Skeleton } from '@shopperstop/ui'
 import { api, type ApiError } from '../../../../api'
 import { NotFound } from '../../../../not-found'
+import { ServiceAreas } from '../../../../service-areas'
 import { StoreForm } from '../../../../store-form'
 import { storeQuery, storesQuery, type AdminStore } from '../../../../stores'
 
@@ -55,6 +56,9 @@ function StorePage() {
       <PageHeader title={store.data.name} actions={<DeleteStore store={store.data} />} />
       <Card className="p-6">
         <StoreForm key={store.data.id} store={store.data} />
+      </Card>
+      <Card className="p-6">
+        <ServiceAreas storeId={storeId} />
       </Card>
     </div>
   )
