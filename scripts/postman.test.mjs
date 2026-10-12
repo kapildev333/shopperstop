@@ -49,6 +49,19 @@ const fixture = {
         },
       },
     },
+    '/stores/{id}/products/{slug}': {
+      get: {
+        summary: 'Product at store',
+        tags: ['catalog'],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: 's1' },
+          { name: 'slug', in: 'path', required: true, schema: { type: 'string' }, example: 'banana-robusta' },
+        ],
+        responses: {
+          200: { description: 'The product.', content: { 'application/json': { schema: { type: 'object' }, example: { slug: 'banana-robusta' } } } },
+        },
+      },
+    },
     '/admin/auth/sign-in': {
       post: {
         summary: 'Staff sign in',
@@ -136,6 +149,12 @@ test('path ids read environment variables', async () => {
   const c = JSON.parse(await generate(fixture));
   const variables = requestNamed(c, 'Order').request.url.variable;
   assert.deepEqual(variables.map((v) => [v.key, v.value]), [['id', '{{orderId}}']]);
+});
+
+test('slug path variables keep their example value', async () => {
+  const c = JSON.parse(await generate(fixture));
+  const variables = requestNamed(c, 'Product at store').request.url.variable;
+  assert.deepEqual(variables.map((v) => [v.key, v.value]), [['id', '{{storeId}}'], ['slug', 'banana-robusta']]);
 });
 
 test('two runs give identical bytes with no generated ids', async () => {
