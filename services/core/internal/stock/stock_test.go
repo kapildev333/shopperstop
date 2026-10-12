@@ -328,3 +328,73 @@ func TestReserveEmptyIsNoop(t *testing.T) {
 		t.Fatalf("empty reservation: %v", err)
 	}
 }
+
+func TestReserveMergesDuplicateLines(t *testing.T) {
+	store, category := newStore(t), newCategory(t)
+	p := newProduct(t, category, true)
+	setStock(t, store, p, 3)
+	twice := []stock.Line{{ProductID: p, Quantity: 2}, {ProductID: p, Quantity: 2}}
+
+	oos := outOfStock(t, reserve(store, twice...))
+	if len(oos.ProductIDs) != 1 || oos.ProductIDs[0] != p {
+		t.Fatalf("out of stock %v, want [%s]", oos.ProductIDs, p)
+	}
+	if got := stored(t, store, p); got != 3 {
+		t.Fatalf("P quantity %d after refused reservation, want 3", got)
+	}
+
+	if _, err := testPool.Exec(context.Background(), `update store_stock set quantity = 5 where store_id = $1 and product_id = $2`, store, p); err != nil {
+		t.Fatal(err)
+	}
+	if err := reserve(store, twice...); err != nil {
+		t.Fatalf("reserve 4 of 5: %v", err)
+	}
+	if got := stored(t, store, p); got != 1 {
+		t.Fatalf("P quantity %d, want 1", got)
+	}
+}
+
+func TestReleaseMergesDuplicateLines(t *testing.T) {
+	store, category := newStore(t), newCategory(t)
+	p := newProduct(t, category, true)
+	setStock(t, store, p, 5)
+
+	err := pgx.BeginFunc(context.Background(), testPool, func(tx pgx.Tx) error {
+		return stock.Release(context.Background(), tx, store, []stock.Line{{ProductID: p, Quantity: 2}, {ProductID: p, Quantity: 2}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stored(t, store, p); got != 9 {
+		t.Fatalf("P quantity %d after releasing 4, want 9", got)
+	}
+}
+
+func TestReleaseSkipsProductWithoutRow(t *testing.T) {
+	ctx := context.Background()
+	store, category := newStore(t), newCategory(t)
+	p := newProduct(t, category, true)
+
+	err := pgx.BeginFunc(ctx, testPool, func(tx pgx.Tx) error {
+		return stock.Release(ctx, tx, store, []stock.Line{{ProductID: p, Quantity: 2}})
+	})
+	if err != nil {
+		t.Fatalf("release without a row: %v", err)
+	}
+	if got, err := stock.Quantity(ctx, testPool, store, p); err != nil || got != 0 {
+		t.Fatalf("after release without a row: %d, %v; want 0, nil and no row created", got, err)
+	}
+}
+
+func TestReserveRefusesZeroQuantity(t *testing.T) {
+	store, category := newStore(t), newCategory(t)
+	p := newProduct(t, category, true)
+	setStock(t, store, p, 3)
+
+	if err := reserve(store, stock.Line{ProductID: p, Quantity: 0}); err == nil {
+		t.Fatal("reserve of quantity 0 succeeded, want an error")
+	}
+	if got := stored(t, store, p); got != 3 {
+		t.Fatalf("P quantity %d, want 3 untouched", got)
+	}
+}
