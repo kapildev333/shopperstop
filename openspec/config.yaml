@@ -22,8 +22,8 @@ rules:
     - Prefer the smallest design that meets the spec; name each simplification and its ceiling
     - List the files the change touches, all inside one area
   tasks:
-    - One task is one worker lane: scope paths, the scenario it implements, the failing test it starts from (file and test name)
-    - Each task's commit order is "test: <scenario>" then "feat:" or "fix:"; a task with no test names why
+    - "One task is one worker lane: scope paths, the scenario it implements, the failing test it starts from (file and test name)"
+    - 'Each task''s commit order is "test: <scenario>" then "feat:" or "fix:"; a task with no test names why'
 
 operations:
   apply:
