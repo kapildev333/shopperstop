@@ -4,10 +4,10 @@ Scope: `README.md` (new), this file's 1.x checkboxes, `.claude/lanes/platform-P1
 Test first: no `test:` commit. Why: prose has no unit test and no dependency may be added; the failing check already exists in this change, `sh openspec/changes/platform-readme-claude/check-docs.sh`, committed with the change. Red step: run it before writing and paste the README failure lines into `.claude/lanes/platform-P1-L11-t1.md`.
 Commit: one commit, `docs: readme with quick start, demo sign-ins and commands`.
 
-- [ ] 1.1 Red: run `check-docs.sh`, record the `README.md missing` and `README.md lacks` lines in `.claude/lanes/platform-P1-L11-t1.md`
-- [ ] 1.2 `ls apps scripts docs/postman` and record what exists; write `README.md` to design.md "README.md outline", items 1 to 10, describing what exists truthfully
-- [ ] 1.3 `check-docs.sh` prints no line starting `FAIL: README.md` and no `make -n` or `broken link` failure for a README target or link
-- [ ] 1.4 `openspec validate --all --strict` passes; `git status --short` shows only `README.md`, this file and `.claude/lanes/platform-P1-L11-t1.md`
+- [x] 1.1 Red: run `check-docs.sh`, record the `README.md missing` and `README.md lacks` lines in `.claude/lanes/platform-P1-L11-t1.md`
+- [x] 1.2 `ls apps scripts docs/postman` and record what exists; write `README.md` to design.md "README.md outline", items 1 to 10, describing what exists truthfully
+- [x] 1.3 `check-docs.sh` prints no line starting `FAIL: README.md` and no `make -n` or `broken link` failure for a README target or link
+- [x] 1.4 `openspec validate --all --strict` passes; `git status --short` shows only `README.md`, this file and `.claude/lanes/platform-P1-L11-t1.md`
 
 ## 2. CLAUDE.md (worker, lane platform-P1-L11, task 2, after task 1 on the same branch)
 
