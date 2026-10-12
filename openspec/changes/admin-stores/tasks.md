@@ -8,7 +8,7 @@ Commits per task: `test: <scenario>` with the failing tests (Vitest output showi
 
 ## 0. Recheck the design against core (team lead)
 Scope: `openspec/changes/admin-stores/**`, `.claude/lanes/admin-P2-L2.md`. No test: a document check.
-- [ ] 0.1 Diff design.md "Assumptions" A1 to A12 against `packages/ui/src/api/core.d.ts`, `services/core/openapi.json` and the core-P2-L2 lane log on origin/main; re-run the spike's typecheck and Vitest against main's `core.d.ts`; update design.md, the delta and these tasks where they differ; `openspec validate admin-stores --strict` passes; record the result in the lane log
+- [x] 0.1 Diff design.md "Assumptions" A1 to A12 against `packages/ui/src/api/core.d.ts`, `services/core/openapi.json` and the core-P2-L2 lane log on origin/main; re-run the spike's typecheck and Vitest against main's `core.d.ts`; update design.md, the delta and these tasks where they differ; `openspec validate admin-stores --strict` passes; record the result in the lane log
 
 ## 1. Stores table (and the e2e written first)
 Scope: `apps/admin/src/stores.ts` (new), `src/fake-core.ts` (append fixtures, add the type import), `src/routes/_staff/_admin/stores/index.tsx` (replace the placeholder), `src/stores.test.tsx` (new), `apps/admin/e2e/stores.spec.ts` (new, written only), this file's checkboxes, the worker's lane log.
