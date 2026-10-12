@@ -1,0 +1,10 @@
+.DS_Store
+node_modules/
+.env
+.env.*
+.worktrees/
+services/*/data/
+apps/*/test-results/
+apps/*/playwright-report/
+apps/*/dist/
+packages/*/dist/
