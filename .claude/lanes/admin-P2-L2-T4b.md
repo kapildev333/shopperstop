@@ -1,7 +1,7 @@
 # admin-P2-L2-T4b - review follow-ups, store change cache and pincode guards (OpenSpec change admin-stores, task 4b)
-Status: started
+Status: done
 ## Doing
-4b.1 committed (82ec7c9). 4b.2 test checks written in `service-areas.test.tsx`; mutations recorded below. Next: commit 4b.2, then 4b.3.
+4b done: 4b.1 82ec7c9, 4b.2 c8d4cda, 4b.3 refactor (drops the list invalidation and the unused `storesQuery` import). Gates in the report.
 ## Found
 - 4b.1 (2026-10-12): both new tests pass on the landed code, so the red is shown by mutation, as the brief says. Vitest 52 passed.
 - Mutation 1, `setQueryData` line deleted from `store-form.tsx` onSuccess: RED. "a second save sends only its own change": `AssertionError: expected { isOpen: false, promisedMinutes: 11 } to deeply equal { isOpen: false }`. 1 failed, 7 passed. Reverted.
@@ -13,6 +13,9 @@ Status: started
   - M2, `unsaved` = `draft !== undefined`: RED "the store page lists its pincodes": `expected document not to contain element, found <div` (the "Unsaved changes." note after re-adding 560095). 1 failed, 6 passed.
   - M3, `save.reset()` dropped from `edit`: RED "a pincode served by another store names that store": `expected document not to contain element, found <div` (the alert after removing 560038). 1 failed, 6 passed.
   - `git diff HEAD -- apps/admin/src/service-areas.tsx` empty at the commit.
+- 4b.3: after the refactor, mutation 2 (`staleTime: Infinity` on `storesQuery`, alone) is RED: "the stores table shows a saved change": `Unable to find an element with the text: 11 min`. 1 failed, 7 passed. Reverted. Vitest 52 passed.
+- Deviation, recorded: mutation 2 is red only from 4b.3 on (see 4b.1 above), not at commit 1 as the brief expected.
+- Ceiling kept (design.md Decision 3): the delete's list invalidation in `$storeId.tsx` is a no-op under staleTime 0; left as landed.
 ## Requests
 - none
 ## Blockers

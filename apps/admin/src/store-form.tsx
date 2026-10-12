@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import type { components } from '@shopperstop/ui/api'
 import { Button, ErrorBanner, FormField, Input, Select, StatusMessage } from '@shopperstop/ui'
 import { api, type ApiError } from './api'
-import { storeQuery, storesQuery, toCents, toRupees, type AdminStore } from './stores'
+import { storeQuery, toCents, toRupees, type AdminStore } from './stores'
 
 type StoreCreate = components['schemas']['StoreCreate']
 type Field = keyof StoreCreate
@@ -82,7 +82,6 @@ export function StoreForm({ store }: { store?: AdminStore }) {
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(storeQuery(saved.id).queryKey, saved)
-      void queryClient.invalidateQueries({ queryKey: storesQuery.queryKey, exact: true })
       if (!store) await navigate({ to: '/stores/$storeId', params: { storeId: saved.id } })
     },
   })
