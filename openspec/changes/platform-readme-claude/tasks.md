@@ -20,6 +20,16 @@ Commit: one commit, `docs: claude.md commands and rules match the makefile, ci a
 - [x] 2.3 `check-docs.sh` ends with `docs check: ok` and exits 0
 - [x] 2.4 `openspec validate --all --strict` passes; `git status --short` shows only `CLAUDE.md`, this file and `.claude/lanes/platform-P1-L11-t2.md`
 
+## 4. Review fixes (worker, lane platform-P1-L11, after tasks 1 and 2)
+
+Scope: `README.md`, `CLAUDE.md`, this change's `specs/platform/spec.md` and `check-docs.sh`, this file, `.claude/lanes/platform-P1-L11.md`. Three reviewer findings: admin under `/admin/`, Postman collection present on main, `prod-local` without the macOS note.
+Commit: one commit, `docs: admin url under /admin/, postman collection present, prod-local wording`.
+
+- [x] 4.1 Admin URLs read `localhost:5174/admin/` in README.md (quick start, demo table) and CLAUDE.md (port rows name the path); the scenario "README has the quick start" and `check-docs.sh` match the literal
+- [x] 4.2 README no longer calls the Postman collection pending; `make postman` row and CLAUDE.md `make postman` row say it runs `node --test scripts/postman.test.mjs`
+- [x] 4.3 README `make prod-local` row drops "(macOS)"
+- [x] 4.4 `check-docs.sh` ends `docs check: ok`, `openspec validate --all --strict` passes
+
 ## 3. Acceptance (team lead)
 
 - [ ] 3.1 `/opsx:verify platform-readme-claude`: `check-docs.sh` ok, every scenario covered, both tasks ticked, nothing outside `README.md`, `CLAUDE.md` and this change landed

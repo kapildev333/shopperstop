@@ -19,9 +19,9 @@ Prerequisites: Docker Desktop running (`make db` uses it), Go 1.27, Node >= 22.1
 | `make test` | `test-core`, then `test-web` |
 | `make test-core` | gofmt, `go vet`, `go test -race` on `shopperstop_core_test` |
 | `make test-web` | builds `packages/ui`, then lint, typecheck, test and build for every workspace |
-| `make e2e` | Playwright on `shopperstop_core_e2e`: core :18080, web and admin previews 15173 and 15174, fixed env |
+| `make e2e` | Playwright on `shopperstop_core_e2e`: core :18080, web and admin previews 15173 and 15174 (admin under /admin/), fixed env |
 | `make gen` | sqlc generate (only while `sqlc.yaml` exists), then `openapi-typescript` into `packages/ui/src/api/core.d.ts` |
-| `make postman` | regenerates `docs/postman/` from `openapi.json` |
+| `make postman` | regenerates `docs/postman/` from `openapi.json`, then runs `node --test scripts/postman.test.mjs` |
 | `make prod-local` | builds the apps and serves them through Caddy on http://localhost, starting containers |
 
 Every target prints one skip line (`<target>: <path> absent, skipping`) while its part is absent. `seed`, `core`, `ui`, `web` and `admin` are the pieces `dev` composes.
@@ -103,7 +103,7 @@ Red, green, refactor per task: the failing test from the spec scenario is commit
 - Commit identity `kapildev333 <47056817+kapildev333@users.noreply.github.com>` (repo git config). No AI attribution or co-author lines in commits or PRs. No personal email, name, address or payment detail anywhere in the repository, seed data included.
 - One branch per lane, `lane/<LANE-ID>-<slug>`, in its own worktree under `.worktrees/<LANE-ID>` (gitignored). Non-lane changes use `chore/<slug>`.
 - Lanes commit on their branch and never push. The area manager pushes, opens the PR from `.github/pull_request_template.md` (lane, spec section, OpenSpec change, gates pasted, reviewer verdict, deferred), waits for `ci`, squash-merges with branch deletion, removes the worktree, records the PR URL in the area plan.
-- `ci.yml` jobs: `core` (gofmt, `go vet`, `go test -race` against a Postgres service from `deploy/initdb.sql`, then `make gen postman` must leave `git status` clean, D14; sqlc is installed only while `services/core/sqlc.yaml` exists), `web` (`npm ci`, `make test-web`), `e2e` (`make e2e`: Playwright, Chromium only, `shopperstop_core_e2e`, core :18080, web and admin previews 15173 and 15174, D15), `spec` (`openspec validate --all --strict`); Node 22 in CI. Each job no-ops with a message while its directory does not exist. Branch protection waits until the repo is public; the PR-only rule is process-enforced until then.
+- `ci.yml` jobs: `core` (gofmt, `go vet`, `go test -race` against a Postgres service from `deploy/initdb.sql`, then `make gen postman` must leave `git status` clean, D14; sqlc is installed only while `services/core/sqlc.yaml` exists), `web` (`npm ci`, `make test-web`), `e2e` (`make e2e`: Playwright, Chromium only, `shopperstop_core_e2e`, core :18080, web and admin previews 15173 and 15174 (admin under /admin/), D15), `spec` (`openspec validate --all --strict`); Node 22 in CI. Each job no-ops with a message while its directory does not exist. Branch protection waits until the repo is public; the PR-only rule is process-enforced until then.
 - Releases: one tag per completed phase, `v0.<phase>.<patch>`, by the program orchestrator at phase close; chore PRs carry the `chore` label.
 - Not used: GitHub Projects, Issues, Wiki, Discussions. `PLAN.md` is the single plan.
 

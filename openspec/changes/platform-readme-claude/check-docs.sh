@@ -7,7 +7,7 @@ fail() { echo "FAIL: $*"; f=$((f+1)); }
 has() { grep -qF -- "$2" "$1" 2>/dev/null || fail "$1 lacks: $2"; }
 
 test -f README.md || fail "README.md missing"
-for s in '## Quick start' 'make dev' 'Docker' 'Go 1.27' '22.12' ':8080' ':5173' ':5174' '<details>' '## Screenshots' 'seed-demo --reset' \
+for s in '## Quick start' 'make dev' 'Docker' 'Go 1.27' '22.12' ':8080' ':5173' 'localhost:5174/admin/' '<details>' '## Screenshots' 'seed-demo --reset' \
   'admin@shopperstop.local' 'admin12345' 'koramangala@shopperstop.local' 'indiranagar@shopperstop.local' 'staff12345' \
   'demo@shopperstop.local' 'demo12345'; do has README.md "$s"; done
 grep -q '^|.*|$' README.md 2>/dev/null || fail "README.md has no table"

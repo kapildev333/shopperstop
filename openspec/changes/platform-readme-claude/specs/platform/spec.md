@@ -6,7 +6,7 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 
 #### Scenario: README has the quick start
 - **WHEN** `README.md` is read
-- **THEN** it has a `## Quick start` section with a code block containing `make dev`, names the prerequisites Docker (running), Go 1.27 and Node 22.12 or newer, names core on `:8080`, web on `:5173` and admin on `:5174`, and says which of those are not on `main` yet
+- **THEN** it has a `## Quick start` section with a code block containing `make dev`, names the prerequisites Docker (running), Go 1.27 and Node 22.12 or newer, names core on `:8080`, web on `:5173` and admin on `:5174/admin/`, and says which of those are not on `main` yet
 
 #### Scenario: README has the step-by-step fold and the screenshots table
 - **WHEN** `README.md` is read
