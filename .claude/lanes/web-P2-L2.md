@@ -8,6 +8,17 @@ Change `web-accounts` proposed and valid (8 ADDED requirements, 23 scenarios, 3 
 - Overlap with web-P2-L1 (`web-serviceability-catalog`): both need the typed client, `QueryClientProvider` and the header in `src/routes/__root.tsx`. This change owns `src/api.ts` (client, `queryClient`, error split) and `src/session.ts`; L1 should import them. The header gets one `<AccountLink />` line here.
 - `make e2e` already runs `core-admin migrate` and `seed-demo --reset` before all suites; the web `e2e/global-setup.ts` repeats them so web starts fresh after admin's suite and `npm run e2e` works alone.
 - Pins: `@tanstack/react-query` 5.104.2, `openapi-fetch` 0.17.0, dev `@testing-library/user-event` 14.6.7.
+- 2026-10-12 T1 (worker, Haiku): red before code, `npm run test --workspace apps/web -- --run src/session.test.ts src/api.test.ts`:
+  ```
+  FAIL  src/api.test.ts [ src/api.test.ts ]
+  Error: Failed to resolve import "./api" from "src/api.test.ts". Does the file exist?
+  FAIL  src/session.test.ts [ src/session.test.ts ]
+  Error: Failed to resolve import "./session" from "src/session.test.ts". Does the file exist?
+  Test Files  2 failed (2)
+       Tests  no tests
+  ```
+- T1 deviation: brief said workers run on current main, so `paths` has only `/healthz` and `/readyz`. `api.GET('/me')` would not type-check, so `useMe` is not in T1; it lands with the header in T3 (where `/me` is first used). `call`, `splitError`, `ApiError` are in T1 as designed; T2 consumes them.
+- T1 was started before core-P2-L1 is on main, per the orchestrator's D21 course correction; the blocker below is superseded for T1 only.
 ## Requests
 - to core (core-P2-L1, via the web area plan): (1) does `POST /auth/register` return `{token, customer}`? (design handles both); (2) accept `""` to clear `phone` and address `line2` on PATCH, omit them in responses when unset; (3) document 401 `unauthorized` on `/me*` for an expired or unknown token; (4) validation `field` uses the JSON field name.
 - to web-P2-L1 (via the manager): import `api`, `queryClient`, `call`, `splitError` from `apps/web/src/api.ts` and the session from `src/session.ts` instead of a second client.

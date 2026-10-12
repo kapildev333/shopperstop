@@ -10,9 +10,9 @@ Scope: `apps/web/package.json`, `apps/web/src/session.ts`, `apps/web/src/session
 Scenarios: Customer session token › "Token persisted and cleared", "Token restored on load", "Bearer attached", "Expired session dropped".
 Failing tests: `src/session.test.ts` › "token persisted and cleared", "token restored on load"; `src/api.test.ts` › "bearer attached", "expired session dropped".
 
-- [ ] 1.1 Pins added and installed (`chore: web client dependencies`): `@tanstack/react-query` 5.104.2, `openapi-fetch` 0.17.0, dev `@testing-library/user-event` 14.6.7
-- [ ] 1.2 Tests committed red (`test: customer session token`)
-- [ ] 1.3 `session.ts`, `api.ts`, provider in `__root.tsx`, `test-setup.ts` reset (`feat: customer session store and api client`); all gates green
+- [x] 1.1 Pins added and installed (`chore: web client dependencies`): `@tanstack/react-query` 5.104.2, `openapi-fetch` 0.17.0, dev `@testing-library/user-event` 14.6.7
+- [x] 1.2 Tests committed red (`test: customer session token`)
+- [x] 1.3 `session.ts`, `api.ts`, provider in `__root.tsx`, `test-setup.ts` reset (`feat: customer session store and api client`); all gates green
 
 ## 2. Sign-in and register
 

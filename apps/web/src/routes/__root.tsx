@@ -1,12 +1,14 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { Outlet, createLink, createRootRoute } from '@tanstack/react-router'
 import { Button, ButtonLink, Card, EmptyState, PageHeader } from '@shopperstop/ui'
 import { MapPin } from 'lucide-react'
+import { queryClient } from '../api'
 
 const RouterButtonLink = createLink(ButtonLink)
 
 function RootLayout() {
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <header className="flex items-center justify-between gap-4 bg-brand px-4 py-3 sm:px-6">
         <div className="text-h2 text-on-brand">ShopperStop</div>
         <Button variant="secondary">
@@ -17,7 +19,7 @@ function RootLayout() {
       <main className="px-4 py-6 sm:px-6">
         <Outlet />
       </main>
-    </>
+    </QueryClientProvider>
   )
 }
 
