@@ -6,8 +6,8 @@ Four worker lanes, run in order on branch `lane/core-P1-L1-core-service` in `.wo
 
 Scope: `services/core/go.mod`, `services/core/internal/config/`. Scenarios: platform "Configuration fails fast" (both), "Configured origins are normalised" (Only commas), "Log level is configurable" (both). Start from `internal/config/config_test.go` `TestLoadNamesEveryMissingVariable`. Commits: `test: configuration fails fast naming every problem`, then `feat: core config from SHOPPERSTOP_CORE_ env`.
 
-- [ ] 1.1 Create `services/core/go.mod` (`module github.com/kapildev333/shopperstop/services/core`, `go 1.27`) and `config_test.go` with `TestLoadNamesEveryMissingVariable`, `TestLoadRefusesShortPepper`, `TestLoadTrimsOrigins` (`"http://a, http://b,"` gives `[http://a http://b]`; `","` is named missing), `TestLoadLogLevel` (unset is info, `debug` is debug, `loud` names the variable); verify `go test ./internal/config` fails, commit
-- [ ] 1.2 Implement `config.Load` per Decision 1; verify the four tests and the gates pass, commit
+- [x] 1.1 Create `services/core/go.mod` (`module github.com/kapildev333/shopperstop/services/core`, `go 1.27`) and `config_test.go` with `TestLoadNamesEveryMissingVariable`, `TestLoadRefusesShortPepper`, `TestLoadTrimsOrigins` (`"http://a, http://b,"` gives `[http://a http://b]`; `","` is named missing), `TestLoadLogLevel` (unset is info, `debug` is debug, `loud` names the variable); verify `go test ./internal/config` fails, commit
+- [x] 1.2 Implement `config.Load` per Decision 1; verify the four tests and the gates pass, commit
 
 ## 2. HTTP layer (plan task 6; no database)
 
