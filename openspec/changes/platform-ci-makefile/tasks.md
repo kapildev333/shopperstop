@@ -23,5 +23,5 @@ Commit: one commit, `feat: ci workflow with core, web, e2e and spec jobs`.
 
 ## 3. Runtime evidence (area manager, not a worker)
 
-- [ ] 3.1 On the PR: `ci` runs four jobs, all green; the `core`, `web` and `e2e` logs show their skip lines (scenario "Foundation tree is green"). Paste the run URL into the lane log
+- [ ] 3.1 On the PR: `ci` runs four jobs, all green; the `core`, `web` and `e2e` logs show their skip lines (scenario "Foundation tree is green"). Paste the run URL into the lane log. Blocked: GitHub Actions disabled by account billing on 2026-10-12; run 38300525970 started no steps; re-check on the first run after billing is fixed
 - [ ] 3.2 Pending until the contracts land, checked on those PRs' CI runs and recorded here by the manager: stale Postman collection fails `core` (after platform Task 12), core tests reach the CI database (after core task 3), failing ui test fails `web` (after ui lands), `make dev` reaches three servers and Ctrl-C stops them (orchestrator at phase close)

@@ -1,7 +1,6 @@
 # platform-P1-L9 - CI workflow and full Makefile (OpenSpec change platform-ci-makefile)
-Status: started
+Status: done
 ## Doing
-Task 2 (ci.yml) written and gated; committing on the branch. Task 3 is the area manager's (runtime evidence).
 ## Found
 - Task 1 red (1.1), unchanged tree, `make test`:
   ```
@@ -31,8 +30,9 @@ Task 2 (ci.yml) written and gated; committing on the branch. Task 3 is the area 
   - 2.3 `openspec validate --all --strict`: `Totals: 3 passed, 0 failed (3 items)`.
   - YAML parse: `d[True]` holds the `on` key under PyYAML; the check reads both keys.
   - Not run: `act`, `actionlint` (not installed, no dependency added). Behaviour is verified by the PR's CI run (task 3.1).
+- Task 3.1 runtime gate, PR #15, run https://github.com/kapildev333/shopperstop/actions/runs/38300525970 (head 2631359): `core` failure, `web` failure, `e2e` failure, `spec` failure, each with zero steps. Annotation on every job: "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings". GitHub account billing, not the workflow; owner notified by the coordinator. 3.1 left unticked with the blocked note; re-check on the first run after billing is fixed. 3.2 items stay pending on their later PRs.
+- Acceptance (/opsx:verify platform-ci-makefile, team lead, 2026-10-12): pass on static and dry-run evidence plus the manager's checks, with 3.1 blocked externally. Tasks 1.1 to 1.6 and 2.1 to 2.3 ticked; 3.1 blocked (billing); 3.2 deferred by design. `Makefile` and `ci.yml` byte-equal to the design.md blocks. Re-run on the branch: every skip target prints only skip lines and exits 0; `openspec validate --all --strict` 3 passed. Diff vs 3160aac: Makefile, ci.yml, the change folder and this log only; nothing extra. Scenario coverage: make scenarios by 1.3 to 1.5 dry runs; "Workflow shape" by the 2.2 parse; "Invalid OpenSpec change fails CI" statically (scratch copy with a scenario-less requirement: `openspec validate --all --strict` exits 1, and the `spec` job runs exactly that command); "Foundation tree is green" waits on 3.1; "Interrupt stops every server", "Stale Postman collection", "Core tests reach the CI database", "Failing web test fails CI" are the 3.2 deferrals. Gap not named in any task: "Build runs only the workspaces that exist" (`make test` with only `packages/ui`) was not exercised, because the scratch copy had no `package.json`; it is first observable on the ui landing PR's `web` job and local `make test`. The manager should check it there.
 ## Requests
 - to core (via platform manager and orchestrator): `core-admin seed-demo --reset` must exist and exit 0 before `make dev` and `make e2e` can pass with services/core present; recommended a Phase 1 stub that prints `seed-demo: no demo data yet` and exits 0.
 - to web, admin (via orchestrator): the `e2e` script and Playwright webServer contract above.
-- to platform (same area, separate chore): root `package.json` `build` script to `npm run build --workspaces --if-present`; engines `>=22.12.0` (ui's request).
 ## Blockers
