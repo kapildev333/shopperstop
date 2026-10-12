@@ -34,7 +34,7 @@ function RootLayout() {
         {staff && (
           <TabNav label="Admin" className="bg-surface px-4 sm:px-6">
             {navLinks(staff.role).map((link) => (
-              <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
+              <Link key={link.to} to={link.to}>
                 {link.label}
               </Link>
             ))}
