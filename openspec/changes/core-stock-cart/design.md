@@ -7,7 +7,7 @@ A spike on 2026-10-12 (copy of the module with L1's 0002, L2's spiked 0003, L3's
 
 ### Assumptions about L2 and L3 (from their change folders and lane logs, 2026-10-12)
 - `stores` and `internal/store`, confirmed by core-P2-L2's lane log (2026-10-12): `store.Get(ctx, q db.DBTX, id) (store.Store, error)` answering 404 `not_found` when absent, `Store` with `DeliveryFeeCents`, `FreeDeliveryAboveCents`, `MinOrderCents int64` and `IsOpen`; demo stores Koramangala `00000000-0000-4000-8000-000000000401` and Indiranagar `...0402`, both fee 2500, free above 19900, minimum 9900 (the cart scenarios use the same numbers). L2 recommends `on delete cascade` on `store_stock.store_id` and `carts.store_id`, as below.
-- `categories`, `products` and `internal/catalog`, confirmed by core-P2-L3's design.md (2026-10-12): 0004 as spiked there; `catalog.Product` (`id, name, slug, description?, brand?, unitLabel, mrpCents, priceCents, categoryId, isActive, imageUrl?`) is the admin and public product shape; `CategoryNode` and the tree assembly of L3 Decision 9; unexported `pattern`, `imageURL`, `toProduct` in the package; `*Catalog` built by `catalog.New(pool, files)`; `app.New(pool, origins, a, files)`. L3 hands the three store-facing routes (`GET /stores/{id}/categories`, `/stores/{id}/products`, `/stores/{id}/products/{slug}`) to this change with draft requirement text and four spiked queries (L3 design "Handover to core-P2-L4"); this change takes them whole (catalog delta, task 3) and adds `catalog.ProductsByID` for the cart. Demo catalog: 148 products from `...0601` (`Banana Robusta`, the Postman `productId`); `...0694` inactive.
+- `categories`, `products` and `internal/catalog` (core-P2-L3, PLAN.md D24): this change owns the three customer-facing catalog routes end to end (`GET /stores/{id}/categories`, `/stores/{id}/products`, `/stores/{id}/products/{slug}`); L3 ships no store-facing handler, requirement or customer product type, and there is no interim stockless version. This design relies on L3 only for what its admin routes need anyway: the 0004 tables (`categories`, `products` as spiked there), the Go types `catalog.Category` / `catalog.CategoryNode` and their tree assembly (`tree` in L3's names), the unexported helpers `pattern` (escaped `ilike` pattern) and `imageURL`, the `CategoryTree` schema in `openapi.json`, and `app.New(pool, origins, a, files)`. Everything else for the customer-facing routes is this change's: `internal/catalog/store.go` (new file, task 2), `catalog.StoreProduct`, the five queries below, the schemas `StoreProduct` and `StoreProductList`. If L3's amended lane log names a helper differently, the worker uses that name; if a helper is absent, the worker writes it in `store.go`. Demo catalog (L3): 148 products `...0601` to `...0694`, `...0601` `Banana Robusta` slug `banana-robusta`, `...0694` inactive.
 - Fixed demo ids (D20, L1 Decision 22 blocks): stores `...0401`, `...0402` (L2), products `...0601` to `...0694` (L3). Examples in `openapi.json` use store `...0401`, product `...0601`, slug `banana-robusta`.
 - If L2 or L3 change these names before the rebase, workers use the landed names and note it in the lane log; the behaviour in the deltas does not change.
 
@@ -21,12 +21,12 @@ A spike on 2026-10-12 (copy of the module with L1's 0002, L2's spiked 0003, L3's
 migrations/0005_stock_cart.sql            schema below, verbatim
 sqlc.yaml                                 two entries appended (stock, cart)
 queries/stock.sql, queries/cart.sql       verbatim below
-queries/catalog.sql                       L3's four handover queries and StoreProductsByID appended (task 3)
+queries/catalog.sql                       five customer-facing queries appended (tasks 2, 3)
 internal/stock/db/*, internal/cart/db/*   sqlc output, never hand-edited; internal/catalog/db regenerated
 internal/stock/stock.go                   Line, OutOfStockError, Reserve, Release, Quantity, LowCount
 internal/stock/handlers.go                Row, List, Put, canSee
 internal/stock/stock_test.go              Go API against the database
-internal/catalog/store.go                 StoreProduct, ProductsByID, StoreCategories, StoreProducts, StoreProduct handlers (task 3)
+internal/catalog/store.go                 new: StoreProduct, ProductsByID, StoreCategories, StoreProducts, StoreProductBySlug handlers (tasks 2, 3)
 internal/catalog/store_test.go            ProductsByID against the database
 internal/cart/cart.go                     Cart, Line, Update, view, Lines, Clear
 internal/cart/handlers.go                 Get, PutItem, Delete
@@ -195,9 +195,44 @@ delete from carts c where c.id = $1 and not exists (select 1 from cart_items i w
 delete from carts where customer_id = $1;
 ```
 
-### Appended to `queries/catalog.sql` (task 3)
-L3's four handover queries verbatim from `core-catalog` design.md, "Handover to core-P2-L4" (`StoreCategories`, `StoreProducts`, `CountStoreProducts`, `StoreProductBySlug`), then:
+### Appended to `queries/catalog.sql` (tasks 2 and 3, verbatim; first drafted by L3, spiked here against 0005)
 ```sql
+-- name: StoreCategories :many
+select c.* from categories c
+where exists (
+    select 1 from products p join store_stock s on s.product_id = p.id
+    where s.store_id = @store_id and s.quantity > 0 and p.is_active
+      and (p.category_id = c.id or p.category_id in (select k.id from categories k where k.parent_id = c.id)))
+order by c.sort_order, c.name, c.id;
+
+-- name: StoreProducts :many
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
+where p.is_active
+  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
+  and (sqlc.narg(category_id)::uuid is null
+       or p.category_id = sqlc.narg(category_id)
+       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)))
+order by p.name, p.id
+limit @page_size offset @page_offset;
+
+-- name: CountStoreProducts :one
+select count(*) from products p
+where p.is_active
+  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
+  and (sqlc.narg(category_id)::uuid is null
+       or p.category_id = sqlc.narg(category_id)
+       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)));
+
+-- name: StoreProductBySlug :one
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
+where p.slug = @slug and p.is_active;
+
 -- name: StoreProductsByID :many
 -- Active and inactive products by id with their quantity at the store, for the cart.
 select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
@@ -206,7 +241,7 @@ from products p
 left join store_stock s on s.product_id = p.id and s.store_id = @store_id
 where p.id = any(@ids::uuid[]);
 ```
-Generated: `StoreProductsByIDRow` has L3's product columns plus `IsActive bool` and `Quantity int32`; `StoreProductsRow` and `StoreProductBySlugRow` have the columns plus `Quantity int32` (no `IsActive`: always active).
+Generated: `StoreProductsRow`, `StoreProductBySlugRow` carry the product columns plus `Quantity int32`; `StoreProductsByIDRow` also `IsActive bool`; `StoreCategories` returns `db.Category`.
 
 ## Interfaces
 ```go
@@ -239,16 +274,29 @@ type Row struct {
     Quantity   int32  `json:"quantity"`
 }
 
-// internal/catalog (task 3, additions to L3's package; Catalog gains a pool field for store.Get)
+// internal/catalog/store.go (tasks 2 and 3; new file owned by this change)
 type StoreProduct struct {
-    Product                // L3's shape, isActive included
-    InStock  bool  `json:"inStock"`  // stored quantity above 0 and active
-    Quantity int32 `json:"quantity"` // min(stored, 10); 0 when inactive
+    ID          string `json:"id"`
+    Name        string `json:"name"`
+    Slug        string `json:"slug"`
+    Description string `json:"description,omitempty"`
+    Brand       string `json:"brand,omitempty"`
+    UnitLabel   string `json:"unitLabel"`
+    MrpCents    int64  `json:"mrpCents"`
+    PriceCents  int64  `json:"priceCents"`
+    CategoryID  string `json:"categoryId"`
+    ImageURL    string `json:"imageUrl,omitempty"` // imageURL(image_key)
+    InStock     bool   `json:"inStock"`            // active and stored quantity above 0
+    Quantity    int32  `json:"quantity"`           // min(stored, 10); 0 when inactive
+    Active      bool   `json:"-"`                  // for the cart's validation
 }
 // ProductsByID answers active and inactive products by id with their stock at the store (StoreProductsByID);
 // unknown ids are absent. For the cart.
 func ProductsByID(ctx context.Context, d db.DBTX, storeID string, ids []string) (map[string]StoreProduct, error)
-// handlers, methods on *Catalog: StoreCategories, StoreProducts, StoreProduct
+// handlers, plain functions like stock's (no dependency on L3's *Catalog):
+func StoreProducts(pool *pgxpool.Pool) http.HandlerFunc       // GET /stores/{id}/products
+func StoreProductBySlug(pool *pgxpool.Pool) http.HandlerFunc  // GET /stores/{id}/products/{slug}
+func StoreCategories(pool *pgxpool.Pool) http.HandlerFunc     // GET /stores/{id}/categories
 
 // internal/cart
 type Line struct {
@@ -280,24 +328,24 @@ func Delete(pool *pgxpool.Pool) http.HandlerFunc  // DELETE /me/cart
 ```
 `db.DBTX` is each package's sqlc interface; `*pgxpool.Pool` and `pgx.Tx` satisfy all of them, so callers pass either.
 
-Imports (no cycles): `cart` → `catalog`, `store`, `stock`, `auth`, `httpx`, `pg`; `catalog` → `store` (task 3); `stock` → `store`, `auth`, `httpx`, `pg`. `catalog` and `stock` do not import each other; `store` imports none of these.
+Imports (no cycles): `cart` → `catalog`, `store`, `stock`, `auth`, `httpx`, `pg`; `catalog` → `store` (tasks 2, 3); `stock` → `store`, `auth`, `httpx`, `pg`. `catalog` and `stock` do not import each other; `store` imports none of these.
 
 ## Routes (`internal/app.New`, flat full paths under `/api/core/v1`)
 | Method and path | Middleware | Handler | Tag | Answers |
 |---|---|---|---|---|
-| GET /stores/{id}/categories | none | `c.StoreCategories` | catalog | 200 CategoryTree, 404 |
-| GET /stores/{id}/products | none | `c.StoreProducts` | catalog | 200 StoreProductList, 400, 404 |
-| GET /stores/{id}/products/{slug} | none | `c.StoreProduct` | catalog | 200 StoreProduct, 404 |
+| GET /stores/{id}/categories | none | `catalog.StoreCategories(pool)` | catalog | 200 CategoryTree, 404 |
+| GET /stores/{id}/products | none | `catalog.StoreProducts(pool)` | catalog | 200 StoreProductList, 400, 404 |
+| GET /stores/{id}/products/{slug} | none | `catalog.StoreProductBySlug(pool)` | catalog | 200 StoreProduct, 404 |
 | GET /admin/stores/{id}/stock | RequireStaff | `stock.List(pool)` | stock | 200 StockList, 400, 401, 404 |
 | PUT /admin/stores/{id}/stock | RequireStaff | `stock.Put(pool)` | stock | 204, 400, 401, 404 |
 | GET /me/cart | RequireCustomer | `cart.Get(pool)` | cart | 200 Cart, 401 |
 | PUT /me/cart/items | RequireCustomer | `cart.PutItem(pool)` | cart | 200 CartUpdate, 400, 401 |
 | DELETE /me/cart | RequireCustomer | `cart.Delete(pool)` | cart | 204, 401 |
 
-Messages: other store or unknown store 404 "not found"; store-facing `q`, `categoryId` 400 exactly as L3's admin list; `q` on the stock list over 100 runes 400 field `q` "at most 100 characters"; `lowStock` 400 field `lowStock` "must be true or false"; rows count 400 field `rows` "1 to 500 rows"; duplicate 400 field `rows` "product listed twice"; unknown product 400 field `rows` "unknown product"; bad product id in a row 400 field `productId` "must be a uuid"; quantity out of range 400 field `quantity` "0 to 100000" (stock) or "0 to 20" (cart); unknown store in the cart 400 field `storeId` "unknown store"; inactive or unknown product in the cart 400 field `productId` "product not available"; missing `quantity` in the cart body 400 field `quantity` "required".
+Messages: other store or unknown store 404 "not found"; store-facing `q` over 100 runes 400 field `q`, `categoryId` not a uuid 400 field `categoryId` (the same rules and messages as L3's admin product list); `q` on the stock list over 100 runes 400 field `q` "at most 100 characters"; `lowStock` 400 field `lowStock` "must be true or false"; rows count 400 field `rows` "1 to 500 rows"; duplicate 400 field `rows` "product listed twice"; unknown product 400 field `rows` "unknown product"; bad product id in a row 400 field `productId` "must be a uuid"; quantity out of range 400 field `quantity` "0 to 100000" (stock) or "0 to 20" (cart); unknown store in the cart 400 field `storeId` "unknown store"; inactive or unknown product in the cart 400 field `productId` "product not available"; missing `quantity` in the cart body 400 field `quantity` "required".
 
 ## Decisions
-1. **Read-only joins between `catalog` and `stock` tables; writes never cross.** L3's Decision 2 already lets `catalog`'s store-facing reads join `store_stock` read-only; symmetrically `stock` joins `products` read-only in `ListStock`, `CountStock` (the list must filter by quantity and page in SQL) and `LockStock` (`is_active` must be checked under the lock, Spec 2 §4). `cart` runs SQL only on `carts` and `cart_items` and calls `catalog.ProductsByID`, `store.Get` and `stock.Quantity` (Spec 2 §9, the work package). Ceiling: a product column rename breaks `make gen` for `stock` (caught at generate time); if stock becomes its own service, the joins become calls.
+1. **Read-only joins between `catalog` and `stock` tables; writes never cross (accepted once for L3 and L4, PLAN.md D24).** The customer-facing catalog queries in `internal/catalog` join `store_stock` read-only; `stock` joins `products` read-only in `ListStock`, `CountStock` (the list must filter by quantity and page in SQL) and `LockStock` (`is_active` must be checked under the lock, Spec 2 §4). `cart` runs SQL only on `carts` and `cart_items` and calls `catalog.ProductsByID`, `store.Get` and `stock.Quantity`. Ceiling: a product column rename breaks `make gen` (caught at generate time); if stock becomes its own service, the joins become calls.
 2. **Reservation locks in product id order, then decides, then writes once.** `LockStock` is `order by s.product_id for update of s` (the lock node sits above the sort, so rows lock in id order; spike: opposite-order reservations never deadlock). Rows missing, inactive or short are all collected before returning, so the error names every offending product (Spec 2 §4); nothing is written unless all pass; then one `AddStock` with negative deltas. In READ COMMITTED a blocked transaction re-reads the row after the winner commits, so it sees the new quantity (spike: exactly one of two wins the last unit). Ids are sorted in Go before the call so the error's ids are ascending. Ceiling: one round trip for the lock, one for the update; fine for carts of 20 lines.
 3. **`OutOfStockError` is a Go error, not an `httpx.Error`.** The envelope's `productIds[]` (Spec 2 §6) is written by L5's placement handler, which owns the `out_of_stock` response; `httpx.Error` has no `productIds` today (request to L5).
 4. **A cart holds no stock.** Clamping reads `stock.Quantity` without a lock; placement re-checks under lock and may still answer `out_of_stock`. Ceiling: two customers can both hold the last unit in their carts; the first to place gets it (Spec 2 §4 intends this).
@@ -310,7 +358,7 @@ Messages: other store or unknown store 404 "not found"; store-facing `q`, `categ
 11. **Stock routes: who and in which order.** `PathID` (malformed 404) → `auth.CurrentStaff(ctx)`: role `store_staff` with `StoreID != id` → 404 before any query → `store.Get` (unknown → 404, covers admins) → handler body. A small unexported `canSee(staff, storeID)` in `stock`; L5 writes its own for orders. Ceiling: none.
 12. **Stock list.** `httpx.Page` for paging (default 24, max 100), `q` trimmed, at most 100 runes, turned into an `ilike` pattern with `\`, `%`, `_` escaped exactly like L3's `pattern` (a local `strings.NewReplacer`, since `stock` does not import `catalog`; `""` means no filter); `lowStock` `""`/`false`/`true` only; `ListStock` + `CountStock`, answered as `httpx.NewList`. The low-stock threshold 5 is a literal in the SQL (Spec 2 §6 dashboard rule); `LowCount` reuses `CountStock` with `Q: ""`, `LowStock: true`. Ceiling: offset paging (keyset past 10 000 products).
 13. **Stock upsert.** `httpx.ReadJSON` into `{Rows []struct{ProductID string; Quantity *int}}`; checks in order, first failure wins: 1..500 rows (`rows`), each `productId` a uuid (`productId`), each quantity present and 0..100000 (`quantity`), no product twice (`rows`); then one `UpsertStock` in `pgx.BeginFunc`; `23503` (the store was checked, so it is the product) → 400 `rows` "unknown product"; 204 with no body. The 100000 ceiling keeps `integer` far from overflow when L5 adds back cancelled quantities. Ceiling: the error does not say which row is unknown; the admin page sends only products it listed.
-14. **Store-facing catalog, as L3 handed it over** (task 3). Each handler: `PathID(id)` → `store.Get(ctx, c.pool, id)` (404) → query. `StoreCategories`: `StoreCategories(storeID)` gives exactly the qualifying categories (a parent qualifies through a stocked child, a child only by itself); L3's tree assembly turns them into `{items: CategoryNode[]}`. `StoreProducts`: `httpx.Page`, `q` and `categoryId` parsed and refused exactly as L3's admin list (same fields and messages), `StoreProducts` + `CountStoreProducts`, each row → `StoreProduct{toProduct-equivalent, InStock: q > 0, Quantity: min(q, 10)}`, answered as `httpx.NewList`. `StoreProduct`: `StoreProductBySlug` (no rows → 404). `ProductsByID`: `StoreProductsByID`, map by id, `InStock = IsActive && q > 0`, `Quantity = 0` when inactive else `min(q, 10)`. The slug is not a uuid; only `{id}` goes through `PathID`. Ceiling: none beyond L3's (sequential `ilike` scan).
+14. **Customer-facing catalog, owned here (D24; tasks 2 and 3).** Plain handler functions in the new `internal/catalog/store.go`, so nothing depends on L3 shipping store-facing code. Each: `PathID(r, "id")` → `store.Get(ctx, pool, id)` (404 as is) → query. `StoreProducts`: `httpx.Page`; `q` trimmed, at most 100 runes (400 `q`), `pattern(q)` when non-empty else NULL; `categoryId` canonical uuid (400 `categoryId`) else NULL; `StoreProducts` + `CountStoreProducts`; rows → `StoreProduct{..., ImageURL: imageURL(key), InStock: q > 0, Quantity: min(q, 10), Active: true}`; `httpx.NewList`. `StoreProductBySlug`: the slug as is (no format check) → `StoreProductBySlug` → no rows 404. `StoreCategories`: `StoreCategories(storeID)` returns exactly the qualifying categories (a parent through a stocked child, a child only by itself), assembled with L3's tree function into `{items: CategoryNode[]}`. `ProductsByID`: `StoreProductsByID`, map by id, `InStock = IsActive && q > 0`, `Quantity = 0` when inactive else `min(q, 10)`, `Active = IsActive`. Ceiling: two round trips (store, then catalog); sequential `ilike` scan as L3's.
 15. **Seed (D22).** `seed.Reset`'s single `truncate` gains `store_stock, cart_items, carts` (they reference `customers`, `stores` and `products`, which are truncated in the same statement; truncating those without these fails). `Load` ends with one statement, after L2's stores and L3's products:
     ```sql
     insert into store_stock (store_id, product_id, quantity)
@@ -325,13 +373,13 @@ Messages: other store or unknown store 404 "not found"; store-facing `q`, `categ
     ```
     Fixed ids order the rows, so quantities are the same on every reset: per store one zero every 15 products and one low count (1 to 4) every 15, the rest 10 to 49; the first product (`...0601`, the Postman `productId`) has 17 at the first store and 22 at the second, so the Postman run's add-to-cart succeeds. Stock rows get generated ids (nothing references them). Ceiling: needs at least 15 demo products for a zero and a low count per store; L3 seeds 148. Stock rows also go to the inactive `...0694` (harmless: it is hidden everywhere customers look). No demo cart.
 16. **Response codes.** `PUT` stock and `DELETE /me/cart` answer 204 with no body (the admin page refetches the list; the cart drawer reads the next `GET`). 500 `internal` is not documented per operation (L1 Decision 24's rule).
-17. **`openapi.json` shapes.** Tags appended `stock`, `cart`. Schemas: `StockRow`, `StockList {items, page, pageSize, total}`, `StockUpdate {rows: [{productId, quantity}]}` (`maxItems` 500, quantity 0..100000), `Cart`, `CartLine {product: Product, quantity}`, `CartItemSet {storeId, productId, quantity}` (quantity 0..20), `CartUpdate` (`allOf` `Cart` plus required `replaced`, `clamped`), `StoreProduct` (`allOf` L3's `Product` plus required `inStock` boolean and `quantity` integer 0..10), `StoreProductList` (paged); `CartLine.product` is a `StoreProduct`; the store categories answer L3's `CategoryTree`. L3's `Product` is unchanged (admin answers carry no stock). Query parameters `q`, `lowStock` (boolean), `page`, `pageSize` on the stock list and `q`, `categoryId`, `page`, `pageSize` on the store product list; path `slug` example `banana-robusta`; the three store-facing operations are public (no `security`, tag `catalog`) and document 404 (and 400 on the list) with examples; path `id` example `00000000-0000-4000-8000-000000000401`. Every stock and cart operation has `security: [{"bearer": []}]`, a 401 with an example, and an example on every response with content; request bodies carry examples (Postman's raw body): stock update `{"rows":[{"productId":"00000000-0000-4000-8000-000000000601","quantity":25}]}`, cart line `{"storeId":"00000000-0000-4000-8000-000000000401","productId":"00000000-0000-4000-8000-000000000601","quantity":2}`. Tag order puts `stock` before `cart`, so the Postman run restocks before it adds to the cart.
+17. **`openapi.json` shapes.** Tags appended `stock`, `cart`. Schemas: `StockRow`, `StockList {items, page, pageSize, total}`, `StockUpdate {rows: [{productId, quantity}]}` (`maxItems` 500, quantity 0..100000), `Cart`, `CartLine {product: Product, quantity}`, `CartItemSet {storeId, productId, quantity}` (quantity 0..20), `CartUpdate` (`allOf` `Cart` plus required `replaced`, `clamped`), `StoreProduct` (its own object: the fields of the Go struct above, `inStock` boolean and `quantity` integer 0..10 required), `StoreProductList` (paged); `CartLine.product` is a `StoreProduct`; the store categories answer L3's `CategoryTree`. Whatever product schemas L3 keeps for its admin routes are not touched. Query parameters `q`, `lowStock` (boolean), `page`, `pageSize` on the stock list and `q`, `categoryId`, `page`, `pageSize` on the store product list; path `slug` example `banana-robusta`; the three store-facing operations are public (no `security`, tag `catalog`) and document 404 (and 400 on the list) with examples; path `id` example `00000000-0000-4000-8000-000000000401`. Every stock and cart operation has `security: [{"bearer": []}]`, a 401 with an example, and an example on every response with content; request bodies carry examples (Postman's raw body): stock update `{"rows":[{"productId":"00000000-0000-4000-8000-000000000601","quantity":25}]}`, cart line `{"storeId":"00000000-0000-4000-8000-000000000401","productId":"00000000-0000-4000-8000-000000000601","quantity":2}`. Tag order puts `stock` before `cart`, so the Postman run restocks before it adds to the cart.
 
 ## Test strategy
 `make test-core`. Packages and schemas: `stock` → `testdb.Migrated("stock")`, `cart` → `Migrated("cart")`, `catalog` keeps L3's `Migrated("catalog")`, `app` and `seed` keep L1's. Fixtures insert stores, categories and products with plain `pool.Exec` (column lists from 0003 and 0004) and unique names per test; route tests reuse L1's `call` helper and its customer, admin and store-staff fixtures, adding a store-staff user of a second store through `auth.CreateStaff` and `POST /admin/auth/sign-in` once per package (`sync.Once`). Each route test checks status, `code`, `field` and the body through the real router (`srv`). `TestAuthGates` gains five rows: stock routes anonymous 401, customer 401, own-store staff allowed, admin allowed (other-store staff 404 is its own test); cart routes anonymous 401, customer allowed, store staff 401, admin 401. The race tests start both goroutines on a closed channel and run `pgx.BeginFunc` each; they assert exactly one `nil` and one `*OutOfStockError`, then the stored quantity. `go test -race` covers the goroutines.
 
 ## Risks / Trade-offs
-- [L2 and L3 change shape before this branch rebases] → the assumptions above are the only coupling; task 1's migration needs only `stores.id`, `products.id`, `customers.id` and `set_updated_at()`; the team lead re-reads L2's and L3's landed design and refreshes briefs 3 and 5 after the rebase.
-- [web-P2-L1's browsing pages now wait for this lane, not L3] → task 3 comes right after the stock tasks; the manager may run task 3 before task 2 (they touch disjoint files except `app.go`, `openapi.json` and the generated files) if web is blocked.
+- [L2 and L3 change shape before this branch rebases] → the assumptions above are the only coupling; task 1's migration needs only `stores.id`, `products.id`, `customers.id` and `set_updated_at()`; the team lead re-reads L2's and L3's landed design and lane logs and refreshes briefs 2 to 6 after the rebase.
+- [web-P2-L1's browsing pages wait for this lane] → task order (D24) puts the store products and categories (tasks 2, 3) right after the schema.
 - [`out_of_stock` envelope needs `productIds`] → L5 adds `ProductIDs []string \`json:"productIds,omitempty"\`` to `httpx.Error` (request in the lane log).
 - [Postman run order] → tags put `stock` before `cart`, so the run restocks before it adds to the cart; on a fresh seed `...0601` has stock at both stores anyway. L3's collection deletes `...0601` unless an order references it (L3's request to L5/L6); a later cart request then fails with 400 `productId` until `seed-demo --reset`.
