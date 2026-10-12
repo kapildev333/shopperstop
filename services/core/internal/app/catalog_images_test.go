@@ -185,6 +185,20 @@ func TestUploadProductPNG(t *testing.T) {
 		t.Fatal("served bytes differ from the upload")
 	}
 
+	// HEAD answers the same headers with no body.
+	req, err := http.NewRequest(http.MethodHead, srv.URL+got.ImageURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	headResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	headResp.Body.Close()
+	if headResp.StatusCode != http.StatusOK || headResp.Header.Get("Content-Type") != "image/png" {
+		t.Fatalf("HEAD file: got %d %q, want 200 image/png", headResp.StatusCode, headResp.Header.Get("Content-Type"))
+	}
+
 	status, read := getProduct(t, token, p.ID)
 	var admin productView
 	if status != http.StatusOK || json.Unmarshal(read, &admin) != nil || admin.ImageURL != wantURL {
@@ -364,6 +378,80 @@ func TestFileUnsafeNameOrKind(t *testing.T) {
 		"/api/core/v1/files/products/..%2Fsecret.png",
 		"/api/core/v1/files/orders/x.png",
 		"/api/core/v1/files/products/X.PNG",
+	} {
+		resp, body := getFile(t, path, nil)
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("GET %s: got %d %s, want 404", path, resp.StatusCode, body)
+		}
+	}
+}
+
+// TestUploadRefusesSVGAndHTML renames active documents to .png: the content
+// decides, so both are refused.
+func TestUploadRefusesSVGAndHTML(t *testing.T) {
+	token := adminToken(t)
+	cat := createCategory(t, token, map[string]any{"name": "Upload SVG HTML Category"})
+	p := createProduct(t, token, productBody(cat.ID, "Upload SVG HTML"))
+	cases := []struct {
+		what string
+		data []byte
+	}{
+		{"svg with script", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)},
+		{"html with script", []byte(`<!DOCTYPE html><html><body><script>alert(1)</script></body></html>`)},
+	}
+	for _, c := range cases {
+		status, body := upload(t, productImagePath(p.ID), token, part{name: "file", filename: "x.png", contentType: "image/png", data: c.data})
+		expectError(t, c.what, status, body, http.StatusBadRequest, "validation", "file", imageMessage)
+	}
+}
+
+// TestUploadFilenameIgnored sends a traversal file name: the stored key is
+// kind/id.ext, and nothing lands outside the kind directory.
+func TestUploadFilenameIgnored(t *testing.T) {
+	token := adminToken(t)
+	cat := createCategory(t, token, map[string]any{"name": "Upload Traversal Category"})
+	p := createProduct(t, token, productBody(cat.ID, "Upload Traversal"))
+	data := pngBytes(t, color.RGBA{B: 180, A: 255})
+	status, body := upload(t, productImagePath(p.ID), token, part{name: "file", filename: "../../evil.png", contentType: "image/png", data: data})
+	if status != http.StatusOK {
+		t.Fatalf("upload: got %d %s, want 200", status, body)
+	}
+	if !bytes.Equal(storedFile(t, "products/"+p.ID+".png"), data) {
+		t.Fatal("stored file differs from the upload")
+	}
+	for _, outside := range []string{
+		filepath.Join(filesDir, "evil.png"),
+		filepath.Join(filesDir, "products", "evil.png"),
+		filepath.Join(filesDir, "..", "..", "evil.png"),
+	} {
+		if _, err := os.Stat(outside); !os.IsNotExist(err) {
+			t.Fatalf("upload with a traversal name wrote %s: %v", outside, err)
+		}
+	}
+}
+
+// TestUploadTwoFileParts pins what happens with two file parts: the first is stored.
+func TestUploadTwoFileParts(t *testing.T) {
+	token := adminToken(t)
+	cat := createCategory(t, token, map[string]any{"name": "Upload Two Parts Category"})
+	p := createProduct(t, token, productBody(cat.ID, "Upload Two Parts"))
+	first := pngBytes(t, color.RGBA{R: 1, A: 255})
+	second := pngBytes(t, color.RGBA{R: 2, A: 255})
+	status, body := upload(t, productImagePath(p.ID), token, filePart(first), filePart(second))
+	if status != http.StatusOK {
+		t.Fatalf("two file parts: got %d %s, want 200", status, body)
+	}
+	if !bytes.Equal(storedFile(t, "products/"+p.ID+".png"), first) {
+		t.Fatal("two file parts: the second part was stored, want the first")
+	}
+}
+
+// TestFileTraversalPaths asks for paths outside the catalog file shape; all are 404.
+func TestFileTraversalPaths(t *testing.T) {
+	for _, path := range []string{
+		"/api/core/v1/files/etc/passwd",
+		"/api/core/v1/files/categories/%2e%2e/x.png",
+		"/api/core/v1/files/products/%2e%2e.png",
 	} {
 		resp, body := getFile(t, path, nil)
 		if resp.StatusCode != http.StatusNotFound {
