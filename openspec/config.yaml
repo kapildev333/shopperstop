@@ -1,0 +1,35 @@
+schema: spec-driven
+
+# OpenSpec is the only place specifications are written. docs/specs/ holds the two
+# frozen 2026-10-12 briefs that seed openspec/specs/; nothing new goes there.
+context: |
+  ShopperStop: quick-commerce (Blinkit-like), microservices in one repo. Areas with disjoint scopes:
+  platform (root, deploy/, .github/, openspec/, docs/), core (services/core/), ui (packages/ui/),
+  web (apps/web/), admin (apps/admin/). A change belongs to exactly one area and is named <area>-<slug>.
+  Stack and naming rules are in CLAUDE.md; a change never introduces a dependency outside CLAUDE.md's list.
+  Capabilities in openspec/specs/: platform, design-system, serviceability, catalog, stock, accounts,
+  cart, orders, admin-stores, admin-catalog, admin-staff.
+  JSON is camelCase and never null; money is integer cents; routes are /api/<service>/v1/<plural-noun>.
+
+rules:
+  proposal:
+    - State the area, the capabilities touched, and what is out of scope
+    - Name every cross-area contract the change relies on (openapi.json, @shopperstop/ui exports, tokens.css)
+  specs:
+    - Requirements use SHALL wording and carry at least one "#### Scenario:" with WHEN / THEN bullets
+    - Every scenario is testable against the real database, HTTP router or rendered component; no scenario depends on a mock
+  design:
+    - Prefer the smallest design that meets the spec; name each simplification and its ceiling
+    - List the files the change touches, all inside one area
+  tasks:
+    - One task is one worker lane: scope paths, the scenario it implements, the failing test it starts from (file and test name)
+    - Each task's commit order is "test: <scenario>" then "feat:" or "fix:"; a task with no test names why
+
+operations:
+  apply:
+    guidance:
+      - Write the failing test first, see it fail, commit it, then the smallest code that passes
+      - Stay inside the task's scope paths; report anything needed outside them instead of editing it
+  archive:
+    guidance:
+      - Archive only after the feature PR merged and the team lead's /opsx:verify passed

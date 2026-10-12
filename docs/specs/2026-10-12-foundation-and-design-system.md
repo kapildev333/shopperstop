@@ -34,13 +34,13 @@ shopperstop/
     docker-compose.yml    postgres, caddy
     Caddyfile             /api/core/* -> core:8080; / -> web; /admin/* -> admin (prod); dev uses Vite proxies instead
     initdb.sql            roles and databases: shopperstop_core, shopperstop_core_test, one owner role per service
-  docs/specs/             design specs, YYYY-MM-DD-<topic>.md, approved before any plan or code
-  docs/plans/             implementation plans, one per spec, same file name; each task is one lane
+  docs/specs/             frozen: the two 2026-10-12 founding briefs; all later specification is OpenSpec
+  docs/plans/             frozen: the Phase 1 plan; later work is planned as OpenSpec changes
   docs/design/            designer-lane output, <LANE-ID>.md
   docs/figma.md           link to the Figma file and the page map (§9)
   docs/postman/           Postman collection and environment generated from openapi.json (§11)
   openspec/               OpenSpec root: specs/ (the living spec per capability), changes/ (one per feature), changes/archive/ (§5.1)
-  .claude/                agents (manager, worker, reviewer), commands/orchestrate.md, opsx commands installed by openspec init, lanes/
+  .claude/                agents (team-lead, worker, reviewer), commands (orchestrate, manage), areas/, lanes/, opsx commands installed by openspec init
   .github/                workflows/ci.yml, pull_request_template.md, dependabot.yml
   PLAN.md                 orchestration plan, orchestrator-only
   Makefile                dev, db, seed, core, web, admin, test, e2e, gen, prod-local
@@ -73,23 +73,25 @@ Naming, one convention per layer:
 
 ## 5. Orchestration workflow
 
-The workflow is the UniCourse one with the roles the owner set on 2026-10-12: a manager owns an entire feature, workers build its tasks, a reviewer reviews in detail, and the orchestrator (the main session) dispatches and verifies.
+Amended 2026-10-12 (PLAN.md D5): the workflow is organised by area. The owner replaced the single manager lane with one Fable manager session per sub-project.
 
-- `/orchestrate <source documents>` (`.claude/commands/orchestrate.md`): the main session is the orchestrator; it reads `PLAN.md` or proposes one and stops for discussion before launching anything.
-- Lanes are sub-agents with disjoint directory scopes. Per feature, in order:
-  - `manager` (Opus 5.5) owns the feature end to end: runs the OpenSpec change for it (§5.1: proposal, spec deltas, design, tasks), writes `docs/design/<LANE-ID>.md` when the change's `design.md` is not enough, cuts `tasks.md` into worker briefs (each one task, one scope, the failing test it must start from), and at the end does the feature-level acceptance against the spec deltas before the orchestrator verifies. It writes no product code. Sub-agents cannot launch sub-agents, so the orchestrator launches the workers from the manager's briefs; the manager stays available by SendMessage to answer worker questions and is re-run for acceptance.
+- Areas are sub-projects with disjoint scopes: `platform` (root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md`), `core` (`services/core/`), `ui` (`packages/ui/`), `web` (`apps/web/`), `admin` (`apps/admin/`); each later service is an area. Each has a plan in `.claude/areas/<area>.md`.
+- `/orchestrate <source documents>` (`.claude/commands/orchestrate.md`): the program orchestrator, a Fable 5.1 session. Owns `PLAN.md` and the root checkout, writes each area's work package, relays cross-area requests, verifies integration and tags releases at phase close.
+- `/manage <area>` (`.claude/commands/manage.md`): the area manager, a Fable 5.1 session per area in its own terminal. Sub-agents cannot launch sub-agents, so a manager that commands lanes must be a session. It launches the lanes below, verifies every landing itself (suites, then the real database, HTTP and browser), lands PRs, and keeps the area plan current.
+- Lanes inside an area, per feature, in order:
+  - `team-lead` (Opus 5.5) owns the feature end to end: the OpenSpec change (§5.1), `docs/design/<LANE-ID>.md` when the change's `design.md` is not enough, one brief per worker task (one task, one scope, the failing test it must start from), and the feature-level acceptance against the spec deltas. It writes no product code.
   - `worker` (Haiku 5.5) implements one task from its brief, test first (§5.2), inside its scope, and stops on any open design choice.
   - `reviewer` (Sonnet 5.5) reviews every landing read-only and in detail: brief and spec delta coverage, correctness, the test-first commit order, scope creep, needless complexity; re-runs the gates itself. Findings are file:line with the failing scenario and the smallest fix.
-- Lane logs in `.claude/lanes/<LANE-ID>.md` (format in `.claude/lanes/README.md`); each lane writes only its own file.
-- Only the orchestrator edits `PLAN.md`. Lanes work only inside their brief's paths. One directory has one owner at a time; one integration suite runs at a time. The orchestrator verifies every landing itself (re-run suites, then exercise the real database, HTTP and browser) and records the evidence in the lane's status cell. The orchestrator does not write features itself while a lane could.
+- `LANE-ID = <area>-P<phase>-L<n>`. Lane logs in `.claude/lanes/<LANE-ID>.md` (format in `.claude/lanes/README.md`); each lane writes only its own file.
+- Contracts between areas are files: `services/core/openapi.json`, `packages/ui/src/tokens.css` and the `@shopperstop/ui` exports, `openspec/specs/`. A change needed in another area is a request in the area plan, relayed by the orchestrator; no lane edits outside its area.
+- Only the orchestrator edits `PLAN.md` or touches the root checkout. One directory has one owner at a time; one integration suite runs at a time across all managers.
 - Agents never run `docker compose` or touch containers; the local Postgres is `shopperstop-postgres-1`, started by the owner or the orchestrator through `make db`.
-- A service is one directory scope. A lane that needs a change in another service reports it; the orchestrator opens a lane there.
 
 ### 5.1 Spec-driven with OpenSpec
 
-Development is spec-driven with OpenSpec (`npm install -g @fission-ai/openspec@latest`, then `openspec init` in the repo with the Claude Code integration, which installs the `/opsx:*` commands under `.claude/`). The documents in `docs/specs/` are the owner-approved design briefs; the living, normative specification is `openspec/specs/`, one folder per capability (`serviceability`, `catalog`, `stock`, `accounts`, `cart`, `orders`, `admin-stores`, `admin-catalog`, `admin-staff`, `design-system`), written as requirements with `SHALL` wording and at least one `#### Scenario:` block of **WHEN** / **THEN** bullets per requirement.
+Development is spec-driven with OpenSpec, run as `npx -y @fission-ai/openspec@latest` (initialised 2026-10-12 with the Claude Code integration and the full workflow profile, so the `/opsx:*` commands live under `.claude/commands/opsx/`). Amended 2026-10-12 (PLAN.md D6): OpenSpec is the only spec tool. The two documents in `docs/specs/` are frozen founding briefs that the first platform change seeds into `openspec/specs/`; no new spec or plan file is written under `docs/`. The living, normative specification is `openspec/specs/`, one folder per capability (`serviceability`, `catalog`, `stock`, `accounts`, `cart`, `orders`, `admin-stores`, `admin-catalog`, `admin-staff`, `design-system`), written as requirements with `SHALL` wording and at least one `#### Scenario:` block of **WHEN** / **THEN** bullets per requirement.
 
-Every feature is one OpenSpec change (`openspec new change <name>`, or `/opsx:propose`) with `proposal.md`, `design.md`, `specs/<capability>/spec.md` deltas under `## ADDED|MODIFIED|REMOVED|RENAMED Requirements`, and `tasks.md` with checkboxes. The manager drafts them from the brainstorm spec; the orchestrator shows them to the owner before any worker starts. Workers tick `tasks.md` as they land (`/opsx:apply`); the manager's acceptance is `/opsx:verify`; the orchestrator archives with `openspec archive <name>` after the PR merges, which merges the deltas into `openspec/specs/`. `openspec validate --all --strict` runs in CI and must pass. The first change of Phase 1 seeds `openspec/specs/` from the two brainstorm specs so later changes are deltas, not rewrites.
+Every feature is one OpenSpec change (`openspec new change <name>`, or `/opsx:propose`) with `proposal.md`, `design.md`, `specs/<capability>/spec.md` deltas under `## ADDED|MODIFIED|REMOVED|RENAMED Requirements`, and `tasks.md` with checkboxes. The team lead drafts them from the brainstorm spec; the area manager shows them to the owner before any worker starts. Workers tick `tasks.md` as they land (`/opsx:apply`); the team lead's acceptance is `/opsx:verify`; the area manager archives with `openspec archive <name>` by PR after the feature merges, which merges the deltas into `openspec/specs/`. `openspec validate --all --strict` runs in CI and must pass. The first change of Phase 1 seeds `openspec/specs/` from the two brainstorm specs so later changes are deltas, not rewrites.
 
 ### 5.2 Test-driven development
 
