@@ -3,7 +3,7 @@
 ## Context
 See proposal.md for why. `apps/admin` on main is the Phase 1 shell (admin-P1-L1): `__root.tsx` with a banner, a one-link `TabNav` on a `surface` strip and `<Outlet />` in `main`; `index.tsx` is a Dashboard placeholder; `main.tsx` builds the router with `basepath: '/admin'`; `shell.test.tsx` renders the real route tree on a memory history; `e2e/smoke.spec.ts` visits Dashboard and not-found with axe and proves the `/api` proxy. `@shopperstop/ui/api` is types only (`paths`, `components`), generated from `services/core/openapi.json` whose `servers[0].url` is `/api/core/v1`, so `paths` keys have no prefix (`/healthz`). On origin/main 5101344 it has only `healthz` and `readyz`; the staff routes arrive with core-P2-L1 (D19 regenerates `core.d.ts` in that PR).
 
-Spike, 2026-10-12, scratchpad copy of 5101344 with Node 22.23.3: the staff routes below were added to a scratch `openapi.json` exactly as assumed in "Assumptions", `core.d.ts` regenerated, and every file in this design written and run: `npm install` in the workspace clean (no peer conflict), lint, typecheck, Vitest 5 files / 28 tests (after dropping the 403 row and adding the blocked-storage test), `vite build` with `routeTree.gen.ts` byte-stable across builds, and Playwright with axe against `vite preview` on a scratch port (sign-in page, error banner, Dashboard, signed-out not-found, store-staff not-found on `/stores`, reload restoring the session, deep link `/admin/stock` round trip through sign-in, sign-out): no violations. The real-core e2e (task 4) could not run: core does not serve the routes yet.
+Spike, 2026-10-12, scratchpad copy of 5101344 with Node 22.23.3: the staff routes below were added to a scratch `openapi.json` exactly as assumed in "Assumptions", `core.d.ts` regenerated, and every file in this design written and run: `npm install` in the workspace clean (no peer conflict), lint, typecheck, Vitest 5 files / 29 tests (after dropping the sign-in 403 row and adding the blocked-storage and route 403 tests), `vite build` with `routeTree.gen.ts` byte-stable across builds, and Playwright with axe against `vite preview` on a scratch port (sign-in page, error banner, Dashboard, signed-out not-found, store-staff not-found on `/stores`, reload restoring the session, deep link `/admin/stock` round trip through sign-in, sign-out): no violations. The real-core e2e (task 4) could not run: core does not serve the routes yet.
 
 ## Assumptions awaiting `core.d.ts` (task 0 rechecks each)
 | # | Assumption | Where it is used | If wrong | core-P2-L1 design (branch, not main, read 2026-10-12) |
@@ -19,6 +19,18 @@ Spike, 2026-10-12, scratchpad copy of 5101344 with Node 22.23.3: the staff route
 | A9 | the error envelope is `components['schemas']['Error']` = `{ error: { code, message, field? } }` (already on main) | `ApiError`, `throw error.error` | none | agrees |
 | A10 | `core-admin seed-demo --reset` creates `admin@shopperstop.local` / `admin12345`, active (D22, core-P2-L1) | `e2e/auth.spec.ts` | change the credentials in the spec only | agrees: id `00000000-0000-4000-8000-000000000101`, name `Admin`; `seed.Reset` is one transaction truncating sessions and staff users, safe with core running |
 
+## Core contract facts (core-P2-L1 as proposed, relayed by the manager 2026-10-12)
+1. Staff sign-in answers `{token, staff}`.
+2. 401 `unauthorized` on any secured route means the session is gone: the client clears the token and the guard sends the user to sign-in (the `onResponse` rule below).
+3. Store staff calling admin-only routes get 403 `forbidden`. The nav hides those sections and the `_admin` layout shows not-found from the role in `/admin/me` before any call; a stray 403 from any call renders the same not-found page, never sign-in (`RouteError` below). Core answers 404 `not_found` for another store's objects: the page lanes' concern.
+4. PATCH rejects explicit `null`; `""` unsets an optional text field (page lanes).
+5. Validation errors carry the JSON field name in `field` (A6 holds).
+6. Lists are `{items, page, pageSize, total}` (page lanes).
+7. Every secured operation documents 401 and `security` in `openapi.json`, so `core.d.ts` types the 401 bodies as `Error`; `throw error.error` covers them.
+8. The seed creates `admin@shopperstop.local` / `admin12345` with id `00000000-0000-4000-8000-000000000101`. core's e2e seed command (its design.md decision 22) is `go run ./cmd/core-admin migrate && go run ./cmd/core-admin seed-demo --reset` in `services/core` with the `make e2e` environment; `e2e/global-setup.ts` runs exactly those two commands there, with the environment Playwright was given.
+
+Core accepted the admin requests: schema names `Staff` and `StaffSession`, `/admin/me` unwrapped, inactive staff 401, `storeId` omitted for admins. Task 0 is therefore a diff of the assumptions table against the generated `core.d.ts`.
+
 ## Goals / Non-Goals
 **Goals:** the smallest auth layer every later admin page sits in: one client, one guard, one role rule, one place that knows the nav. **Non-Goals:** page bodies, store selector, client-side expiry timers, refresh tokens, "remember me", password reset (Spec 2 §14), a sign-in redirect for an already signed-in visitor (they can sign in again; harmless).
 
@@ -32,12 +44,13 @@ src/api.ts                          typed client, bearer + 401 middleware, meQue
 src/fake-core.ts                    test helper: fake fetch at the process boundary      (task 1)
 src/session.test.ts, src/api.test.ts                                                    (task 1)
 src/router.ts                       createAppRouter: QueryClient in router context       (task 2)
+src/route-error.tsx                 every route's error boundary: 403 → not found        (task 2)
 src/render-app.tsx                  test helper: renderApp(path)                         (task 2)
 src/main.tsx                        uses createAppRouter + QueryClientProvider           (task 2)
 src/nav.ts                          the section list and the role filter                 (task 2)
 src/not-found.tsx                   the one not-found page                               (task 2)
 src/routes/__root.tsx               shell: name, Sign out, role nav                      (task 2)
-src/routes/_staff.tsx               guard (pathless layout) + load error                 (task 2)
+src/routes/_staff.tsx               guard (pathless layout)                              (task 2)
 src/routes/_staff/_admin.tsx        admin-only rule (pathless layout)                    (task 2)
 src/routes/_staff/index.tsx         Dashboard, moved from src/routes/index.tsx           (task 2)
 src/routes/_staff/orders.tsx, stock.tsx                                placeholders     (task 2)
@@ -186,12 +199,16 @@ Fake at the process boundary (`fetch`), the only fake allowed (Spec 1 §5.2); ev
 ```ts
 import { QueryClient } from '@tanstack/react-query'
 import { createRouter, type RouterHistory } from '@tanstack/react-router'
-import { onUnauthorized } from './api'
+import { onUnauthorized, type ApiError } from './api'
+import { RouteError } from './route-error'
 import { routeTree } from './routeTree.gen'
 
 export function createAppRouter(history?: RouterHistory) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const router = createRouter({ routeTree, history, basepath: history ? undefined : '/admin', context: { queryClient } })
+  const queryClient = new QueryClient({
+    // A 403 in a page query goes to the route's error boundary, which shows not found.
+    defaultOptions: { queries: { retry: false, throwOnError: (error) => (error as Partial<ApiError>).code === 'forbidden' } },
+  })
+  const router = createRouter({ routeTree, history, basepath: history ? undefined : '/admin', context: { queryClient }, defaultErrorComponent: RouteError })
   onUnauthorized(() => {
     queryClient.clear()
     void router.invalidate()
@@ -225,6 +242,7 @@ createRoot(document.getElementById('root')!).render(
 ```
 - Tests pass a memory history without the basepath (Phase 1 convention: test paths are `/`, `/stores`); the app passes none and gets `/admin`.
 - `retry: false`: a 401 or 500 on `/admin/me` must surface at once; pages that want retries set them per query.
+- `throwOnError` for `forbidden` only: a 403 in a page's `useQuery` goes to the route's error boundary and shows not-found (contract fact 3); every other query error stays in the query for the page to show. Loader errors reach the boundary anyway.
 - The 401 handler clears the query cache and invalidates the router; the `_staff` guard re-runs, finds no token and redirects with the current path.
 - `src/render-app.tsx` (task 2):
 ```tsx
@@ -246,16 +264,9 @@ export function renderApp(path: string) {
 
 ### Guard (`src/routes/_staff.tsx`)
 ```tsx
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
-import { ErrorBanner } from '@shopperstop/ui'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { meQuery } from '../api'
 import { getToken } from '../session'
-
-// Renders in the root Outlet, so the banner stays; a 401 never gets here (the guard redirects).
-function SessionError() {
-  const router = useRouter()
-  return <ErrorBanner message="Could not reach the server." onRetry={() => void router.invalidate()} />
-}
 
 export const Route = createFileRoute('/_staff')({
   beforeLoad: async ({ context, location }) => {
@@ -268,10 +279,9 @@ export const Route = createFileRoute('/_staff')({
       throw error
     }
   },
-  errorComponent: SessionError,
 })
 ```
-Pathless layout route: every protected page lives under `src/routes/_staff/`, the URL has no `_staff`. `location.href` excludes the basepath, so `redirect` is `/stock`, URL-encoded `%2Fstock` (spike, in Chromium under `/admin/`). `staleTime: Infinity` on `meQuery` means one `GET /admin/me` per page load, not per navigation; sign-in seeds the cache with the `staff` it got back, so no second call. The `errorComponent` sits here, not on the root: a root `errorComponent` replaces the whole layout and loses the banner (spike).
+Pathless layout route: every protected page lives under `src/routes/_staff/`, the URL has no `_staff`. `location.href` excludes the basepath, so `redirect` is `/stock`, URL-encoded `%2Fstock` (spike, in Chromium under `/admin/`). `staleTime: Infinity` on `meQuery` means one `GET /admin/me` per page load, not per navigation; sign-in seeds the cache with the `staff` it got back, so no second call. Load errors are not handled here: the router's `defaultErrorComponent` (`RouteError`, below) renders them in the failing route's place, below the root, so the banner stays. A root `errorComponent` was tried and rejected: it replaces the whole layout and loses the banner (spike).
 
 ### Role rule (`src/routes/_staff/_admin.tsx`) and nav (`src/nav.ts`)
 ```tsx
@@ -366,6 +376,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 - "Sign out" is a `secondary` `Button` on the brand band (axe-clean, as web's header button); the name is `text-body` `on-brand`.
 - Sign-out ignores the server's answer: the local session ends whatever happens (A7).
 
+### Errors (`src/route-error.tsx`)
+```tsx
+import { useRouter, type ErrorComponentProps } from '@tanstack/react-router'
+import { ErrorBanner } from '@shopperstop/ui'
+import { NotFound } from './not-found'
+
+// Every route's error boundary. A 403 means the role cannot open this, so it reads as not found (Spec 2 §8);
+// anything else is a load failure with a retry. 401 never lands here: the client clears the session and the guard redirects.
+export function RouteError({ error }: ErrorComponentProps) {
+  const router = useRouter()
+  if ((error as { code?: string } | undefined)?.code === 'forbidden') return <NotFound />
+  return <ErrorBanner message="Could not reach the server." onRetry={() => void router.invalidate()} />
+}
+```
+Set once as the router's `defaultErrorComponent`, so it is every route's boundary; no route sets its own. Spike: a 403 on `GET /admin/me` shows not-found inside the banner with the token kept; a 403 inside a page's `useQuery` (throwaway probe on the Stock placeholder) shows not-found with the admin's seven-link nav kept; a 500 on `/admin/me` shows the banner and "Try again".
+
 ### Not found (`src/not-found.tsx`)
 ```tsx
 import { Link } from '@tanstack/react-router'
@@ -386,7 +412,7 @@ export function NotFound() {
   )
 }
 ```
-One component for unknown paths (root `notFoundComponent`) and wrong-role paths (`_admin`). The `Card` is required: `EmptyState`'s description is `ink-muted`, 4.47:1 on canvas (Phase 1 finding). The link is a router `Link` styled with `buttonClass`, so it gets the basepath; no `createLink(ButtonLink)` yet.
+One component for unknown paths (root `notFoundComponent`), wrong-role paths (`_admin`) and 403 answers (`RouteError`). The `Card` is required: `EmptyState`'s description is `ink-muted`, 4.47:1 on canvas (Phase 1 finding). The link is a router `Link` styled with `buttonClass`, so it gets the basepath; no `createLink(ButtonLink)` yet.
 
 ### Dashboard and placeholders
 `src/routes/index.tsx` moves to `src/routes/_staff/index.tsx` with `createFileRoute('/_staff/')`, content unchanged except the description "Store cards arrive with the dashboard page." Each placeholder is the same five lines, for example `src/routes/_staff/orders.tsx`:
@@ -520,6 +546,7 @@ Vitest (Testing Library, `userEvent`, fake `fetch` only). Every test file's `aft
 | Role-based navigation › Store staff see their sections | `src/shell.test.tsx` › "store staff see dashboard, orders and stock" |
 | Protected routes › Signed-out deep link | `src/shell.test.tsx` › "signed-out deep link goes to sign-in with the path" (`router.state.location.search` equals `{ redirect: '/stock' }`, zero fetch calls) |
 | Wrong-role deep link › Store staff open an admin page | `src/shell.test.tsx` › "store staff deep link to an admin page shows not found in the shell" |
+| Wrong-role deep link › A 403 from core shows not found | `src/shell.test.tsx` › "a 403 from core shows not found, not sign-in" (`GET /admin/me` answers 403: the only call this lane makes; the page-query path is the same boundary plus `throwOnError`, proven in the spike and by the first page lane that meets a 403) |
 | Wrong-role deep link › Admin opens an admin page; Admin shell › Current section stays marked | `src/shell.test.tsx` › "admin opens an admin page" |
 | Lost session › Expired session on load | `src/shell.test.tsx` › "expired session on load returns to sign-in" |
 | Lost session › Core unreachable on load | `src/shell.test.tsx` › "core unreachable on load shows a retry" (banner still present, token kept) |
@@ -551,7 +578,7 @@ export default function globalSetup() {
   }
 }
 ```
-`playwright.config.ts` gains `globalSetup: './e2e/global-setup.ts'`, nothing else. Core reads the same `SHOPPERSTOP_CORE_*` variables the `webServer` core gets (both inherit the process environment that `make e2e` sets). Under `make e2e` the Makefile has already migrated and seeded; the second run is idempotent and costs a few seconds.
+`playwright.config.ts` gains `globalSetup: './e2e/global-setup.ts'`, nothing else. The two commands are core's e2e seed command (contract fact 8). Core reads the same `SHOPPERSTOP_CORE_*` variables the `webServer` core gets (both inherit the process environment that `make e2e` sets). Under `make e2e` the Makefile has already migrated and seeded; the second run is idempotent and costs a few seconds.
 
 `e2e/auth.spec.ts` (credentials live only here, A10):
 - "admin signs in, reloads and signs out": `goto('./')` → URL matches `/\/admin\/sign-in\?redirect=%2F$/`, h1 "Sign in", `body` background `rgb(245, 246, 248)`, axe clean; `goto('./stock')` → URL ends `sign-in?redirect=%2Fstock`; fill Email `admin@shopperstop.local`, Password `admin12345`, click "Sign in" → URL ends `/admin/stock`, h1 "Stock"; click nav link "Dashboard" → h1 "Dashboard", that link has `href` `/admin/`, the "Admin" nav has the seven links in order, axe clean; `page.reload()` → h1 "Dashboard" and seven links again (session restored by the real `GET /admin/me`); click "Sign out" → URL ends `/admin/sign-in`, h1 "Sign in", `localStorage` `shopperstop:staff-token` is `null`, no "Admin" navigation, axe clean.

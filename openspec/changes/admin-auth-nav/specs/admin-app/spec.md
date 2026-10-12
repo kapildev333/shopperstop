@@ -108,7 +108,7 @@ The app SHALL keep the staff token in memory and in `localStorage` under `shoppe
 - **THEN** the request carries `Authorization: Bearer tok`
 
 ### Requirement: Lost session
-When a core request that carried the token is answered 401, the app SHALL remove the token from memory and storage and show `/sign-in?redirect=<current path>`. When `GET /admin/me` fails with anything other than 401, the app SHALL keep the token and show the alert "Could not reach the server." with a "Try again" button.
+When a core request that carried the token is answered 401, the app SHALL remove the token from memory and storage and show `/sign-in?redirect=<current path>`. When `GET /admin/me` fails with anything other than 401 or 403 (see "Wrong-role deep link shows not found"), the app SHALL keep the token and show the alert "Could not reach the server." with a "Try again" button.
 
 #### Scenario: 401 clears the session
 - **WHEN** a request that carried a token is answered 401
@@ -149,11 +149,15 @@ The "Admin" navigation SHALL show only the sections the signed-in role can reach
 - **THEN** the "Admin" navigation links are Dashboard, Orders, Stock in that order
 
 ### Requirement: Wrong-role deep link shows not found
-When a store staff member opens an admin-only path (`/stores`, `/categories`, `/products`, `/staff` and the paths under them), the app SHALL stay on that path and show the not-found page inside the shell with the staff member's navigation, never the admin page and never a redirect. The not-found page SHALL show "Page not found" as the level-1 heading and a card with a "Go to Dashboard" link.
+When a store staff member opens an admin-only path (`/stores`, `/categories`, `/products`, `/staff` and the paths under them), the app SHALL stay on that path and show the not-found page inside the shell, never the admin page and never a redirect. A 403 `forbidden` from core on any request SHALL show the same not-found page and keep the session. The not-found page SHALL show "Page not found" as the level-1 heading and a card with a "Go to Dashboard" link.
 
 #### Scenario: Store staff open an admin page
 - **WHEN** a store staff member with a valid session opens `/stores`
 - **THEN** "Page not found" is the level-1 heading, the "Admin" navigation is present, and the path is still `/stores`
+
+#### Scenario: A 403 from core shows not found
+- **WHEN** the app opens `/stock` with a stored token and core answers 403 `forbidden`
+- **THEN** "Page not found" is the level-1 heading inside the banner, the path is still `/stock`, the sign-in page is not shown and the token is kept
 
 #### Scenario: Admin opens an admin page
 - **WHEN** an admin with a valid session opens `/stores`
