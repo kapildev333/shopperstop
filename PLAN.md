@@ -20,6 +20,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D11 | Node floor is >=22.12.0 (Vite 8, Vitest 5, jsdom 27 require it; Spec 1 §4 said 22.11+). Root `package.json` engines and CI use it; lanes on this machine use a user-space Node 22.23.3 under `~/.local`, nothing global changed | Orchestrator 2026-10-12 |
 | D12 | Palette: `line-strong` #C9CDD2 measures 1.60:1 on surface, below §8.1's 3:1 rule for borders; decided #868C94 (3.39:1), the spec's own rule wins over the drawn value; Figma token updated in Task 14 | Orchestrator 2026-10-12 under D13 |
 | D13 | The owner delegated every decision to the orchestrator ("Decide everything by yourself", 2026-10-12): the orchestrator decides what the specs leave open and records it here; managers no longer wait for the owner's go before launching workers once the orchestrator has seen the change; the owner can override any row | Agreed (owner, 2026-10-12) |
+| D14 | CI's `sqlc diff` step is replaced by `make gen postman` leaving `git status` clean (covers sqlc output, generated API types and the Postman collection); sqlc is installed only while `services/core/sqlc.yaml` exists. Spec 1 §6 and CLAUDE.md wording updated in Task 15 | Orchestrator 2026-10-12 |
+| D15 | End-to-end runs use `shopperstop_core_e2e` (plan, `initdb.sql`, Spec 2 §13), not `_test` as Spec 1 §6 says: core on :18080, web preview 15173, admin preview 15174, e2e-only pepper, set by `make e2e`; each app's Playwright config starts core and `vite preview`; Chromium only. core adds a Phase 1 `seed-demo --reset` stub so `make dev` reaches the three servers | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -62,3 +64,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: platform tasks 3 and 4 landed (#3, #4) and archived (#5, #6); `make db` verified against the real container. core, ui and admin managers running; CI and Makefile lane (platform-P1-L9) started so every later PR gets a `ci` check.
 - 2026-10-12: ui raised typescript-eslint (D10), the Node 22.12 floor (D11) and the line-strong contrast (D12, pending owner). CI and Makefile (platform-P1-L9) told to build packages/ui before app gates and to use Node >= 22.12.
 - 2026-10-12: owner delegated decisions (D13); D12 decided for #868C94.
+- 2026-10-12: platform-P1-L9 (CI and Makefile) change seen and workers launched under D13; D14, D15 recorded; root build script chore (#13).
