@@ -24,13 +24,15 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D15 | End-to-end runs use `shopperstop_core_e2e` (plan, `initdb.sql`, Spec 2 §13), not `_test` as Spec 1 §6 says: core on :18080, web preview 15173, admin preview 15174, e2e-only pepper, set by `make e2e`; each app's Playwright config starts core and `vite preview`; Chromium only. core adds a Phase 1 `seed-demo --reset` stub so `make dev` reaches the three servers | Orchestrator 2026-10-12 |
 | D16 | Core Phase 1 defaults: `healthz` and `readyz` are listed in `openapi.json` (every served route, Spec 1 §11, so no skip list in the contract test); `internal/pg` deferred to Phase 2 (`pgx.BeginFunc` covers `WithTx` until the first query); `core-admin migrate` loads the full core env, `SHOPPERSTOP_CORE_FILES_DIR` unread in Phase 1 | Orchestrator 2026-10-12 |
 | D17 | The owner's Figma plan is Starter: three pages per file and a daily MCP tool-call cap. The ShopperStop file (https://www.figma.com/design/pUvvBVQbwM8287Q3Fji8G1) therefore has three pages (`Tokens & Components`, `Customer web`, `Admin web`) with sections instead of the five in Spec 1 §9; the Mobile page is added with the mobile spec. Code Connect and small nits wait for the next call budget | Orchestrator 2026-10-12 |
+| D18 | `packages/ui` pins TypeScript 5.9.3 and openapi-typescript 7.13.0 (openapi-typescript 7 needs TS ^5; nothing needs TS 6); revisit when openapi-typescript supports 6 | Orchestrator 2026-10-12 |
+| D19 | `packages/ui/src/api/core.d.ts` is generated from `services/core/openapi.json` and committed; a ui test fails when it is stale. Cross-area exception: a core lane that changes `openapi.json` runs `make gen` (or `npm run gen:api --workspace packages/ui`) and commits the regenerated `core.d.ts` in the same PR as a mechanical change, like `package-lock.json`; it never hand-edits it. Reviewers treat that file as generated | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
 - One task of the plan is one lane, `LANE-ID = <area>-P<phase>-L<n>`; the lane's directory scope is the task's **Files** list.
 - Contracts between areas are files: `services/core/openapi.json`, `packages/ui/src/tokens.css` and `@shopperstop/ui` exports, `openspec/specs/`.
 - Gates per PR: `make test`, `make e2e` where the task touches an app, `openspec validate --all --strict`, `make postman` clean. One `make e2e` runs at a time across all managers.
-- Root `package-lock.json` changes from workspace installs are expected in ui, web and admin PRs (npm workspaces).
+- Root `package-lock.json` changes from workspace installs are expected in ui, web and admin PRs (npm workspaces). `packages/ui/src/api/core.d.ts` is regenerated in core PRs that touch `openapi.json` (D19).
 - `psql` is not installed on the owner's machine; ad-hoc checks use a Go pgx client.
 - Each manager verifies its own landings (suites, then real database / HTTP / browser) before the PR; the orchestrator verifies integration at phase close.
 - Only the orchestrator touches the root checkout and PLAN.md.
@@ -48,11 +50,11 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | Area | Plan tasks | Status |
 |------|-----------|--------|
 | platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | 1, 2 done (orchestrator); 3 done #3 (archived #5); 4 done #4 (archived #6); 13 done #15 (platform-P1-L9; CI gate open until Actions billing is fixed); 12 waits on core task 8; 15 waits on 13 and 14 |
-| core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | waits on platform task 4 |
+| core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
 | ui | 9 packages/ui | done #20 (ui-P1-L1); `api/core.d.ts` follows core's openapi.json |
 | web | 10 apps/web | waits on ui task 9 |
 | admin | 11 apps/admin | waits on ui task 9 |
-| orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#21) |
+| orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#25) |
 
 ## Backlog
 -
@@ -74,3 +76,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: first CI run blocked by account billing (see Blockers); managers told to verify locally and merge without `ci` until fixed.
 - 2026-10-12: CI workflow and Makefile landed (#15); core defaults recorded (D16); core workers started under D13.
 - 2026-10-12: Figma file built (Task 14, D17); packages/ui landed (#20); web manager still to be started by the owner.
+- 2026-10-12: core tasks 5 to 8 done (#23); `make test` on main green across core and ui (orchestrator); D18, D19 recorded; ui-P1-L2 (api types) running.

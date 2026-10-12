@@ -20,4 +20,10 @@ Nothing running. Phase 1 core work is complete; Phase 2 (Spec 2) starts when the
 - `psql` is not installed on this host; ad-hoc checks go through pgx from Go. `docker exec` is denied by the guard hook, as intended.
 - Archive order: `core-service-foundation` archives after the platform archives (done, #5 and #6) and its own PR.
 ## Backlog
+- Phase 2 contract rules for `openapi.json` (orchestrator, D13/D19/D20, from platform-P1-L8 Postman and ui-P1-L2 types), binding for every Phase 2 lane and brief:
+  - D19: a lane that changes `openapi.json` runs `make gen` (or `npm run gen:api --workspace packages/ui`; Node >= 22.12, user-space node at `~/.local/node-v22.23.3/bin`) and commits the regenerated `packages/ui/src/api/core.d.ts` in the same PR as a mechanical change; never hand-edited; reviewers treat it as generated. It is the one cross-area file a core lane may touch.
+  - Declare `components.securitySchemes.bearer` (type http, scheme bearer) and put `security: [{bearer: []}]` on every authenticated operation (Postman derives "needs a token" from it). Add a contract-test assertion that every non-public operation declares `security`.
+  - Every staff route lives under `/admin/` (Postman picks `{{staffToken}}` by that prefix, `{{customerToken}}` otherwise).
+  - Sign-in and register 2xx response examples carry a string `token` (triggers Postman's token-storing script).
+  - D20: `seed-demo` uses fixed, documented ids for the demo store, products, addresses and orders so `docs/postman/local.postman_environment.json` can ship `storeId`, `productId`, `addressId`, `orderId` and the collection runs top to bottom against `make dev` (Spec 1 §11).
 - Phase 2: `internal/pg` error mapping with the first query; `sqlc.yaml` and `queries/` (D3); `core-admin seed-demo` real data and `create-admin`; auth, rate limiter, files dir.
