@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"image"
+	_ "image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -195,4 +198,116 @@ func TestLoadRollsBackWhenCustomerInsertFails(t *testing.T) {
 	assertCount(t, "staff_users", 0)
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
+}
+
+// assertSQL runs a query that returns one integer and fails unless it equals want.
+func assertSQL(t *testing.T, what, query string, want int) {
+	t.Helper()
+	var n int
+	if err := testPool.QueryRow(context.Background(), query).Scan(&n); err != nil {
+		t.Fatalf("%s: %v", what, err)
+	}
+	if n != want {
+		t.Fatalf("%s: %d, want %d", what, n, want)
+	}
+}
+
+// TestResetLoadsDemoCatalog: two resets over a database holding an extra
+// category and product leave exactly the demo catalog, and a Load on top of it
+// fails without changing anything.
+func TestResetLoadsDemoCatalog(t *testing.T) {
+	ctx := context.Background()
+	var extra string
+	if err := testPool.QueryRow(ctx, "insert into categories (name, slug) values ('Extra', 'extra') returning id::text").Scan(&extra); err != nil {
+		t.Fatalf("insert extra category: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, "insert into products (category_id, name, slug, unit_label, mrp_cents, price_cents) values ($1, 'Extra Product', 'extra-product', '1 unit', 100, 100)", extra); err != nil {
+		t.Fatalf("insert extra product: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := seed.Reset(ctx, testPool); err != nil {
+			t.Fatalf("reset %d: %v", i+1, err)
+		}
+	}
+
+	assertCount(t, "categories", 49)
+	assertCount(t, "products", 148)
+	assertSQL(t, "parent categories", "select count(*) from categories where parent_id is null", 12)
+	assertSQL(t, "child categories", "select count(*) from categories where parent_id is not null", 37)
+	assertSQL(t, "parents outside 2 to 4 children", "select count(*) from categories p where p.parent_id is null and (select count(*) from categories c where c.parent_id = p.id) not between 2 and 4", 0)
+	assertSQL(t, "parent sort orders 10..120", "select count(distinct sort_order) from categories where parent_id is null and sort_order in (10,20,30,40,50,60,70,80,90,100,110,120)", 12)
+	assertSQL(t, "child sort orders 10..40", "select count(*) from categories where parent_id is not null and sort_order in (10,20,30,40)", 37)
+	assertSQL(t, "products in a parent category", "select count(*) from products p join categories c on c.id = p.category_id where c.parent_id is null", 0)
+	assertSQL(t, "fixed product ids", "select count(*) from products where id between '00000000-0000-4000-8000-000000000601' and '00000000-0000-4000-8000-000000000694'", 148)
+	assertSQL(t, "banana robusta", "select count(*) from products where id = '00000000-0000-4000-8000-000000000601' and name = 'Banana Robusta' and slug = 'banana-robusta' and unit_label = '1 kg'", 1)
+	assertSQL(t, "inactive products", "select count(*) from products where not is_active and id = '00000000-0000-4000-8000-000000000694'", 1)
+	assertSQL(t, "inactive products total", "select count(*) from products where not is_active", 1)
+	assertSQL(t, "slugs not kebab-case", "select count(*) from (select slug from categories union all select slug from products) s where slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$'", 0)
+	assertSQL(t, "product images not the parent's seed image", "select count(*) from products p join categories c on c.id = p.category_id join categories g on g.id = c.parent_id where p.image_key <> 'products/seed-' || g.slug || '.png'", 0)
+	assertSQL(t, "child category images not the parent's seed image", "select count(*) from categories c join categories g on g.id = c.parent_id where c.image_key <> 'categories/seed-' || g.slug || '.png'", 0)
+	assertSQL(t, "parent category images not their own seed image", "select count(*) from categories where parent_id is null and image_key <> 'categories/seed-' || slug || '.png'", 0)
+
+	if err := seed.Load(ctx, testPool); err == nil || !strings.Contains(err.Error(), "duplicate key") {
+		t.Fatalf("load on a seeded database: %v, want a duplicate key error", err)
+	}
+	assertCount(t, "categories after failed load", 49)
+	assertCount(t, "products after failed load", 148)
+}
+
+// TestDemoImagesServed: Files writes the twelve placeholder images, and the
+// file route serves one of them as a PNG.
+func TestDemoImagesServed(t *testing.T) {
+	dir := t.TempDir()
+	store := blob.Disk{Dir: dir}
+	if err := seed.Files(context.Background(), store); err != nil {
+		t.Fatalf("files: %v", err)
+	}
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
+	srv := httptest.NewServer(app.New(testPool, []string{"http://localhost:5173"}, a, store))
+	t.Cleanup(srv.Close)
+
+	resp, err := http.Get(srv.URL + "/api/core/v1/files/products/seed-fruits-vegetables.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || resp.Header.Get("Content-Type") != "image/png" {
+		t.Fatalf("demo image: %d %q, want 200 image/png", resp.StatusCode, resp.Header.Get("Content-Type"))
+	}
+
+	entries, err := os.ReadDir("images")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 12 {
+		t.Fatalf("embedded images: %d, want 12", len(entries))
+	}
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Size() >= 2048 {
+			t.Errorf("%s is %d bytes, want under 2 KB", e.Name(), info.Size())
+		}
+		f, err := os.Open(filepath.Join("images", e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg, format, err := image.DecodeConfig(f)
+		f.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", e.Name(), err)
+		}
+		if format != "png" || cfg.Width != 256 || cfg.Height != 256 {
+			t.Errorf("%s: %s %dx%d, want png 256x256", e.Name(), format, cfg.Width, cfg.Height)
+		}
+	}
+	stored, err := os.ReadDir(filepath.Join(dir, "products"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) != 12 {
+		t.Fatalf("stored product images: %d, want 12", len(stored))
+	}
 }
