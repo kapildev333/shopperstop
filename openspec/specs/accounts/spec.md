@@ -1,7 +1,7 @@
 # accounts Specification
 
 ## Purpose
-TBD - created by archiving change core-accounts-auth. Update Purpose after archive.
+Customer accounts for `services/core`: registration and sign-in with email and password, bearer sessions, the customer profile, delivery addresses, and the rate limits that protect sign-in. Everything a customer owns (cart, orders) sits behind the session this capability issues.
 
 ## Requirements
 
