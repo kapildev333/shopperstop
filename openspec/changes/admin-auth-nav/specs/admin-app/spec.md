@@ -108,15 +108,19 @@ The app SHALL keep the staff token in memory and in `localStorage` under `shoppe
 - **THEN** the request carries `Authorization: Bearer tok`
 
 ### Requirement: Lost session
-When a core request that carried the token is answered 401, the app SHALL remove the token from memory and storage and show `/sign-in?redirect=<current path>`. When `GET /admin/me` fails with anything other than 401 or 403 (see "Wrong-role deep link shows not found"), the app SHALL keep the token and show the alert "Could not reach the server." with a "Try again" button.
+When a core request that carried the current token is answered 401, the app SHALL remove the token from memory and storage and show `/sign-in?redirect=<current path>`. When `GET /admin/me` fails with anything other than 401 or 403 (see "Wrong-role deep link shows not found"), the app SHALL keep the token and show the alert "Could not reach the server." with a "Try again" button.
 
 #### Scenario: 401 clears the session
 - **WHEN** a request that carried a token is answered 401
 - **THEN** the token is removed from memory and `localStorage`, and the session-lost handler runs
 
 #### Scenario: 401 without a session changes nothing
-- **WHEN** a request sent without a token is answered 401
-- **THEN** the session-lost handler does not run
+- **WHEN** a request sent without a token is answered 401 after a session with token `fresh` was stored meanwhile
+- **THEN** the token is still `fresh` and the session-lost handler does not run
+
+#### Scenario: 401 to a replaced token keeps the new session
+- **WHEN** a request sent with token `old` is answered 401 after token `new` was stored meanwhile
+- **THEN** the token is still `new` in memory and `localStorage`, and the session-lost handler does not run
 
 #### Scenario: Expired session on load
 - **WHEN** the app opens `/orders` with a stored token and core answers `GET /admin/me` with 401

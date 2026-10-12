@@ -3,7 +3,7 @@
 ## Context
 See proposal.md for why. `apps/admin` on main is the Phase 1 shell (admin-P1-L1): `__root.tsx` with a banner, a one-link `TabNav` on a `surface` strip and `<Outlet />` in `main`; `index.tsx` is a Dashboard placeholder; `main.tsx` builds the router with `basepath: '/admin'`; `shell.test.tsx` renders the real route tree on a memory history; `e2e/smoke.spec.ts` visits Dashboard and not-found with axe and proves the `/api` proxy. `@shopperstop/ui/api` is types only (`paths`, `components`), generated from `services/core/openapi.json` whose `servers[0].url` is `/api/core/v1`, so `paths` keys have no prefix (`/healthz`). Since core-P2-L1 (#63, origin/main ba69715, openapi 0.2.0) it holds the staff routes and the `Staff`, `StaffSession`, `SignInRequest` and `Error` schemas.
 
-Spike, 2026-10-12, scratchpad copy of 5101344 with Node 22.23.3: the staff routes below were added to a scratch `openapi.json` exactly as assumed in "Assumptions", `core.d.ts` regenerated, and every file in this design written and run: `npm install` in the workspace clean (no peer conflict), lint, typecheck, Vitest 5 files / 29 tests (after dropping the sign-in 403 row and adding the blocked-storage and route 403 tests), `vite build` with `routeTree.gen.ts` byte-stable across builds, and Playwright with axe against `vite preview` on a scratch port (sign-in page, error banner, Dashboard, signed-out not-found, store-staff not-found on `/stores`, reload restoring the session, deep link `/admin/stock` round trip through sign-in, sign-out): no violations. The real-core e2e (task 4) could not run: core does not serve the routes yet.
+Spike, 2026-10-12, scratchpad copy of 5101344 with Node 22.23.3: the staff routes below were added to a scratch `openapi.json` exactly as assumed in "Assumptions", `core.d.ts` regenerated, and every file in this design written and run: `npm install` in the workspace clean (no peer conflict), lint, typecheck, Vitest 5 files / 31 tests (after dropping the sign-in 403 row and adding the blocked-storage, route 403 and two 401-race tests), `vite build` with `routeTree.gen.ts` byte-stable across builds, and Playwright with axe against `vite preview` on a scratch port (sign-in page, error banner, Dashboard, signed-out not-found, store-staff not-found on `/stores`, reload restoring the session, deep link `/admin/stock` round trip through sign-in, sign-out): no violations. The real-core e2e (task 4) could not run: core does not serve the routes yet.
 
 ## Assumptions, verified against `core.d.ts` (task 0, ba69715)
 | # | Assumption | Where it is used | If wrong | `core.d.ts` on ba69715 |
@@ -42,7 +42,7 @@ package.json                        + openapi-fetch 0.17.0, @tanstack/react-quer
 src/session.ts                      token in memory + localStorage                       (task 1)
 src/api.ts                          typed client, bearer + 401 middleware, meQuery, Staff (task 1)
 src/fake-core.ts                    test helper: fake fetch at the process boundary      (task 1)
-src/session.test.ts, src/api.test.ts                                                    (task 1)
+src/session.test.ts, src/api.test.ts                                                    (task 1; api.ts and api.test.ts amended in task 3)
 src/router.ts                       createAppRouter: QueryClient in router context       (task 2)
 src/route-error.tsx                 every route's error boundary: 403 → not found        (task 2)
 src/render-app.tsx                  test helper: renderApp(path)                         (task 2)
@@ -137,8 +137,10 @@ api.use({
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
     return request
   },
-  onResponse({ response }) {
-    if (response.status === 401 && getToken()) {
+  onResponse({ request, response }) {
+    // Only a 401 to the current token ends the session: not one to a signed-out request or to a token since replaced.
+    const token = getToken()
+    if (response.status === 401 && token && request.headers.get('Authorization') === `Bearer ${token}`) {
       clearToken()
       unauthorized()
     }
@@ -159,7 +161,7 @@ export const meQuery = {
 - `baseUrl` is the page origin plus `/api/core/v1`: same-origin through the Vite proxy and Caddy, and jsdom's `Request` rejects a relative URL (spike: `TypeError: Failed to parse URL from /api/core/v1/admin/me`). The spec's proxy requirement is reworded for this.
 - `fetch` is looked up per call, so a test's `vi.stubGlobal('fetch', ...)` takes effect after the module is imported (openapi-fetch captures `globalThis.fetch` at `createClient` otherwise; spike confirmed).
 - openapi-fetch's `error` is the whole envelope; `throw error.error` throws `{ code, message, field? }` (spike: throwing `error` lost the code).
-- 401 is acted on only when a token was sent, so a wrong password at sign-in never fires the session-lost handler, without special-casing a path.
+- 401 is acted on only when the request carried the current token (its `Authorization` header equals `Bearer <token now>`). A wrong-password sign-in, sent without a token, never clears a session stored meanwhile; a request still in flight with an old token never clears the new one. `request.headers.has('Authorization')` was rejected: it still lets an old token's 401 clear a new token (spike: that test fails with it). No path is special-cased. Amended after task 1 review (reviewer nit, 2026-10-12); lands as task 3's first fix.
 - `onUnauthorized` is a setter, not an import of the router, to avoid a module cycle (router imports routes import api).
 - Every later page uses `api` and TanStack Query; queries throw `error.error` the same way.
 
@@ -539,7 +541,8 @@ Vitest (Testing Library, `userEvent`, fake `fetch` only). Every test file's `aft
 | (support for Sign-out, Lost session) | `src/session.test.ts` › "clear removes the token from memory and storage" |
 | Staff session › Bearer token attached; Core reached through a same-origin proxy › Client calls the page's origin | `src/api.test.ts` › "client attaches the bearer token" (URL is `${location.origin}/api/core/v1/admin/me`, header `Bearer tok`) |
 | Lost session › 401 clears the session | `src/api.test.ts` › "401 with a session clears it and reports the loss" |
-| Lost session › 401 without a session changes nothing | `src/api.test.ts` › "401 without a session reports nothing" |
+| Lost session › 401 without a session changes nothing | `src/api.test.ts` › "a 401 to a signed-out request keeps a session set meanwhile" (the sign-in handler calls `setToken('fresh')` before answering 401; replaces task 1's "401 without a session reports nothing") |
+| Lost session › 401 to a replaced token keeps the new session | `src/api.test.ts` › "a 401 to a replaced token keeps the new session" (token `old`; the `/admin/me` handler calls `setToken('new')` before answering 401) |
 | Admin shell › Dashboard renders in the shell | `src/shell.test.tsx` › "dashboard renders in the shell" (also asserts the admin's name and a "Sign out" button in the banner) |
 | Unknown paths show not found › Unknown path; Protected routes › Unknown path signed out | `src/shell.test.tsx` › "unknown path" (no session, no nav) |
 | Role-based navigation › Admin sees every section | `src/shell.test.tsx` › "admin sees every section" |
