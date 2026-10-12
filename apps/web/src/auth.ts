@@ -48,3 +48,12 @@ export async function signOut() {
   setToken(undefined)
   queryClient.clear()
 }
+
+// Navigates first so the guard does not redirect when the token drops; the session is cleared even if navigation fails.
+export async function signOutAndGoHome(navigate: () => Promise<unknown>) {
+  try {
+    await navigate()
+  } finally {
+    await signOut()
+  }
+}

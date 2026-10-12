@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, Input, PageHea
 import type { components } from '@shopperstop/ui/api'
 import { AddressDialog, type AddressValues } from '../address-dialog'
 import { api, call, queryClient, splitError, useMe, type ApiError } from '../api'
-import { signOut } from '../auth'
+import { signOutAndGoHome } from '../auth'
 import { useToken } from '../session'
 
 type Address = components['schemas']['Address']
@@ -37,8 +37,7 @@ function AccountPage() {
   const navigate = useNavigate()
   async function onSignOut() {
     // Leave the page first: dropping the token while it is mounted would redirect to sign-in.
-    await navigate({ to: '/' })
-    await signOut()
+    await signOutAndGoHome(() => navigate({ to: '/' }))
   }
   return (
     <div className="flex flex-col gap-6">

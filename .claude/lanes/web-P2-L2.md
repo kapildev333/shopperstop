@@ -61,6 +61,8 @@ T3 (account, addresses, header, sign out): red `e201ca4`, feat committed; gates 
   - e2e `global-setup.ts` guard lives in the red commit (test infrastructure): refuses unless `SHOPPERSTOP_CORE_DATABASE_URL` names an `_e2e` database.
 - T3 gates green: `npm run build --workspace packages/ui`; `npm run lint --workspace apps/web` (clean); `npm run typecheck --workspace apps/web` (clean); `npm run test --workspace apps/web -- --run` (8 files, 18 tests); `npm run build --workspace apps/web` (tree clean after it, routeTree regenerated and committed); `openspec validate web-accounts --strict` valid; e2e `CI=1 npm run e2e --workspace apps/web`: 11 passed (smoke 4, auth 3, account 4), global setup ran `migrate` and `seed-demo --reset` on `shopperstop_core_e2e`.
 
+- 2026-10-12 T3 review fix (worker, Haiku): red `test: sign out clears the session even when navigation fails` (fce08fe): `TypeError: signOutAndGoHome is not a function`. Fix `fix: sign out always clears the session`: `signOutAndGoHome(navigate)` in `src/auth.ts` awaits navigate in `try` and `signOut()` in `finally`; `routes/account.tsx` `onSignOut` calls it with `() => navigate({ to: '/' })`. Navigate-first ordering kept.
+
 ## Requests
 - to core (core-P2-L1, via the web area plan): (1) does `POST /auth/register` return `{token, customer}`? (design handles both); (2) accept `""` to clear `phone` and address `line2` on PATCH, omit them in responses when unset; (3) document 401 `unauthorized` on `/me*` for an expired or unknown token; (4) validation `field` uses the JSON field name.
 - to web-P2-L1 (via the manager): import `api`, `queryClient`, `call`, `splitError` from `apps/web/src/api.ts` and the session from `src/session.ts` instead of a second client.
