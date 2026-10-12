@@ -174,3 +174,24 @@ func TestLoadTwiceFails(t *testing.T) {
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
 }
+
+// TestLoadRollsBackWhenCustomerInsertFails: with the demo admin removed, the
+// admin insert succeeds inside the transaction and the customer insert hits the
+// existing demo customer. The transaction rolls back, so the admin row is not
+// left behind, and the customer and its addresses are untouched.
+func TestLoadRollsBackWhenCustomerInsertFails(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, "delete from staff_users"); err != nil {
+		t.Fatalf("delete admin: %v", err)
+	}
+	err := seed.Load(ctx, testPool)
+	if err == nil || !strings.Contains(err.Error(), "insert demo customer") || !strings.Contains(err.Error(), "duplicate key") {
+		t.Fatalf("load with the customer present: %v, want an insert demo customer duplicate key error", err)
+	}
+	assertCount(t, "staff_users", 0)
+	assertCount(t, "customers", 1)
+	assertCount(t, "addresses", 2)
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -92,5 +93,54 @@ func TestCreateAdmin(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("rows for root@example.com: %d, want 1", n)
+	}
+}
+
+// commandURL is the test database with search_path set to the schema, so the
+// command under test writes to this package's schema.
+func commandURL(t *testing.T, schema string) string {
+	t.Helper()
+	base := os.Getenv("SHOPPERSTOP_CORE_TEST_DATABASE_URL")
+	if base == "" {
+		base = "postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable"
+	}
+	u, err := url.Parse(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	q.Set("search_path", schema+",public")
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// TestSeedDemoExitCodes: --reset loads the demo accounts and exits 0; a plain
+// seed-demo over them hits the duplicate key and exits 1 with the reason.
+func TestSeedDemoExitCodes(t *testing.T) {
+	ctx := context.Background()
+	var schema string
+	if err := testPool.QueryRow(ctx, "select current_schema()").Scan(&schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHOPPERSTOP_CORE_DATABASE_URL", commandURL(t, schema))
+	t.Setenv("SHOPPERSTOP_CORE_ADDR", ":8080")
+	t.Setenv("SHOPPERSTOP_CORE_SESSION_PEPPER", "test-pepper-test-pepper-test-pepper-00")
+	t.Setenv("SHOPPERSTOP_CORE_WEB_ORIGINS", "http://localhost:5173")
+
+	var stdout, stderr strings.Builder
+	if code := run([]string{"seed-demo", "--reset"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("seed-demo --reset: exit %d stderr %q, want 0", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "seed-demo: demo accounts loaded") {
+		t.Fatalf("seed-demo --reset stdout %q, want the loaded line", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"seed-demo"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("second seed-demo: exit %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "seed-demo: insert demo admin") || !strings.Contains(stderr.String(), "duplicate key") {
+		t.Fatalf("second seed-demo stderr %q, want the duplicate key reason", stderr.String())
 	}
 }
