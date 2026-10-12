@@ -31,6 +31,27 @@ func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (i
 	return count, err
 }
 
+const countStoreProducts = `-- name: CountStoreProducts :one
+select count(*) from products p
+where p.is_active
+  and ($1::text is null or p.name ilike $1 or p.brand ilike $1)
+  and ($2::uuid is null
+       or p.category_id = $2
+       or p.category_id in (select c.id from categories c where c.parent_id = $2))
+`
+
+type CountStoreProductsParams struct {
+	Pattern    *string
+	CategoryID *string
+}
+
+func (q *Queries) CountStoreProducts(ctx context.Context, arg CountStoreProductsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStoreProducts, arg.Pattern, arg.CategoryID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :one
 insert into categories (name, slug, parent_id, sort_order)
 values ($1, $2, $3, $4)
@@ -333,6 +354,188 @@ func (q *Queries) SetProductImage(ctx context.Context, arg SetProductImageParams
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const storeProductBySlug = `-- name: StoreProductBySlug :one
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = $1
+where p.slug = $2 and p.is_active
+`
+
+type StoreProductBySlugParams struct {
+	StoreID string
+	Slug    string
+}
+
+type StoreProductBySlugRow struct {
+	ID          string
+	Name        string
+	Slug        string
+	Description string
+	Brand       string
+	UnitLabel   string
+	MrpCents    int64
+	PriceCents  int64
+	CategoryID  string
+	ImageKey    string
+	Quantity    int32
+}
+
+func (q *Queries) StoreProductBySlug(ctx context.Context, arg StoreProductBySlugParams) (StoreProductBySlugRow, error) {
+	row := q.db.QueryRow(ctx, storeProductBySlug, arg.StoreID, arg.Slug)
+	var i StoreProductBySlugRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Brand,
+		&i.UnitLabel,
+		&i.MrpCents,
+		&i.PriceCents,
+		&i.CategoryID,
+		&i.ImageKey,
+		&i.Quantity,
+	)
+	return i, err
+}
+
+const storeProducts = `-- name: StoreProducts :many
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = $1
+where p.is_active
+  and ($2::text is null or p.name ilike $2 or p.brand ilike $2)
+  and ($3::uuid is null
+       or p.category_id = $3
+       or p.category_id in (select c.id from categories c where c.parent_id = $3))
+order by p.name, p.id
+limit $5 offset $4
+`
+
+type StoreProductsParams struct {
+	StoreID    string
+	Pattern    *string
+	CategoryID *string
+	PageOffset int32
+	PageSize   int32
+}
+
+type StoreProductsRow struct {
+	ID          string
+	Name        string
+	Slug        string
+	Description string
+	Brand       string
+	UnitLabel   string
+	MrpCents    int64
+	PriceCents  int64
+	CategoryID  string
+	ImageKey    string
+	Quantity    int32
+}
+
+func (q *Queries) StoreProducts(ctx context.Context, arg StoreProductsParams) ([]StoreProductsRow, error) {
+	rows, err := q.db.Query(ctx, storeProducts,
+		arg.StoreID,
+		arg.Pattern,
+		arg.CategoryID,
+		arg.PageOffset,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StoreProductsRow
+	for rows.Next() {
+		var i StoreProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Brand,
+			&i.UnitLabel,
+			&i.MrpCents,
+			&i.PriceCents,
+			&i.CategoryID,
+			&i.ImageKey,
+			&i.Quantity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const storeProductsByID = `-- name: StoreProductsByID :many
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, p.is_active, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = $1
+where p.id = any($2::uuid[])
+`
+
+type StoreProductsByIDParams struct {
+	StoreID string
+	Ids     []string
+}
+
+type StoreProductsByIDRow struct {
+	ID          string
+	Name        string
+	Slug        string
+	Description string
+	Brand       string
+	UnitLabel   string
+	MrpCents    int64
+	PriceCents  int64
+	CategoryID  string
+	ImageKey    string
+	IsActive    bool
+	Quantity    int32
+}
+
+// Active and inactive products by id with their quantity at the store, for the cart.
+func (q *Queries) StoreProductsByID(ctx context.Context, arg StoreProductsByIDParams) ([]StoreProductsByIDRow, error) {
+	rows, err := q.db.Query(ctx, storeProductsByID, arg.StoreID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StoreProductsByIDRow
+	for rows.Next() {
+		var i StoreProductsByIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Brand,
+			&i.UnitLabel,
+			&i.MrpCents,
+			&i.PriceCents,
+			&i.CategoryID,
+			&i.ImageKey,
+			&i.IsActive,
+			&i.Quantity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateCategory = `-- name: UpdateCategory :one

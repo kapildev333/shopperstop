@@ -396,6 +396,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stores/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's products
+         * @description Public, no session. The paged active products a store sells, ordered by name, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them. Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match, not just this page. An unknown store answers 404 not_found; a bad q or categoryId answers 400 naming the field.
+         */
+        get: operations["getStoreProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/{id}/products/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one product of a store by slug
+         * @description Public, no session. One active product by its slug, with inStock and quantity at this store as in the list. An unknown store, a slug no product has, or an inactive product answers 404 not_found.
+         */
+        get: operations["getStoreProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/categories": {
         parameters: {
             query?: never;
@@ -806,6 +846,43 @@ export interface components {
         };
         Serviceability: {
             store: components["schemas"]["Store"];
+        };
+        /** @description An active product as a store shows it: the product fields without isActive, plus its stock at that store. */
+        StoreProduct: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @description Omitted when empty. */
+            description?: string;
+            /** @description Omitted when empty. */
+            brand?: string;
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Maximum retail price in paise.
+             */
+            mrpCents: number;
+            /**
+             * Format: int64
+             * @description Selling price in paise.
+             */
+            priceCents: number;
+            /** Format: uuid */
+            categoryId: string;
+            /** @description Path of the product image. Omitted until one is uploaded. */
+            imageUrl?: string;
+            /** @description True when the store holds more than 0 of it. */
+            inStock: boolean;
+            /** @description The store's quantity, capped at 10 for display; 0 when it holds none. */
+            quantity: number;
+        };
+        StoreProductList: {
+            items: components["schemas"]["StoreProduct"][];
+            page: number;
+            pageSize: number;
+            /** @description Every active product that matches the filters, not just this page. */
+            total: number;
         };
         Category: {
             /** Format: uuid */
@@ -3031,6 +3108,171 @@ export interface operations {
                 };
             };
             /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreProducts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.
+                 * @example banana
+                 */
+                q?: string;
+                /**
+                 * @description That category and its children.
+                 * @example 00000000-0000-4000-8000-000000000521
+                 */
+                categoryId?: string;
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the store's active products. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "slug": "banana-robusta",
+                     *           "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *           "unitLabel": "1 kg",
+                     *           "mrpCents": 6000,
+                     *           "priceCents": 5500,
+                     *           "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *           "inStock": true,
+                     *           "quantity": 10
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StoreProductList"];
+                };
+            };
+            /** @description A q or categoryId is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be at most 100 characters",
+                     *         "field": "q"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+                /**
+                 * @description The product slug.
+                 * @example banana-robusta
+                 */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The active product with its stock at the store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "inStock": true,
+                     *       "quantity": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StoreProduct"];
+                };
+            };
+            /** @description No active product has this slug at a store that exists. */
             404: {
                 headers: {
                     [name: string]: unknown;

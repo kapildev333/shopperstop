@@ -71,3 +71,39 @@ returning *;
 
 -- name: DeleteProduct :execrows
 delete from products where id = $1;
+
+-- name: StoreProducts :many
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
+where p.is_active
+  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
+  and (sqlc.narg(category_id)::uuid is null
+       or p.category_id = sqlc.narg(category_id)
+       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)))
+order by p.name, p.id
+limit @page_size offset @page_offset;
+
+-- name: CountStoreProducts :one
+select count(*) from products p
+where p.is_active
+  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
+  and (sqlc.narg(category_id)::uuid is null
+       or p.category_id = sqlc.narg(category_id)
+       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)));
+
+-- name: StoreProductBySlug :one
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
+where p.slug = @slug and p.is_active;
+
+-- name: StoreProductsByID :many
+-- Active and inactive products by id with their quantity at the store, for the cart.
+select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
+       p.category_id, p.image_key, p.is_active, coalesce(s.quantity, 0)::integer as quantity
+from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
+where p.id = any(@ids::uuid[]);
