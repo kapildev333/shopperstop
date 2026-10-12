@@ -9,6 +9,7 @@ Done: tasks 3.1 and 3.2 ticked; gates green; dev migrate applied 0001_init then 
 - `go.mod` now requires `github.com/jackc/pgx/v5` (direct) plus indirect pgpassfile, pgservicefile, puddle/v2, x/sync, x/text.
 - `core-admin` is `run(args, stdout, stderr) int` so the exit codes are one place; `migrate` prints `applied <version>` lines or `nothing to apply`; `seed-demo` takes an optional `--reset`.
 - Judgement call: `migrate` and `seed-demo` both run through the same usage path; `seed-demo` with a second argument other than `--reset` exits 2.
+- Read platform-P1-L9: its request to core (`core-admin seed-demo --reset` exits 0 before make dev and make e2e) is met by the stub.
 ## Requests
 (none)
 ## Blockers
