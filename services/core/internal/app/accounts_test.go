@@ -509,6 +509,9 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, productsPath + "/" + missingProductID, nil, http.StatusNotFound},
 		{http.MethodPatch, productsPath + "/" + missingProductID, map[string]string{}, http.StatusNotFound},
 		{http.MethodDelete, productsPath + "/" + missingProductID, nil, http.StatusNotFound},
+		// The image routes answer 404 for an unknown id before they read the body.
+		{http.MethodPut, productImagePath(missingProductID), map[string]string{}, http.StatusNotFound},
+		{http.MethodPut, categoryImagePath(missingCategoryID), nil, http.StatusNotFound},
 	}
 	for _, g := range adminGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {

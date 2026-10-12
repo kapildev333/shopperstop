@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -286,6 +287,32 @@ func TestListProductsBadFilters(t *testing.T) {
 	for _, c := range cases {
 		status, body := call(t, http.MethodGet, productsPath+"?"+c.query, token, nil)
 		expectError(t, c.query, status, body, http.StatusBadRequest, "validation", c.field, "")
+	}
+}
+
+// TestCreateProductFieldBounds posts one bad member at a time and expects 400
+// naming that member.
+func TestCreateProductFieldBounds(t *testing.T) {
+	token := adminToken(t)
+	cat := createCategory(t, token, map[string]any{"name": "Product Bounds Category"})
+	cases := []struct {
+		field string
+		value any
+	}{
+		{"name", ""},
+		{"name", strings.Repeat("n", 101)},
+		{"brand", strings.Repeat("b", 61)},
+		{"unitLabel", ""},
+		{"unitLabel", strings.Repeat("u", 31)},
+		{"description", strings.Repeat("d", 2001)},
+		{"mrpCents", 0},
+		{"mrpCents", 100_000_001},
+	}
+	for i, c := range cases {
+		body := productBody(cat.ID, "Bounds Product")
+		body[c.field] = c.value
+		status, resp := call(t, http.MethodPost, productsPath, token, body)
+		expectError(t, fmt.Sprintf("case %d %s", i, c.field), status, resp, http.StatusBadRequest, "validation", c.field, "")
 	}
 }
 
