@@ -45,22 +45,43 @@ func requestID(next http.Handler) http.Handler {
 	})
 }
 
+type subjectKey struct{}
+
+// subject is the signed-in subject of one request. logAndRecover puts it in
+// the context, SetSubject fills it, and the request log line reads it.
+type subject struct{ typ, id string }
+
+// SetSubject records who the request is signed in as, so the request log line
+// carries subjectType and subjectId. Outside a request from NewRouter it does nothing.
+func SetSubject(ctx context.Context, subjectType, id string) {
+	if s, ok := ctx.Value(subjectKey{}).(*subject); ok {
+		s.typ, s.id = subjectType, id
+	}
+}
+
 // logAndRecover logs one "request" line per request with the route pattern
-// (never the raw path). A panic is logged with its stack and answered 500
-// internal; the panic text never reaches the client.
+// (never the raw path) and the subject when one was set. A panic is logged
+// with its stack and answered 500 internal; the panic text never reaches the client.
 func logAndRecover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		id := RequestID(r.Context())
+		sub := &subject{}
+		r = r.WithContext(context.WithValue(r.Context(), subjectKey{}, sub))
 		// Deferred in this order, so the recover runs first and the log line sees its 500.
 		defer func() {
-			slog.InfoContext(r.Context(), "request",
+			attrs := []any{
 				"method", r.Method,
 				"route", chi.RouteContext(r.Context()).RoutePattern(),
 				"status", ww.Status(),
 				"durationMs", time.Since(start).Milliseconds(),
-				"requestId", id)
+				"requestId", id,
+			}
+			if sub.typ != "" {
+				attrs = append(attrs, "subjectType", sub.typ, "subjectId", sub.id)
+			}
+			slog.InfoContext(r.Context(), "request", attrs...)
 		}()
 		defer func() {
 			if v := recover(); v != nil {

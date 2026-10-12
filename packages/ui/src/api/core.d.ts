@@ -44,6 +44,242 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a customer
+         * @description Creates a customer and a session, and answers with the token and the customer. The email is unique without regard to case; the password is 8 to 72 bytes and is stored as a bcrypt hash of cost 12. Every attempt counts against its email and its client IP: the eleventh attempt for one email within an hour, or the hundred and first from one IP, answers 429.
+         */
+        post: operations["postAuthRegister"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in a customer
+         * @description Creates a new session and answers with its token and the customer. Other sessions of the customer stay signed in. A wrong password and an unknown email answer the same 401. Shares the registration rate limit: attempts count per email and per client IP.
+         */
+        post: operations["postAuthSignIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Ends the session of the bearer token and nothing else: the customer's other sessions stay signed in.
+         */
+        post: operations["postAuthSignOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the signed-in customer
+         * @description Answers the customer the bearer token belongs to. A customer session slides: each use after an hour moves its expiry 30 days on.
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the signed-in customer's name or phone
+         * @description Changes only the fields present. An empty phone clears it, and a cleared phone is omitted from responses. A null value is refused with 400 naming the field; an empty object changes nothing.
+         */
+        patch: operations["patchMe"];
+        trace?: never;
+    };
+    "/me/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the customer's addresses
+         * @description Answers one page of the signed-in customer's addresses, the default first, then newest first. total counts every address, not just this page. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter.
+         */
+        get: operations["getMeAddresses"];
+        put?: never;
+        /**
+         * Add an address
+         * @description Creates an address for the signed-in customer and answers 201 with it. isDefault true makes it the only default: the previous default is cleared in the same transaction. A new address is never made default by itself. An empty line2 is omitted from responses.
+         */
+        post: operations["postMeAddresses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/addresses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an address
+         * @description Deletes the address. Deleting the default address is allowed; the customer then has no default until one is set. Another customer's address, or an id that is not one, answers 404.
+         */
+        delete: operations["deleteMeAddress"];
+        options?: never;
+        head?: never;
+        /**
+         * Change an address
+         * @description Changes only the fields present. An empty line2 clears it and it is then omitted. isDefault true clears the customer's previous default in the same transaction. A null value is refused with 400 naming the field. Another customer's address, or an id that is not one, answers 404.
+         */
+        patch: operations["patchMeAddress"];
+        trace?: never;
+    };
+    "/admin/auth/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in a staff user
+         * @description Creates a session for an active staff user and answers its token and the staff user. Staff sessions end 12 hours after sign-in and use does not extend them. A wrong password, an unknown email, a customer's email and an inactive staff user answer the same 401. Shares the sign-in rate limit: attempts count per email and per client IP.
+         */
+        post: operations["postAdminAuthSignIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/auth/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out a staff user
+         * @description Ends the session of the bearer token and nothing else: the staff user's other sessions stay signed in.
+         */
+        post: operations["postAdminAuthSignOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in staff user
+         * @description Answers the staff user the bearer token belongs to. A customer token is refused with 401.
+         */
+        get: operations["getAdminMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List staff users
+         * @description Admins only. Answers one page of staff users ordered by email, admins and store staff alike. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every staff user, not just this page.
+         */
+        get: operations["listStaffUsers"];
+        put?: never;
+        /**
+         * Create a staff user
+         * @description Admins only. Creates an active staff user from email, password, name, role and storeId. role is admin or store_staff; storeId is required for store_staff and refused for admin. The password is stored at bcrypt cost 12. An email taken in any letter case answers 409 on field email. The new user signs in at /admin/auth/sign-in at once.
+         */
+        post: operations["createStaffUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff-users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a staff user
+         * @description Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account; core-admin create-admin with another email makes a new admin. A null value is refused with 400 naming the field. An id that is not one answers 404.
+         */
+        patch: operations["patchStaffUser"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -52,6 +288,42 @@ export interface components {
             /** @enum {string} */
             status: "ok";
         };
+        Customer: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            name: string;
+            /** @description Omitted when the customer has no phone. */
+            phone?: string;
+        };
+        CustomerSession: {
+            /** @description Bearer token for the customer routes. Shown once; the server keeps only a hash. */
+            token: string;
+            customer: components["schemas"]["Customer"];
+        };
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @description One email address, unique without regard to case.
+             */
+            email: string;
+            /** @description 8 to 72 bytes. Not trimmed. */
+            password: string;
+            /** @description 1 to 100 characters after trimming. */
+            name: string;
+        };
+        SignInRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        /** @description Every member is optional; a member that is present must not be null. */
+        CustomerPatch: {
+            name?: string;
+            /** @description Empty clears the phone; otherwise an optional + and 10 to 15 digits. */
+            phone?: string;
+        };
         Error: {
             error: {
                 /** @enum {string} */
@@ -59,6 +331,91 @@ export interface components {
                 message: string;
                 field?: string;
             };
+        };
+        Address: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            line1: string;
+            /** @description Omitted when empty. */
+            line2?: string;
+            pincode: string;
+            /** @description true for the customer's default address. At most one address is true. */
+            isDefault: boolean;
+        };
+        AddressCreate: {
+            label: string;
+            line1: string;
+            /** @description Optional; empty or absent means no line2. */
+            line2?: string;
+            pincode: string;
+            /** @default false */
+            isDefault: boolean;
+        };
+        /** @description Every member is optional; a member that is present must not be null. */
+        AddressPatch: {
+            label?: string;
+            line1?: string;
+            /** @description Empty clears line2. */
+            line2?: string;
+            pincode?: string;
+            isDefault?: boolean;
+        };
+        AddressList: {
+            items: components["schemas"]["Address"][];
+            page: number;
+            pageSize: number;
+            /** @description Every address the customer has, not just this page. */
+            total: number;
+        };
+        Staff: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            name: string;
+            /** @enum {string} */
+            role: "admin" | "store_staff";
+            /**
+             * Format: uuid
+             * @description Omitted for admins; present for store staff.
+             */
+            storeId?: string;
+            isActive: boolean;
+        };
+        StaffSession: {
+            /** @description Bearer token for the staff routes. Shown once; the server keeps only a hash. */
+            token: string;
+            staff: components["schemas"]["Staff"];
+        };
+        StaffCreate: {
+            /** Format: email */
+            email: string;
+            /** @description 8 to 72 bytes. Not trimmed. */
+            password: string;
+            name: string;
+            /** @enum {string} */
+            role: "admin" | "store_staff";
+            /**
+             * Format: uuid
+             * @description Required for store_staff; refused for admin.
+             */
+            storeId?: string;
+        };
+        /** @description Every member is optional; a member that is present must not be null. */
+        StaffPatch: {
+            name?: string;
+            /** @description A new password; replaces the old one. 8 to 72 bytes. */
+            password?: string;
+            /** @description false ends the user's signed-in sessions at their next request. */
+            isActive?: boolean;
+        };
+        StaffList: {
+            items: components["schemas"]["Staff"][];
+            page: number;
+            pageSize: number;
+            /** @description Every staff user, not just this page. */
+            total: number;
         };
     };
     responses: never;
@@ -128,6 +485,1174 @@ export interface operations {
                      *       "error": {
                      *         "code": "internal",
                      *         "message": "database not ready"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthRegister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "new@example.com",
+                 *       "password": "password123",
+                 *       "name": "Asha"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description The customer is registered and signed in. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                     *       "customer": {
+                     *         "id": "6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13",
+                     *         "email": "new@example.com",
+                     *         "name": "Asha"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CustomerSession"];
+                };
+            };
+            /** @description A field is missing or invalid. The field names the JSON member. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be 8 to 72 bytes",
+                     *         "field": "password"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The email is already registered, in any case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "email already registered",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts for this email or from this IP within the hour. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "too many attempts, try again later"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "demo@shopperstop.local",
+                 *       "password": "demo12345"
+                 *     }
+                 */
+                "application/json": components["schemas"]["SignInRequest"];
+            };
+        };
+        responses: {
+            /** @description The customer is signed in. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                     *       "customer": {
+                     *         "id": "00000000-0000-4000-8000-000000000201",
+                     *         "email": "demo@shopperstop.local",
+                     *         "name": "Demo Customer",
+                     *         "phone": "+919800000000"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CustomerSession"];
+                };
+            };
+            /** @description The email is not an email address, or the password is empty. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a valid email address",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The email is unknown or the password is wrong. The two cases look the same. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "wrong email or password"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts for this email or from this IP within the hour. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "too many attempts, try again later"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthSignOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is ended. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed-in customer. phone is omitted when it is empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000201",
+                     *       "email": "demo@shopperstop.local",
+                     *       "name": "Demo Customer",
+                     *       "phone": "+919800000000"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Asha R",
+                 *       "phone": "+919800000001"
+                 *     }
+                 */
+                "application/json": components["schemas"]["CustomerPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated customer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000201",
+                     *       "email": "demo@shopperstop.local",
+                     *       "name": "Asha R",
+                     *       "phone": "+919800000001"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            /** @description A field is invalid, or a member is null. The field names the member. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be empty or 10 to 15 digits, optionally after +",
+                     *         "field": "phone"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMeAddresses: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of addresses. items is [] when the customer has none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000301",
+                     *           "label": "Home",
+                     *           "line1": "12 80 Feet Rd, Koramangala",
+                     *           "pincode": "560034",
+                     *           "isDefault": true
+                     *         },
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000302",
+                     *           "label": "Work",
+                     *           "line1": "100 Feet Rd, Indiranagar",
+                     *           "pincode": "560038",
+                     *           "isDefault": false
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AddressList"];
+                };
+            };
+            /** @description page or pageSize is out of range or not a whole number. The field names the parameter. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be from 1 to 100",
+                     *         "field": "pageSize"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postMeAddresses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "label": "Home",
+                 *       "line1": "12 80 Feet Rd, Koramangala",
+                 *       "pincode": "560034",
+                 *       "isDefault": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["AddressCreate"];
+            };
+        };
+        responses: {
+            /** @description The address that was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000301",
+                     *       "label": "Home",
+                     *       "line1": "12 80 Feet Rd, Koramangala",
+                     *       "pincode": "560034",
+                     *       "isDefault": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Address"];
+                };
+            };
+            /** @description A field is invalid. The field names it: label, line1, line2 or pincode. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be six digits, not starting with 0",
+                     *         "field": "pincode"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteMeAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The address id.
+                 * @example 00000000-0000-4000-8000-000000000301
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address is deleted. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No address with this id belongs to the customer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchMeAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The address id.
+                 * @example 00000000-0000-4000-8000-000000000301
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "label": "Work",
+                 *       "isDefault": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["AddressPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000302",
+                     *       "label": "Work",
+                     *       "line1": "100 Feet Rd, Indiranagar",
+                     *       "pincode": "560038",
+                     *       "isDefault": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Address"];
+                };
+            };
+            /** @description A field is invalid, or a member is null. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must not be null",
+                     *         "field": "line2"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No address with this id belongs to the customer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAdminAuthSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "admin@shopperstop.local",
+                 *       "password": "admin12345"
+                 *     }
+                 */
+                "application/json": components["schemas"]["SignInRequest"];
+            };
+        };
+        responses: {
+            /** @description The staff user is signed in. storeId is present for store staff only. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                     *       "staff": {
+                     *         "id": "00000000-0000-4000-8000-000000000101",
+                     *         "email": "admin@shopperstop.local",
+                     *         "name": "Admin",
+                     *         "role": "admin",
+                     *         "isActive": true
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StaffSession"];
+                };
+            };
+            /** @description The email is not an email address, or the password is empty. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a valid email address",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Any failed sign-in: wrong password, unknown email, customer credentials or inactive staff user. The four cases look the same. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "wrong email or password"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts for this email or from this IP within the hour. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "too many attempts, try again later"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAdminAuthSignOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is ended. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, a customer token, or belongs to a deactivated staff user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed-in staff user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000101",
+                     *       "email": "admin@shopperstop.local",
+                     *       "name": "Admin",
+                     *       "role": "admin",
+                     *       "isActive": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Staff"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, a customer token, or belongs to a deactivated staff user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listStaffUsers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of staff users. items is [] when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000101",
+                     *           "email": "admin@shopperstop.local",
+                     *           "name": "Admin",
+                     *           "role": "admin",
+                     *           "isActive": true
+                     *         },
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000103",
+                     *           "email": "hsr@example.com",
+                     *           "name": "HSR",
+                     *           "role": "store_staff",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "isActive": true
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StaffList"];
+                };
+            };
+            /** @description page or pageSize is out of range or not a whole number. The field names the parameter. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be from 1 to 100",
+                     *         "field": "pageSize"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "hsr@example.com",
+                 *       "password": "staff12345",
+                 *       "name": "HSR",
+                 *       "role": "store_staff",
+                 *       "storeId": "00000000-0000-4000-8000-000000000401"
+                 *     }
+                 */
+                "application/json": components["schemas"]["StaffCreate"];
+            };
+        };
+        responses: {
+            /** @description The staff user is created. storeId is present for store staff only. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000103",
+                     *       "email": "hsr@example.com",
+                     *       "name": "HSR",
+                     *       "role": "store_staff",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "isActive": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Staff"];
+                };
+            };
+            /** @description A field is invalid. role must be admin or store_staff; storeId is required for store_staff and refused for admin. The field names the problem. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be admin or store_staff",
+                     *         "field": "role"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The email is already registered, in any letter case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "email already registered",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The staff user id.
+                 * @example 00000000-0000-4000-8000-000000000101
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "isActive": false
+                 *     }
+                 */
+                "application/json": components["schemas"]["StaffPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated staff user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000101",
+                     *       "email": "admin@shopperstop.local",
+                     *       "name": "Admin",
+                     *       "role": "admin",
+                     *       "isActive": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Staff"];
+                };
+            };
+            /** @description A field is invalid, or a member is null. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must not be null",
+                     *         "field": "isActive"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No staff user has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
                      *       }
                      *     }
                      */

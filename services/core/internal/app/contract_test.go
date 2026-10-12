@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 )
 
 // responseSpec is the part of an OpenAPI response the contract checks.
@@ -136,7 +140,7 @@ func TestContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if problems := contractProblems(New(nil, nil), doc); len(problems) > 0 {
+	if problems := contractProblems(New(nil, nil, auth.New(nil, testPepper, nil)), doc); len(problems) > 0 {
 		t.Fatalf("contract problems:\n%s", strings.Join(problems, "\n"))
 	}
 }
@@ -211,4 +215,144 @@ func containsProblem(problems []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// zeroID fills every {param} of a documented path for the anonymous probe.
+const zeroID = "00000000-0000-4000-8000-000000000000"
+
+var pathParam = regexp.MustCompile(`\{[^}]+\}`)
+
+// securityProblems sends one anonymous request to every documented operation
+// and checks the operation's security declaration against the router's answer:
+// a 401 must match declared security, and declared security must document a 401.
+func securityProblems(baseURL string, doc []byte) []string {
+	var spec struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
+		Components struct {
+			SecuritySchemes map[string]struct {
+				Type   string `json:"type"`
+				Scheme string `json:"scheme"`
+			} `json:"securitySchemes"`
+		} `json:"components"`
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal(doc, &spec); err != nil {
+		return []string{fmt.Sprintf("openapi.json does not parse: %v", err)}
+	}
+	if len(spec.Servers) == 0 {
+		return []string{"openapi.json lists no servers"}
+	}
+	base := spec.Servers[0].URL
+	var problems []string
+	bearer := spec.Components.SecuritySchemes["bearer"]
+	if bearer.Type != "http" || bearer.Scheme != "bearer" {
+		problems = append(problems, `components.securitySchemes.bearer must be {"type":"http","scheme":"bearer"}`)
+	}
+	for path, item := range spec.Paths {
+		for method, raw := range item {
+			switch strings.ToLower(method) {
+			case "get", "post", "put", "patch", "delete":
+			default:
+				continue
+			}
+			key := strings.ToUpper(method) + " " + base + path
+			var op struct {
+				Security  []map[string][]string      `json:"security"`
+				Responses map[string]json.RawMessage `json:"responses"`
+			}
+			if err := json.Unmarshal(raw, &op); err != nil {
+				problems = append(problems, key+": operation does not parse: "+err.Error())
+				continue
+			}
+			declared := len(op.Security) > 0
+			if declared {
+				if len(op.Security) != 1 || len(op.Security[0]) != 1 || op.Security[0]["bearer"] == nil {
+					problems = append(problems, key+`: security must be [{"bearer":[]}]`)
+				}
+				if _, ok := op.Responses["401"]; !ok {
+					problems = append(problems, key+": declares security but documents no 401")
+				}
+			}
+			req, err := http.NewRequest(strings.ToUpper(method), baseURL+base+pathParam.ReplaceAllString(path, zeroID), nil)
+			if err != nil {
+				problems = append(problems, key+": bad request: "+err.Error())
+				continue
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				problems = append(problems, key+": request failed: "+err.Error())
+				continue
+			}
+			resp.Body.Close()
+			switch {
+			case declared && resp.StatusCode != http.StatusUnauthorized:
+				problems = append(problems, fmt.Sprintf("%s: declares security but answers %d without a token", key, resp.StatusCode))
+			case !declared && resp.StatusCode == http.StatusUnauthorized:
+				problems = append(problems, key+": answers 401 without a token but declares no security")
+			}
+		}
+	}
+	sort.Strings(problems)
+	return problems
+}
+
+// TestContractSecurity checks the real router against the real openapi.json security.
+func TestContractSecurity(t *testing.T) {
+	doc, err := os.ReadFile("../../openapi.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if problems := securityProblems(srv.URL, doc); len(problems) > 0 {
+		t.Fatalf("security problems:\n%s", strings.Join(problems, "\n"))
+	}
+}
+
+// toySecurityDoc documents GET /api/core/v1/extra with a 401, with or without security.
+func toySecurityDoc(secured bool) string {
+	security := ""
+	if secured {
+		security = `"security":[{"bearer":[]}],`
+	}
+	return `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],
+  "components":{"securitySchemes":{"bearer":{"type":"http","scheme":"bearer"}}},
+  "paths":{"/extra":{"get":{"summary":"s","description":"d","tags":["accounts"],` + security + `
+  "responses":{"200":{"description":"ok"},"401":{"description":"no token"}}}}}}`
+}
+
+// toySecurityProblems serves a toy router that answers status to GET /extra
+// and returns securityProblems for doc against it.
+func toySecurityProblems(t *testing.T, status int, doc string) []string {
+	t.Helper()
+	r := chi.NewRouter()
+	r.Get("/api/core/v1/extra", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })
+	ts := httptest.NewServer(r)
+	t.Cleanup(ts.Close)
+	return securityProblems(ts.URL, []byte(doc))
+}
+
+// TestContractNamesMissingSecurity: a route that answers 401 must declare security.
+func TestContractNamesMissingSecurity(t *testing.T) {
+	problems := toySecurityProblems(t, http.StatusUnauthorized, toySecurityDoc(false))
+	if !containsProblem(problems, "GET /api/core/v1/extra") {
+		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
+	}
+}
+
+// TestContractNamesNeedlessSecurity: an operation that answers without a token must not declare security.
+func TestContractNamesNeedlessSecurity(t *testing.T) {
+	problems := toySecurityProblems(t, http.StatusOK, toySecurityDoc(true))
+	if !containsProblem(problems, "GET /api/core/v1/extra") || !containsProblem(problems, "answers 200") {
+		t.Fatalf("want a problem naming GET /api/core/v1/extra and answers 200, got %q", problems)
+	}
+}
+
+// TestContractNamesSecurityWithout401: declared security must document its 401.
+func TestContractNamesSecurityWithout401(t *testing.T) {
+	doc := strings.Replace(toySecurityDoc(true), `,"401":{"description":"no token"}`, "", 1)
+	problems := toySecurityProblems(t, http.StatusUnauthorized, doc)
+	if !containsProblem(problems, "documents no 401") {
+		t.Fatalf("want a problem saying the 401 is undocumented, got %q", problems)
+	}
 }
