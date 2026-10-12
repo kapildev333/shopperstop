@@ -238,3 +238,40 @@ func TestCORSRejectsUnknownOrigin(t *testing.T) {
 		}
 	})
 }
+
+func TestLogNamesSubject(t *testing.T) {
+	logs := captureLogs(t)
+	r := NewRouter(nil)
+	r.Get("/who", func(w http.ResponseWriter, req *http.Request) {
+		SetSubject(req.Context(), "customer", "c1")
+		w.WriteHeader(http.StatusNoContent)
+	})
+	do(t, r, httptest.NewRequest(http.MethodGet, "/who", nil))
+
+	line := logWithMsg(logLines(t, logs), "request")
+	if line == nil {
+		t.Fatal("no request log line")
+	}
+	if line["subjectType"] != "customer" || line["subjectId"] != "c1" {
+		t.Fatalf("request line has subjectType %v subjectId %v, want customer c1", line["subjectType"], line["subjectId"])
+	}
+}
+
+func TestLogOmitsSubjectWhenAnonymous(t *testing.T) {
+	logs := captureLogs(t)
+	r := NewRouter(nil)
+	r.Get("/anon", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	do(t, r, httptest.NewRequest(http.MethodGet, "/anon", nil))
+
+	line := logWithMsg(logLines(t, logs), "request")
+	if line == nil {
+		t.Fatal("no request log line")
+	}
+	for _, key := range []string{"subjectType", "subjectId"} {
+		if _, ok := line[key]; ok {
+			t.Fatalf("anonymous request line carries %s = %v", key, line[key])
+		}
+	}
+}
