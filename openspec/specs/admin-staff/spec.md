@@ -1,7 +1,7 @@
 # admin-staff Specification
 
 ## Purpose
-TBD - created by archiving change core-accounts-auth. Update Purpose after archive.
+Staff accounts for the admin panel: staff sign-in and sessions, the two roles (admin, store staff), management of staff users by admins, the first admin from the command line, and the dashboard. Store staff are scoped to one store; admins see every store.
 
 ## Requirements
 
