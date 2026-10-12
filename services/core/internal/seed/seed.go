@@ -22,6 +22,8 @@ import (
 var truncateTables = []string{"sessions", "addresses", "customers", "staff_users", "store_service_areas", "stores",
 	// catalog (core-P2-L3)
 	"products", "categories",
+	// stock and cart (core-P2-L4)
+	"store_stock", "carts", "cart_items",
 }
 
 // Fixed ids and values of design Decision 22. Later lanes take their ids from
