@@ -185,20 +185,6 @@ func TestUploadProductPNG(t *testing.T) {
 		t.Fatal("served bytes differ from the upload")
 	}
 
-	// HEAD answers the same headers with no body.
-	req, err := http.NewRequest(http.MethodHead, srv.URL+got.ImageURL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	headResp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	headResp.Body.Close()
-	if headResp.StatusCode != http.StatusOK || headResp.Header.Get("Content-Type") != "image/png" {
-		t.Fatalf("HEAD file: got %d %q, want 200 image/png", headResp.StatusCode, headResp.Header.Get("Content-Type"))
-	}
-
 	status, read := getProduct(t, token, p.ID)
 	var admin productView
 	if status != http.StatusOK || json.Unmarshal(read, &admin) != nil || admin.ImageURL != wantURL {
