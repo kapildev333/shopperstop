@@ -9,6 +9,7 @@ Unblocked by fix commit (seed truncate list, scope extended by coordinator). Tas
 - Generated `internal/cart/db/` only; no cart Go code (task 5).
 - Gate `GOFLAGS=-count=1 make test-core`: gofmt and vet pass. `internal/stock` ok (1.96s, `-race`; race tests stable over 20 runs). `app` ok (54.3s), `auth` ok (9.95s), `blob` ok (2.78s), `catalog` ok (1.79s), `config` ok (2.35s), `httpx` ok (2.99s), `migrate` ok (2.24s), `pg` ok (2.71s), `store` ok (1.6s).
 - No deviations from design.md names. Test names are the brief's, plus `TestReserveEmptyIsNoop` (design says empty lines is a no-op).
+- Review fix (task 1): `Reserve` and `Release` merge lines by product id (sums quantities) before any query, and refuse quantity below 1 with a plain error. Tests `TestReserveMergesDuplicateLines`, `TestReleaseMergesDuplicateLines`, `TestReleaseSkipsProductWithoutRow`, `TestReserveRefusesZeroQuantity`. Commits febc15c (tests), next fix commit.
 ## Requests
 - to core-P2-L4 team lead: task 4's seed change (design Decision 15) is needed now, not later. Add `store_stock`, `cart_items`, `carts` to `truncateTables` in `internal/seed/seed.go` (same statement, before or with `stores`/`products`). Without it `truncate` fails with SQLSTATE 0A000 because the new foreign keys reference `stores` and `products`.
 ## Blockers
