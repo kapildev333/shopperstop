@@ -16,6 +16,7 @@ type Config struct {
 	Addr          string     // SHOPPERSTOP_CORE_ADDR, required
 	SessionPepper string     // SHOPPERSTOP_CORE_SESSION_PEPPER, required, >= 32 bytes
 	WebOrigins    []string   // SHOPPERSTOP_CORE_WEB_ORIGINS, required, trimmed, empties dropped
+	FilesDir      string     // SHOPPERSTOP_CORE_FILES_DIR, required, trimmed
 	LogLevel      slog.Level // SHOPPERSTOP_CORE_LOG_LEVEL, optional, default info
 }
 
@@ -44,6 +45,11 @@ func Load(getenv func(string) string) (Config, error) {
 		missing("SHOPPERSTOP_CORE_SESSION_PEPPER")
 	case len(cfg.SessionPepper) < minPepperBytes:
 		problems = append(problems, fmt.Errorf("SHOPPERSTOP_CORE_SESSION_PEPPER must be at least %d bytes", minPepperBytes))
+	}
+
+	cfg.FilesDir = strings.TrimSpace(getenv("SHOPPERSTOP_CORE_FILES_DIR"))
+	if cfg.FilesDir == "" {
+		missing("SHOPPERSTOP_CORE_FILES_DIR")
 	}
 
 	for _, origin := range strings.Split(getenv("SHOPPERSTOP_CORE_WEB_ORIGINS"), ",") {
