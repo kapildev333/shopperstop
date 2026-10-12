@@ -49,7 +49,7 @@ export * from './dialog'      // Dialog, DialogFooter
 export * from './sheet'
 export * from './error-banner'
 ```
-and each listed component file as a placeholder containing only `export {}`. A later task replaces its own placeholders wholesale. `typecheck`, `build` and `lint` are green on task 1's tree; every `feat:` commit is green on all four gates; parallel branches touch disjoint files, so they never conflict (except their own checkbox lines in `tasks.md`, which merge as separate hunks). A `test:` commit is red by design: its test imports a name the placeholder does not export yet. Chosen over a fully written index pointing at missing files (typecheck red until the last task lands) and over per-group barrel files (extra files for no runtime benefit).
+and each listed component file, plus `cn.ts` (until task 1's `feat:` commit fills it), as a placeholder containing only `export {}`, so the scaffold commit typechecks. A later task replaces its own placeholders wholesale. `typecheck`, `build` and `lint` are green on task 1's tree; every `feat:` commit is green on all four gates; parallel branches touch disjoint files, so they never conflict (except their own checkbox lines in `tasks.md`, which merge as separate hunks). A `test:` commit is red by design: its test imports a name the placeholder does not export yet. Chosen over a fully written index pointing at missing files (typecheck red until the last task lands) and over per-group barrel files (extra files for no runtime benefit).
 
 ### Tokens (`src/tokens.css`)
 Order inside the file:
@@ -101,15 +101,16 @@ Patterns (case-insensitive, global):
 - palette utility: `\b(?:[a-z-]+:)*(?:bg|text|border|ring|outline|fill|stroke|from|via|to|divide|placeholder|decoration|accent|caret|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b`
 - white/black: `\b(?:[a-z-]+:)*(?:bg|text|border|ring|outline|fill|stroke|from|via|to|divide|placeholder|decoration|caret|shadow)-(?:white|black)\b`
 - colour function: `\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\(`
-`findLiteralColors` walks `dir` recursively with `node:fs` (`readdirSync` with `recursive: true`), reads `.ts`, `.tsx`, `.css` files, skips any file named `tokens.css` and every path in `ignore` (relative to `dir`, forward slashes), and returns matches in path order with `file` relative to `dir`. An app's test is:
+`findLiteralColors` walks `dir` recursively with `node:fs` (`readdirSync(dir, { recursive: true, encoding: 'utf8' })`; the encoding makes the entries typed `string[]`), reads `.ts`, `.tsx`, `.css` files, skips any file named `tokens.css` and every path in `ignore` (relative to `dir`, forward slashes), and returns matches in path order with `file` relative to `dir`. An app's test is:
 ```ts
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findLiteralColors } from '@shopperstop/ui/testing'
 test('no literal colours in src', () => {
-  expect(findLiteralColors(fileURLToPath(new URL('.', import.meta.url)))).toEqual([])
+  expect(findLiteralColors(dirname(fileURLToPath(import.meta.url)))).toEqual([])
 })
 ```
-The package's own `src/no-literal-colors.test.ts` is the same with `ignore = ['tokens.test.ts', 'testing/literal-colors.ts', 'testing/literal-colors.test.ts']`. Simplification: regexes over text, not a CSS or TS parser. Ceiling: a hex-looking anchor (`#add`) is a false positive; rename the anchor.
+Use `dirname(fileURLToPath(import.meta.url))`, not `new URL('.', import.meta.url)`: under jsdom the global `URL` is jsdom's and `fileURLToPath` rejects it ("The URL must be of scheme file"). The package's own `src/no-literal-colors.test.ts` is the same with `ignore = ['tokens.test.ts', 'testing/literal-colors.ts', 'testing/literal-colors.test.ts']`. Simplification: regexes over text, not a CSS or TS parser. Ceiling: a hex-looking anchor (`#add`) is a false positive; rename the anchor.
 
 ### Components: interfaces
 Every component accepts `className` merged last through `cn`, spreads remaining native props, and gets `ref` as a plain prop (React 19). Icons are Lucide, 20 px, 16 px inside buttons, always `aria-hidden`.
