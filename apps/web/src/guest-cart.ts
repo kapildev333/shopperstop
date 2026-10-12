@@ -36,7 +36,7 @@ export function maxQuantity(product: CartProduct): number {
 export function cartReducer(state: GuestCart, action: CartAction): GuestCart {
   if (action.type === 'clear') return emptyCart
   const { product } = action
-  const quantity = Math.max(0, Math.min(Math.trunc(action.quantity), maxQuantity(product)))
+  const quantity = Math.max(0, Math.min(Math.trunc(action.quantity) || 0, maxQuantity(product)))
   let base = state.items
   if (state.storeId && state.storeId !== action.storeId) {
     if (quantity === 0) return state
