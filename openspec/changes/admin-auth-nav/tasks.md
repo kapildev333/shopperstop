@@ -6,7 +6,7 @@ Gates, from the worktree root, Node 22.12+ (D11): prefix every command with `PAT
 
 ## 0. Recheck the design against core (team lead)
 Scope: `openspec/changes/admin-auth-nav/**`, `.claude/lanes/admin-P2-L1.md`. No test: a document check.
-- [ ] 0.1 Diff design.md "Assumptions" A1 to A10 and "Core contract facts" against the regenerated `packages/ui/src/api/core.d.ts`, `services/core/openapi.json` and the core-P2-L1 lane log on origin/main; update design.md, the spec delta and these tasks where they differ; `openspec validate admin-auth-nav --strict` passes; record the result in the lane log
+- [x] 0.1 Diff design.md "Assumptions" A1 to A10 and "Core contract facts" against the regenerated `packages/ui/src/api/core.d.ts`, `services/core/openapi.json` and the core-P2-L1 lane log on origin/main; update design.md, the spec delta and these tasks where they differ; `openspec validate admin-auth-nav --strict` passes; record the result in the lane log
 
 ## 1. Session and typed client
 Scope: `apps/admin/package.json`, `apps/admin/src/session.ts`, `apps/admin/src/api.ts`, `apps/admin/src/fake-core.ts`, `apps/admin/src/session.test.ts`, `apps/admin/src/api.test.ts`, root `package-lock.json` (mechanical), this file's checkboxes, the worker's lane log.

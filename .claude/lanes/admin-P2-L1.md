@@ -1,7 +1,7 @@
 # admin-P2-L1 - admin sign-in, session, role-based nav (OpenSpec change admin-auth-nav)
-Status: blocked
+Status: started
 ## Doing
-Change `admin-auth-nav` approved under D13 (manager, 2026-10-12); core contract facts folded into design.md. Workers start at the core-P2-L1 merge, after task 0. Next: task 0 (recheck design.md assumptions A1 to A10 against the regenerated `core.d.ts`) as soon as core-P2-L1 is on origin/main.
+Task 0 done (verified against core.d.ts on ba69715, no shape differences); workers may start with task 1, tasks 1 to 4 in order on this branch. Task 4's e2e waits for the e2e slot.
 ## Found
 - Capability: `admin-app` only (4 MODIFIED, 7 ADDED requirements). No `admin-auth` capability: `admin-staff` and `accounts` are core's HTTP capabilities (core-P2-L1), and the client side of one flow belongs to the app.
 - Spike 2026-10-12 (scratchpad copy of 5101344, Node 22.23.3, staff routes added to a scratch `openapi.json` as assumed): workspace install clean; lint, typecheck, Vitest 5 files / 28 tests, `vite build` with `routeTree.gen.ts` stable; Playwright + axe on a scratch preview port (25174, not 15174/18080): sign-in, error banner, Dashboard, not-found signed out, store-staff not-found on `/stores`, reload restores the session, `/admin/stock` round trip through sign-in, sign-out: all clean.
@@ -11,8 +11,9 @@ Change `admin-auth-nav` approved under D13 (manager, 2026-10-12); core contract 
 - Pins: `openapi-fetch` 0.17.0, `@tanstack/react-query` 5.104.2, dev `@testing-library/user-event` 14.6.7 (same as web-P2-L2).
 - Session store guards every `localStorage` access, the same rule as web-P2-L2's review fix.
 - For web-P2-L5 (cross-app e2e): the admin sign-in page has fields labelled "Email" and "Password" and a "Sign in" button; the banner has a "Sign out" button; `/admin/<path>` signed out goes to `/admin/sign-in?redirect=%2F<path>` and returns there after sign-in.
+- 2026-10-12 task 0 (team lead): `packages/ui/src/api/core.d.ts` on ba69715 matches A1 to A10 and the contract facts: `postAdminAuthSignIn` (SignInRequest → 200 StaffSession; 400, 401, 429; no 403), `postAdminAuthSignOut` (204, 401), `getAdminMe` (200 Staff, 401), `Staff` required id/email/name/role/isActive with `storeId?`, `Error` envelope. Specs `admin-staff` and `accounts` agree (inactive and customer credentials 401 alike, rate limit per email and IP). core's e2e seed command (core-P2-L1 lane log) is the global setup's two commands. Spike re-run against the real core.d.ts: typecheck, lint, Vitest 29/29, vite build green. Only edit: the field-validation scenario quotes core's real message "must be a valid email address". Task 1 brief unchanged.
+
 ## Requests
 - to web (information, via the admin area plan): `createClient({ baseUrl: '/api/core/v1' })` throws `TypeError: Failed to parse URL` in Vitest/jsdom on the first real call through the client (middleware-only tests do not hit it); `${location.origin}/api/core/v1` plus `fetch: (r) => globalThis.fetch(r)` fixes it and stays same-origin in the browser.
 - to core (core-P2-L1): Staff/StaffSession names, unwrapped `/admin/me`, inactive 401, `storeId` omitted for admins: accepted (relayed 2026-10-12), closed.
 ## Blockers
-- Workers wait for core-P2-L1 on origin/main (regenerated `packages/ui/src/api/core.d.ts`, D19), then task 0.

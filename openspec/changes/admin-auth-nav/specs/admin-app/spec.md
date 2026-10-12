@@ -85,8 +85,8 @@ A failed sign-in SHALL keep the user on `/sign-in` with no session and SHALL exp
 - **THEN** an alert shows "Something went wrong. Try again." and no token is stored
 
 #### Scenario: Field validation from core
-- **WHEN** core answers 400 `validation` with `field` `email` and message "Enter a valid email."
-- **THEN** the "Email" field is described by "Enter a valid email."
+- **WHEN** core answers 400 `validation` with `field` `email` and message "must be a valid email address"
+- **THEN** the "Email" field is described by "must be a valid email address"
 
 ### Requirement: Staff session
 The app SHALL keep the staff token in memory and in `localStorage` under `shopperstop:staff-token` (in memory only when storage is blocked), SHALL send it as `Authorization: Bearer <token>` on every core request while it exists, and on load with a stored token SHALL restore the staff member with `GET /admin/me` before showing a protected page.
