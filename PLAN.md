@@ -18,7 +18,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D9 | The owner runs the orchestrator and the platform manager in one Fable session (`/loop 10min /manage Platform /orchestrate`); orchestrator work (root checkout, PLAN.md, `make db`, repo) and platform-manager work (worktrees, lanes, PRs) keep their own rules inside it | Agreed (owner, 2026-10-12) |
 | D10 | Dev tooling implied by the Spec 1 §4 stack is allowed without a per-package decision: `typescript-eslint`, `@types/*`, `jsdom`, `@testing-library/dom` and `@testing-library/jest-dom`, `@axe-core/playwright`, Vite and Vitest peers. Runtime dependencies still need a decision here | Orchestrator 2026-10-12 |
 | D11 | Node floor is >=22.12.0 (Vite 8, Vitest 5, jsdom 27 require it; Spec 1 §4 said 22.11+). Root `package.json` engines and CI use it; lanes on this machine use a user-space Node 22.23.3 under `~/.local`, nothing global changed | Orchestrator 2026-10-12 |
-| D12 | Palette: `line-strong` #C9CDD2 measures 1.60:1 on surface, below §8.1's 3:1 rule for borders; ui proposes #868C94 (3.39:1). Components use the token as is until decided | Pending owner |
+| D12 | Palette: `line-strong` #C9CDD2 measures 1.60:1 on surface, below §8.1's 3:1 rule for borders; decided #868C94 (3.39:1), the spec's own rule wins over the drawn value; Figma token updated in Task 14 | Orchestrator 2026-10-12 under D13 |
+| D13 | The owner delegated every decision to the orchestrator ("Decide everything by yourself", 2026-10-12): the orchestrator decides what the specs leave open and records it here; managers no longer wait for the owner's go before launching workers once the orchestrator has seen the change; the owner can override any row | Agreed (owner, 2026-10-12) |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -60,3 +61,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: repo `kapildev333/shopperstop` created private, Task 1 pushed as origin/main. Docker Desktop started by the orchestrator. The core and ui manager sessions ended before starting any lane; both restart once their dependencies are on main. Orchestrator and platform manager share one session (D9).
 - 2026-10-12: platform tasks 3 and 4 landed (#3, #4) and archived (#5, #6); `make db` verified against the real container. core, ui and admin managers running; CI and Makefile lane (platform-P1-L9) started so every later PR gets a `ci` check.
 - 2026-10-12: ui raised typescript-eslint (D10), the Node 22.12 floor (D11) and the line-strong contrast (D12, pending owner). CI and Makefile (platform-P1-L9) told to build packages/ui before app gates and to use Node >= 22.12.
+- 2026-10-12: owner delegated decisions (D13); D12 decided for #868C94.
