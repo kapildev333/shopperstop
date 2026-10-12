@@ -1,7 +1,7 @@
 # admin-P2-L1 - admin sign-in, session, role-based nav (OpenSpec change admin-auth-nav)
 Status: started
 ## Doing
-Task 0 done (verified against core.d.ts on ba69715, no shape differences); workers may start with task 1, tasks 1 to 4 in order on this branch. Task 4's e2e waits for the e2e slot.
+Tasks 0 to 3 landed (task 3 at 9769814). Task 4 (review follow-ups, then the e2e) is briefed in tasks.md; its e2e needs the slot.
 ## Found
 - Capability: `admin-app` only (4 MODIFIED, 7 ADDED requirements). No `admin-auth` capability: `admin-staff` and `accounts` are core's HTTP capabilities (core-P2-L1), and the client side of one flow belongs to the app.
 - Spike 2026-10-12 (scratchpad copy of 5101344, Node 22.23.3, staff routes added to a scratch `openapi.json` as assumed): workspace install clean; lint, typecheck, Vitest 5 files / 28 tests, `vite build` with `routeTree.gen.ts` stable; Playwright + axe on a scratch preview port (25174, not 15174/18080): sign-in, error banner, Dashboard, not-found signed out, store-staff not-found on `/stores`, reload restores the session, `/admin/stock` round trip through sign-in, sign-out: all clean.
@@ -14,6 +14,14 @@ Task 0 done (verified against core.d.ts on ba69715, no shape differences); worke
 - 2026-10-12 task 0 (team lead): `packages/ui/src/api/core.d.ts` on ba69715 matches A1 to A10 and the contract facts: `postAdminAuthSignIn` (SignInRequest → 200 StaffSession; 400, 401, 429; no 403), `postAdminAuthSignOut` (204, 401), `getAdminMe` (200 Staff, 401), `Staff` required id/email/name/role/isActive with `storeId?`, `Error` envelope. Specs `admin-staff` and `accounts` agree (inactive and customer credentials 401 alike, rate limit per email and IP). core's e2e seed command (core-P2-L1 lane log) is the global setup's two commands. Spike re-run against the real core.d.ts: typecheck, lint, Vitest 29/29, vite build green. Only edit: the field-validation scenario quotes core's real message "must be a valid email address". Task 1 brief unchanged.
 
 - 2026-10-12 task 1 review nit (relayed by the manager): `onResponse` keyed on `getToken()` at response time, so a signed-out 401 (wrong-password sign-in) or an old token's in-flight 401 could clear a session stored meanwhile. Decision: clear only when the request's `Authorization` equals `Bearer <current token>`. The reviewer's `request.headers.has('Authorization')` was not taken: it still lets an old token's 401 clear a new one. Spike: both new tests fail on task 1's rule, the replaced-token test fails on `has`, and 31/31 pass with the equality rule. Spec, design.md and task 3 amended (3.1 `test:`, 3.2 `fix:` before the form). Record: `@tanstack/react-query` is imported by `router.ts`, `main.tsx`, `routes/__root.tsx` (task 2) and `routes/sign-in.tsx` (task 3); `@testing-library/user-event` by `shell.test.tsx` (task 2) and `sign-in.test.tsx` (task 3); `fake-core.ts` and `render-app.tsx` are imported only by `*.test.ts(x)` files, never by app code, so they never reach the bundle.
+
+- 2026-10-12 review decisions on tasks 2 and 3 (relayed by the manager):
+  - Sign-out drops every cached core answer: the test asserts the whole query cache is empty, which is stricter than only `['admin','me']`. Spike: the check fails without `queryClient.clear()`.
+  - `activeOptions` dropped: TanStack's default already matches `/` exactly (spike, 11/11 without it), and "admin opens an admin page" guards it. That test also covers "Current section stays marked on a sub-page"; the folded mapping is accepted.
+  - `safeRedirect` also rejects a leading `/\\` (regex `^\/(?![/\\])`); a `test.each` row is added.
+  - The task 3 worker's validation fallback is accepted (field error only for `email`/`password`, banner otherwise); design.md's sign-in block is now the landed file plus the `safeRedirect` change.
+  - The ceilings are noted in design.md: the retry and 403 pages are a dead end without Sign out; the Sign out button's contrast is checked by task 4's axe; the sign-out-answered-401 path gets a look in the manager's Chrome walk-through.
+  - All of this is folded into task 4 (4.1 to 4.3 unit, 4.4 to 4.5 e2e). Expected: Vitest 31, e2e 4.
 
 ## Requests
 - to web (information, via the admin area plan): `createClient({ baseUrl: '/api/core/v1' })` throws `TypeError: Failed to parse URL` in Vitest/jsdom on the first real call through the client (middleware-only tests do not hit it); `${location.origin}/api/core/v1` plus `fetch: (r) => globalThis.fetch(r)` fixes it and stays same-origin in the browser.

@@ -43,7 +43,7 @@ The app SHALL call the core service only through one shared client whose base UR
 ## ADDED Requirements
 
 ### Requirement: Staff sign-in
-The app SHALL serve `/sign-in` without a session, with labelled "Email" and "Password" fields and a "Sign in" button. It SHALL send no request while a field is empty, keep the button disabled while `POST /admin/auth/sign-in` is pending, and on success store the token and open the `redirect` query path, or `/` without one. A `redirect` not starting with a single `/` SHALL be ignored.
+The app SHALL serve `/sign-in` without a session, with labelled "Email" and "Password" fields and a "Sign in" button. It SHALL send no request while a field is empty, keep the button disabled while `POST /admin/auth/sign-in` is pending, and on success store the token and open the `redirect` query path, or `/` without one. A `redirect` that is not an in-app path (`/` followed by neither `/` nor `\`) SHALL be ignored.
 
 #### Scenario: Sign-in form is labelled
 - **WHEN** a visitor opens `/sign-in`
@@ -62,7 +62,7 @@ The app SHALL serve `/sign-in` without a session, with labelled "Email" and "Pas
 - **THEN** the Stock page opens at `/stock`, the token is stored under `shopperstop:staff-token`, and no extra `GET /admin/me` is sent
 
 #### Scenario: Outside redirect ignored
-- **WHEN** the visitor signs in successfully at `/sign-in?redirect=%2F%2Fevil.example`
+- **WHEN** the visitor signs in successfully at `/sign-in?redirect=%2F%2Fevil.example` or `/sign-in?redirect=%2F%5Cevil.example`
 - **THEN** the Dashboard opens at `/`
 
 ### Requirement: Sign-in errors
@@ -168,11 +168,11 @@ When a store staff member opens an admin-only path (`/stores`, `/categories`, `/
 - **THEN** "Stores" is the level-1 heading
 
 ### Requirement: Sign-out
-The "Sign out" button SHALL send `POST /admin/auth/sign-out` with the token, then, whatever core answers, remove the token from memory and storage, forget the signed-in staff member and show `/sign-in` without navigation.
+The "Sign out" button SHALL send `POST /admin/auth/sign-out` with the token, then, whatever core answers, remove the token from memory and storage, drop every cached core answer and show `/sign-in` without navigation.
 
 #### Scenario: Sign out ends the session
 - **WHEN** a signed-in admin presses "Sign out"
-- **THEN** `POST /admin/auth/sign-out` was sent with the bearer token, the sign-in page shows at `/sign-in`, `shopperstop:staff-token` is gone, and there is no "Admin" navigation
+- **THEN** `POST /admin/auth/sign-out` was sent with the bearer token, the sign-in page shows at `/sign-in`, `shopperstop:staff-token` is gone, no cached core answer remains, and there is no "Admin" navigation
 
 #### Scenario: Sign in, dashboard, sign out against core
 - **WHEN** the e2e suite opens `/admin/`, signs in as the seeded admin, reloads the Dashboard and presses "Sign out"

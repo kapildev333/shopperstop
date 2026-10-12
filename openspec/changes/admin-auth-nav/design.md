@@ -354,7 +354,7 @@ function RootLayout() {
         {staff && (
           <TabNav label="Admin" className="bg-surface px-4 sm:px-6">
             {navLinks(staff.role).map((link) => (
-              <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
+              <Link key={link.to} to={link.to}>
                 {link.label}
               </Link>
             ))}
@@ -374,7 +374,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 })
 ```
 - The root reads the staff member from the `_staff` match (`useMatch(..., shouldThrow: false)`), so name, Sign out and nav appear exactly while a protected page is shown, and vanish on sign-in and on the signed-out not-found page. A query observer was tried first and rejected: `useQuery({ enabled: false })` keeps showing its last data after `queryClient.clear()`, so the nav outlived sign-out (spike).
-- `activeOptions.exact` only on Dashboard; the others match by prefix so `/stores/<id>` keeps "Stores" current.
+- No `activeOptions`: TanStack Router's default already matches `/` exactly and every other link by prefix, so `/stores/<id>` keeps "Stores" current and Dashboard is not current there. `activeOptions={{ exact: link.to === '/' }}` shipped in task 2 and is removed in task 4: dropping it or setting `exact: false` changes nothing (reviewer mutation and spike), and "admin opens an admin page" asserts both links.
 - "Sign out" is a `secondary` `Button` on the brand band (axe-clean, as web's header button); the name is `text-body` `on-brand`.
 - Sign-out ignores the server's answer: the local session ends whatever happens (A7).
 
@@ -433,9 +433,9 @@ Task 2 lands a stub so the guard has a target:
 import { createFileRoute } from '@tanstack/react-router'
 import { PageHeader } from '@shopperstop/ui'
 
-// Only same-app paths: never an absolute or protocol-relative URL (open redirect).
+// Only in-app paths: `/` not followed by `/` or `\` (browsers read `/\host` like `//host`); never an absolute URL (open redirect).
 function safeRedirect(value: unknown) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : undefined
+  return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : undefined
 }
 
 export const Route = createFileRoute('/sign-in')({
@@ -443,7 +443,7 @@ export const Route = createFileRoute('/sign-in')({
   component: () => <PageHeader title="Sign in" />,
 })
 ```
-Task 3 replaces the component with the form:
+Task 3 replaces the component with the form (this block is the landed file 9769814 plus task 4's `safeRedirect` change):
 ```tsx
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
@@ -452,9 +452,9 @@ import { Button, Card, ErrorBanner, FormField, Input, PageHeader } from '@shoppe
 import { api, meQuery, type ApiError } from '../api'
 import { setToken } from '../session'
 
-// Only same-app paths: never an absolute or protocol-relative URL (open redirect).
+// Only in-app paths: `/` not followed by `/` or `\` (browsers read `/\host` like `//host`); never an absolute URL (open redirect).
 function safeRedirect(value: unknown) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : undefined
+  return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : undefined
 }
 
 const messages: Partial<Record<ApiError['code'], string>> = {
@@ -493,11 +493,15 @@ function SignIn() {
     if (!errors.email && !errors.password) signIn.mutate()
   }
 
+  // A validation error on email or password goes to its field; any other answer from core goes to the banner.
   const apiError = signIn.error && 'code' in signIn.error ? (signIn.error as ApiError) : undefined
-  const serverField = apiError?.code === 'validation' ? apiError.field : undefined
+  const serverField =
+    apiError?.code === 'validation' && (apiError.field === 'email' || apiError.field === 'password') ? apiError.field : undefined
   const banner = signIn.error
     ? apiError
-      ? (serverField ? undefined : (messages[apiError.code] ?? 'Something went wrong. Try again.'))
+      ? serverField
+        ? undefined
+        : (messages[apiError.code] ?? 'Something went wrong. Try again.')
       : 'Could not reach the server. Check your connection and try again.'
     : undefined
 
@@ -527,7 +531,8 @@ export const Route = createFileRoute('/sign-in')({
 ```
 - `noValidate` and own required checks: native bubbles are not announced through `FormField` and cannot be asserted in jsdom.
 - The banner is cleared by the next submit (`useMutation` resets `error` on `mutate`). Field errors from core use `FormField`'s `error`, so the input gets `aria-invalid` and `aria-describedby`.
-- `navigate({ href })` takes the already-validated path; `safeRedirect` stops `//evil.example` and absolute URLs (open redirect).
+- `navigate({ href })` takes the already-validated path. `safeRedirect` stops `//evil.example`, `/\evil.example` and absolute URLs (open redirect). The backslash rule comes from task 3's review and lands in task 4. It was not exploitable, because `navigate({ href })` stays in the router's history, but browsers read `/\` like `//` and the check costs nothing.
+- A `validation` error goes on its field only when `field` is `email` or `password`; any other code, and a `validation` error naming another field or none, gets a banner (a known code's message, else "Something went wrong. Try again."), so no answer from core goes unshown. This is the task 3 worker's narrowing, accepted at review; the first design hid the banner for a `validation` error naming any field.
 - `autoComplete` `username` and `current-password` for password managers.
 
 ### Tests
@@ -550,17 +555,17 @@ Vitest (Testing Library, `userEvent`, fake `fetch` only). Every test file's `aft
 | Protected routes › Signed-out deep link | `src/shell.test.tsx` › "signed-out deep link goes to sign-in with the path" (`router.state.location.search` equals `{ redirect: '/stock' }`, zero fetch calls) |
 | Wrong-role deep link › Store staff open an admin page | `src/shell.test.tsx` › "store staff deep link to an admin page shows not found in the shell" |
 | Wrong-role deep link › A 403 from core shows not found | `src/shell.test.tsx` › "a 403 from core shows not found, not sign-in" (`GET /admin/me` answers 403: the only call this lane makes; the page-query path is the same boundary plus `throwOnError`, proven in the spike and by the first page lane that meets a 403) |
-| Wrong-role deep link › Admin opens an admin page; Admin shell › Current section stays marked | `src/shell.test.tsx` › "admin opens an admin page" |
+| Wrong-role deep link › Admin opens an admin page; Admin shell › Current section stays marked on a sub-page | `src/shell.test.tsx` › "admin opens an admin page" (one test for both scenarios, accepted at review: it asserts h1 "Stores", "Stores" `aria-current="page"` and "Dashboard" without it) |
 | Lost session › Expired session on load | `src/shell.test.tsx` › "expired session on load returns to sign-in" |
 | Lost session › Core unreachable on load | `src/shell.test.tsx` › "core unreachable on load shows a retry" (banner still present, token kept) |
-| Sign-out › Sign out ends the session | `src/shell.test.tsx` › "sign out ends the session" |
+| Sign-out › Sign out ends the session | `src/shell.test.tsx` › "sign out ends the session" (task 4 adds: `router.options.context.queryClient.getQueryCache().getAll()` equals `[]`; fails when `queryClient.clear()` is removed, spike) |
 | Staff sign-in › Sign-in form is labelled | `src/sign-in.test.tsx` › "sign-in form has labelled fields and one h1" |
 | Staff sign-in › Empty fields are flagged | `src/sign-in.test.tsx` › "empty fields are flagged without a request" (`toHaveAccessibleDescription`) |
 | Sign-in errors › Wrong credentials or inactive staff, Rate limited, Any other error, Core unreachable | `src/sign-in.test.tsx` › `test.each` "%s shows an error banner" with rows "wrong credentials" (401), "rate limited" (429), "any other error" (500 `internal`), "network error" (handler returns `Promise.reject(new TypeError('Failed to fetch'))`); each asserts the alert text and `getToken()` null |
 | Sign-in errors › Field validation from core | `src/sign-in.test.tsx` › "validation error is shown on its field" |
 | Staff sign-in › Submit disabled while pending | `src/sign-in.test.tsx` › "submit is disabled while signing in" (handler returns a promise released by the test) |
 | Staff sign-in › Return to the page after sign-in | `src/sign-in.test.tsx` › "success stores the token and returns to the redirect" (`/sign-in?redirect=%2Fstock` → h1 Stock, path `/stock`, storage `tok`, zero `/admin/me` calls) |
-| Staff sign-in › Outside redirect ignored | `src/sign-in.test.tsx` › "an outside redirect is ignored" |
+| Staff sign-in › Outside redirect ignored | `src/sign-in.test.tsx` › "an outside redirect is ignored" (task 4 turns it into `test.each` over `%2F%2Fevil.example` and `%2F%5Cevil.example`, keeping the name with a `%s` suffix: "an outside redirect is ignored: %s") |
 | Served under /admin/ › Built app opens under the prefix; Sign-out › Sign in, dashboard, sign out against core; End-to-end suite › Smoke pages pass axe, Suite seeds its own data | `e2e/auth.spec.ts` › "admin signs in, reloads and signs out" |
 | Sign-in errors › Wrong credentials or inactive staff (against core) | `e2e/auth.spec.ts` › "wrong password shows the error" |
 | Smoke pages pass axe (not found); Preview proxies to core | `e2e/smoke.spec.ts` › "not found passes axe", "preview proxies to core" (unchanged) |
@@ -596,6 +601,7 @@ export default function globalSetup() {
 - Admin-only rule is a folder (`_admin/`), not per-route metadata. Ceiling: a third role with a different section set needs a role list per section in `nav.ts` and one more pathless layout.
 - Placeholders are a `PageHeader` only. Ceiling: replaced by the page lanes; no behaviour depends on their content.
 - The signed-in visitor can still open `/sign-in`. Ceiling: harmless; redirect it when someone asks.
+- The retry banner (core unreachable on load) and the not-found page for a 403 on `/admin/me` show no Sign out and no nav: there is no `_staff` match, so the shell has no staff member. Spec-conformant; the way out is "Try again", "Go to Dashboard" or a reload. Ceiling: add a Sign out to `RouteError` when someone gets stuck there.
 - Store-staff cases are Vitest only (D22). Ceiling: an e2e for store staff lands with the seed's store staff (core-P2-L2) in a later admin lane.
 
 ## Risks / Trade-offs
@@ -605,6 +611,10 @@ export default function globalSetup() {
 - [Playwright starts the `webServer`s before `globalSetup` (plugin setup runs first; read in playwright 1.64.0 `lib/runner/index.js` `createGlobalSetupTasks`)] → core does not need the seed to start, and the seed runs before any test. core-P2-L1's `seed.Reset` is one transaction (truncate, insert), safe while core runs.
 - [Web's cross-app e2e (web-P2-L5) drives this sign-in page] → its labels, button name and redirect behaviour are in the spec; changing them is a spec change.
 - [A later page needs the staff member] → `Route.useRouteContext()` under `_staff` gives `staff`; no new store.
+
+### Acceptance notes (review of task 2, 2026-10-12)
+- The "Sign out" `secondary` button on the brand band has not been contrast-checked in this app; task 4's axe run on the Dashboard decides it (web's header button with the same recipe passed).
+- A sign-out POST answered 401 (session already dead) runs the 401 rule (clear, invalidate) and then `navigate('/sign-in')`; both end on `/sign-in` with no `redirect`. Unit-tested only for 204; the manager's Chrome walk-through should sign out after deleting the session row or waiting out an expired token.
 
 ## Migration Plan
 None: no data. Signed-out users of the Phase 1 shell now see the sign-in page at `/admin/`.

@@ -32,13 +32,26 @@ Failing tests: `src/api.test.ts` › "a 401 to a signed-out request keeps a sess
 - [x] 3.3 Tests committed red (`test: staff sign-in form states`); Vitest shows them failing against the stub
 - [x] 3.4 The form per design.md (`feat: staff sign-in form`); every gate green
 
-## 4. Sign-in e2e against core
-Scope: `apps/admin/playwright.config.ts`, `apps/admin/e2e/global-setup.ts`, `apps/admin/e2e/auth.spec.ts`, `apps/admin/e2e/smoke.spec.ts`, this file's checkboxes, the worker's lane log.
-Waits on: core-P2-L1 on main with `seed-demo --reset` creating `admin@shopperstop.local` / `admin12345` (D22).
-Scenarios: Served under /admin/ › Built app opens under the prefix; Sign-out › Sign in, dashboard, sign out against core; End-to-end suite with axe › Smoke pages pass axe, Suite seeds its own data; Sign-in errors › Wrong credentials or inactive staff (against core).
-Failing tests: `e2e/auth.spec.ts` › "admin signs in, reloads and signs out", "wrong password shows the error" (red if run before the global setup exists against an unseeded e2e database; otherwise the commit order is still `test:` first, with the red run recorded in the lane log or the reason it was green).
-- [ ] 4.1 Tests committed (`test: admin sign-in flow against core with axe`): `e2e/auth.spec.ts` per design.md, and "dashboard passes axe" removed from `e2e/smoke.spec.ts`; run against an e2e database freshly reset by the manager or with the seed absent, and record the result
-- [ ] 4.2 Global setup (`feat: admin e2e seeds its own data`): `e2e/global-setup.ts` and `globalSetup` in `playwright.config.ts` per design.md; with the `make e2e` environment exported, `CI=1 npm run e2e --workspace apps/admin` passes (4 tests: 2 auth, 2 smoke) after `npm run build --workspace packages/ui` and `--workspace apps/admin`
+## 4. Review follow-ups and sign-in e2e against core
+Scope: `apps/admin/src/shell.test.tsx`, `src/sign-in.test.tsx`, `src/routes/sign-in.tsx`, `src/routes/__root.tsx`, `src/routeTree.gen.ts` (must not change), `apps/admin/playwright.config.ts`, `apps/admin/e2e/global-setup.ts` (new), `apps/admin/e2e/auth.spec.ts` (new), `apps/admin/e2e/smoke.spec.ts`, this file's checkboxes, the worker's lane log.
+Waits on: core-P2-L1 on main (done, ba69715) and, for 4.4 and 4.5 only, the e2e slot the manager holds (one `make e2e` at a time).
+Scenarios:
+- Unit follow-ups from the task 2 and 3 reviews: Sign-out › Sign out ends the session (amended: no cached core answer remains); Staff sign-in › Outside redirect ignored (amended: backslash form); Admin shell › Current section stays marked on a sub-page (refactor guard).
+- e2e: Served under /admin/ › Built app opens under the prefix; Sign-out › Sign in, dashboard, sign out against core; End-to-end suite with axe › Smoke pages pass axe, Suite seeds its own data; Sign-in errors › Wrong credentials or inactive staff (against core).
+Failing tests:
+- `src/sign-in.test.tsx` › "an outside redirect is ignored: %s": the `%2F%5Cevil.example` row is red.
+- `src/shell.test.tsx` › "sign out ends the session" gains a cache assertion. It passes against the current code because it guards the existing `queryClient.clear()`; record in the lane log that removing `clear()` turns it red, then restore.
+- `e2e/auth.spec.ts` › "admin signs in, reloads and signs out" and "wrong password shows the error".
+- [ ] 4.1 Unit tests committed (`test: backslash redirect ignored, sign-out drops cached data`):
+  - "an outside redirect is ignored" becomes `test.each([['%2F%2Fevil.example'], ['%2F%5Cevil.example']])('an outside redirect is ignored: %s', ...)`, with the old body using the row as the `redirect` value.
+  - "sign out ends the session" gets `expect(router.options.context.queryClient.getQueryCache().getAll()).toEqual([])` as its last line. It checks the whole cache, not only `['admin','me']`, so the page lanes' cached data is covered too.
+  - Vitest shows only the backslash row failing.
+- [ ] 4.2 `safeRedirect` per design.md (`fix: reject a backslash redirect`): `typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : undefined`, with the comment as in design.md. Vitest 31 passed; every unit gate green.
+- [ ] 4.3 Drop `activeOptions={{ exact: link.to === '/' }}` from the nav `Link` in `__root.tsx` (`refactor: nav links use the router's default active match`). TanStack's default already matches `/` exactly; "admin opens an admin page" guards it. Vitest 31 passed; every unit gate green.
+- [ ] 4.4 e2e tests committed (`test: admin sign-in flow against core with axe`): `e2e/auth.spec.ts` per design.md "End-to-end", and "dashboard passes axe" deleted from `e2e/smoke.spec.ts`. Run once before the global setup exists, against an e2e database the seed has not reached, and record the result; if the database is already seeded and the run is green, record that and why.
+- [ ] 4.5 Global setup (`feat: admin e2e seeds its own data`): `e2e/global-setup.ts` per design.md and `globalSetup: './e2e/global-setup.ts'` in `playwright.config.ts`. The setup runs core's e2e seed command (core-P2-L1 lane log; it is what `make e2e` runs), the two `go run ./cmd/core-admin` commands, in `services/core` with the environment Playwright was given:
+  `cd services/core && SHOPPERSTOP_CORE_DATABASE_URL='postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_e2e?sslmode=disable' SHOPPERSTOP_CORE_ADDR=':18080' SHOPPERSTOP_CORE_SESSION_PEPPER='e2e-pepper-e2e-pepper-e2e-pepper-00' SHOPPERSTOP_CORE_FILES_DIR="$PWD/data/e2e-files" SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174' sh -c 'go run ./cmd/core-admin migrate && go run ./cmd/core-admin seed-demo --reset'`
+  Then, with the same five `SHOPPERSTOP_CORE_*` variables exported and after `npm run build --workspace packages/ui` and `npm run build --workspace apps/admin`, `CI=1 npm run e2e --workspace apps/admin` gives **4 passed**: auth "admin signs in, reloads and signs out" and "wrong password shows the error"; smoke "not found passes axe" and "preview proxies to core".
 
 ## Workflow follow-up
 - Team lead runs `/opsx:verify admin-auth-nav` after task 4 lands: every scenario mapped in design.md "Tests" has a passing test, every task ticked, nothing extra in `git diff origin/main...HEAD`.
