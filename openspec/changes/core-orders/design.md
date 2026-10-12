@@ -23,7 +23,7 @@ migrations/0006_orders.sql                 schema below, verbatim
 sqlc.yaml                                  one entry appended (below)
 queries/order.sql                          verbatim below
 queries/address.sql                        AddressByID appended (below)
-internal/order/db/*, internal/address/db/* sqlc output, never hand-edited
+internal/order/db/*, internal/*/db/*      sqlc output, never hand-edited (every package's models.go gains the three tables)
 internal/order/order.go                    Order, Item, Event, Address, Actor, scope, views, newNumber
 internal/order/place.go                    Place
 internal/order/status.go                   next, allowed, Transition, Today
