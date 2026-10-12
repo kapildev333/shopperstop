@@ -3,7 +3,7 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-admin-P2-L2 landed (#91). admin-P2-L3 `admin-catalog`: team lead designing against the admin-stores base (core-P2-L3 on main); workers start after the lane is rebased onto main. admin-P2-L4 `admin-stock` waits on core-P2-L4. No `make e2e` here right now.
+Paused 2026-10-12 (owner stopped for the day). Resume at: `/manage admin`, then rebase `.worktrees/admin-P2-L3` (branch `lane/admin-P2-L3-admin-catalog`, unpushed; proposal committed by its team lead, see `.claude/lanes/admin-P2-L3.md`) onto origin/main, run task 0 of `admin-catalog` against the merged admin-stores base and `core.d.ts`, send the change to the orchestrator under D13, then workers. admin-P2-L4 `admin-stock` waits on core-P2-L4 on main. No `make e2e` running; nothing on 18080/15174.
 
 ## Lanes
 | Lane | Task | Scope | Status |
