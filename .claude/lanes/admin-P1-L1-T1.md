@@ -11,12 +11,12 @@ Tasks 1.1 to 1.3 landed (scaffold, red tests, shell and dashboard placeholder); 
 ## Blockers
 
 ## Red output (commit 2)
-Vitest (\`npm run test --workspace apps/admin -- --run\`): 2 failed | 1 passed (3)
+Vitest (`npm run test --workspace apps/admin -- --run`): 2 failed | 1 passed (3)
 - FAIL src/shell.test.tsx > dashboard renders in the shell: TestingLibraryElementError: Unable to find role="heading" and name "Dashboard" (body renders an empty div)
 - FAIL src/shell.test.tsx > unknown path: Unable to find role="heading" and name "Page not found" (router default text "Not Found")
 - PASS src/no-literal-colors.test.ts > no literal colours in src
 
-Playwright (\`CI=1 npm run e2e --workspace apps/admin\`): 2 failed, 1 passed (13.7s)
+Playwright (`CI=1 npm run e2e --workspace apps/admin`): 2 failed, 1 passed (13.7s)
 - FAIL e2e/smoke.spec.ts:4 dashboard passes axe: getByRole('heading', { name: 'Dashboard', level: 1 }) element(s) not found
 - FAIL e2e/smoke.spec.ts:14 not found passes axe: getByRole('heading', { name: 'Page not found', level: 1 }) element(s) not found
 - PASS e2e/smoke.spec.ts:24 preview proxies to core
