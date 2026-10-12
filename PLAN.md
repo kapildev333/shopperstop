@@ -97,3 +97,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-12: core-accounts-auth proposed, worker 1 running; platform unblocked its final gate (#58: Postman folders test by tags, sqlc pin); D23.
 - 2026-10-12: core L1 tasks 1 to 5 of 10; L2, L3, L4 proposed; D24; Postman environment ids for D20: storeId 00000000-0000-4000-8000-000000000401, productId ...0601 (platform chore after the seed lanes land).
 - 2026-10-12: core-P2-L1 merged (#63, archived #64): auth, accounts, addresses, staff users, bearer security; admin-P2-L1 workers started; web-P2-L2 T2 running. Postman env ids so far: storeId ...0401, productId ...0601, addressId ...0301.
+- 2026-10-12: web-P2-L2 customer accounts merged (#68, archived #69); admin-P2-L1 at its walk-through and PR; core L2 and L3 building. web-P2-L1 (browsing) team lead proposing against core L2 and L4 designs.
