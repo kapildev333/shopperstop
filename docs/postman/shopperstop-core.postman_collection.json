@@ -1,0 +1,191 @@
+{
+  "item": [
+    {
+      "name": "platform",
+      "description": "Service health: liveness and readiness.",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "name": "Liveness",
+            "description": {
+              "content": "Answers 200 whenever the process is up. Does not touch the database.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "healthz"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The process is up.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "healthz"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"ok\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "name": "Readiness",
+            "description": {
+              "content": "Answers 200 when the database answers a ping within 2 seconds. Answers 503 with code internal otherwise.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "readyz"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The database answers.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "readyz"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"ok\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The database did not answer within 2 seconds.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "readyz"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"database not ready\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "info": {
+    "name": "ShopperStop core API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": {
+      "content": "The core service: catalogue, carts, orders and accounts for the ShopperStop storefront and admin panel. Every error is the envelope {\"error\": {code, message, field?}}.",
+      "type": "text/plain"
+    }
+  }
+}
