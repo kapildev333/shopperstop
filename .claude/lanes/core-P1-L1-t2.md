@@ -4,6 +4,7 @@ Status: done
 Done: tasks 2.1 to 2.4 ticked, four commits (test, feat, test, feat), gates green. Awaiting reviewer.
 ## Found
 - Commits on `lane/core-P1-L1-core-service`: `7e3c329` test: request body limits and error envelope; `c18185a` feat: httpx JSON read and write, error envelope; `d2f95aa` test: router errors, request log and CORS; `ae08f07` feat: httpx router, request log, CORS.
+- Review fixes: `875d707` test: 404 carries request id and CORS headers; then `fix: httpx re-panics ErrAbortHandler, Vary Origin on every response`. Added `TestAbortHandlerPropagates` (not in the coordinator list) so the re-panic is test-first. Gates re-run green.
 - `httpx` exports: `Error` (envelope body, `Status` not serialised), `WriteJSON`, `WriteError`, `ReadJSON`, `RequestID(ctx)`, `NewRouter(origins []string) chi.Router`. `NewRouter` expects the caller to register routes flat with full paths.
 - `RequestID` and its context key live in `errors.go`, not `router.go`, because `WriteError` needs them in commit 2 and the middleware that sets them lands in commit 4.
 - Panics are logged as `panic` with `requestId` and `stack`, then answered 500 `internal`; `route` in the request line is the chi route pattern, empty for an unmatched path.
