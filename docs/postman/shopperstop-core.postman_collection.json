@@ -3763,6 +3763,328 @@
           }
         }
       ]
+    },
+    {
+      "name": "serviceability",
+      "description": "Which store delivers to a pincode, and its public details.",
+      "item": [
+        {
+          "name": "Find the store that delivers to a pincode",
+          "request": {
+            "name": "Find the store that delivers to a pincode",
+            "description": {
+              "content": "Public, no session. Answers the one store whose service areas hold the pincode, whether the store is open or closed; check isOpen. A pincode no store serves answers 404 not_serviceable. A missing pincode, or one that is not six digits with a first digit from 1 to 9, answers 400 naming pincode.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "serviceability"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Six-digit pincode, first digit 1 to 9.",
+                    "type": "text/plain"
+                  },
+                  "key": "pincode",
+                  "value": "560034"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The store that delivers to the pincode, open or closed.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "serviceability"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Six-digit pincode, first digit 1 to 9.",
+                        "type": "text/plain"
+                      },
+                      "key": "pincode",
+                      "value": "560034"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"store\": {\n    \"id\": \"00000000-0000-4000-8000-000000000401\",\n    \"name\": \"Koramangala\",\n    \"isOpen\": true,\n    \"deliveryFeeCents\": 2500,\n    \"freeDeliveryAboveCents\": 19900,\n    \"minOrderCents\": 9900,\n    \"promisedMinutes\": 10\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The pincode is missing or is not six digits starting from 1 to 9.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "serviceability"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Six-digit pincode, first digit 1 to 9.",
+                        "type": "text/plain"
+                      },
+                      "key": "pincode",
+                      "value": "560034"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"pincode must be 6 digits\",\n    \"field\": \"pincode\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No store serves the pincode.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "serviceability"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Six-digit pincode, first digit 1 to 9.",
+                        "type": "text/plain"
+                      },
+                      "key": "pincode",
+                      "value": "560034"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_serviceable\",\n    \"message\": \"we do not deliver to this pincode yet\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Get a store's public details",
+          "request": {
+            "name": "Get a store's public details",
+            "description": {
+              "content": "Public, no session. The fields checkout shows, open or closed; the address and pincode stay admin-only. An id that is not a store, or not a uuid, answers 404 not_found.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "stores",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The public store.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
     }
   ],
   "event": [],

@@ -22,6 +22,10 @@
     {
       "name": "admin-staff",
       "description": "Staff sign-in, sign-out and the signed-in staff user for the admin panel."
+    },
+    {
+      "name": "serviceability",
+      "description": "Which store delivers to a pincode, and its public details."
     }
   ],
   "paths": {
@@ -1338,6 +1342,145 @@
           }
         }
       }
+    },
+    "/serviceability": {
+      "get": {
+        "operationId": "getServiceability",
+        "summary": "Find the store that delivers to a pincode",
+        "description": "Public, no session. Answers the one store whose service areas hold the pincode, whether the store is open or closed; check isOpen. A pincode no store serves answers 404 not_serviceable. A missing pincode, or one that is not six digits with a first digit from 1 to 9, answers 400 naming pincode.",
+        "tags": [
+          "serviceability"
+        ],
+        "parameters": [
+          {
+            "name": "pincode",
+            "in": "query",
+            "required": true,
+            "description": "Six-digit pincode, first digit 1 to 9.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{5}$"
+            },
+            "example": "560034"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The store that delivers to the pincode, open or closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Serviceability"
+                },
+                "example": {
+                  "store": {
+                    "id": "00000000-0000-4000-8000-000000000401",
+                    "name": "Koramangala",
+                    "isOpen": true,
+                    "deliveryFeeCents": 2500,
+                    "freeDeliveryAboveCents": 19900,
+                    "minOrderCents": 9900,
+                    "promisedMinutes": 10
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The pincode is missing or is not six digits starting from 1 to 9.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "pincode must be 6 digits",
+                    "field": "pincode"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store serves the pincode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_serviceable",
+                    "message": "we do not deliver to this pincode yet"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stores/{id}": {
+      "get": {
+        "operationId": "getStore",
+        "summary": "Get a store's public details",
+        "description": "Public, no session. The fields checkout shows, open or closed; the address and pincode stay admin-only. An id that is not a store, or not a uuid, answers 404 not_found.",
+        "tags": [
+          "serviceability"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The public store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Store"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000401",
+                  "name": "Koramangala",
+                  "isOpen": true,
+                  "deliveryFeeCents": 2500,
+                  "freeDeliveryAboveCents": 19900,
+                  "minOrderCents": 9900,
+                  "promisedMinutes": 10
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1752,6 +1895,68 @@
             "description": "Every staff user, not just this page."
           }
         }
+      },
+      "Store": {
+        "type": "object",
+        "description": "The public view of a store: what checkout shows. Open or closed.",
+        "required": [
+          "id",
+          "name",
+          "isOpen",
+          "deliveryFeeCents",
+          "freeDeliveryAboveCents",
+          "minOrderCents",
+          "promisedMinutes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isOpen": {
+            "type": "boolean",
+            "description": "false when the store is closed; it still appears in serviceability answers."
+          },
+          "deliveryFeeCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Delivery fee in paise (INR cents)."
+          },
+          "freeDeliveryAboveCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Delivery is free at or above this subtotal; 0 means always free."
+          },
+          "minOrderCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Smallest subtotal the store accepts; 0 means no minimum."
+          },
+          "promisedMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Promised delivery time in minutes."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Serviceability": {
+        "type": "object",
+        "required": [
+          "store"
+        ],
+        "properties": {
+          "store": {
+            "$ref": "#/components/schemas/Store"
+          }
+        },
+        "additionalProperties": false
       }
     }
   }

@@ -13,6 +13,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
+	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
 // New returns the core router. Routes are registered with their full path
@@ -21,6 +22,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/core/v1/healthz", healthz)
 	r.Get("/api/core/v1/readyz", readyz(pool))
+	r.Get("/api/core/v1/serviceability", store.Serviceability(pool))
+	r.Get("/api/core/v1/stores/{id}", store.PublicGet(pool))
 	r.Post("/api/core/v1/auth/register", a.Register)
 	r.Post("/api/core/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireCustomer).Post("/api/core/v1/auth/sign-out", a.SignOut)

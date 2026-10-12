@@ -280,6 +280,46 @@ export interface paths {
         patch: operations["patchStaffUser"];
         trace?: never;
     };
+    "/serviceability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find the store that delivers to a pincode
+         * @description Public, no session. Answers the one store whose service areas hold the pincode, whether the store is open or closed; check isOpen. A pincode no store serves answers 404 not_serviceable. A missing pincode, or one that is not six digits with a first digit from 1 to 9, answers 400 naming pincode.
+         */
+        get: operations["getServiceability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a store's public details
+         * @description Public, no session. The fields checkout shows, open or closed; the address and pincode stay admin-only. An id that is not a store, or not a uuid, answers 404 not_found.
+         */
+        get: operations["getStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -416,6 +456,34 @@ export interface components {
             pageSize: number;
             /** @description Every staff user, not just this page. */
             total: number;
+        };
+        /** @description The public view of a store: what checkout shows. Open or closed. */
+        Store: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description false when the store is closed; it still appears in serviceability answers. */
+            isOpen: boolean;
+            /**
+             * Format: int64
+             * @description Delivery fee in paise (INR cents).
+             */
+            deliveryFeeCents: number;
+            /**
+             * Format: int64
+             * @description Delivery is free at or above this subtotal; 0 means always free.
+             */
+            freeDeliveryAboveCents: number;
+            /**
+             * Format: int64
+             * @description Smallest subtotal the store accepts; 0 means no minimum.
+             */
+            minOrderCents: number;
+            /** @description Promised delivery time in minutes. */
+            promisedMinutes: number;
+        };
+        Serviceability: {
+            store: components["schemas"]["Store"];
         };
     };
     responses: never;
@@ -1643,6 +1711,134 @@ export interface operations {
                 };
             };
             /** @description No staff user has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getServiceability: {
+        parameters: {
+            query: {
+                /**
+                 * @description Six-digit pincode, first digit 1 to 9.
+                 * @example 560034
+                 */
+                pincode: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The store that delivers to the pincode, open or closed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "store": {
+                     *         "id": "00000000-0000-4000-8000-000000000401",
+                     *         "name": "Koramangala",
+                     *         "isOpen": true,
+                     *         "deliveryFeeCents": 2500,
+                     *         "freeDeliveryAboveCents": 19900,
+                     *         "minOrderCents": 9900,
+                     *         "promisedMinutes": 10
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Serviceability"];
+                };
+            };
+            /** @description The pincode is missing or is not six digits starting from 1 to 9. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "pincode must be 6 digits",
+                     *         "field": "pincode"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store serves the pincode. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_serviceable",
+                     *         "message": "we do not deliver to this pincode yet"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The public store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000401",
+                     *       "name": "Koramangala",
+                     *       "isOpen": true,
+                     *       "deliveryFeeCents": 2500,
+                     *       "freeDeliveryAboveCents": 19900,
+                     *       "minOrderCents": 9900,
+                     *       "promisedMinutes": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Store"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
             404: {
                 headers: {
                     [name: string]: unknown;
