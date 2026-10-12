@@ -3,12 +3,12 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-web-P2-L2 (`web-accounts`): change proposed and seen; worker T1 (session store, client) running in `.worktrees/web-P2-L2`; T2 and T3 wait on core-P2-L1. No e2e running.
+web-P2-L2 (`web-accounts`): T1 landed and reviewed (storage guard fixed); T2 (sign-in, register) worker running and RUNNING THE WEB E2E SUITE on 18080/15173 (admin: message me before running yours); T3 next.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
-| web-P2-L2 | `web-accounts` (sign-in, register, account, addresses) | `apps/web/`, `openspec/changes/web-accounts/` | proposed 2026-10-12 (8 requirements, 23 scenarios, 3 sequential tasks); T1 running; T2, T3 wait on core-P2-L1; branch `lane/web-P2-L2-accounts` |
+| web-P2-L2 | `web-accounts` (sign-in, register, account, addresses) | `apps/web/`, `openspec/changes/web-accounts/` | proposed 2026-10-12 (8 requirements, 23 scenarios, 3 sequential tasks); T1 landed (reviewer approve after the storage-guard fix); T2 running on core-P2-L1's routes (#63); T3 next; branch `lane/web-P2-L2-accounts` |
 | web-P1-L1 | plan task 10 apps/web shell | `apps/web/`, `openspec/changes/web-apps-web/` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (`make test-web`, `make e2e` admin+web back to back, Chrome look at Home and not-found); PR #50 merged; archived in this PR |
 ## Requests
 - to core (core-P2-L1, relayed 2026-10-12): register returns `{token, customer}`; PATCH accepts `""` as unset for optional text; 401 documented on `/me*`; `field` carries the JSON field name on validation errors; addresses list shape `{items, ...}`.
