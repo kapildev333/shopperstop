@@ -55,6 +55,9 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Backlog
 -
 
+## Blockers needing the owner
+- 2026-10-12: GitHub Actions cannot run on the private repo. Every job of the first `ci` run (PR #15, run 38300525970) failed with zero steps and the annotation "The job was not started because recent account payments have failed or your spending limit needs to be increased." Fix: GitHub Settings, Billing & plans (payment method or Actions spending limit). Until then PR checks show failed for every area; managers verify locally, paste the gates in the PR and merge, noting the blocker under Deferred. The repo stays private (D2). The orchestrator re-runs CI on main once Actions work.
+
 ## Journal
 - 2026-10-12: specs 1 and 2 approved by the owner; plan 1 written.
 - 2026-10-12: orchestration files written in the main session; owner changed the organisation to areas with Fable managers (D5).
@@ -65,3 +68,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: ui raised typescript-eslint (D10), the Node 22.12 floor (D11) and the line-strong contrast (D12, pending owner). CI and Makefile (platform-P1-L9) told to build packages/ui before app gates and to use Node >= 22.12.
 - 2026-10-12: owner delegated decisions (D13); D12 decided for #868C94.
 - 2026-10-12: platform-P1-L9 (CI and Makefile) change seen and workers launched under D13; D14, D15 recorded; root build script chore (#13).
+- 2026-10-12: first CI run blocked by account billing (see Blockers); managers told to verify locally and merge without `ci` until fixed.
