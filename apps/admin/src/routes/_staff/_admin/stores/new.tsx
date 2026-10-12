@@ -1,5 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { PageHeader } from '@shopperstop/ui'
+import { Card, PageHeader } from '@shopperstop/ui'
+import { StoreForm } from '../../../../store-form'
 
-// Placeholder for admin-P2-L2's create page; task 2 replaces it with the store form.
-export const Route = createFileRoute('/_staff/_admin/stores/new')({ component: () => <PageHeader title="New store" /> })
+function NewStore() {
+  return (
+    <div className="flex max-w-2xl flex-col gap-6">
+      <PageHeader title="New store" />
+      <Card className="p-6">
+        <StoreForm />
+      </Card>
+    </div>
+  )
+}
+
+export const Route = createFileRoute('/_staff/_admin/stores/new')({ component: NewStore })
