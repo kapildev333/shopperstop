@@ -15,7 +15,11 @@ const rows: Line[] = [
 
 test('rows and headers render', () => {
   render(<Table columns={columns} rows={rows} rowKey={(r) => r.id} />)
-  expect(screen.getAllByRole('columnheader')).toHaveLength(2)
+  const headers = screen.getAllByRole('columnheader')
+  expect(headers).toHaveLength(2)
+  for (const th of headers) {
+    expect(th).toHaveAttribute('scope', 'col')
+  }
   const body = screen.getByRole('table').querySelector('tbody')!
   expect(within(body as HTMLElement).getAllByRole('row')).toHaveLength(2)
   expect(screen.getByRole('cell', { name: 'Milk' })).toBeInTheDocument()
@@ -24,9 +28,15 @@ test('rows and headers render', () => {
 
 test('stack labels cells', () => {
   const { unmount } = render(<Table columns={columns} rows={rows} rowKey={(r) => r.id} stack />)
+  const table = screen.getByRole('table')
+  expect(table).toHaveClass('max-sm:block')
+  expect(table.querySelector('thead')).toHaveClass('max-sm:sr-only')
   const stacked = screen.getAllByRole('cell')
   expect(stacked[0]).toHaveTextContent('Product')
   expect(stacked[1]).toHaveTextContent('Quantity')
+  for (const cell of stacked) {
+    expect(cell.querySelector('span')).toHaveClass('sm:hidden')
+  }
   unmount()
 
   render(<Table columns={columns} rows={rows} rowKey={(r) => r.id} />)
