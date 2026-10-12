@@ -1,0 +1,122 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ShopperStop core API",
+    "version": "0.1.0",
+    "description": "The core service: catalogue, carts, orders and accounts for the ShopperStop storefront and admin panel. Every error is the envelope {\"error\": {code, message, field?}}."
+  },
+  "servers": [
+    {
+      "url": "/api/core/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "platform",
+      "description": "Service health: liveness and readiness."
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "getHealthz",
+        "summary": "Liveness",
+        "description": "Answers 200 whenever the process is up. Does not touch the database.",
+        "tags": ["platform"],
+        "responses": {
+          "200": {
+            "description": "The process is up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "getReadyz",
+        "summary": "Readiness",
+        "description": "Answers 200 when the database answers a ping within 2 seconds. Answers 503 with code internal otherwise.",
+        "tags": ["platform"],
+        "responses": {
+          "200": {
+            "description": "The database answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The database did not answer within 2 seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "database not ready"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["validation", "unauthorized", "forbidden", "not_found", "conflict", "out_of_stock", "not_serviceable", "rate_limited", "internal"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
