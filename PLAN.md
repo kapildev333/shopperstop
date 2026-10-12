@@ -42,24 +42,31 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 ## Areas
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
-| platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | running (orchestrator session, D9) |
+| platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | Phase 1 done; orchestrator session (D9) |
 | core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | running (session shopperstop-ed); core-P1-L1 team lead on change core-service-foundation (tasks 5-8); unblocked by #4 |
 | ui | `packages/ui/` | platform (`package.json` workspaces) | ui-P1-L1 landed #20; archive and plan PRs follow; no further Phase 1 tasks |
 | web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | acting manager: the orchestrator session (D21); web-P1-L1 starting |
 | admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | admin-P1-L1 done #41; idle until the Phase 2 package |
 
-## Phase 1 - Foundation and design system
+## Phase 1 - Foundation and design system (closed 2026-10-12, tag v0.1.0)
 | Area | Plan tasks | Status |
 |------|-----------|--------|
 | platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | all done: 1, 2 (orchestrator); 3 #3; 4 #4; 12 #36; 13 #15 (CI gate open until Actions billing is fixed, change `platform-ci-makefile` stays unarchived until then); 15 #42; docs/figma.md #25 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
 | ui | 9 packages/ui | done #20 (ui-P1-L1) and #33 (ui-P1-L2 api types, archived #34) |
-| web | 10 apps/web | web-P1-L1 running from the orchestrator session (D21) |
+| web | 10 apps/web | done #50 (web-P1-L1, archived #51) |
 | admin | 11 apps/admin | done #41 (admin-P1-L1, served under `/admin/`) |
 | orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#25) |
 
+## Phase 2 - Core service and apps (Spec 2)
+Work packages are written into `.claude/areas/<area>.md`; order: core (auth, serviceability, catalog, stock, accounts, cart, orders, admin routes, seed-demo with fixed ids per D20), then ui (api types per D19, any new components), then admin and web pages. Each area's team leads turn the package into OpenSpec changes; capabilities serviceability, catalog, stock, accounts, cart, orders, admin-stores, admin-catalog, admin-staff are seeded by their first change (D4).
+
 ## Backlog
--
+- Makefile: `make dev` runs `npm ci` when `node_modules` is absent (L11 request).
+- Pin sqlc when `services/core/sqlc.yaml` lands (L9).
+- Lane guard hook: match `git merge` on a word boundary so `merge-base` is allowed to reviewers.
+- Figma: Orders board column badges show counts; IconButton icons; Code Connect (next MCP call budget).
+- Running `make db` from a second checkout (different compose file path) recreates `shopperstop-postgres-1`; the data volume persists. Use one checkout for `make db`.
 
 ## Blockers needing the owner
 - 2026-10-12: `apps/web` has no manager session. Start one in a new terminal at the repo root: `claude --model claude-fable-5-1`, then `/manage web`. Its work package is `.claude/areas/web.md` (plan task 10, the e2e contract under Requests).
@@ -83,3 +90,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: Postman generator landed (#36) and archived (#38); ui api types landed (#33); README and CLAUDE.md in review fixes.
 - 2026-10-12: README and CLAUDE.md landed (#42, archived #43). Platform Phase 1 complete except the first green CI run. Phase 1 close waits on apps/admin (lane running) and apps/web (no manager yet).
 - 2026-10-12: admin shell landed (#41). D21: orchestrator runs the web lanes. CI still blocked by billing (latest runs start no steps).
+- 2026-10-12: web shell landed (#50). Phase 1 closed: `make test`, `make e2e`, `openspec validate --all --strict`, `make postman` clean on main, `make dev` on a fresh clone reached core, web and admin; tagged v0.1.0 with release notes. CI remains blocked by billing.
