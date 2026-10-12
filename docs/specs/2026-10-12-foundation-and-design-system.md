@@ -38,7 +38,9 @@ shopperstop/
   docs/plans/             implementation plans, one per spec, same file name; each task is one lane
   docs/design/            designer-lane output, <LANE-ID>.md
   docs/figma.md           link to the Figma file and the page map (§9)
-  .claude/                agents, commands/orchestrate.md, lanes/
+  docs/postman/           Postman collection and environment generated from openapi.json (§11)
+  openspec/               OpenSpec root: specs/ (the living spec per capability), changes/ (one per feature), changes/archive/ (§5.1)
+  .claude/                agents (manager, worker, reviewer), commands/orchestrate.md, opsx commands installed by openspec init, lanes/
   .github/                workflows/ci.yml, pull_request_template.md, dependabot.yml
   PLAN.md                 orchestration plan, orchestrator-only
   Makefile                dev, db, seed, core, web, admin, test, e2e, gen, prod-local
@@ -71,20 +73,34 @@ Naming, one convention per layer:
 
 ## 5. Orchestration workflow
 
-Copied from UniCourse with names changed, so the behaviour the owner already knows holds here:
+The workflow is the UniCourse one with the roles the owner set on 2026-10-12: a manager owns an entire feature, workers build its tasks, a reviewer reviews in detail, and the orchestrator (the main session) dispatches and verifies.
 
 - `/orchestrate <source documents>` (`.claude/commands/orchestrate.md`): the main session is the orchestrator; it reads `PLAN.md` or proposes one and stops for discussion before launching anything.
-- Lanes are sub-agents with disjoint directory scopes, run per piece of work in the order `designer` (Opus 5.5, writes `docs/design/<LANE-ID>.md`, no product code), `worker` (Sonnet 5.5, implements the brief against that design, stops on open design choices), `reviewer` (Opus 5.5, read-only review of the landing, re-runs the gates).
+- Lanes are sub-agents with disjoint directory scopes. Per feature, in order:
+  - `manager` (Opus 5.5) owns the feature end to end: runs the OpenSpec change for it (§5.1: proposal, spec deltas, design, tasks), writes `docs/design/<LANE-ID>.md` when the change's `design.md` is not enough, cuts `tasks.md` into worker briefs (each one task, one scope, the failing test it must start from), and at the end does the feature-level acceptance against the spec deltas before the orchestrator verifies. It writes no product code. Sub-agents cannot launch sub-agents, so the orchestrator launches the workers from the manager's briefs; the manager stays available by SendMessage to answer worker questions and is re-run for acceptance.
+  - `worker` (Haiku 5.5) implements one task from its brief, test first (§5.2), inside its scope, and stops on any open design choice.
+  - `reviewer` (Sonnet 5.5) reviews every landing read-only and in detail: brief and spec delta coverage, correctness, the test-first commit order, scope creep, needless complexity; re-runs the gates itself. Findings are file:line with the failing scenario and the smallest fix.
 - Lane logs in `.claude/lanes/<LANE-ID>.md` (format in `.claude/lanes/README.md`); each lane writes only its own file.
 - Only the orchestrator edits `PLAN.md`. Lanes work only inside their brief's paths. One directory has one owner at a time; one integration suite runs at a time. The orchestrator verifies every landing itself (re-run suites, then exercise the real database, HTTP and browser) and records the evidence in the lane's status cell. The orchestrator does not write features itself while a lane could.
 - Agents never run `docker compose` or touch containers; the local Postgres is `shopperstop-postgres-1`, started by the owner or the orchestrator through `make db`.
 - A service is one directory scope. A lane that needs a change in another service reports it; the orchestrator opens a lane there.
 
+### 5.1 Spec-driven with OpenSpec
+
+Development is spec-driven with OpenSpec (`npm install -g @fission-ai/openspec@latest`, then `openspec init` in the repo with the Claude Code integration, which installs the `/opsx:*` commands under `.claude/`). The documents in `docs/specs/` are the owner-approved design briefs; the living, normative specification is `openspec/specs/`, one folder per capability (`serviceability`, `catalog`, `stock`, `accounts`, `cart`, `orders`, `admin-stores`, `admin-catalog`, `admin-staff`, `design-system`), written as requirements with `SHALL` wording and at least one `#### Scenario:` block of **WHEN** / **THEN** bullets per requirement.
+
+Every feature is one OpenSpec change (`openspec new change <name>`, or `/opsx:propose`) with `proposal.md`, `design.md`, `specs/<capability>/spec.md` deltas under `## ADDED|MODIFIED|REMOVED|RENAMED Requirements`, and `tasks.md` with checkboxes. The manager drafts them from the brainstorm spec; the orchestrator shows them to the owner before any worker starts. Workers tick `tasks.md` as they land (`/opsx:apply`); the manager's acceptance is `/opsx:verify`; the orchestrator archives with `openspec archive <name>` after the PR merges, which merges the deltas into `openspec/specs/`. `openspec validate --all --strict` runs in CI and must pass. The first change of Phase 1 seeds `openspec/specs/` from the two brainstorm specs so later changes are deltas, not rewrites.
+
+### 5.2 Test-driven development
+
+Every task is built red, green, refactor: the worker writes the failing test from the scenario in the spec delta first and commits it (`test: <scenario>`), then the smallest code that passes (`feat:` or `fix:`), then cleans up with the suite green. A commit that adds behaviour without a preceding failing test is a reviewer finding, and the reviewer checks commit order on every landing. Go tests run against the real database; web tests use Testing Library; the end-to-end scenarios in Spec 2 §13 are written before the pages they cover and fail until the pages exist. No mocks of the database or the HTTP layer; fakes only at the process boundary (clock, files, later the SMS sender).
+
 ## 6. Git and GitHub
 
-- Repository `kapildev333/shopperstop`, public, created by the orchestrator with `gh repo create` once the owner confirms the name (§13 Q1). `main` is the only long-lived branch.
+- Repository `kapildev333/shopperstop`, **private** until the owner has verified everything and says to open it, created by the orchestrator with `gh repo create --private` once the owner confirms the name (§13 Q1). `main` is the only long-lived branch.
+- Commit identity is the owner's GitHub username and GitHub noreply address (`kapildev333 <47056817+kapildev333@users.noreply.github.com>`, set in the repo's `git config`); no personal email, name, address or payment detail appears anywhere in the repository, including seed data and docs. Commits and PR descriptions carry no AI attribution or co-author lines.
 - One branch per lane, `lane/<LANE-ID>-<slug>`, in its own worktree under `.worktrees/<LANE-ID>` (gitignored). Non-lane changes use `chore/<slug>`. Lanes commit and never push; the orchestrator pushes, opens the PR from `.github/pull_request_template.md` (lane, spec section, gates pasted, reviewer verdict, deferred), waits for `ci`, squash-merges with branch deletion, removes the worktree, records the PR URL in PLAN.md.
-- `ci.yml` jobs: `core` (gofmt, `go vet`, `sqlc diff`, `go test -race` against a Postgres service created from `deploy/initdb.sql`), `web` (`npm ci`, lint, typecheck, test, build for `packages/ui`, `apps/web`, `apps/admin`), `e2e` (Playwright against a built core and both apps on scratch ports and the `_test` database). Every job no-ops with a clear message while its directory does not exist, so the required checks stay green on an empty tree. Required checks `core` and `web` with linear history, enabled as soon as the repo is public.
+- `ci.yml` jobs: `core` (gofmt, `go vet`, `sqlc diff`, `go test -race` against a Postgres service created from `deploy/initdb.sql`, then `make postman` leaves the tree clean), `web` (`npm ci`, lint, typecheck, test, build for `packages/ui`, `apps/web`, `apps/admin`), `e2e` (Playwright against a built core and both apps on scratch ports and the `_test` database), `spec` (`openspec validate --all --strict`). Every job no-ops with a clear message while its directory does not exist, so the required checks stay green on an empty tree. A private repo on a free plan has no branch protection, so the PR-only rule is enforced by the orchestrator until the repo is public; required checks `core`, `web` and `spec` with linear history are enabled then.
 - Dependabot weekly for Go modules (every `services/*`), npm (root workspace) and Actions.
 - Releases: one tag per completed phase, `v0.<phase>.<patch>`, by the orchestrator at phase close; chore PRs carry the `chore` label.
 - Not used: GitHub Projects, Issues, Wiki, Discussions. `PLAN.md` is the single plan.
@@ -163,21 +179,28 @@ Order of work: tokens and components first, built from §8 and §10; then screen
 
 A new pattern goes into `packages/ui` with a test and a Figma component, never as a one-off in an app.
 
-## 11. Gates
+## 11. API documentation: OpenAPI and Postman
 
-A PR under this spec is done when: `make test` passes on the tree; CI is green with every job either run or no-op'd with its message; `make dev` on a fresh clone reaches the three servers; the Figma file has the five pages with tokens and components complete and the Spec 2 screens drawn; `docs/figma.md` links them; `CLAUDE.md` describes the layout, conventions, orchestration and UI rules in the shape of UniCourse's.
+Every service's `openapi.json` is the contract and the documentation: every route has `summary`, `description`, tagged by capability, typed request and response schemas, every error code it can return with the envelope, and at least one request and response example. A test in the service fails when a registered route is missing from the file or the file names a route the router does not serve.
 
-## 12. Deferred, with triggers
+`make postman` (`openapi-to-postmanv2`, a dev dependency of the root workspace) generates `docs/postman/shopperstop-core.postman_collection.json` from `openapi.json`, folders by tag, every request with its example body, and an auth header that reads `{{customerToken}}` or `{{staffToken}}`. `docs/postman/local.postman_environment.json` holds `baseUrl` (`http://localhost:8080/api/core/v1`), `customerToken`, `staffToken`, `storeId`, `productId`, `addressId`, `orderId`; the sign-in requests carry a test script that stores the returned token into the matching variable, so the collection runs top to bottom against `make dev` with the demo accounts. Both files are committed; CI regenerates the collection and fails on a diff. Later services add their own collection and reuse the environment.
+
+## 12. Gates
+
+A PR under this spec is done when: `make test` passes on the tree; CI is green with every job either run or no-op'd with its message; `openspec validate --all --strict` passes and `openspec/specs/` holds the seeded capability specs; `make postman` is clean; `make dev` on a fresh clone reaches the three servers; the Figma file has the five pages with tokens and components complete and the Spec 2 screens drawn; `docs/figma.md` links them; `CLAUDE.md` describes the layout, conventions, orchestration and UI rules in the shape of UniCourse's.
+
+## 13. Deferred, with triggers
 
 - Dark mode: after the mobile app spec; tokens already allow a second value block.
 - Caddy TLS and a real deploy target: first deploy off a laptop.
 - Storybook or a docs site for `packages/ui`: when a third app consumes it.
 - Figma token sync in CI: when the design changes more often than the code.
 - Service-to-service auth and a gateway with its own code: when the rider service lands (Caddy prefix routing covers it until then).
+- Branch protection with required checks: when the repo goes public (free private repos cannot enforce it).
 
-## 13. Decisions needing the owner's call
+## 14. Decisions needing the owner's call
 
-1. Repository name and visibility: `kapildev333/shopperstop`, public (same as UniCourse)? The orchestrator does not create it until confirmed.
+1. Repository name: `kapildev333/shopperstop`, private until the owner verifies and opens it. The orchestrator does not create it until confirmed.
 2. Go module path prefix `github.com/kapildev333/shopperstop/`: follows from Q1.
 3. Currency: INR and `₹` throughout the UI (Blinkit is India-only). Change here if the demo should be CAD.
 4. The Figma file is created in the owner's connected Figma account, in Drafts unless a team or project is named.
