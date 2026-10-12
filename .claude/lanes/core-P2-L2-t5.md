@@ -17,6 +17,7 @@ Task 5 landed on `lane/core-P2-L2-stores-serviceability`: test commit `f161fa1` 
 ## Blockers
 - none
 ## Judgement calls
+- Perf (coordinator review, 2026-10-12): `hashDemo` is `sync.OnceValues(computeHashes)`, so the three demo hashes are computed once per process (the demo passwords are public constants). Gates after the change, `GOFLAGS=-count=1 make test-core`: cmd/core 1.3 s, cmd/core-admin 16.4 s, internal/app 51.2 s, auth 9.6 s, config 1.9 s, httpx 2.6 s, migrate 2.9 s, pg 2.5 s, seed 22.7 s (was 82.4 s), store 3.3 s; all ok. The seed package is still about 23 s, not the ~10 s estimated: the first call per test binary pays three cost-12 hashes under -race, and the sign-in tests pay their own.
 - `seed` package time rose from 38.6 s (L1 tail) to 82.4 s under `-race`: the store-staff hash (cost 12) runs on every reset, and the seed tests reset a dozen times. The brief said about 5 s; the real cost is about 40 s over the whole package. Ceiling: a shared cheaper hash for seed tests would need a test-only path in `seed`, which I did not add.
 - `CreateStaff` maps the FK by constraint name rather than checking `store.Get` first. Design allowed either; the FK check has no race and no extra query.
 - `TestResetTwiceLeavesDemoStores` plants a stray store (pincode 110001 with a service area) and checks that both resets remove it, so the reset-clears-stores rule has a test, not only the dev run.

@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,7 +46,10 @@ type hashes struct {
 	admin, customer, staff string
 }
 
-func hashDemo() (hashes, error) {
+// hashDemo is computed once per process: the demo passwords are public constants, so caching across resets is correct.
+var hashDemo = sync.OnceValues(computeHashes)
+
+func computeHashes() (hashes, error) {
 	admin, err := auth.HashPassword(adminPass)
 	if err != nil {
 		return hashes{}, fmt.Errorf("hash demo admin password: %w", err)
