@@ -1,8 +1,18 @@
 import { useSyncExternalStore } from 'react'
 
 const key = 'shopperstop:customer-token'
-let token: string | undefined = localStorage.getItem(key) ?? undefined
 const listeners = new Set<() => void>()
+
+// Storage can be blocked or full (privacy modes, disabled cookies); the token then lives in memory only.
+function read() {
+  try {
+    return localStorage.getItem(key) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+let token: string | undefined = read()
 
 export function getToken() {
   return token
@@ -10,9 +20,13 @@ export function getToken() {
 
 export function setToken(next: string | undefined) {
   token = next
-  if (next) localStorage.setItem(key, next)
-  else localStorage.removeItem(key)
   listeners.forEach((listener) => listener())
+  try {
+    if (next) localStorage.setItem(key, next)
+    else localStorage.removeItem(key)
+  } catch {
+    // Not persisted; the in-memory token above still applies for this page.
+  }
 }
 
 function subscribe(listener: () => void) {

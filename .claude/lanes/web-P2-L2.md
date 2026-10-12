@@ -19,6 +19,7 @@ Change `web-accounts` proposed and valid (8 ADDED requirements, 23 scenarios, 3 
   ```
 - T1 deviation: brief said workers run on current main, so `paths` has only `/healthz` and `/readyz`. `api.GET('/me')` would not type-check, so `useMe` is not in T1; it lands with the header in T3 (where `/me` is first used). `call`, `splitError`, `ApiError` are in T1 as designed; T2 consumes them.
 - T1 was started before core-P2-L1 is on main, per the orchestrator's D21 course correction; the blocker below is superseded for T1 only.
+- 2026-10-12 review fix T1 (worker, Haiku): session store read `localStorage` at load and in `setToken` without a guard; blocked or full storage threw and stopped listeners. Red: `test: session tolerates blocked storage` (b29dbc1) failed with SecurityError from `session.ts`. Fix: guarded `read()`, `setToken` sets the token and notifies before the guarded write. Token then lives in memory only when storage is blocked.
 ## Requests
 - to core (core-P2-L1, via the web area plan): (1) does `POST /auth/register` return `{token, customer}`? (design handles both); (2) accept `""` to clear `phone` and address `line2` on PATCH, omit them in responses when unset; (3) document 401 `unauthorized` on `/me*` for an expired or unknown token; (4) validation `field` uses the JSON field name.
 - to web-P2-L1 (via the manager): import `api`, `queryClient`, `call`, `splitError` from `apps/web/src/api.ts` and the session from `src/session.ts` instead of a second client.
