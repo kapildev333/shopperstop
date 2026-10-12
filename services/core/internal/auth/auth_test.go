@@ -347,6 +347,29 @@ func TestRequireAdminForbidsStoreStaff(t *testing.T) {
 	}
 }
 
+// captureRequestLog sends the default logger to a buffer for the rest of the
+// test and returns a function giving the last "request" line as a map.
+// Tests that use it must not call t.Parallel: the default logger is global.
+func captureRequestLog(t *testing.T) func() map[string]any {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	return func() map[string]any {
+		var line map[string]any
+		for _, l := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+			var m map[string]any
+			if json.Unmarshal([]byte(l), &m) == nil && m["msg"] == "request" {
+				line = m
+			}
+		}
+		if line == nil {
+			t.Fatalf("no request line in log %q", buf.String())
+		}
+		return line
+	}
+}
+
 func TestRequireCustomerLogsSubject(t *testing.T) {
 	ctx := context.Background()
 	a := New(testPool, testPepper, nil)
@@ -355,25 +378,31 @@ func TestRequireCustomerLogsSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var buf bytes.Buffer
-	prev := slog.Default()
-	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, nil)))
-	t.Cleanup(func() { slog.SetDefault(prev) })
-
+	lastLine := captureRequestLog(t)
 	if rec := get(probeRouter(a), "/probe/customer", "Bearer "+tok); rec.Code != http.StatusOK {
 		t.Fatalf("use: %d, want 200", rec.Code)
 	}
-	var line map[string]any
-	for _, l := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
-		var m map[string]any
-		if json.Unmarshal([]byte(l), &m) == nil && m["msg"] == "request" {
-			line = m
-		}
-	}
-	if line == nil {
-		t.Fatalf("no request line in log %q", buf.String())
-	}
+	line := lastLine()
 	if line["subjectType"] != "customer" || line["subjectId"] != cust.ID {
 		t.Fatalf("request line subject %v %v, want customer %s", line["subjectType"], line["subjectId"], cust.ID)
+	}
+}
+
+func TestRequireStaffLogsSubject(t *testing.T) {
+	ctx := context.Background()
+	a := New(testPool, testPepper, nil)
+	store := testStoreID
+	clerk := newStaff(t, db.StaffRoleStoreStaff, &store)
+	tok, err := a.startSession(ctx, "staff", clerk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lastLine := captureRequestLog(t)
+	if rec := get(probeRouter(a), "/probe/staff", "Bearer "+tok); rec.Code != http.StatusOK {
+		t.Fatalf("use: %d, want 200", rec.Code)
+	}
+	line := lastLine()
+	if line["subjectType"] != "staff" || line["subjectId"] != clerk.ID {
+		t.Fatalf("request line subject %v %v, want staff %s", line["subjectType"], line["subjectId"], clerk.ID)
 	}
 }
