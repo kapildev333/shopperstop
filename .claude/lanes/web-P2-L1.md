@@ -1,7 +1,7 @@
 # web-P2-L1 - web-serviceability-catalog: pincode, serviceability, Home, Category, Product, Search (team lead)
 Status: started
 ## Doing
-2026-10-12 task 1 (worker, Haiku): red tests committed; next, the feat commit.
+2026-10-12 task 1 (worker, Haiku): feat committed (pincode, store resolution, banner, store gate); gates green, task 2 next.
 Change proposed and valid (`openspec validate web-serviceability-catalog --strict`; `--all --strict` 8 passed). Waiting for core-P2-L2 on main (task 1) and core-P2-L3, core-P2-L4 on main (tasks 2 to 4); the manager launches workers.
 ## Found
 - Change: `openspec/changes/web-serviceability-catalog/` (proposal; `web-app` delta: MODIFIED "Customer site shell", 10 ADDED requirements, 30 scenarios; design with the scenario → test map; tasks 1 to 4). No `docs/design/web-P2-L1.md`: design.md is enough.
@@ -24,6 +24,13 @@ Change proposed and valid (`openspec validate web-serviceability-catalog --stric
   Test Files  4 failed (4)
        Tests  no tests
   ```
+
+  The e2e `browse.spec.ts` red run (before the feat) failed on the sheet and the pincode field, as expected: "pincode resolves against core" (`Element(s) not found` for the dialog) and "notices against core" (timeout waiting for the "Pincode" field).
+- 2026-10-12 task 1 feat (worker, Haiku): green. Vitest 11 files, 32 tests passed. `npm run typecheck`, `npm run lint`, `npm run build --workspace apps/web` clean; `routeTree.gen.ts` unchanged (no new route in task 1). `openspec validate web-serviceability-catalog --strict`: valid. e2e `CI=1 npm run e2e --workspace apps/web`: 13 passed (smoke 4, auth 3, account 4, browse 2); global setup ran migrate and `seed-demo --reset` on `shopperstop_core_e2e`; "notices against core" created "E2E Closed" (560076) through the seeded admin, since core answered 404 first.
+- Core types on main (`packages/ui/src/api/core.d.ts`) match design.md: `Store`, `Serviceability {store}`, `getServiceability` 200/400/404. No deviation.
+- Test noise: the "Not implemented: Window's scrollTo()" jsdom lines now appear more often: the router scrolls on navigation (search-from-banner and not-found tests). Not failures.
+- `SearchForm` reads `q` with a cast (`(search as { q?: unknown })`) because no route declares `q` until task 3 adds `validateSearch`; drop the cast then.
+- `useServiceability` returns `Store | null`; the 404 check is on the status, not on the `not_serviceable` code (core's 404 for the pincode is the only 404 this query can see).
 
 ## Requests
 - to core (via the web area plan): confirm generated schema names `Serviceability`, `Store`, `CategoryTree`, `CategoryNode`, `StoreProduct`, `StoreProductList`; `pageSize` default 24, max 100 on `GET /stores/{id}/products`; the 404s of `/serviceability` and `/stores/{id}/products/{slug}` documented in `openapi.json`.
