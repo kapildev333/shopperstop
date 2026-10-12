@@ -31,6 +31,7 @@ test('create a store and open it', async () => {
     ...signedIn,
     'POST /admin/stores': () => json(201, created),
     [`GET /admin/stores/${created.id}/service-areas`]: () => json(200, { pincodes: [] }),
+    [`GET /admin/stores/${created.id}`]: () => json(200, created),
   })
 
   const router = renderApp('/stores/new')
