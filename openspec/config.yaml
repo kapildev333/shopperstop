@@ -8,7 +8,7 @@ context: |
   web (apps/web/), admin (apps/admin/). A change belongs to exactly one area and is named <area>-<slug>.
   Stack and naming rules are in CLAUDE.md; a change never introduces a dependency outside CLAUDE.md's list.
   Capabilities in openspec/specs/: platform, design-system, serviceability, catalog, stock, accounts,
-  cart, orders, admin-stores, admin-catalog, admin-staff.
+  cart, orders, admin-stores, admin-catalog, admin-staff, web-app, admin-app.
   JSON is camelCase and never null; money is integer cents; routes are /api/<service>/v1/<plural-noun>.
 
 rules:
