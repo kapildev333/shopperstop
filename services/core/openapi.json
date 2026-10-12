@@ -1481,7 +1481,7 @@
       "post": {
         "operationId": "createStore",
         "summary": "Create a store",
-        "description": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; every bad field answers 400 validation naming it, and nothing is written.",
+        "description": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.",
         "tags": [
           "admin-stores"
         ],
@@ -1896,6 +1896,244 @@
                   "error": {
                     "code": "conflict",
                     "message": "still in use"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/stores/{id}/service-areas": {
+      "get": {
+        "operationId": "getServiceAreas",
+        "summary": "List the pincodes a store serves",
+        "description": "Admins only. The store's pincodes in ascending order, as one list (not paged; at most 100). A store with none answers an empty list, never null. An unknown id answers 404 not_found.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The store's pincodes, ascending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceAreas"
+                },
+                "example": {
+                  "pincodes": [
+                    "560034",
+                    "560095"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceServiceAreas",
+        "summary": "Replace the pincodes a store serves",
+        "description": "Admins only. Replaces the store's whole list with the pincodes in the body: repeats are ignored and an empty list is allowed. A pincode that another store already serves answers 409 conflict, naming the pincode and that store's id, and nothing changes. A missing or null pincodes, more than 100 entries or a bad pincode answers 400 naming pincodes, and nothing changes. An unknown id answers 404. Two admins claiming the same new pincode at once: the later one answers 409 conflict with the code and message only.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceAreas"
+              },
+              "example": {
+                "pincodes": [
+                  "560034",
+                  "560095"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The store's new list, ascending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceAreas"
+                },
+                "example": {
+                  "pincodes": [
+                    "560034",
+                    "560095"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A missing or null pincodes, more than 100 entries, or a pincode that is not six digits. Names pincodes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "pincodes is required",
+                    "field": "pincodes"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A pincode in the list is served by another store. The error names the pincode and that store's id; the store's list is unchanged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PincodeConflict"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "pincode 560038 is served by another store",
+                    "field": "pincodes",
+                    "pincode": "560038",
+                    "storeId": "00000000-0000-4000-8000-000000000402"
                   }
                 }
               }
@@ -2648,6 +2886,68 @@
             "description": "Every store, not just this page."
           }
         }
+      },
+      "ServiceAreas": {
+        "type": "object",
+        "description": "The pincodes a store serves. As a response: ascending, no repeats. As the PUT body: the whole new list, at most 100 six-digit pincodes; repeats are ignored and a missing or null list is refused.",
+        "required": [
+          "pincodes"
+        ],
+        "properties": {
+          "pincodes": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{5}$"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PincodeConflict": {
+        "type": "object",
+        "description": "A 409 from a service-area replace. When another store serves a pincode in the list, the error names it (field pincodes, pincode, storeId). A race with another admin's claim answers code and message only.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "conflict"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "pincodes"
+                ]
+              },
+              "pincode": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{5}$"
+              },
+              "storeId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The store that serves the pincode. Absent, never null, when the store is not known."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       "Store": {
         "type": "object",

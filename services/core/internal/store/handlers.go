@@ -1,9 +1,12 @@
 package store
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
+	"slices"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
@@ -84,11 +87,11 @@ func List(pool *pgxpool.Pool) http.HandlerFunc {
 
 // Create answers 201 with the new store. Absent fields take their defaults
 // (closed, zero money) except name, addressLine, pincode and promisedMinutes,
-// which must be present and valid.
+// which must be present and valid. An explicit null is refused like on change.
 func Create(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var f fields
-		if err := httpx.ReadJSON(w, r, &f); err != nil {
+		if err := httpx.ReadPatch(w, r, &f); err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}
@@ -179,4 +182,137 @@ func Delete(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+// maxServiceAreas caps one store's pincode list: a Bengaluru store needs about 100.
+const maxServiceAreas = 100
+
+// serviceAreas is the body of the service-area routes: the store's pincodes in ascending order.
+type serviceAreas struct {
+	Pincodes []string `json:"pincodes"`
+}
+
+// pincodeConflict is the answer of a replace whose list holds a pincode another store serves.
+type pincodeConflict struct {
+	Pincode string
+	StoreID string
+}
+
+func (e *pincodeConflict) Error() string {
+	return "pincode " + e.Pincode + " is served by another store"
+}
+
+// pincodeConflictBody is the 409 body: the error envelope with the pincode and the store that holds it.
+type pincodeConflictBody struct {
+	Error pincodeConflictError `json:"error"`
+}
+
+type pincodeConflictError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Field   string `json:"field"`
+	Pincode string `json:"pincode"`
+	StoreID string `json:"storeId"`
+}
+
+// ServiceAreas answers the pincodes the store in the path serves, ascending.
+// A store with none answers an empty list. An unknown id is 404 not_found.
+func ServiceAreas(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		q := db.New(pool)
+		if _, err := q.GetStore(ctx, id); err != nil {
+			httpx.WriteError(w, r, pg.Map(err))
+			return
+		}
+		pincodes, err := q.ListServiceAreas(ctx, id)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		if pincodes == nil {
+			pincodes = []string{}
+		}
+		httpx.WriteJSON(w, http.StatusOK, serviceAreas{Pincodes: pincodes})
+	}
+}
+
+// ReplaceServiceAreas replaces the store's pincodes with the body's list and
+// answers 200 with the new list. The store row is locked, so two replaces of
+// one store run in turn. A pincode another store serves is 409 conflict naming
+// that pincode and store; nothing is written. Two stores claiming the same new
+// pincode at once: the later insert gets pg.Map's 409 without storeId.
+func ReplaceServiceAreas(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		var body serviceAreas
+		if err := httpx.ReadJSON(w, r, &body); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		if err := checkPincodes(body.Pincodes); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		pincodes := body.Pincodes
+		slices.Sort(pincodes)
+		pincodes = slices.Compact(pincodes)
+
+		ctx := r.Context()
+		err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+			q := db.New(tx)
+			if _, err := q.LockStore(ctx, id); err != nil {
+				return err
+			}
+			holder, err := q.PincodeHolder(ctx, db.PincodeHolderParams{Pincodes: pincodes, StoreID: id})
+			if err == nil {
+				return &pincodeConflict{Pincode: holder.Pincode, StoreID: holder.StoreID}
+			}
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+			if err := q.DeleteServiceAreas(ctx, id); err != nil {
+				return err
+			}
+			return q.AddServiceAreas(ctx, db.AddServiceAreasParams{StoreID: id, Pincodes: pincodes})
+		})
+		var conflict *pincodeConflict
+		switch {
+		case errors.As(err, &conflict):
+			httpx.WriteJSON(w, http.StatusConflict, pincodeConflictBody{Error: pincodeConflictError{
+				Code: "conflict", Message: conflict.Error(), Field: "pincodes",
+				Pincode: conflict.Pincode, StoreID: conflict.StoreID,
+			}})
+		case err != nil:
+			httpx.WriteError(w, r, pg.Map(err))
+		default:
+			httpx.WriteJSON(w, http.StatusOK, serviceAreas{Pincodes: pincodes})
+		}
+	}
+}
+
+// checkPincodes answers the first problem with a service-area list: a missing
+// list, more than 100 entries, or an entry that is not six digits.
+func checkPincodes(p []string) error {
+	if p == nil {
+		return invalid("pincodes", "pincodes is required")
+	}
+	if len(p) > maxServiceAreas {
+		return invalid("pincodes", "at most 100 pincodes")
+	}
+	for _, code := range p {
+		if !pincodePattern.MatchString(code) {
+			return invalid("pincodes", "every pincode must be 6 digits")
+		}
+	}
+	return nil
 }

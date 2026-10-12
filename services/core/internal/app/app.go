@@ -44,6 +44,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}", store.AdminGet(pool))
 	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/stores/{id}", store.Update(pool))
 	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/stores/{id}", store.Delete(pool))
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}/service-areas", store.ServiceAreas(pool))
+	r.With(a.RequireAdmin).Put("/api/core/v1/admin/stores/{id}/service-areas", store.ReplaceServiceAreas(pool))
 	return r
 }
 
