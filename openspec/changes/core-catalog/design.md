@@ -1,14 +1,14 @@
 # Design
 
 ## Context
-Builds on `core-accounts-auth` (core-P2-L1, merged before task 1 starts): migration 0002 with `set_updated_at()`, `sqlc.yaml`, `internal/pg` (`Map`, `IsUnique`), `testdb.Migrated`, `httpx.ReadPatch` / `Page` / `NewList` / `PathID`, `auth.RequireAdmin`, `app.New(pool, origins, a)`, the route-test fixtures (`srv`, `testPool`, `call`, the admin and store-staff tokens, `TestAuthGates`), the contract and security tests, and `seed.Reset` / `Load`. core-P2-L2 (`stores`, migration 0003) may land before or after; nothing here reads `stores`. Behaviour comes from this change's deltas (`catalog`, `admin-catalog`, `platform`). PLAN.md D3, D19, D20, D22, D23 apply.
+Builds on `core-accounts-auth` (core-P2-L1, merged before task 1 starts): migration 0002 with `set_updated_at()`, `sqlc.yaml`, `internal/pg` (`Map`, `IsUnique`), `testdb.Migrated`, `httpx.ReadPatch` / `Page` / `NewList` / `PathID`, `auth.RequireAdmin`, `app.New(pool, origins, a)`, the route-test fixtures (`srv`, `testPool`, `call`, the admin and store-staff tokens, `TestAuthGates`), the contract and security tests, and `seed.Reset` / `Load`. core-P2-L2 (`core-stores-serviceability`: `stores`, migration 0003, `store.Get(ctx, q db.DBTX, id) (Store, error)` answering 404 `not_found`) is needed by task 7 only (the unknown-store 404 of the store-facing reads); tasks 1 to 6 do not read `stores`. core-P2-L4 (`core-stock-cart`, proposed) builds on this change's store-facing handlers and adds stock. Behaviour comes from this change's deltas (`catalog`, `admin-catalog`, `platform`). PLAN.md D3, D19, D20, D22, D23 apply.
 
-A spike on 2026-10-12 (scratch copy of L1's tree at `6d870f1`, sqlc v1.31.1, `shopperstop_core_test`) confirmed the migration, the `sqlc.yaml` entry and the query file below verbatim: they generate and vet; `select *` / `returning *` make every query return `db.Category` or `db.Product`; `ListProducts` and `CountProducts` agree for every filter; a parent `categoryId` includes the child's products; escaped `\%` and `\_` match literally; price above MRP is SQLSTATE `23514` constraint `products_price_lte_mrp`; deleting a parent with a child is `23503` `categories_parent_id_fkey`; an unknown `category_id` on insert is `23503` `products_category_id_fkey`; a duplicate slug is `23505` `categories_slug_key`; a row in another table referencing a product `on delete restrict` makes the delete `23503`; deleting or reading an unknown id gives 0 rows / `pgx.ErrNoRows`. The handover queries for core-P2-L4 compiled and ran against a scratch `store_stock`. Workers copy these; they do not redesign them.
+A spike on 2026-10-12 (scratch copy of L1's tree at `6d870f1`, sqlc v1.31.1, `shopperstop_core_test`) confirmed the migration, the `sqlc.yaml` entry and the query file below verbatim: they generate and vet; `select *` / `returning *` make every query return `db.Category` or `db.Product`; `ListProducts` and `CountProducts` agree for every filter; a parent `categoryId` includes the child's products; escaped `\%` and `\_` match literally; price above MRP is SQLSTATE `23514` constraint `products_price_lte_mrp`; deleting a parent with a child is `23503` `categories_parent_id_fkey`; an unknown `category_id` on insert is `23503` `products_category_id_fkey`; a duplicate slug is `23505` `categories_slug_key`; a row in another table referencing a product `on delete restrict` makes the delete `23503`; deleting or reading an unknown id gives 0 rows / `pgx.ErrNoRows`. `GetActiveProductBySlug` returns `pgx.ErrNoRows` for an inactive slug. Workers copy these; they do not redesign them.
 
 ## Goals / Non-Goals
-**Goals:** every scenario in the three deltas has a Go test through the real router or the real database; core-P2-L4 can add the store-facing reads to `internal/catalog` by copying the handover below; core-P2-L5 tightens product deletion by adding `order_items` alone.
+**Goals:** every scenario in the three deltas has a Go test through the real router or the real database; core-P2-L4 adds stock to the store-facing handlers without changing their routes or shapes beyond two fields; core-P2-L5 tightens product deletion by adding `order_items` alone.
 
-**Non-Goals:** the store-facing routes (`/stores/{id}/categories`, `/stores/{id}/products`, `/stores/{id}/products/{slug}`: core-P2-L4, see Handover); stock; re-parenting a category; deleting stored files; image resizing, dimension or decode checks; search ranking; category `isActive`; a `GET /admin/categories/{id}` (the tree holds everything).
+**Non-Goals:** stock, `inStock`, `quantity` and the in-stock category filter (core-P2-L4, see Handover); re-parenting a category; deleting stored files; image resizing, dimension or decode checks; search ranking; category `isActive`; a `GET /admin/categories/{id}` (the tree holds everything).
 
 ## Files (all in `services/core/` unless noted)
 ```
@@ -16,15 +16,16 @@ migrations/0004_catalog.sql                  schema below
 sqlc.yaml                                    one more entry (below)
 queries/catalog.sql                          verbatim below
 internal/catalog/db/*                        sqlc output, never hand-edited
-internal/catalog/catalog.go                  Catalog, New, Category, CategoryNode, Product, slugify, pattern, error mapping
+internal/catalog/catalog.go                  Catalog, New, Category, CategoryNode, AdminProduct, Product, slugify, pattern, tree, error mapping
 internal/catalog/categories.go               ListCategories, CreateCategory, UpdateCategory, DeleteCategory
 internal/catalog/products.go                 ListProducts, CreateProduct, GetProduct, UpdateProduct, DeleteProduct
 internal/catalog/images.go                   PutProductImage, PutCategoryImage, File, readImage
+internal/catalog/store.go                    StoreCategories, StoreProducts, StoreProduct (customer reads)
 internal/catalog/*_test.go                   queries_test.go (SQL), slug_test.go
 internal/blob/blob.go, blob_test.go          Store, Disk
 internal/config/config.go, config_test.go    FilesDir
 internal/app/app.go                          New(pool, origins, a, files) and the 12 routes
-internal/app/*_test.go                       catalog_categories_test.go, catalog_products_test.go, catalog_images_test.go, gate rows, TestMain and contract New calls
+internal/app/*_test.go                       catalog_categories_test.go, catalog_products_test.go, catalog_images_test.go, catalog_store_test.go, gate rows, TestMain and contract New calls
 internal/seed/catalog.go, images/*.png       demo categories, products, 12 placeholder PNGs (embedded)
 internal/seed/seed.go, seed_test.go          truncate list, Load calls the catalog rows, Files
 cmd/core/main.go                             blob.Disk{Dir: cfg.FilesDir} into app.New
@@ -167,6 +168,9 @@ returning *;
 
 -- name: DeleteProduct :execrows
 delete from products where id = $1;
+
+-- name: GetActiveProductBySlug :one
+select * from products where slug = $1 and is_active;
 ```
 Generated: `ListProductsParams{Pattern *string; CategoryID *string; IsActive *bool; PageOffset, PageSize int32}`, `CreateCategoryParams{Name, Slug string; ParentID *string; SortOrder int32}`, `UpdateProductParams{CategoryID, Name, Description, Brand, UnitLabel *string; MrpCents, PriceCents *int64; IsActive *bool; ID string}`; `db.Category.ParentID *string`, `SortOrder int32`.
 
@@ -183,7 +187,7 @@ type Disk struct{ Dir string } // implements Store; key "products/<name>" is the
 FilesDir string // SHOPPERSTOP_CORE_FILES_DIR, required, trimmed
 
 // internal/catalog
-type Catalog struct{ /* q *db.Queries, files blob.Store */ }
+type Catalog struct{ /* pool *pgxpool.Pool, q *db.Queries, files blob.Store */ }
 func New(pool *pgxpool.Pool, files blob.Store) *Catalog  // must not touch pool or files (TestContract passes nil)
 type Category struct {
     ID        string `json:"id"`
@@ -197,7 +201,7 @@ type CategoryNode struct {
     Category
     Children []Category `json:"children"` // never nil
 }
-type Product struct {
+type AdminProduct struct {           // admin routes
     ID          string `json:"id"`
     Name        string `json:"name"`
     Slug        string `json:"slug"`
@@ -210,15 +214,30 @@ type Product struct {
     IsActive    bool   `json:"isActive"`
     ImageURL    string `json:"imageUrl,omitempty"`
 }
+type Product struct {                // store-facing routes; L4 adds InStock, Quantity (and its own json:"-" fields)
+    ID          string `json:"id"`
+    Name        string `json:"name"`
+    Slug        string `json:"slug"`
+    Description string `json:"description,omitempty"`
+    Brand       string `json:"brand,omitempty"`
+    UnitLabel   string `json:"unitLabel"`
+    MrpCents    int64  `json:"mrpCents"`
+    PriceCents  int64  `json:"priceCents"`
+    CategoryID  string `json:"categoryId"`
+    ImageURL    string `json:"imageUrl,omitempty"`
+}
 // unexported helpers L4 reuses inside the package:
 func slugify(name, fallback string) string
 func pattern(q string) string            // "%" + q with \ % _ escaped + "%"
 func imageURL(key string) string         // "" -> "", else "/api/core/v1/files/" + key
 func toCategory(db.Category) Category
+func toAdminProduct(db.Product) AdminProduct
 func toProduct(db.Product) Product
+func tree([]db.Category) []CategoryNode   // Decision 9, shared by admin and store trees
 // handlers, methods on *Catalog, all func(http.ResponseWriter, *http.Request):
 // ListCategories, CreateCategory, UpdateCategory, DeleteCategory, PutCategoryImage,
-// ListProducts, CreateProduct, GetProduct, UpdateProduct, DeleteProduct, PutProductImage, File
+// ListProducts, CreateProduct, GetProduct, UpdateProduct, DeleteProduct, PutProductImage, File,
+// StoreCategories, StoreProducts, StoreProduct
 
 // internal/seed
 func Files(ctx context.Context, files blob.Store) error // writes the 12 embedded PNGs under products/ and categories/
@@ -235,26 +254,29 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 | PATCH /admin/categories/{id} | RequireAdmin | `c.UpdateCategory` | admin-catalog | 200 Category, 400, 401, 403, 404 |
 | DELETE /admin/categories/{id} | RequireAdmin | `c.DeleteCategory` | admin-catalog | 204, 401, 403, 404, 409 |
 | PUT /admin/categories/{id}/image | RequireAdmin | `c.PutCategoryImage` | admin-catalog | 200 Category, 400, 401, 403, 404 |
-| GET /admin/products | RequireAdmin | `c.ListProducts` | admin-catalog | 200 ProductList, 400, 401, 403 |
-| POST /admin/products | RequireAdmin | `c.CreateProduct` | admin-catalog | 201 Product, 400, 401, 403, 409 |
-| GET /admin/products/{id} | RequireAdmin | `c.GetProduct` | admin-catalog | 200 Product, 401, 403, 404 |
-| PATCH /admin/products/{id} | RequireAdmin | `c.UpdateProduct` | admin-catalog | 200 Product, 400, 401, 403, 404 |
+| GET /admin/products | RequireAdmin | `c.ListProducts` | admin-catalog | 200 AdminProductList, 400, 401, 403 |
+| POST /admin/products | RequireAdmin | `c.CreateProduct` | admin-catalog | 201 AdminProduct, 400, 401, 403, 409 |
+| GET /admin/products/{id} | RequireAdmin | `c.GetProduct` | admin-catalog | 200 AdminProduct, 401, 403, 404 |
+| PATCH /admin/products/{id} | RequireAdmin | `c.UpdateProduct` | admin-catalog | 200 AdminProduct, 400, 401, 403, 404 |
 | DELETE /admin/products/{id} | RequireAdmin | `c.DeleteProduct` | admin-catalog | 204, 401, 403, 404, 409 |
-| PUT /admin/products/{id}/image | RequireAdmin | `c.PutProductImage` | admin-catalog | 200 Product, 400, 401, 403, 404 |
+| PUT /admin/products/{id}/image | RequireAdmin | `c.PutProductImage` | admin-catalog | 200 AdminProduct, 400, 401, 403, 404 |
 | GET /files/{kind}/{name} | none | `c.File` | catalog | 200 image, 304, 404 |
+| GET /stores/{id}/categories | none | `c.StoreCategories` | catalog | 200 CategoryTree, 404 |
+| GET /stores/{id}/products | none | `c.StoreProducts` | catalog | 200 ProductList, 400, 404 |
+| GET /stores/{id}/products/{slug} | none | `c.StoreProduct` | catalog | 200 Product, 404 |
 
 Messages (handlers write exactly these): unknown row 404 "not found" (from `pg.Map` / `PathID`); parent missing 400 field `parentId` "unknown category"; parent is a child 400 field `parentId` "categories have two levels"; unknown category on a product 400 field `categoryId` "unknown category"; price rule 400 field `priceCents` "must be between 1 and mrpCents"; category in use 409 "category has products or subcategories"; product referenced 409 "product was ordered; set isActive to false instead"; upload problems 400 field `file`: "multipart/form-data with a file part is required", "image larger than 5 MiB", "image must be PNG, JPEG or WebP"; body over 16 MiB 400 "body too large" (no field).
 
 ## Decisions
-1. **Store-facing reads move to core-P2-L4.** The three `/stores/{id}/...` routes need `store_stock` (L4's migration 0005) for `inStock`, `quantity` and the category filter, and `stores` (L2's 0003) for the unknown-store 404. sqlc compiles queries against the migrations, so a query naming `store_stock` cannot exist on this branch; the alternative, a stub that reports every product out of stock and lists no category, would be rewritten and retested by L4 and is useless to web meanwhile. This change keeps every scenario it states testable here (`/opsx:verify` stays honest) and hands L4 the requirement text and the spiked queries (Handover). Ceiling: web-P2-L1's browsing pages wait for L4 instead of L3 (escalated in the lane report).
-2. **Ownership.** `internal/catalog` owns `categories` and `products`. The store-facing reads join `store_stock` read-only; they live in `internal/catalog` (the catalog read model) and are written by L4. This is the one cross-package read Spec 2 §9 does not foresee; ceiling: if stock moves to its own service, the join becomes a call to it.
+1. **Store-facing reads ship here without stock; L4 adds stock.** The three `/stores/{id}/...` routes land in this change with their shape, filters, paging, ordering and unknown-store 404; `inStock`, `quantity` and the in-stock category filter need `store_stock` (L4's migration 0005, invisible to sqlc from this branch) and are L4's ADDED `catalog` requirements, already proposed in `core-stock-cart` on this basis (its task 3 decorates these handlers through its `stock` package). Alternatives: moving the routes to L4 (leaves web-P2-L1, whose plan renders products without stock until L4, with nothing to call, and L4's change does not specify the routes) or a stub reporting every product out of stock (rewritten and retested by L4). Interim ceiling, until L4 merges: the store tree lists every category (empty ones included) and products carry no stock fields; the routes answer the same for every existing store.
+2. **Ownership.** `internal/catalog` owns `categories` and `products` and the store-facing handlers (the catalog read model). The unknown-store check calls core-P2-L2's `store.Get(ctx, pool, id)` (its 404 is returned as is), never SQL on `stores`. L4 joins stock through its `stock` package. Ceiling: none.
 3. **Two levels in Go, parent fixed at creation.** `CreateCategory` with `parentId`: canonical uuid (else 400 `parentId` "unknown category"), `GetCategory` (no rows → 400 `parentId` "unknown category"), parent's `ParentID != nil` → 400 `parentId` "categories have two levels". Because `parent_id` is never updated, the check cannot race into a third level; a parent deleted between check and insert hits `categories_parent_id_fkey` (23503) and is mapped to the same 400. `CategoryPatch` has `name` and `sortOrder` only; an unknown member such as `parentId` is ignored by `json.Unmarshal`. Ceiling: moving a category means creating a new one and moving its products by PATCH.
 4. **Deletion rules are foreign keys.** `parent_id` and `products.category_id` are `on delete restrict`: deleting a category with a child or a product is 23503 → 409 "category has products or subcategories". Product deletion maps any 23503 to 409 "product was ordered; set isActive to false instead". Today nothing references `products`; core-P2-L5's `order_items.product_id ... on delete restrict` makes the rule real without a code change here. L4's `store_stock` and `cart_items` must reference products `on delete cascade`, or a never-ordered product with stock would be refused with the ordered message (request to L4). `:execrows` 0 → 404. The "ordered product" scenario is tested here with a probe table `order_items_probe (product_id uuid not null references products (id) on delete restrict)` created by the test in its own schema: a real foreign key, not a mock; L5 adds the test with a real order.
 5. **Slugs.** `slugify(name, fallback)`: lower-case; runs of anything other than ASCII `a-z0-9` become one `-`; trim `-`; cut to 60 bytes and trim a trailing `-`; empty → `fallback` (`category` or `product`). Create inserts with `slugify(name)`; on `pg.IsUnique(err)` (the only unique constraint besides the primary key) it retries with `<slug>-<6 lowercase hex from crypto/rand>`, three attempts in all, then `pg.Map` (409 conflict). PATCH never touches `slug`. Ceiling: names in non-Latin scripts get `product-<hex>` slugs; transliterate when the catalog has such names.
 6. **Validation, first failing field wins, in this order:** `name` trimmed 1 to 100 runes; `parentId` / `categoryId` canonical uuid (`^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$`, a malformed one would be a Postgres cast error, 500) else 400 "unknown category"; `sortOrder` 0 to 9999; `brand` trimmed 0 to 60 runes; `description` trimmed 0 to 2000 runes; `unitLabel` trimmed 1 to 30 runes; `mrpCents` 1 to 100 000 000 (₹10 lakh); `priceCents` 1 to `mrpCents` when both are known in Go. Stored trimmed. PATCH validates only present fields; the price rule for a patch with one of the two amounts is left to the `products_price_lte_mrp` / `products_price_positive` checks (23514 → 400 `priceCents`), so the stored value is compared atomically. Non-integer amounts fail `json.Unmarshal` → 400 "invalid JSON". Bodies go through `httpx.ReadJSON` (create) and `httpx.ReadPatch` (patch), so the 1 MiB, NUL and `null` rules hold. `brand: ""` and `description: ""` clear (omitted from responses).
 7. **Error mapping in one place.** `catalog.mapErr(err)`: `*pgconn.PgError` 23514 → 400 `priceCents`; 23503 with constraint `products_category_id_fkey` → 400 `categoryId` "unknown category"; 23503 `categories_parent_id_fkey` on insert → 400 `parentId` "unknown category"; otherwise `pg.Map(err)`. The two delete handlers check 23503 first and write their 409 messages.
 8. **Admin product list.** `httpx.Page` for paging; `q` trimmed, at most 100 runes (else 400 `q`), empty means no filter, otherwise `pattern(q)` escapes `\`, `%`, `_` with a backslash (Postgres' default `ilike` escape) and wraps in `%`; `categoryId` canonical uuid else 400 `categoryId`; `isActive` exactly `true` or `false` else 400 `isActive`. Two statements (`ListProducts`, `CountProducts`) with the same `where`, so `total` is right on any page. Ceiling: sequential scan on `ilike`; add `pg_trgm` when products pass 10 000.
-9. **Category tree is not paged.** `GET /admin/categories` answers `{"items": CategoryNode[]}` (schema `CategoryTree`), not the paged shape: the tree is bounded (two levels, the demo has 49 rows) and page fields would mean nothing. Built in Go from one `ListCategories` (ordered `sort_order, name, id`): parents in order, each child appended to its parent. L4's store tree reuses `CategoryNode` and the same assembly. Ceiling: one query of every category; fine to a few thousand.
+9. **Category tree is not paged.** `GET /admin/categories` answers `{"items": CategoryNode[]}` (schema `CategoryTree`), not the paged shape: the tree is bounded (two levels, the demo has 49 rows) and page fields would mean nothing. Built in Go from one `ListCategories` (ordered `sort_order, name, id`): parents in order, each child appended to its parent. `StoreCategories` uses the same `tree`. Ceiling: one query of every category; fine to a few thousand.
 10. **Blob store.** `Store` has two methods because nothing deletes files (Decision 12). `Disk.Put`: refuse a key for which `filepath.IsLocal(key)` is false (error); `os.MkdirAll(filepath.Dir(path), 0o755)`; `os.CreateTemp` in that directory; write; close; `os.Rename` onto the final path, so a reader never sees half a file and a re-upload replaces atomically. `Disk.Open`: `os.Open` then `Stat` for the modification time; a missing file returns an error satisfying `errors.Is(err, fs.ErrNotExist)`. The interface is the one Spec 2 §9 asks for so S3 is a later package; ceiling: whole files in memory (5 MiB cap).
 11. **Uploads.** Handler order: `PathID` → `GetProduct`/`GetCategory` (404 before reading the body, so nothing is stored for an unknown id) → `readImage` → `files.Put(kind + "/" + row.ID + "." + ext)` → `SetProductImage`/`SetCategoryImage` → 200. `readImage`: `r.Body = http.MaxBytesReader(w, r.Body, 16<<20)`; `r.MultipartReader()` error (not multipart) → 400 `file`; loop `NextPart`: `io.EOF` → 400 `file` (no part), `*http.MaxBytesError` → 400 "body too large", other error → 400 `file`; skip parts whose `FormName()` is not `file`; read the part with `io.LimitReader(part, 5<<20+1)` (MaxBytesError → "body too large"); length over 5 MiB → 400 `file` "image larger than 5 MiB"; `http.DetectContentType` gives `image/png` → `png`, `image/jpeg` → `jpg`, `image/webp` → `webp`, anything else 400 `file` "image must be PNG, JPEG or WebP". The client's part `Content-Type` and file name are ignored. Ceiling: content sniffing, not decoding; a file with a valid header and garbage after it is stored (admins only).
 12. **Files are never deleted.** A re-upload with the same extension overwrites; a different extension or a deleted row leaves the old file on disk. Ceiling: orphans grow by at most one file per such event; add a `core-admin` sweep (keys not referenced by any row) when the directory matters.
@@ -264,8 +286,8 @@ Messages (handlers write exactly these): unknown row 404 "not found" (from `pg.M
 16. **`FILES_DIR` is required.** `config.Load` names `SHOPPERSTOP_CORE_FILES_DIR` with the other missing variables; the Makefile already sets it for `dev`, `seed`, `core`, `e2e` and `prod-local`, and README exports it. `core-admin migrate` therefore needs it too (it loads the full config, D16). The directory is created on the first `Put`, not at start.
 17. **Demo catalog (D20, D22).** `seed.Load` inserts the rows below with explicit ids by plain `tx.Exec` (same rule as L1 Decision 21); `seed.Reset`'s `truncate` list gains `products, categories`. `seed.Files(ctx, files)` writes each embedded `images/<parent-slug>.png` as `products/seed-<parent-slug>.png` and `categories/seed-<parent-slug>.png`; every product's `image_key` is `products/seed-<its parent's slug>.png` and every category's `categories/seed-<parent-slug>.png` (children share their parent's image). `cmd/core-admin seed-demo` calls `seed.Files(ctx, blob.Disk{Dir: cfg.FilesDir})` after `Reset` or `Load` and keeps its output line. Images live in `internal/seed/images/` (not `services/core/data/seed-images/` as the work package says) because `.gitignore` ignores `services/*/data/` (the runtime files directory) and `go:embed` needs the files under the package. Ceiling: twelve images for 148 products; each product gets its own when an admin uploads one.
 18. **Placeholder images.** Twelve 256×256 PNGs, each a solid light fill with a darker centred 128×128 square, one colour pair per parent, made once by a throwaway Go program using `image/png` (run from the scratchpad, not committed), each under 2 KB. Free and attribution-free by construction. The seed test decodes each with `image.DecodeConfig` (256×256).
-
-19. **`openapi.json` shapes.** Tags appended `catalog`, `admin-catalog` (after whatever L1 and L2 have). Schemas: `Category`, `CategoryNode` (`allOf` Category plus required `children` array of Category), `CategoryTree {items: CategoryNode[]}`, `CategoryCreate {name, parentId?, sortOrder?}`, `CategoryPatch {name?, sortOrder?}`, `Product`, `ProductCreate {name, categoryId, unitLabel, mrpCents, priceCents, brand?, description?, isActive?}`, `ProductPatch` (all eight optional), `ProductList` (paged), `ImageUpload` (`multipart/form-data` object, required `file`, `type: string, format: binary`). Ids `format: uuid`; amounts `type: integer, format: int64, minimum: 1`. Every admin operation has `security: [{"bearer": []}]` and documents 401 and 403 with examples (L1 Decision 24). Path parameter examples: categories `00000000-0000-4000-8000-000000000501`, products `00000000-0000-4000-8000-000000000601` (Postman maps `products` path ids to `{{productId}}`); file route `kind` example `products`, `name` example `seed-fruits-vegetables.png`. Query parameters `q`, `categoryId`, `isActive`, `page`, `pageSize` on `GET /admin/products`. The file route's 200 declares `image/png`, `image/jpeg` and `image/webp` with `type: string, format: binary` and an example string on `image/png` (the contract test needs an example on a response with content); 304 has no content. Request bodies carry an example (Postman uses it as the raw body); the image routes' multipart body has none.
+19. **`openapi.json` shapes.** Tags appended `catalog`, `admin-catalog` (after whatever L1 and L2 have). Schemas: `Category`, `CategoryNode` (`allOf` Category plus required `children` array of Category), `CategoryTree {items: CategoryNode[]}`, `CategoryCreate {name, parentId?, sortOrder?}`, `CategoryPatch {name?, sortOrder?}`, `AdminProduct`, `AdminProductList` (paged), `Product` (customer shape, no `isActive`; L4 adds `inStock`, `quantity`), `ProductList` (paged `Product`), `ProductCreate {name, categoryId, unitLabel, mrpCents, priceCents, brand?, description?, isActive?}`, `ProductPatch` (all eight optional), `ImageUpload` (`multipart/form-data` object, required `file`, `type: string, format: binary`). Ids `format: uuid`; amounts `type: integer, format: int64, minimum: 1`. Every admin operation has `security: [{"bearer": []}]` and documents 401 and 403 with examples (L1 Decision 24); the store-facing and file operations have none. Path parameter examples: categories `00000000-0000-4000-8000-000000000501`, products `00000000-0000-4000-8000-000000000601` (Postman maps `products` path ids to `{{productId}}`), stores `00000000-0000-4000-8000-000000000401` (L2's Koramangala; Postman maps it to `{{storeId}}`), slug `banana-robusta`; file route `kind` example `products`, `name` example `seed-fruits-vegetables.png`. Query parameters `q`, `categoryId`, `isActive`, `page`, `pageSize` on `GET /admin/products`; `q`, `categoryId`, `page`, `pageSize` on `GET /stores/{id}/products`. The file route's 200 declares `image/png`, `image/jpeg` and `image/webp` with `type: string, format: binary` and an example string on `image/png` (the contract test needs an example on a response with content); 304 has no content. Request bodies carry an example (Postman uses it as the raw body); the image routes' multipart body has none.
+20. **Store-facing reads.** Order in each handler: `PathID(r, "id")` → `store.Get(ctx, pool, id)` (404 as is) → the read. `StoreCategories`: `ListCategories` → `tree` → `{items}`. `StoreProducts`: `httpx.Page`, the `q` and `categoryId` rules of Decision 8, then `ListProducts` / `CountProducts` with `IsActive` fixed to `true` (no `isActive` query parameter) → `httpx.NewList` of `Product`. `StoreProduct`: the `slug` path parameter as is (no format check; any string that matches no row is 404) → `GetActiveProductBySlug` → `pg.Map` (no rows is 404). No query reads `stores`; the store id does not filter anything until L4 joins stock. Ceiling: two round trips (store, then catalog) per request; fine.
 
 ### Demo catalog rows
 Ids are `fmt.Sprintf("00000000-0000-4000-8000-%012x", n)`: parents `n = 0x500 + i` (i = 1..12), children `n = 0x520 + j` (j = 1..37 in the order below), products `n = 0x600 + k` (k = 1..148, four per child in child order). Parent `sortOrder` is `10*i`; child `sortOrder` is 10, 20, 30, 40 within its parent. Every slug is what `slugify(name)` gives (the table is written that way; the seed test checks the kebab-case form).
@@ -287,61 +309,21 @@ Ids are `fmt.Sprintf("00000000-0000-4000-8000-%012x", n)`: parents `n = 0x500 + 
 
 Products: four per child, a Go table in `internal/seed/catalog.go` of `{name, brand, unitLabel, mrpCents, priceCents, description}`; names unique across the table (so slugs are unique and equal `slugify(name)`); realistic Bengaluru grocery prices in paise; about a third with `priceCents < mrpCents`; brands invented (never a real company's mark; produce has no brand), e.g. `ShopperStop`, `Sunny Fields`, `Urban Pantry`, `Blue Hill`, `Masala Ghar`, `Crunchy Bay`, `Pure Drop`, `Little Sprout`, `Sparkle Home`; one-sentence descriptions. Product 1 (`...0601`) is `Banana Robusta`, unit `1 kg`, the Postman `productId`. Product 148 (`...0694`) has `is_active = false` (for L4's hidden-product test and the e2e suite). Categories have no products of their own in the demo.
 
-## Handover to core-P2-L4 (store-facing reads)
-L4's change adds these to the `catalog` capability (ADDED; this change's archive creates `openspec/specs/catalog/`). Draft requirement text, to adapt:
-- `GET /stores/{id}/categories` SHALL return `{items: CategoryNode[]}` holding only categories that have, themselves or through a child, at least one active product with quantity above 0 at that store; parents without such a child keep only the qualifying children; unknown store 404 `not_found`.
-- `GET /stores/{id}/products?categoryId=&q=&page=&pageSize=` SHALL return the paged active products (filters exactly as the admin list: `q` literal and case-insensitive on name and brand, `categoryId` with children), ordered by `name`, each with `inStock` (quantity above 0) and `quantity` capped at 10; a product with no stock row counts as quantity 0.
-- `GET /stores/{id}/products/{slug}` SHALL return one active product with `inStock` and capped `quantity`, 404 `not_found` for an unknown or inactive slug.
-Queries for `queries/catalog.sql` (spiked against a scratch `store_stock (store_id, product_id, quantity)`):
-```sql
--- name: StoreCategories :many
-select c.* from categories c
-where exists (
-    select 1 from products p join store_stock s on s.product_id = p.id
-    where s.store_id = @store_id and s.quantity > 0 and p.is_active
-      and (p.category_id = c.id or p.category_id in (select k.id from categories k where k.parent_id = c.id)))
-order by c.sort_order, c.name, c.id;
-
--- name: StoreProducts :many
-select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
-       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
-from products p
-left join store_stock s on s.product_id = p.id and s.store_id = @store_id
-where p.is_active
-  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
-  and (sqlc.narg(category_id)::uuid is null
-       or p.category_id = sqlc.narg(category_id)
-       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)))
-order by p.name, p.id
-limit @page_size offset @page_offset;
-
--- name: CountStoreProducts :one
-select count(*) from products p
-where p.is_active
-  and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
-  and (sqlc.narg(category_id)::uuid is null
-       or p.category_id = sqlc.narg(category_id)
-       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)));
-
--- name: StoreProductBySlug :one
-select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
-       p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
-from products p
-left join store_stock s on s.product_id = p.id and s.store_id = @store_id
-where p.slug = @slug and p.is_active;
-```
-In Go: reuse `pattern`, `imageURL`, the tree assembly of Decision 9 and the `Product` shape plus `inStock bool` and `quantity int` (`min(q, 10)`); the store's existence comes from L2's package (a store lookup before the query). L4 also: `store_stock.product_id` and `cart_items.product_id` reference `products (id) on delete cascade` (Decision 4); `seed.Reset` truncates its tables with the catalog's.
+## Handover to core-P2-L4 (stock in the store-facing reads)
+`core-stock-cart` (proposed) adds `inStock` and `quantity` and the in-stock category filter as ADDED `catalog` requirements on top of Decision 20. Names it builds on: Go types `catalog.Product` (customer shape; L4 adds `InStock bool json:"inStock"`, `Quantity int json:"quantity"` and its `Active bool json:"-"`) and `catalog.AdminProduct` (admin, untouched by L4); handlers `(*Catalog).StoreCategories`, `StoreProducts`, `StoreProduct` in `internal/catalog/store.go`; helpers `toProduct`, `tree`, `pattern`, `imageURL`; queries `ListCategories`, `ListProducts` / `CountProducts` (called with `IsActive` true), `GetActiveProductBySlug`; openapi schemas `Product` and `ProductList` (L4 adds the two required fields and updates every `Product` example), `CategoryTree`. L3's store-facing tests in `internal/app/catalog_store_test.go` create categories and products without stock; once L4 filters the tree by stock, `TestStoreCategoryTree` and the positive product tests need stock rows in their fixtures (L4 task 3 adds them; the assertions stay). L4 also: `store_stock.product_id` and `cart_items.product_id` reference `products (id) on delete cascade` (Decision 4; L4's design already says so); `seed.Reset` truncates its tables with the catalog's.
 
 ## Handover to core-P2-L5 (ordered products)
 `order_items.product_id uuid not null references products (id) on delete restrict`. Then `DELETE /admin/products/{id}` on an ordered product already answers 409 with the hint; L5 adds the scenario test with a real order and may drop `order_items_probe` from `TestDeleteOrderedProductRefused`. L5's (or L6's) seeded past orders should include product `...0601`, so the Postman collection's `DELETE /admin/products/{{productId}}` answers 409 instead of deleting the demo product.
 
 ## Test strategy
-`make test-core` (`go test -race ./...` on `shopperstop_core_test`). `internal/catalog` → `testdb.Migrated("catalog")` for the SQL tests (`queries_test.go`) and pure unit tests (`slug_test.go`); `internal/blob` uses `t.TempDir()` only; `internal/config` none; `internal/app` reuses L1's `TestMain` (`Migrated("app")`) with a temp files dir; `internal/seed` → `Migrated("seed")` (L1). Route tests go through the real router (`srv`) with L1's tokens: each test creates its own categories and products with unique names (`<test name> ...`) so tests may run in parallel and never depend on order; uploads use real `mime/multipart.Writer` bodies (a PNG made with `image/png`; JPEG as `\xff\xd8\xff\xe0` plus padding; WebP as `RIFF????WEBPVP8 ` plus padding; GIF as `GIF89a`), and stored files are checked on disk under `filesDir` and through `GET /files/...`. `TestAuthGates` gets one row per new admin route (anonymous 401, customer 401, store staff 403, admin allowed: 2xx, 400 or 404 on an empty body or zero id). The contract test and L1's `TestContractSecurity` cover every new operation once it is in `openapi.json`.
+`make test-core` (`go test -race ./...` on `shopperstop_core_test`). `internal/catalog` → `testdb.Migrated("catalog")` for the SQL tests (`queries_test.go`) and pure unit tests (`slug_test.go`); `internal/blob` uses `t.TempDir()` only; `internal/config` none; `internal/app` reuses L1's `TestMain` (`Migrated("app")`) with a temp files dir; `internal/seed` → `Migrated("seed")` (L1). Route tests go through the real router (`srv`) with L1's tokens: each test creates its own categories and products with unique names (`<test name> ...`) so tests may run in parallel and never depend on order; uploads use real `mime/multipart.Writer` bodies (a PNG made with `image/png`; JPEG as `\xff\xd8\xff\xe0` plus padding; WebP as `RIFF????WEBPVP8 ` plus padding; GIF as `GIF89a`), and stored files are checked on disk under `filesDir` and through `GET /files/...`. Store-facing tests need a store: they insert one through `testPool` with L2's columns or use L2's test helper if it exports one (task 7 brief). `TestAuthGates` gets one row per new admin route (anonymous 401, customer 401, store staff 403, admin allowed: 2xx, 400 or 404 on an empty body or zero id). The contract test and L1's `TestContractSecurity` cover every new operation once it is in `openapi.json`.
 
 ## Risks / Trade-offs
-- [web-P2-L1 expected the store-facing catalog from this lane] → it now needs core-P2-L4; the admin catalog (admin-P2-L3) is unaffected. Escalated to the manager.
+- [Task 7 needs core-P2-L2's `store.Get`] → the manager rebases this branch onto main after L2 merges and before task 7; if L2 is late, task 7 waits (tasks 1 to 6 do not). Escalated.
+- [Until L4 lands, `GET /stores/{id}/categories` lists empty categories and products carry no stock] → matches web's plan ("until then products render without stock"); L4 closes it.
 - [core-P2-L2 also edits `openapi.json`, `internal/app`, `app.New`, `seed`] → textual conflicts on rebase; the second lane to land rebases and keeps both (tags, schemas and routes are disjoint).
 - [`.gitignore` ignores `services/*/data/`] → images live in `internal/seed/images/` (Decision 17), no platform change needed.
 - [Postman's `DELETE /admin/products/{{productId}}` deletes the demo product while no order refers to it] → request to L5/L6 (seed an order with `...0601`); until then running the whole collection removes it; `seed-demo --reset` restores it.
+- [`scripts/postman.mjs` maps every path variable that follows a `products` segment to `{{productId}}`, so `GET /stores/{{storeId}}/products/:slug` would send a uuid as the slug and answer 404] → request to platform: map only variables named `id` (or the generator skips `slug`); the request still exists and documents the route.
 - [Multipart in the generated client] → `openapi-typescript` types the body as `{file: string}`; admin sends a `FormData` with `bodySerializer` (note to admin-P2-L3).
 - [The 16 MiB scenario builds a 17 MiB body in a test] → about 17 MB of memory once; acceptable.
