@@ -6,12 +6,12 @@ function Dashboard() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" />
       <Card className="p-6">
-        <EmptyState title="No stores to show yet" description="Store cards appear here after sign-in." />
+        <EmptyState title="No stores to show yet" description="Store cards arrive with the dashboard page." />
       </Card>
     </div>
   )
 }
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_staff/')({
   component: Dashboard,
 })

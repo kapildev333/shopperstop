@@ -9,50 +9,251 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as StaffRouteImport } from './routes/_staff'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as StaffIndexRouteImport } from './routes/_staff/index'
+import { Route as StaffAdminRouteImport } from './routes/_staff/_admin'
+import { Route as StaffOrdersRouteImport } from './routes/_staff/orders'
+import { Route as StaffStockRouteImport } from './routes/_staff/stock'
+import { Route as StaffAdminCategoriesRouteImport } from './routes/_staff/_admin/categories'
+import { Route as StaffAdminStaffRouteImport } from './routes/_staff/_admin/staff'
+import { Route as StaffAdminProductsIndexRouteImport } from './routes/_staff/_admin/products/index'
+import { Route as StaffAdminStoresIndexRouteImport } from './routes/_staff/_admin/stores/index'
 
-const IndexRoute = IndexRouteImport.update({
+const StaffRoute = StaffRouteImport.update({
+  id: '/_staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaffIndexRoute = StaffIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffAdminRoute = StaffAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffOrdersRoute = StaffOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffStockRoute = StaffStockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffAdminCategoriesRoute = StaffAdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => StaffAdminRoute,
+} as any)
+const StaffAdminStaffRoute = StaffAdminStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => StaffAdminRoute,
+} as any)
+const StaffAdminProductsIndexRoute = StaffAdminProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => StaffAdminRoute,
+} as any)
+const StaffAdminStoresIndexRoute = StaffAdminStoresIndexRouteImport.update({
+  id: '/stores/',
+  path: '/stores/',
+  getParentRoute: () => StaffAdminRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof StaffIndexRoute
+  '/sign-in': typeof SignInRoute
+  '/orders': typeof StaffOrdersRoute
+  '/stock': typeof StaffStockRoute
+  '/categories': typeof StaffAdminCategoriesRoute
+  '/staff': typeof StaffAdminStaffRoute
+  '/products/': typeof StaffAdminProductsIndexRoute
+  '/stores/': typeof StaffAdminStoresIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/sign-in': typeof SignInRoute
+  '/': typeof StaffIndexRoute
+  '/orders': typeof StaffOrdersRoute
+  '/stock': typeof StaffStockRoute
+  '/categories': typeof StaffAdminCategoriesRoute
+  '/staff': typeof StaffAdminStaffRoute
+  '/products': typeof StaffAdminProductsIndexRoute
+  '/stores': typeof StaffAdminStoresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_staff': typeof StaffRouteWithChildren
+  '/sign-in': typeof SignInRoute
+  '/_staff/_admin': typeof StaffAdminRouteWithChildren
+  '/_staff/orders': typeof StaffOrdersRoute
+  '/_staff/stock': typeof StaffStockRoute
+  '/_staff/': typeof StaffIndexRoute
+  '/_staff/_admin/categories': typeof StaffAdminCategoriesRoute
+  '/_staff/_admin/staff': typeof StaffAdminStaffRoute
+  '/_staff/_admin/products/': typeof StaffAdminProductsIndexRoute
+  '/_staff/_admin/stores/': typeof StaffAdminStoresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/orders'
+    | '/stock'
+    | '/categories'
+    | '/staff'
+    | '/products/'
+    | '/stores/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/sign-in'
+    | '/'
+    | '/orders'
+    | '/stock'
+    | '/categories'
+    | '/staff'
+    | '/products'
+    | '/stores'
+  id:
+    | '__root__'
+    | '/_staff'
+    | '/sign-in'
+    | '/_staff/_admin'
+    | '/_staff/orders'
+    | '/_staff/stock'
+    | '/_staff/'
+    | '/_staff/_admin/categories'
+    | '/_staff/_admin/staff'
+    | '/_staff/_admin/products/'
+    | '/_staff/_admin/stores/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  StaffRoute: typeof StaffRouteWithChildren
+  SignInRoute: typeof SignInRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_staff': {
+      id: '/_staff'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof StaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_staff/': {
+      id: '/_staff/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof StaffIndexRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/_staff/_admin': {
+      id: '/_staff/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof StaffAdminRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/_staff/orders': {
+      id: '/_staff/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof StaffOrdersRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/_staff/stock': {
+      id: '/_staff/stock'
+      path: '/stock'
+      fullPath: '/stock'
+      preLoaderRoute: typeof StaffStockRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/_staff/_admin/categories': {
+      id: '/_staff/_admin/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof StaffAdminCategoriesRouteImport
+      parentRoute: typeof StaffAdminRoute
+    }
+    '/_staff/_admin/staff': {
+      id: '/_staff/_admin/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof StaffAdminStaffRouteImport
+      parentRoute: typeof StaffAdminRoute
+    }
+    '/_staff/_admin/products/': {
+      id: '/_staff/_admin/products/'
+      path: '/products'
+      fullPath: '/products/'
+      preLoaderRoute: typeof StaffAdminProductsIndexRouteImport
+      parentRoute: typeof StaffAdminRoute
+    }
+    '/_staff/_admin/stores/': {
+      id: '/_staff/_admin/stores/'
+      path: '/stores'
+      fullPath: '/stores/'
+      preLoaderRoute: typeof StaffAdminStoresIndexRouteImport
+      parentRoute: typeof StaffAdminRoute
     }
   }
 }
 
+interface StaffAdminRouteChildren {
+  StaffAdminCategoriesRoute: typeof StaffAdminCategoriesRoute
+  StaffAdminStaffRoute: typeof StaffAdminStaffRoute
+  StaffAdminProductsIndexRoute: typeof StaffAdminProductsIndexRoute
+  StaffAdminStoresIndexRoute: typeof StaffAdminStoresIndexRoute
+}
+
+const StaffAdminRouteChildren: StaffAdminRouteChildren = {
+  StaffAdminCategoriesRoute: StaffAdminCategoriesRoute,
+  StaffAdminStaffRoute: StaffAdminStaffRoute,
+  StaffAdminProductsIndexRoute: StaffAdminProductsIndexRoute,
+  StaffAdminStoresIndexRoute: StaffAdminStoresIndexRoute,
+}
+
+const StaffAdminRouteWithChildren = StaffAdminRoute._addFileChildren(
+  StaffAdminRouteChildren,
+)
+
+interface StaffRouteChildren {
+  StaffAdminRoute: typeof StaffAdminRouteWithChildren
+  StaffOrdersRoute: typeof StaffOrdersRoute
+  StaffStockRoute: typeof StaffStockRoute
+  StaffIndexRoute: typeof StaffIndexRoute
+}
+
+const StaffRouteChildren: StaffRouteChildren = {
+  StaffAdminRoute: StaffAdminRouteWithChildren,
+  StaffOrdersRoute: StaffOrdersRoute,
+  StaffStockRoute: StaffStockRoute,
+  StaffIndexRoute: StaffIndexRoute,
+}
+
+const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  StaffRoute: StaffRouteWithChildren,
+  SignInRoute: SignInRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
