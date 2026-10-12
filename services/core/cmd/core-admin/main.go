@@ -17,6 +17,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/config"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/migrate"
+	"github.com/kapildev333/shopperstop/services/core/internal/seed"
 	"github.com/kapildev333/shopperstop/services/core/migrations"
 )
 
@@ -38,9 +39,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		if len(args) > 2 || (len(args) == 2 && args[1] != "--reset") {
 			return usage(stderr)
 		}
-		// ponytail: stub until Phase 2 adds demo data; it loads no config and opens no pool.
-		fmt.Fprintln(stdout, "seed-demo: no demo data yet")
-		return 0
+		return seedDemoCmd(len(args) == 2, stdout, stderr)
 	case "create-admin":
 		if len(args) != 2 {
 			return usage(stderr)
@@ -81,6 +80,34 @@ func migrateDB(stdout, stderr io.Writer) int {
 	if len(applied) == 0 {
 		fmt.Fprintln(stdout, "nothing to apply")
 	}
+	return 0
+}
+
+// seedDemoCmd loads the demo accounts, clearing them first when reset is set.
+func seedDemoCmd(reset bool, stdout, stderr io.Writer) int {
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		fmt.Fprintf(stderr, "core-admin: %v\n", err)
+		return 1
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fmt.Fprintf(stderr, "core-admin: open database: %v\n", err)
+		return 1
+	}
+	defer pool.Close()
+	load := seed.Load
+	if reset {
+		load = seed.Reset
+	}
+	if err := load(ctx, pool); err != nil {
+		fmt.Fprintf(stderr, "core-admin: seed-demo: %v\n", err)
+		return 1
+	}
+	fmt.Fprintln(stdout, "seed-demo: demo accounts loaded")
+	fmt.Fprintln(stdout, "  admin     admin@shopperstop.local (staff, admin)")
+	fmt.Fprintln(stdout, "  customer  demo@shopperstop.local (2 addresses)")
 	return 0
 }
 
