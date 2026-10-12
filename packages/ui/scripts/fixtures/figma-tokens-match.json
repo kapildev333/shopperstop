@@ -1,0 +1,24 @@
+{
+  "color": {
+    "brand": { "$value": "#F8CB46", "$type": "color" },
+    "brand-strong": { "$value": { "hex": "#E5B51F" }, "$type": "color" },
+    "on-brand": { "$value": "#1F1F1F", "$type": "color" },
+    "accent": { "$value": "#0C831F", "$type": "color" },
+    "accent-hover": { "$value": "#0a6b19", "$type": "color" },
+    "accent-soft": { "$value": "#E8F5EA", "$type": "color" },
+    "on-accent": { "$value": "#FFFFFFFF", "$type": "color" },
+    "canvas": { "$value": "#F5F6F8", "$type": "color" },
+    "surface": { "$value": { "hex": "#FFFFFF" }, "$type": "color" },
+    "line": { "$value": "#E6E8EB", "$type": "color" },
+    "line-strong": { "$value": "#868C94", "$type": "color" },
+    "ink": { "$value": "#1F1F1F", "$type": "color" },
+    "ink-muted": { "$value": { "hex": "#6B7280" }, "$type": "color" },
+    "focus": { "$value": "#2563EB", "$type": "color" },
+    "danger": { "$value": "#D92D20", "$type": "color" },
+    "danger-soft": { "$value": "#FEE4E2", "$type": "color" },
+    "warning": { "$value": "#B54708", "$type": "color" },
+    "warning-soft": { "$value": "#FEF0C7", "$type": "color" },
+    "success": { "$value": "#0C831F", "$type": "color" },
+    "success-soft": { "$value": "#E8F5EA", "$type": "color" }
+  }
+}
