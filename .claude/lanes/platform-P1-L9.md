@@ -1,7 +1,7 @@
 # platform-P1-L9 - CI workflow and full Makefile (OpenSpec change platform-ci-makefile)
 Status: started
 ## Doing
-Task 1 (Makefile) written, gated and committed; task 2 (ci.yml) next, same branch.
+Task 2 (ci.yml) written and gated; committing on the branch. Task 3 is the area manager's (runtime evidence).
 ## Found
 - Task 1 red (1.1), unchanged tree, `make test`:
   ```
@@ -21,6 +21,16 @@ Task 1 (Makefile) written, gated and committed; task 2 (ci.yml) next, same branc
 - ui request folded in: `ui` target builds packages/ui before web, admin, test-web (once under `make -j3`); Node floor 22.12, CI uses setup-node `22`.
 - Contract for web and admin: each app's `e2e` npm script; Playwright `webServer` starts core (inherits the env `make e2e` sets) and `vite preview` on 15173 (web) and 15174 (admin), proxying `/api` to core on 18080; Chromium only.
 - Contract for core: `core-admin seed-demo --reset` is called by `make seed`, `make dev`, `make e2e`.
+- Task 2 red (2.2 before the file exists, unchanged tree):
+  ```
+  FileNotFoundError: [Errno 2] No such file or directory: '.github/workflows/ci.yml'
+  ```
+- Task 2 gates (ci.yml written verbatim from design.md "The workflow"):
+  - 2.2 shape check: `ok`
+  - 2.3 `uses:` pins: every `uses: actions/...` is `@v4` (checkout, setup-node) or `@v5` (setup-go); `run: 'echo "...absent, skipping"'` quoted on all three skip lines (core, web, e2e).
+  - 2.3 `openspec validate --all --strict`: `Totals: 3 passed, 0 failed (3 items)`.
+  - YAML parse: `d[True]` holds the `on` key under PyYAML; the check reads both keys.
+  - Not run: `act`, `actionlint` (not installed, no dependency added). Behaviour is verified by the PR's CI run (task 3.1).
 ## Requests
 - to core (via platform manager and orchestrator): `core-admin seed-demo --reset` must exist and exit 0 before `make dev` and `make e2e` can pass with services/core present; recommended a Phase 1 stub that prints `seed-demo: no demo data yet` and exits 0.
 - to web, admin (via orchestrator): the `e2e` script and Playwright webServer contract above.

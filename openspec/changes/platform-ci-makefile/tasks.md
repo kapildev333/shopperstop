@@ -17,9 +17,9 @@ Scope: `.github/workflows/ci.yml`, this file's 2.x checkboxes. Scenarios: platfo
 Test first: none committed. Why: `act` and `actionlint` are not installed and no dependency may be added; the workflow's behaviour is only observable on GitHub. The red step: 2.2's check run before the file exists fails with `FileNotFoundError`; record it in the lane log.
 Commit: one commit, `feat: ci workflow with core, web, e2e and spec jobs`.
 
-- [ ] 2.1 Write `.github/workflows/ci.yml` exactly as design.md "The workflow" (every skip `run:` value quoted as a whole: `run: 'echo "core: services/core absent, skipping"'`)
-- [ ] 2.2 Shape check passes: `python3 -c "import yaml;d=yaml.safe_load(open('.github/workflows/ci.yml'));on=d.get('on',d.get(True));assert d['name']=='ci' and list(d['jobs'])==['core','web','e2e','spec'] and 'pull_request' in on and on['push']['branches']==['main'];print('ok')"` prints `ok`
-- [ ] 2.3 `grep -c "uses: actions/" .github/workflows/ci.yml` lists only `@v4`/`@v5` majors; `openspec validate --all --strict` passes; `git status --short` shows only `ci.yml`, this file and the lane log
+- [x] 2.1 Write `.github/workflows/ci.yml` exactly as design.md "The workflow" (every skip `run:` value quoted as a whole: `run: 'echo "core: services/core absent, skipping"'`)
+- [x] 2.2 Shape check passes: `python3 -c "import yaml;d=yaml.safe_load(open('.github/workflows/ci.yml'));on=d.get('on',d.get(True));assert d['name']=='ci' and list(d['jobs'])==['core','web','e2e','spec'] and 'pull_request' in on and on['push']['branches']==['main'];print('ok')"` prints `ok`
+- [x] 2.3 `grep -c "uses: actions/" .github/workflows/ci.yml` lists only `@v4`/`@v5` majors; `openspec validate --all --strict` passes; `git status --short` shows only `ci.yml`, this file and the lane log
 
 ## 3. Runtime evidence (area manager, not a worker)
 
