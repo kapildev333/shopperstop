@@ -5,9 +5,9 @@ import { Button, Card, ErrorBanner, FormField, Input, PageHeader } from '@shoppe
 import { api, meQuery, type ApiError } from '../api'
 import { setToken } from '../session'
 
-// Only same-app paths: never an absolute or protocol-relative URL (open redirect).
+// Only in-app paths: `/` not followed by `/` or `\` (browsers read `/\host` like `//host`); never an absolute URL (open redirect).
 function safeRedirect(value: unknown) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : undefined
+  return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : undefined
 }
 
 const messages: Partial<Record<ApiError['code'], string>> = {
