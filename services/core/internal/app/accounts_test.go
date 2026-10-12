@@ -488,4 +488,31 @@ func TestAuthGates(t *testing.T) {
 			}
 		}
 	}
+
+	// Admin-only routes: no token and a customer token get 401; store staff get
+	// 403; an admin gets past the gate (the body or id then decides the status).
+	adminGates := []struct {
+		method, path string
+		body         any
+		allowed      int
+	}{
+		{http.MethodGet, "/api/core/v1/admin/staff-users", nil, http.StatusOK},
+		{http.MethodPost, "/api/core/v1/admin/staff-users", map[string]string{}, http.StatusBadRequest},
+		{http.MethodPatch, "/api/core/v1/admin/staff-users/00000000-0000-4000-8000-0000000001ff", map[string]string{}, http.StatusNotFound},
+	}
+	for _, g := range adminGates {
+		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
+			t.Fatalf("%s %s anonymous: got %d %s, want 401 unauthorized", g.method, g.path, status, body)
+		}
+		customer := newCustomer(t)
+		if status, body := call(t, g.method, g.path, customer.Token, g.body); status != http.StatusUnauthorized {
+			t.Fatalf("%s %s with a customer token: got %d %s, want 401", g.method, g.path, status, body)
+		}
+		if status, body := call(t, g.method, g.path, staffSignIn(t, storeStaffEmail), g.body); status != http.StatusForbidden || decodeError(t, body).Error.Code != "forbidden" {
+			t.Fatalf("%s %s with a store-staff token: got %d %s, want 403 forbidden", g.method, g.path, status, body)
+		}
+		if status, body := call(t, g.method, g.path, staffSignIn(t, adminStaffEmail), g.body); status != g.allowed {
+			t.Fatalf("%s %s with an admin token: got %d %s, want %d", g.method, g.path, status, body, g.allowed)
+		}
+	}
 }

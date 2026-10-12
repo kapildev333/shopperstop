@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -176,6 +177,247 @@ func TestStaffMeWithCustomerToken(t *testing.T) {
 		status, body := call(t, c.method, c.path, customer.Token, nil)
 		if e := decodeError(t, body); status != http.StatusUnauthorized || e.Error.Code != "unauthorized" {
 			t.Fatalf("%s %s with a customer token: got %d %s, want 401 unauthorized", c.method, c.path, status, body)
+		}
+	}
+}
+
+// missingStaffID is a canonical uuid no staff user has.
+const (
+	staffUsersPath = "/api/core/v1/admin/staff-users"
+	missingStaffID = "00000000-0000-4000-8000-0000000001ff"
+)
+
+// staffID returns the id of the staff user with email.
+func staffID(t *testing.T, email string) string {
+	t.Helper()
+	var id string
+	if err := testPool.QueryRow(context.Background(), "select id from staff_users where email = $1", email).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// staffUserBody is the 201 and 200 body of the staff-user routes.
+func staffUserBody(t *testing.T, body []byte) staffView {
+	t.Helper()
+	var got staffView
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("body %s is not a staff user: %v", body, err)
+	}
+	return got
+}
+
+func TestStoreStaffForbiddenOnStaffUsers(t *testing.T) {
+	seedStaff(t)
+	token := staffSignIn(t, storeStaffEmail)
+	for _, c := range []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodGet, staffUsersPath, nil},
+		{http.MethodPost, staffUsersPath, map[string]string{}},
+		{http.MethodPatch, staffUsersPath + "/" + missingStaffID, map[string]string{}},
+	} {
+		status, body := call(t, c.method, c.path, token, c.body)
+		if e := decodeError(t, body); status != http.StatusForbidden || e.Error.Code != "forbidden" {
+			t.Fatalf("%s %s as store staff: got %d %s, want 403 forbidden", c.method, c.path, status, body)
+		}
+	}
+}
+
+// TestCreateStoreStaffUser is the one route test that pays cost 12 twice: the
+// create hashes the password and the sign-in checks it.
+func TestCreateStoreStaffUser(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	email := uniqueEmail(t)
+	status, body := call(t, http.MethodPost, staffUsersPath, admin,
+		map[string]string{"email": email, "password": "staff12345", "name": "HSR", "role": "store_staff", "storeId": testStoreID})
+	got := staffUserBody(t, body)
+	if status != http.StatusCreated || got.ID == "" || got.Email != email || got.Name != "HSR" ||
+		got.Role != "store_staff" || got.StoreID != testStoreID || !got.IsActive {
+		t.Fatalf("create store staff: got %d %s, want 201 with the new store-staff user", status, body)
+	}
+	status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+		map[string]string{"email": email, "password": "staff12345"})
+	if status != http.StatusOK {
+		t.Fatalf("sign-in of the created user: got %d %s, want 200", status, body)
+	}
+}
+
+func TestCreateStaffUnknownRole(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	status, body := call(t, http.MethodPost, staffUsersPath, admin,
+		map[string]string{"email": uniqueEmail(t), "password": "staff12345", "name": "Owner", "role": "owner"})
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "role" {
+		t.Fatalf("role owner: got %d %s, want 400 validation field role", status, body)
+	}
+}
+
+func TestCreateStaffRoleStoreMismatch(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	cases := []struct {
+		name string
+		body map[string]string
+	}{
+		{"store staff without a store", map[string]string{"role": "store_staff"}},
+		{"admin with a store", map[string]string{"role": "admin", "storeId": testStoreID}},
+	}
+	for _, c := range cases {
+		c.body["email"] = uniqueEmail(t)
+		c.body["password"] = "staff12345"
+		c.body["name"] = "Staff"
+		status, body := call(t, http.MethodPost, staffUsersPath, admin, c.body)
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "storeId" {
+			t.Fatalf("%s: got %d %s, want 400 validation field storeId", c.name, status, body)
+		}
+	}
+}
+
+func TestCreateStaffTakenEmail(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	status, body := call(t, http.MethodPost, staffUsersPath, admin,
+		map[string]string{"email": strings.ToUpper(adminStaffEmail), "password": "staff12345", "name": "Again", "role": "admin"})
+	if e := decodeError(t, body); status != http.StatusConflict || e.Error.Code != "conflict" || e.Error.Field != "email" {
+		t.Fatalf("taken email: got %d %s, want 409 conflict field email", status, body)
+	}
+}
+
+// TestStaffPasswordReset patches a password, so the new hash costs 12 once.
+func TestStaffPasswordReset(t *testing.T) {
+	email := insertStaff(t, "store_staff", true)
+	admin := staffSignIn(t, adminStaffEmail)
+	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), admin,
+		map[string]string{"password": "newpass123"})
+	if status != http.StatusOK {
+		t.Fatalf("password reset: got %d %s, want 200", status, body)
+	}
+	status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+		map[string]string{"email": email, "password": testPassword})
+	assertStaffRefused(t, "old password after reset", status, body)
+	status, body = call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+		map[string]string{"email": email, "password": "newpass123"})
+	if status != http.StatusOK {
+		t.Fatalf("new password after reset: got %d %s, want 200", status, body)
+	}
+}
+
+func TestPatchUnknownStaff(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	for _, id := range []string{missingStaffID, "abc"} {
+		status, body := call(t, http.MethodPatch, staffUsersPath+"/"+id, admin, map[string]string{"name": "Nobody"})
+		if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+			t.Fatalf("PATCH %s: got %d %s, want 404 not_found", id, status, body)
+		}
+	}
+}
+
+func TestDeactivatedWhileSignedIn(t *testing.T) {
+	email := insertStaff(t, "store_staff", true)
+	token := staffSignIn(t, email)
+	admin := staffSignIn(t, adminStaffEmail)
+	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), admin, map[string]bool{"isActive": false})
+	if got := staffUserBody(t, body); status != http.StatusOK || got.IsActive {
+		t.Fatalf("deactivate: got %d %s, want 200 with isActive false", status, body)
+	}
+	if status, body := call(t, http.MethodGet, "/api/core/v1/admin/me", token, nil); status != http.StatusUnauthorized {
+		t.Fatalf("GET /admin/me after deactivation: got %d %s, want 401", status, body)
+	}
+}
+
+func TestListStaff(t *testing.T) {
+	seedStaff(t)
+	admin := staffSignIn(t, adminStaffEmail)
+	status, body := call(t, http.MethodGet, staffUsersPath+"?page=1&pageSize=2", admin, nil)
+	var list struct {
+		Items    []staffView `json:"items"`
+		Page     int         `json:"page"`
+		PageSize int         `json:"pageSize"`
+		Total    int64       `json:"total"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil || status != http.StatusOK {
+		t.Fatalf("list: got %d %s, want 200", status, body)
+	}
+	var total int64
+	if err := testPool.QueryRow(context.Background(), "select count(*) from staff_users").Scan(&total); err != nil {
+		t.Fatal(err)
+	}
+	if list.Page != 1 || list.PageSize != 2 || list.Total != total || len(list.Items) != 2 {
+		t.Fatalf("list %s: want page 1, pageSize 2, total %d, two items", body, total)
+	}
+	// The expected order comes from the database, which compares citext emails.
+	rows, err := testPool.Query(context.Background(), "select email from staff_users order by email limit 2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for i := 0; rows.Next(); i++ {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			t.Fatal(err)
+		}
+		if list.Items[i].Email != email {
+			t.Fatalf("item %d is %s, want %s (ordered by email)", i, list.Items[i].Email, email)
+		}
+	}
+}
+
+// Task 7 review gaps.
+
+func TestStaffSignOutEndsOnlyThatSession(t *testing.T) {
+	seedStaff(t)
+	first := staffSignIn(t, storeStaffEmail)
+	second := staffSignIn(t, storeStaffEmail)
+	if status, body := call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-out", first, nil); status != http.StatusNoContent {
+		t.Fatalf("sign-out: got %d %s, want 204", status, body)
+	}
+	if status, body := call(t, http.MethodGet, "/api/core/v1/admin/me", first, nil); status != http.StatusUnauthorized {
+		t.Fatalf("signed-out token: got %d %s, want 401", status, body)
+	}
+	if status, body := call(t, http.MethodGet, "/api/core/v1/admin/me", second, nil); status != http.StatusOK {
+		t.Fatalf("other session after one sign-out: got %d %s, want 200", status, body)
+	}
+}
+
+// TestSharedLimiterCountsStaffAndCustomer uses a limit of 3 per email. The
+// customer and staff routes share one limiter, so the 4th attempt across both is 429.
+func TestSharedLimiterCountsStaffAndCustomer(t *testing.T) {
+	email := uniqueEmail(t)
+	a := auth.New(testPool, testPepper, auth.NewLimiter(3, 100, time.Hour, time.Now))
+	limited := httptest.NewServer(New(testPool, nil, a))
+	t.Cleanup(limited.Close)
+	attempts := []string{"/api/core/v1/auth/sign-in", "/api/core/v1/admin/auth/sign-in", "/api/core/v1/auth/sign-in"}
+	for i, path := range attempts {
+		status, body := callAt(t, limited.URL, http.MethodPost, path, "",
+			map[string]string{"email": email, "password": "wrong-password"})
+		if status != http.StatusUnauthorized {
+			t.Fatalf("attempt %d on %s: got %d %s, want 401", i+1, path, status, body)
+		}
+	}
+	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "",
+		map[string]string{"email": email, "password": "wrong-password"})
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("fourth attempt across both routes: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
+func TestStaffSignInValidation(t *testing.T) {
+	cases := []struct {
+		name  string
+		body  map[string]string
+		field string
+	}{
+		{"bad email", map[string]string{"email": "not-an-email", "password": testPassword}, "email"},
+		{"empty password", map[string]string{"email": adminStaffEmail, "password": ""}, "password"},
+	}
+	for _, c := range cases {
+		status, body := call(t, http.MethodPost, "/api/core/v1/admin/auth/sign-in", "", c.body)
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
+			t.Fatalf("%s: got %d %s, want 400 validation field %s", c.name, status, body, c.field)
 		}
 	}
 }
