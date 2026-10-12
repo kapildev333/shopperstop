@@ -18,6 +18,10 @@
     {
       "name": "accounts",
       "description": "Customer sign-up, sign-in, sign-out and profile."
+    },
+    {
+      "name": "admin-staff",
+      "description": "Staff sign-in, sign-out and the signed-in staff user for the admin panel."
     }
   ],
   "paths": {
@@ -786,6 +790,187 @@
           }
         }
       }
+    },
+    "/admin/auth/sign-in": {
+      "post": {
+        "operationId": "postAdminAuthSignIn",
+        "summary": "Sign in a staff user",
+        "description": "Creates a session for an active staff user and answers its token and the staff user. Staff sessions end 12 hours after sign-in and use does not extend them. A wrong password, an unknown email, a customer's email and an inactive staff user answer the same 401. Shares the sign-in rate limit: attempts count per email and per client IP.",
+        "tags": [
+          "admin-staff"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              },
+              "example": {
+                "email": "admin@shopperstop.local",
+                "password": "admin12345"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The staff user is signed in. storeId is present for store staff only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSession"
+                },
+                "example": {
+                  "token": "Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM",
+                  "staff": {
+                    "id": "00000000-0000-4000-8000-000000000101",
+                    "email": "admin@shopperstop.local",
+                    "name": "Admin",
+                    "role": "admin",
+                    "isActive": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email is not an email address, or the password is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Any failed sign-in: wrong password, unknown email, customer credentials or inactive staff user. The four cases look the same.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "wrong email or password"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this email or from this IP within the hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/auth/sign-out": {
+      "post": {
+        "operationId": "postAdminAuthSignOut",
+        "summary": "Sign out a staff user",
+        "description": "Ends the session of the bearer token and nothing else: the staff user's other sessions stay signed in.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The session is ended. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, a customer token, or belongs to a deactivated staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/me": {
+      "get": {
+        "operationId": "getAdminMe",
+        "summary": "The signed-in staff user",
+        "description": "Answers the staff user the bearer token belongs to. A customer token is refused with 401.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signed-in staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Staff"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000101",
+                  "email": "admin@shopperstop.local",
+                  "name": "Admin",
+                  "role": "admin",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, a customer token, or belongs to a deactivated staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1055,6 +1240,62 @@
             "type": "integer",
             "minimum": 0,
             "description": "Every address the customer has, not just this page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Staff": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "store_staff"
+            ]
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Omitted for admins; present for store staff."
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StaffSession": {
+        "type": "object",
+        "required": [
+          "token",
+          "staff"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Bearer token for the staff routes. Shown once; the server keeps only a hash."
+          },
+          "staff": {
+            "$ref": "#/components/schemas/Staff"
           }
         },
         "additionalProperties": false

@@ -30,6 +30,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireCustomer).Post("/api/core/v1/me/addresses", address.Create(pool))
 	r.With(a.RequireCustomer).Patch("/api/core/v1/me/addresses/{id}", address.Update(pool))
 	r.With(a.RequireCustomer).Delete("/api/core/v1/me/addresses/{id}", address.Delete(pool))
+	r.Post("/api/core/v1/admin/auth/sign-in", a.StaffSignIn)
+	r.With(a.RequireStaff).Post("/api/core/v1/admin/auth/sign-out", a.StaffSignOut)
+	r.With(a.RequireStaff).Get("/api/core/v1/admin/me", a.StaffMe)
 	return r
 }
 
