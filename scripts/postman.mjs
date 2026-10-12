@@ -30,7 +30,7 @@ function fixRequest(item) {
   if (auth?.type === 'bearer') auth.bearer = [{ key: 'token', value: `{{${tokenVar(url.path)}}}`, type: 'string' }];
   for (const v of url.variable) {
     const name = ID_VARS[url.path[url.path.indexOf(`:${v.key}`) - 1]];
-    if (name) v.value = `{{${name}}}`;
+    if (v.key === 'id' && name) v.value = `{{${name}}}`;
   }
   if (url.path.includes('auth') && returnsToken(item)) {
     item.event.push({
