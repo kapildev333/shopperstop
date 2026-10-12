@@ -1,6 +1,7 @@
 # web-P2-L1 - web-serviceability-catalog: pincode, serviceability, Home, Category, Product, Search (team lead)
 Status: started
 ## Doing
+2026-10-12 task 1 (worker, Haiku): red tests committed; next, the feat commit.
 Change proposed and valid (`openspec validate web-serviceability-catalog --strict`; `--all --strict` 8 passed). Waiting for core-P2-L2 on main (task 1) and core-P2-L3, core-P2-L4 on main (tasks 2 to 4); the manager launches workers.
 ## Found
 - Change: `openspec/changes/web-serviceability-catalog/` (proposal; `web-app` delta: MODIFIED "Customer site shell", 10 ADDED requirements, 30 scenarios; design with the scenario → test map; tasks 1 to 4). No `docs/design/web-P2-L1.md`: design.md is enough.
@@ -10,6 +11,20 @@ Change proposed and valid (`openspec validate web-serviceability-catalog --stric
 - E2e uses the D22 demo seed; only the closed store is created (seeded admin, pincode 560076, created only when serviceability answers 404).
 - The first-visit sheet opens on `/` for a fresh browser: task 1 adds a `beforeEach` init script storing `560034` to web-P2-L2's `e2e/auth.spec.ts` and `e2e/account.spec.ts`.
 - For ui (finding, no request): `IconButton` spreads props and then forces `type="button"`, so it cannot be a submit button; the search form submits on Enter instead.
+- 2026-10-12 task 1 (worker, Haiku): red `test: pincode, store resolution and notices`. `npm run test --workspace apps/web -- --run src/pincode.test.ts src/pincode-sheet.test.tsx src/store-gate.test.tsx src/shell.test.tsx`:
+  ```
+  FAIL  src/pincode-sheet.test.tsx [ src/pincode-sheet.test.tsx ]
+  Error: Failed to resolve import "./catalog" from "src/pincode-sheet.test.tsx". Does the file exist?
+  FAIL  src/pincode.test.ts [ src/pincode.test.ts ]
+  Error: Failed to resolve import "./pincode" from "src/pincode.test.ts". Does the file exist?
+  FAIL  src/shell.test.tsx [ src/shell.test.tsx ]
+  Error: Failed to resolve import "./pincode" from "src/shell.test.tsx". Does the file exist?
+  FAIL  src/store-gate.test.tsx [ src/store-gate.test.tsx ]
+  Error: Failed to resolve import "./catalog" from "src/store-gate.test.tsx". Does the file exist?
+  Test Files  4 failed (4)
+       Tests  no tests
+  ```
+
 ## Requests
 - to core (via the web area plan): confirm generated schema names `Serviceability`, `Store`, `CategoryTree`, `CategoryNode`, `StoreProduct`, `StoreProductList`; `pageSize` default 24, max 100 on `GET /stores/{id}/products`; the 404s of `/serviceability` and `/stores/{id}/products/{slug}` documented in `openapi.json`.
 ## Blockers

@@ -10,7 +10,7 @@ Scope: `apps/web/src/pincode.ts`, `src/pincode.test.ts`, `src/catalog.ts` (`keys
 Scenarios: Customer site shell › "Home renders in the shell"; Customer search › "Search from the banner"; Customer pincode choice › all three; Customer pincode sheet › all four; Customer store resolution › both; Customer store notices › all four.
 Failing tests: `src/pincode.test.ts` › "pincode persisted", "pincode restored on load", "blocked storage tolerated"; `src/pincode-sheet.test.tsx` › "first visit opens the pincode sheet", "invalid pincode refused", "pincode saved from the sheet", "banner control opens the sheet", "banner shows the delivery promise"; `src/store-gate.test.tsx` › "not serviceable notice", "closed store notice", "store lookup fails"; `src/shell.test.tsx` › "home renders in the shell" (updated), "search from the banner"; `e2e/browse.spec.ts` › "pincode resolves against core", "notices against core".
 
-- [ ] 1.1 Tests committed red (`test: pincode, store resolution and notices`), with `src/test-data.ts` and the two e2e `beforeEach` lines (test infrastructure)
+- [x] 1.1 Tests committed red (`test: pincode, store resolution and notices`), with `src/test-data.ts` and the two e2e `beforeEach` lines (test infrastructure)
 - [ ] 1.2 `pincode.ts`, `catalog.ts` (`keys`, `useServiceability`), `pincode-sheet.tsx`, `search-form.tsx`, `store-gate.tsx`, banner, Home behind `StoreGate`, `test-setup.ts` (`feat: pincode sheet, store resolution and notices`); all gates green, e2e green, `smoke.spec.ts`, `auth.spec.ts`, `account.spec.ts` green
 
 ## 2. Home and the product card

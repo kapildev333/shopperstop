@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
+// Stored pincode so the first-visit pincode sheet does not cover Home.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560034')))
+
 const tokenKey = 'shopperstop:customer-token'
 const demo = { email: 'demo@shopperstop.local', password: 'demo12345' }
 
