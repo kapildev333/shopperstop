@@ -356,6 +356,44 @@ func (q *Queries) SetProductImage(ctx context.Context, arg SetProductImageParams
 	return i, err
 }
 
+const storeCategories = `-- name: StoreCategories :many
+select c.id, c.name, c.slug, c.parent_id, c.sort_order, c.image_key, c.created_at, c.updated_at from categories c
+where exists (
+    select 1 from products p join store_stock s on s.product_id = p.id
+    where s.store_id = $1 and s.quantity > 0 and p.is_active
+      and (p.category_id = c.id or p.category_id in (select k.id from categories k where k.parent_id = c.id)))
+order by c.sort_order, c.name, c.id
+`
+
+func (q *Queries) StoreCategories(ctx context.Context, storeID string) ([]Category, error) {
+	rows, err := q.db.Query(ctx, storeCategories, storeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Category
+	for rows.Next() {
+		var i Category
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.ParentID,
+			&i.SortOrder,
+			&i.ImageKey,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const storeProductBySlug = `-- name: StoreProductBySlug :one
 select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
        p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity

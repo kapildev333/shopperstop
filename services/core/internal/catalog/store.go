@@ -168,3 +168,26 @@ func StoreProductBySlug(pool *pgxpool.Pool) http.HandlerFunc {
 		httpx.WriteJSON(w, http.StatusOK, storeProduct(p, row.Quantity, true))
 	}
 }
+
+// StoreCategories answers the store's category tree with only the categories
+// that have, themselves or through a child, an active product in stock there.
+// A child is listed only when it qualifies itself. 404 for an unknown store.
+func StoreCategories(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		storeID, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		if _, err := store.Get(r.Context(), pool, storeID); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		rows, err := db.New(pool).StoreCategories(r.Context(), storeID)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, CategoryTree{Items: tree(rows)})
+	}
+}

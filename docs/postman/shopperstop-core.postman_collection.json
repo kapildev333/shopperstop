@@ -10376,8 +10376,150 @@
     },
     {
       "name": "catalog",
-      "description": "Public catalog: a store's products, and the product and category images, served without a token.",
+      "description": "Public catalog: a store's category tree and products, and the product and category images, served without a token.",
       "item": [
+        {
+          "name": "List a store's categories",
+          "request": {
+            "name": "List a store's categories",
+            "description": {
+              "content": "Public, no session. The category tree a store sells from: each parent with its children array, parents and children ordered by sortOrder then name. A category is listed only when it, or one of its children, has an active product with a quantity above 0 at this store. A parent is listed through a stocked child; a child is listed only when it qualifies itself, so out-of-stock children are hidden. The tree is not paged. An unknown store answers 404 not_found.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "stores",
+                ":id",
+                "categories"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The store's category tree, holding only categories in stock there.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "categories"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000501\",\n      \"name\": \"Fruits & Vegetables\",\n      \"slug\": \"fruits-vegetables\",\n      \"sortOrder\": 10,\n      \"children\": [\n        {\n          \"id\": \"00000000-0000-4000-8000-000000000521\",\n          \"name\": \"Fresh Fruits\",\n          \"slug\": \"fresh-fruits\",\n          \"sortOrder\": 10,\n          \"parentId\": \"00000000-0000-4000-8000-000000000501\"\n        }\n      ]\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "categories"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
         {
           "name": "List a store's products",
           "request": {

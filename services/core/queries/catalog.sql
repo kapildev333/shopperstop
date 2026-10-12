@@ -107,3 +107,11 @@ select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, 
 from products p
 left join store_stock s on s.product_id = p.id and s.store_id = @store_id
 where p.id = any(@ids::uuid[]);
+
+-- name: StoreCategories :many
+select c.* from categories c
+where exists (
+    select 1 from products p join store_stock s on s.product_id = p.id
+    where s.store_id = @store_id and s.quantity > 0 and p.is_active
+      and (p.category_id = c.id or p.category_id in (select k.id from categories k where k.parent_id = c.id)))
+order by c.sort_order, c.name, c.id;

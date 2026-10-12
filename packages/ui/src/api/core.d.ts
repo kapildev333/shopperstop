@@ -396,6 +396,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stores/{id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's categories
+         * @description Public, no session. The category tree a store sells from: each parent with its children array, parents and children ordered by sortOrder then name. A category is listed only when it, or one of its children, has an active product with a quantity above 0 at this store. A parent is listed through a stocked child; a child is listed only when it qualifies itself, so out-of-stock children are hidden. The tree is not paged. An unknown store answers 404 not_found.
+         */
+        get: operations["getStoreCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stores/{id}/products": {
         parameters: {
             query?: never;
@@ -3105,6 +3125,70 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Store"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The store's category tree, holding only categories in stock there. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000501",
+                     *           "name": "Fruits & Vegetables",
+                     *           "slug": "fruits-vegetables",
+                     *           "sortOrder": 10,
+                     *           "children": [
+                     *             {
+                     *               "id": "00000000-0000-4000-8000-000000000521",
+                     *               "name": "Fresh Fruits",
+                     *               "slug": "fresh-fruits",
+                     *               "sortOrder": 10,
+                     *               "parentId": "00000000-0000-4000-8000-000000000501"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CategoryTree"];
                 };
             };
             /** @description No store has this id, or the id is not a uuid. */

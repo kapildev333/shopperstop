@@ -27,6 +27,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.Get("/api/core/v1/readyz", readyz(pool))
 	r.Get("/api/core/v1/serviceability", store.Serviceability(pool))
 	r.Get("/api/core/v1/stores/{id}", store.PublicGet(pool))
+	r.Get("/api/core/v1/stores/{id}/categories", catalog.StoreCategories(pool))
 	r.Get("/api/core/v1/stores/{id}/products", catalog.StoreProducts(pool))
 	r.Get("/api/core/v1/stores/{id}/products/{slug}", catalog.StoreProductBySlug(pool))
 	r.Post("/api/core/v1/auth/register", a.Register)
