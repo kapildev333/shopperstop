@@ -3,7 +3,7 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-No web e2e running (ports free). web-P2-L1 task 1 and web-P2-L3 task 1 landed and reviewed; both lanes wait on core-P2-L3 and L4.
+PAUSED 2026-10-12 end of day. Resume at: rebase `.worktrees/web-P2-L1` onto main once core-P2-L4 is merged and run task 2 (Home and product card; also narrow the serviceability 404 check to code `not_serviceable`); then web-P2-L3 task 2. Branches are local and unpushed: `lane/web-P2-L1-browsing` (task 1 landed, reviewed), `lane/web-P2-L3-cart` (task 1 landed, reviewed with fixes). No e2e running.
 
 ## Lanes
 | Lane | Task | Scope | Status |
