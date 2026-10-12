@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var fileName = regexp.MustCompile(`^\d{4}_[a-z0-9_]+\.sql$`)
+var fileName = regexp.MustCompile(`^(\d{4})_[a-z0-9_]+\.sql$`)
 
 const bookkeeping = `create table if not exists schema_migrations (
     version    text primary key,
@@ -23,8 +23,9 @@ const bookkeeping = `create table if not exists schema_migrations (
 // Apply runs every *.sql file in the root of fsys that the database has not
 // recorded, in file-name order. Each file runs in its own transaction with
 // its version insert, so a failure leaves no trace of that file and stops the
-// run. Apply returns the versions applied by this call. Two runners racing
-// fail on the primary key instead of waiting.
+// run. Apply returns the versions applied by this call. Two files sharing a
+// number are refused before anything runs. Two runners racing fail on the
+// primary key instead of waiting.
 // ponytail: no advisory lock; add pg_advisory_lock when deploys migrate from more than one process.
 func Apply(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) ([]string, error) {
 	entries, err := fs.ReadDir(fsys, ".")
@@ -32,13 +33,19 @@ func Apply(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) ([]string, error
 		return nil, fmt.Errorf("migrate: read files: %w", err)
 	}
 	var files []string
+	numbers := map[string]string{}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
 			continue
 		}
-		if !fileName.MatchString(e.Name()) {
+		m := fileName.FindStringSubmatch(e.Name())
+		if m == nil {
 			return nil, fmt.Errorf("migrate %s: name must match NNNN_name.sql", e.Name())
 		}
+		if other, dup := numbers[m[1]]; dup {
+			return nil, fmt.Errorf("migrate %s: version %s already used by %s", e.Name(), m[1], other)
+		}
+		numbers[m[1]] = e.Name()
 		files = append(files, e.Name())
 	}
 
