@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -61,4 +63,86 @@ func public(row db.Store) Store {
 		DeliveryFeeCents: row.DeliveryFeeCents, FreeDeliveryAboveCents: row.FreeDeliveryAboveCents,
 		MinOrderCents: row.MinOrderCents, PromisedMinutes: row.PromisedMinutes,
 	}
+}
+
+// admin is the admin view of a stored row.
+func admin(row db.Store) AdminStore {
+	return AdminStore{Store: public(row), AddressLine: row.AddressLine, Pincode: row.Pincode}
+}
+
+// maxMoney is the largest money value an admin may enter: ₹1,00,000 in paise.
+const maxMoney = 10_000_000
+
+// fields is the create and change body. On change a nil member is absent and
+// stays unchanged; on create withDefaults fills every nil member first.
+type fields struct {
+	Name                   *string `json:"name"`
+	AddressLine            *string `json:"addressLine"`
+	Pincode                *string `json:"pincode"`
+	IsOpen                 *bool   `json:"isOpen"`
+	DeliveryFeeCents       *int64  `json:"deliveryFeeCents"`
+	FreeDeliveryAboveCents *int64  `json:"freeDeliveryAboveCents"`
+	MinOrderCents          *int64  `json:"minOrderCents"`
+	PromisedMinutes        *int32  `json:"promisedMinutes"`
+}
+
+// withDefaults gives each absent member its zero value: a new store is closed,
+// with no fee and no minimum, and the blank text and zero minutes that check refuses.
+func (f *fields) withDefaults() {
+	f.Name = orZero(f.Name)
+	f.AddressLine = orZero(f.AddressLine)
+	f.Pincode = orZero(f.Pincode)
+	f.IsOpen = orZero(f.IsOpen)
+	f.DeliveryFeeCents = orZero(f.DeliveryFeeCents)
+	f.FreeDeliveryAboveCents = orZero(f.FreeDeliveryAboveCents)
+	f.MinOrderCents = orZero(f.MinOrderCents)
+	f.PromisedMinutes = orZero(f.PromisedMinutes)
+}
+
+func orZero[T any](p *T) *T {
+	if p == nil {
+		return new(T)
+	}
+	return p
+}
+
+// check trims Name and AddressLine in place, then checks each present member in
+// order; the first failure is the answer. Every failure is 400 validation
+// naming the field, and nothing is written.
+func check(f *fields) error {
+	if f.Name != nil {
+		*f.Name = strings.TrimSpace(*f.Name)
+		if n := utf8.RuneCountInString(*f.Name); n < 1 || n > 100 {
+			return invalid("name", "name must be 1 to 100 characters")
+		}
+	}
+	if f.AddressLine != nil {
+		*f.AddressLine = strings.TrimSpace(*f.AddressLine)
+		if n := utf8.RuneCountInString(*f.AddressLine); n < 1 || n > 200 {
+			return invalid("addressLine", "addressLine must be 1 to 200 characters")
+		}
+	}
+	if f.Pincode != nil && !pincodePattern.MatchString(*f.Pincode) {
+		return invalid("pincode", "pincode must be 6 digits")
+	}
+	for _, m := range []struct {
+		field string
+		v     *int64
+	}{
+		{"deliveryFeeCents", f.DeliveryFeeCents},
+		{"freeDeliveryAboveCents", f.FreeDeliveryAboveCents},
+		{"minOrderCents", f.MinOrderCents},
+	} {
+		if m.v != nil && (*m.v < 0 || *m.v > maxMoney) {
+			return invalid(m.field, "must be 0 to 10000000")
+		}
+	}
+	if f.PromisedMinutes != nil && (*f.PromisedMinutes < 1 || *f.PromisedMinutes > 240) {
+		return invalid("promisedMinutes", "must be 1 to 240")
+	}
+	return nil
+}
+
+func invalid(field, message string) *httpx.Error {
+	return &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Field: field, Message: message}
 }

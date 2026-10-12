@@ -280,6 +280,58 @@ export interface paths {
         patch: operations["patchStaffUser"];
         trace?: never;
     };
+    "/admin/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List stores
+         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page.
+         */
+        get: operations["listStores"];
+        put?: never;
+        /**
+         * Create a store
+         * @description Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; every bad field answers 400 validation naming it, and nothing is written.
+         */
+        post: operations["createStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/stores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a store, admin view
+         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found.
+         */
+        get: operations["getAdminStore"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete an unused store
+         * @description Admins only. Deletes the store and its service areas. A store that staff users still refer to cannot be deleted: the answer is 409 conflict, and the store is kept. Remove its staff users first; a store with orders cannot be deleted either. An unknown id answers 404.
+         */
+        delete: operations["deleteStore"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a store
+         * @description Admins only. Changes only the fields present: name, addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.
+         */
+        patch: operations["updateStore"];
+        trace?: never;
+    };
     "/serviceability": {
         parameters: {
             query?: never;
@@ -455,6 +507,72 @@ export interface components {
             page: number;
             pageSize: number;
             /** @description Every staff user, not just this page. */
+            total: number;
+        };
+        /** @description The admin view of a store: the public Store fields plus the store's own address and pincode. Flat rather than allOf, because Store forbids additional properties. */
+        AdminStore: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            isOpen: boolean;
+            /** Format: int64 */
+            deliveryFeeCents: number;
+            /** Format: int64 */
+            freeDeliveryAboveCents: number;
+            /** Format: int64 */
+            minOrderCents: number;
+            promisedMinutes: number;
+            addressLine: string;
+            pincode: string;
+        };
+        /** @description A store to create. name, addressLine, pincode and promisedMinutes are required; the rest default (closed, zero money). */
+        StoreCreate: {
+            /** @description 1 to 100 characters after trimming. */
+            name: string;
+            /** @description 1 to 200 characters after trimming. */
+            addressLine: string;
+            /** @description Six digits, the first from 1 to 9. */
+            pincode: string;
+            /** @default false */
+            isOpen: boolean;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            deliveryFeeCents: number;
+            /**
+             * Format: int64
+             * @description Delivery is free at or above this subtotal; 0 means always free.
+             * @default 0
+             */
+            freeDeliveryAboveCents: number;
+            /**
+             * Format: int64
+             * @description 0 means no minimum.
+             * @default 0
+             */
+            minOrderCents: number;
+            promisedMinutes: number;
+        };
+        /** @description The fields to change. Absent fields stay; null is refused. */
+        StorePatch: {
+            name?: string;
+            addressLine?: string;
+            pincode?: string;
+            isOpen?: boolean;
+            /** Format: int64 */
+            deliveryFeeCents?: number;
+            /** Format: int64 */
+            freeDeliveryAboveCents?: number;
+            /** Format: int64 */
+            minOrderCents?: number;
+            promisedMinutes?: number;
+        };
+        StoreList: {
+            items: components["schemas"]["AdminStore"][];
+            page: number;
+            pageSize: number;
+            /** @description Every store, not just this page. */
             total: number;
         };
         /** @description The public view of a store: what checkout shows. Open or closed. */
@@ -1711,6 +1829,519 @@ export interface operations {
                 };
             };
             /** @description No staff user has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listStores: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of stores. items is [] when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000401",
+                     *           "name": "Koramangala",
+                     *           "addressLine": "80 Feet Rd, Koramangala",
+                     *           "pincode": "560034",
+                     *           "isOpen": true,
+                     *           "deliveryFeeCents": 2500,
+                     *           "freeDeliveryAboveCents": 19900,
+                     *           "minOrderCents": 9900,
+                     *           "promisedMinutes": 10
+                     *         },
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000402",
+                     *           "name": "Indiranagar",
+                     *           "addressLine": "100 Feet Rd, Indiranagar",
+                     *           "pincode": "560038",
+                     *           "isOpen": true,
+                     *           "deliveryFeeCents": 2500,
+                     *           "freeDeliveryAboveCents": 19900,
+                     *           "minOrderCents": 9900,
+                     *           "promisedMinutes": 12
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StoreList"];
+                };
+            };
+            /** @description page or pageSize is out of range or not a whole number. The field names the parameter. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be from 1 to 100",
+                     *         "field": "pageSize"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "HSR Layout",
+                 *       "addressLine": "27th Main, HSR Layout",
+                 *       "pincode": "560102",
+                 *       "promisedMinutes": 12,
+                 *       "deliveryFeeCents": 2500,
+                 *       "freeDeliveryAboveCents": 19900,
+                 *       "minOrderCents": 9900
+                 *     }
+                 */
+                "application/json": components["schemas"]["StoreCreate"];
+            };
+        };
+        responses: {
+            /** @description The new store, admin view. Closed, with no pincode served yet. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000401",
+                     *       "name": "Koramangala",
+                     *       "addressLine": "80 Feet Rd, Koramangala",
+                     *       "pincode": "560034",
+                     *       "isOpen": true,
+                     *       "deliveryFeeCents": 2500,
+                     *       "freeDeliveryAboveCents": 19900,
+                     *       "minOrderCents": 9900,
+                     *       "promisedMinutes": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminStore"];
+                };
+            };
+            /** @description A field is missing or out of range. The field names it; nothing is written. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "name must be 1 to 100 characters",
+                     *         "field": "name"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The store, admin view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000401",
+                     *       "name": "Koramangala",
+                     *       "addressLine": "80 Feet Rd, Koramangala",
+                     *       "pincode": "560034",
+                     *       "isOpen": true,
+                     *       "deliveryFeeCents": 2500,
+                     *       "freeDeliveryAboveCents": 19900,
+                     *       "minOrderCents": 9900,
+                     *       "promisedMinutes": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminStore"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The store is deleted. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The store still has staff users (or orders). Nothing is deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "still in use"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "promisedMinutes": 10
+                 *     }
+                 */
+                "application/json": components["schemas"]["StorePatch"];
+            };
+        };
+        responses: {
+            /** @description The updated store, admin view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000401",
+                     *       "name": "Koramangala",
+                     *       "addressLine": "80 Feet Rd, Koramangala",
+                     *       "pincode": "560034",
+                     *       "isOpen": true,
+                     *       "deliveryFeeCents": 2500,
+                     *       "freeDeliveryAboveCents": 19900,
+                     *       "minOrderCents": 9900,
+                     *       "promisedMinutes": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminStore"];
+                };
+            };
+            /** @description A present field is null or out of range. The field names it; nothing is changed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must not be null",
+                     *         "field": "isOpen"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
             404: {
                 headers: {
                     [name: string]: unknown;

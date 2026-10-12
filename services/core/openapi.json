@@ -26,6 +26,10 @@
     {
       "name": "serviceability",
       "description": "Which store delivers to a pincode, and its public details."
+    },
+    {
+      "name": "admin-stores",
+      "description": "Admin management of stores and the pincodes they serve."
     }
   ],
   "paths": {
@@ -1343,6 +1347,563 @@
         }
       }
     },
+    "/admin/stores": {
+      "get": {
+        "operationId": "listStores",
+        "summary": "List stores",
+        "description": "Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "One page of stores. items is [] when there are none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000401",
+                      "name": "Koramangala",
+                      "addressLine": "80 Feet Rd, Koramangala",
+                      "pincode": "560034",
+                      "isOpen": true,
+                      "deliveryFeeCents": 2500,
+                      "freeDeliveryAboveCents": 19900,
+                      "minOrderCents": 9900,
+                      "promisedMinutes": 10
+                    },
+                    {
+                      "id": "00000000-0000-4000-8000-000000000402",
+                      "name": "Indiranagar",
+                      "addressLine": "100 Feet Rd, Indiranagar",
+                      "pincode": "560038",
+                      "isOpen": true,
+                      "deliveryFeeCents": 2500,
+                      "freeDeliveryAboveCents": 19900,
+                      "minOrderCents": 9900,
+                      "promisedMinutes": 12
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page or pageSize is out of range or not a whole number. The field names the parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100",
+                    "field": "pageSize"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createStore",
+        "summary": "Create a store",
+        "description": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; every bad field answers 400 validation naming it, and nothing is written.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreCreate"
+              },
+              "example": {
+                "name": "HSR Layout",
+                "addressLine": "27th Main, HSR Layout",
+                "pincode": "560102",
+                "promisedMinutes": 12,
+                "deliveryFeeCents": 2500,
+                "freeDeliveryAboveCents": 19900,
+                "minOrderCents": 9900
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The new store, admin view. Closed, with no pincode served yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStore"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000401",
+                  "name": "Koramangala",
+                  "addressLine": "80 Feet Rd, Koramangala",
+                  "pincode": "560034",
+                  "isOpen": true,
+                  "deliveryFeeCents": 2500,
+                  "freeDeliveryAboveCents": 19900,
+                  "minOrderCents": 9900,
+                  "promisedMinutes": 10
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is missing or out of range. The field names it; nothing is written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "name must be 1 to 100 characters",
+                    "field": "name"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/stores/{id}": {
+      "get": {
+        "operationId": "getAdminStore",
+        "summary": "Get a store, admin view",
+        "description": "Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The store, admin view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStore"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000401",
+                  "name": "Koramangala",
+                  "addressLine": "80 Feet Rd, Koramangala",
+                  "pincode": "560034",
+                  "isOpen": true,
+                  "deliveryFeeCents": 2500,
+                  "freeDeliveryAboveCents": 19900,
+                  "minOrderCents": 9900,
+                  "promisedMinutes": 10
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateStore",
+        "summary": "Change a store",
+        "description": "Admins only. Changes only the fields present: name, addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorePatch"
+              },
+              "example": {
+                "promisedMinutes": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "The updated store, admin view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStore"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000401",
+                  "name": "Koramangala",
+                  "addressLine": "80 Feet Rd, Koramangala",
+                  "pincode": "560034",
+                  "isOpen": true,
+                  "deliveryFeeCents": 2500,
+                  "freeDeliveryAboveCents": 19900,
+                  "minOrderCents": 9900,
+                  "promisedMinutes": 10
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A present field is null or out of range. The field names it; nothing is changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must not be null",
+                    "field": "isOpen"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteStore",
+        "summary": "Delete an unused store",
+        "description": "Admins only. Deletes the store and its service areas. A store that staff users still refer to cannot be deleted: the answer is 409 conflict, and the store is kept. Remove its staff users first; a store with orders cannot be deleted either. An unknown id answers 404.",
+        "tags": [
+          "admin-stores"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "The store is deleted. No body."
+          },
+          "404": {
+            "description": "No store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The store still has staff users (or orders). Nothing is deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "still in use"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/serviceability": {
       "get": {
         "operationId": "getServiceability",
@@ -1893,6 +2454,198 @@
             "type": "integer",
             "minimum": 0,
             "description": "Every staff user, not just this page."
+          }
+        }
+      },
+      "AdminStore": {
+        "type": "object",
+        "description": "The admin view of a store: the public Store fields plus the store's own address and pincode. Flat rather than allOf, because Store forbids additional properties.",
+        "required": [
+          "id",
+          "name",
+          "isOpen",
+          "deliveryFeeCents",
+          "freeDeliveryAboveCents",
+          "minOrderCents",
+          "promisedMinutes",
+          "addressLine",
+          "pincode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "deliveryFeeCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "freeDeliveryAboveCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "minOrderCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "promisedMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StoreCreate": {
+        "type": "object",
+        "description": "A store to create. name, addressLine, pincode and promisedMinutes are required; the rest default (closed, zero money).",
+        "required": [
+          "name",
+          "addressLine",
+          "pincode",
+          "promisedMinutes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "1 to 100 characters after trimming."
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "1 to 200 characters after trimming."
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$",
+            "description": "Six digits, the first from 1 to 9."
+          },
+          "isOpen": {
+            "type": "boolean",
+            "default": false
+          },
+          "deliveryFeeCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000,
+            "default": 0
+          },
+          "freeDeliveryAboveCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000,
+            "default": 0,
+            "description": "Delivery is free at or above this subtotal; 0 means always free."
+          },
+          "minOrderCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000,
+            "default": 0,
+            "description": "0 means no minimum."
+          },
+          "promisedMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 240
+          }
+        }
+      },
+      "StorePatch": {
+        "type": "object",
+        "description": "The fields to change. Absent fields stay; null is refused.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "pincode": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "deliveryFeeCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "freeDeliveryAboveCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "minOrderCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "promisedMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 240
+          }
+        }
+      },
+      "StoreList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStore"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every store, not just this page."
           }
         }
       },
