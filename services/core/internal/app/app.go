@@ -12,12 +12,15 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
+	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 )
 
 // New returns the core router. Routes are registered with their full path
 // so chi.Walk yields the paths openapi.json documents.
-func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
+// Uploaded files go to files.
+func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/core/v1/healthz", healthz)
 	r.Get("/api/core/v1/readyz", readyz(pool))
@@ -36,6 +39,11 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/staff-users", a.ListStaff)
 	r.With(a.RequireAdmin).Post("/api/core/v1/admin/staff-users", a.CreateStaffUser)
 	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/staff-users/{id}", a.UpdateStaffUser)
+	c := catalog.New(pool, files)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/categories", c.ListCategories)
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/categories", c.CreateCategory)
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/categories/{id}", c.UpdateCategory)
+	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/categories/{id}", c.DeleteCategory)
 	return r
 }
 

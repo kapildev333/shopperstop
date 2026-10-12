@@ -22,6 +22,10 @@
     {
       "name": "admin-staff",
       "description": "Staff sign-in, sign-out and the signed-in staff user for the admin panel."
+    },
+    {
+      "name": "admin-catalog",
+      "description": "Admin catalog: the two-level category tree, then products and images."
     }
   ],
   "paths": {
@@ -1338,6 +1342,417 @@
           }
         }
       }
+    },
+    "/admin/categories": {
+      "get": {
+        "operationId": "getAdminCategories",
+        "summary": "List the category tree",
+        "description": "Admins only. Answers every category as a tree: each parent with its children array, parents and children ordered by sortOrder then name. The tree is not paged. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The category tree.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryTree"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000501",
+                      "name": "Fruits & Vegetables",
+                      "slug": "fruits-vegetables",
+                      "sortOrder": 10,
+                      "children": [
+                        {
+                          "id": "00000000-0000-4000-8000-000000000521",
+                          "name": "Fresh Fruits",
+                          "slug": "fresh-fruits",
+                          "sortOrder": 10,
+                          "parentId": "00000000-0000-4000-8000-000000000501"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postAdminCategory",
+        "summary": "Create a category",
+        "description": "Admins only. Creates a category, optionally as a child of a parent. The slug is derived from the name and never changes afterwards; a clash gets a random hex suffix. parentId must name a category that has no parent, so the tree has two levels: an unknown parent, or one that is itself a child, answers 400 with field parentId. name is trimmed and 1 to 100 characters; sortOrder is 0 to 9999 and defaults to 0.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreate"
+              },
+              "example": {
+                "name": "Fresh Fruits",
+                "parentId": "00000000-0000-4000-8000-000000000501",
+                "sortOrder": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000521",
+                  "name": "Fresh Fruits",
+                  "slug": "fresh-fruits",
+                  "sortOrder": 10,
+                  "parentId": "00000000-0000-4000-8000-000000000501"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. The field names it: parentId for an unknown parent or a third level, name for a blank or long name, sortOrder out of range.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "categories have two levels",
+                    "field": "parentId"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The slug could not be made unique in three attempts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "already exists"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/categories/{id}": {
+      "patch": {
+        "operationId": "patchAdminCategory",
+        "summary": "Change a category",
+        "description": "Admins only. Changes the name and sortOrder when present; the slug and the parent never change. A null value is refused with 400 naming the field. An id that is not one answers 404.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryPatch"
+              },
+              "example": {
+                "name": "Fresh Fruits",
+                "sortOrder": 20
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000521",
+                  "name": "Fresh Fruits",
+                  "slug": "fresh-fruits",
+                  "sortOrder": 20,
+                  "parentId": "00000000-0000-4000-8000-000000000501"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid or null. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100 characters",
+                    "field": "name"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminCategory",
+        "summary": "Delete a category",
+        "description": "Admins only. Deletes a category that has no children and no products. A category with either answers 409 and stays. An id that is not one, or no category, answers 404.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The category has a child or a product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "category has products or subcategories"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1752,7 +2167,125 @@
             "description": "Every staff user, not just this page."
           }
         }
+      },
+    "Category": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "sortOrder"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "slug": {
+          "type": "string",
+          "description": "Derived from the name on create, never changed."
+        },
+        "parentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Omitted for a parent category."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Path of the category image. Omitted until one is uploaded."
+        }
+      },
+      "additionalProperties": false
+    },
+    "CategoryNode": {
+      "description": "A parent category with its children.",
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/Category"
+        },
+        {
+          "type": "object",
+          "required": [
+            "children"
+          ],
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Category"
+              },
+              "description": "Its children, ordered by sortOrder then name; empty when it has none."
+            }
+          }
+        }
+      ]
+    },
+    "CategoryTree": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CategoryNode"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CategoryCreate": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Trimmed; 1 to 100 characters."
+        },
+        "parentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "A category that has no parent. Omit for a parent category."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999,
+          "description": "Defaults to 0."
+        }
       }
+    },
+    "CategoryPatch": {
+      "type": "object",
+      "description": "Every member is optional; a member that is present must not be null.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        }
+      }
+    }
     }
   }
 }

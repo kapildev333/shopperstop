@@ -280,6 +280,54 @@ export interface paths {
         patch: operations["patchStaffUser"];
         trace?: never;
     };
+    "/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the category tree
+         * @description Admins only. Answers every category as a tree: each parent with its children array, parents and children ordered by sortOrder then name. The tree is not paged. A missing or customer token answers 401; store staff answer 403.
+         */
+        get: operations["getAdminCategories"];
+        put?: never;
+        /**
+         * Create a category
+         * @description Admins only. Creates a category, optionally as a child of a parent. The slug is derived from the name and never changes afterwards; a clash gets a random hex suffix. parentId must name a category that has no parent, so the tree has two levels: an unknown parent, or one that is itself a child, answers 400 with field parentId. name is trimmed and 1 to 100 characters; sortOrder is 0 to 9999 and defaults to 0.
+         */
+        post: operations["postAdminCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a category
+         * @description Admins only. Deletes a category that has no children and no products. A category with either answers 409 and stays. An id that is not one, or no category, answers 404.
+         */
+        delete: operations["deleteAdminCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a category
+         * @description Admins only. Changes the name and sortOrder when present; the slug and the parent never change. A null value is refused with 400 naming the field. An id that is not one answers 404.
+         */
+        patch: operations["patchAdminCategory"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -416,6 +464,45 @@ export interface components {
             pageSize: number;
             /** @description Every staff user, not just this page. */
             total: number;
+        };
+        Category: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Derived from the name on create, never changed. */
+            slug: string;
+            /**
+             * Format: uuid
+             * @description Omitted for a parent category.
+             */
+            parentId?: string;
+            sortOrder: number;
+            /** @description Path of the category image. Omitted until one is uploaded. */
+            imageUrl?: string;
+        };
+        /** @description A parent category with its children. */
+        CategoryNode: components["schemas"]["Category"] & {
+            /** @description Its children, ordered by sortOrder then name; empty when it has none. */
+            children: components["schemas"]["Category"][];
+        };
+        CategoryTree: {
+            items: components["schemas"]["CategoryNode"][];
+        };
+        CategoryCreate: {
+            /** @description Trimmed; 1 to 100 characters. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description A category that has no parent. Omit for a parent category.
+             */
+            parentId?: string;
+            /** @description Defaults to 0. */
+            sortOrder?: number;
+        };
+        /** @description Every member is optional; a member that is present must not be null. */
+        CategoryPatch: {
+            name?: string;
+            sortOrder?: number;
         };
     };
     responses: never;
@@ -1643,6 +1730,396 @@ export interface operations {
                 };
             };
             /** @description No staff user has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The category tree. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000501",
+                     *           "name": "Fruits & Vegetables",
+                     *           "slug": "fruits-vegetables",
+                     *           "sortOrder": 10,
+                     *           "children": [
+                     *             {
+                     *               "id": "00000000-0000-4000-8000-000000000521",
+                     *               "name": "Fresh Fruits",
+                     *               "slug": "fresh-fruits",
+                     *               "sortOrder": 10,
+                     *               "parentId": "00000000-0000-4000-8000-000000000501"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CategoryTree"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Fresh Fruits",
+                 *       "parentId": "00000000-0000-4000-8000-000000000501",
+                 *       "sortOrder": 10
+                 *     }
+                 */
+                "application/json": components["schemas"]["CategoryCreate"];
+            };
+        };
+        responses: {
+            /** @description The created category. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000521",
+                     *       "name": "Fresh Fruits",
+                     *       "slug": "fresh-fruits",
+                     *       "sortOrder": 10,
+                     *       "parentId": "00000000-0000-4000-8000-000000000501"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description A field is invalid. The field names it: parentId for an unknown parent or a third level, name for a blank or long name, sortOrder out of range. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "categories have two levels",
+                     *         "field": "parentId"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The slug could not be made unique in three attempts. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "already exists"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The category has a child or a product. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "category has products or subcategories"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Fresh Fruits",
+                 *       "sortOrder": 20
+                 *     }
+                 */
+                "application/json": components["schemas"]["CategoryPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated category. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000521",
+                     *       "name": "Fresh Fruits",
+                     *       "slug": "fresh-fruits",
+                     *       "sortOrder": 20,
+                     *       "parentId": "00000000-0000-4000-8000-000000000501"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description A field is invalid or null. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be from 1 to 100 characters",
+                     *         "field": "name"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
             404: {
                 headers: {
                     [name: string]: unknown;
