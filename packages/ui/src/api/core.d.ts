@@ -380,6 +380,66 @@ export interface paths {
         patch: operations["patchAdminProduct"];
         trace?: never;
     };
+    "/admin/categories/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a category image
+         * @description Admins only. Stores one image for the category, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.
+         */
+        put: operations["putAdminCategoryImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/products/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a product image
+         * @description Admins only. Stores one image for the product, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.
+         */
+        put: operations["putAdminProductImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/files/{kind}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a catalog image
+         * @description Public, no token. Serves a stored product or category image. kind is products or categories and name is a lowercase file name ending in png, jpg or webp; any other shape, and a file that is not stored, answers 404. The Content-Type comes from the extension. Cache-Control is no-cache, so a re-upload that keeps the URL is seen at once. If-Modified-Since answers 304 without a body when the file has not changed.
+         */
+        get: operations["getFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -618,6 +678,14 @@ export interface components {
             /** @description Defaults to true. */
             isActive?: boolean;
         };
+        /** @description The body of an image upload: multipart/form-data with one part named file. */
+        ImageUpload: {
+            /**
+             * Format: binary
+             * @description One PNG, JPEG or WebP image of at most 5 MiB. The type comes from the content; the client's Content-Type and file name are ignored.
+             */
+            file: string;
+        };
         /** @description Every member is optional; a member that is present must not be null. An empty brand or description clears it. */
         ProductPatch: {
             /** @description Trimmed; 1 to 100 characters. The slug is derived from it. */
@@ -643,7 +711,7 @@ export interface components {
             brand?: string;
             /** @description Optional; trimmed. An empty string clears it. */
             description?: string;
-            /** @description Defaults to true. */
+            /** @description Unchanged when omitted. */
             isActive?: boolean;
         };
     };
@@ -2796,6 +2864,285 @@ export interface operations {
                 };
             };
             /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAdminCategoryImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The category id.
+                 * @example 00000000-0000-4000-8000-000000000501
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUpload"];
+            };
+        };
+        responses: {
+            /** @description The category with its new image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000501",
+                     *       "name": "Fruits & Vegetables",
+                     *       "slug": "fruits-vegetables",
+                     *       "sortOrder": 10,
+                     *       "imageUrl": "/api/core/v1/files/categories/00000000-0000-4000-8000-000000000501.png"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "image must be PNG, JPEG or WebP",
+                     *         "field": "file"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No category has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAdminProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The product id.
+                 * @example 00000000-0000-4000-8000-000000000601
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUpload"];
+            };
+        };
+        responses: {
+            /** @description The product with its new image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "isActive": true,
+                     *       "imageUrl": "/api/core/v1/files/products/00000000-0000-4000-8000-000000000601.png"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "image must be PNG, JPEG or WebP",
+                     *         "field": "file"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "admins only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No product has this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description products or categories.
+                 * @example products
+                 */
+                kind: "products" | "categories";
+                /**
+                 * @description The file name: lowercase letters, digits and hyphens, then .png, .jpg or .webp.
+                 * @example seed-fruits-vegetables.png
+                 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example <PNG image bytes> */
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description The file has not changed since If-Modified-Since. No body. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The name or kind is not a catalog image shape, or no such file is stored. */
             404: {
                 headers: {
                     [name: string]: unknown;

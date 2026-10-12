@@ -26,6 +26,10 @@
     {
       "name": "admin-catalog",
       "description": "Admin catalog: the two-level category tree, then products and images."
+    },
+    {
+      "name": "catalog",
+      "description": "Public catalog files: the product and category images, served without a token."
     }
   ],
   "paths": {
@@ -2351,6 +2355,337 @@
           }
         }
       }
+    },
+    "/admin/categories/{id}/image": {
+      "put": {
+        "operationId": "putAdminCategoryImage",
+        "summary": "Upload a category image",
+        "description": "Admins only. Stores one image for the category, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000501"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The category with its new image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000501",
+                  "name": "Fruits & Vegetables",
+                  "slug": "fruits-vegetables",
+                  "sortOrder": 10,
+                  "imageUrl": "/api/core/v1/files/categories/00000000-0000-4000-8000-000000000501.png"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "image must be PNG, JPEG or WebP",
+                    "field": "file"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No category has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products/{id}/image": {
+      "put": {
+        "operationId": "putAdminProductImage",
+        "summary": "Upload a product image",
+        "description": "Admins only. Stores one image for the product, replacing any earlier one. The body is multipart/form-data with one part named file: a PNG, JPEG or WebP of at most 5 MiB, judged by its content, not by the client's Content-Type or file name. The stored file is served at imageUrl. An unknown id answers 404 before the body is read. A missing or customer token answers 401; store staff answer 403.",
+        "tags": [
+          "admin-catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The product id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000601"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The product with its new image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000601",
+                  "name": "Banana Robusta",
+                  "slug": "banana-robusta",
+                  "description": "Ripe robusta bananas, sold by the kilogram.",
+                  "unitLabel": "1 kg",
+                  "mrpCents": 6000,
+                  "priceCents": 5500,
+                  "categoryId": "00000000-0000-4000-8000-000000000521",
+                  "isActive": true,
+                  "imageUrl": "/api/core/v1/files/products/00000000-0000-4000-8000-000000000601.png"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The file part is missing, is not a PNG, JPEG or WebP, is larger than 5 MiB, or the body is over 16 MiB. The field is file, except for the body limit, which names no field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "image must be PNG, JPEG or WebP",
+                    "field": "file"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{kind}/{name}": {
+      "get": {
+        "operationId": "getFile",
+        "summary": "Read a catalog image",
+        "description": "Public, no token. Serves a stored product or category image. kind is products or categories and name is a lowercase file name ending in png, jpg or webp; any other shape, and a file that is not stored, answers 404. The Content-Type comes from the extension. Cache-Control is no-cache, so a re-upload that keeps the URL is seen at once. If-Modified-Since answers 304 without a body when the file has not changed.",
+        "tags": [
+          "catalog"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "description": "products or categories.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "products",
+                "categories"
+              ]
+            },
+            "example": "products"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "The file name: lowercase letters, digits and hyphens, then .png, .jpg or .webp.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+\\.(png|jpg|webp)$"
+            },
+            "example": "seed-fruits-vegetables.png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "<PNG image bytes>"
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The file has not changed since If-Modified-Since. No body."
+          },
+          "404": {
+            "description": "The name or kind is not a catalog image shape, or no such file is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3038,6 +3373,20 @@
         }
       }
     },
+    "ImageUpload": {
+      "type": "object",
+      "description": "The body of an image upload: multipart/form-data with one part named file.",
+      "required": [
+        "file"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "format": "binary",
+          "description": "One PNG, JPEG or WebP image of at most 5 MiB. The type comes from the content; the client's Content-Type and file name are ignored."
+        }
+      }
+    },
     "ProductPatch": {
       "type": "object",
       "description": "Every member is optional; a member that is present must not be null. An empty brand or description clears it.",
@@ -3084,7 +3433,7 @@
         },
         "isActive": {
           "type": "boolean",
-          "description": "Defaults to true."
+          "description": "Unchanged when omitted."
         }
       }
     }
