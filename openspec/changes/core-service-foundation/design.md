@@ -88,7 +88,7 @@ func serve(ctx context.Context, srv *http.Server, ln net.Listener, grace time.Du
 One test per scenario, named in tasks.md. Packages `config`, `httpx` and `cmd/core` need no database; `migrate` and `app` open `testdb` in TestMain and fail when Postgres is unreachable. Every test runs under `go test -race ./...` from `services/core`. The `readyz` down case uses a `net.Listener` on `127.0.0.1:0` that accepts and never answers, so the 2-second timeout is exercised for real (the test takes about 2 s).
 
 ## Risks / Trade-offs
-- [The `platform` capability exists only in platform-P1-L3's change] → this delta is ADDED-only with distinct requirement names; archive this change after `platform-seed-specs` is archived, and re-run `openspec validate --all --strict` on main then.
-- [Postgres is not running yet (platform-P1-L4)] → tasks 1 and 2 need no database; tasks 3 and 4 wait for `make db`.
+- [`platform` is seeded on main but `platform-seed-specs` and `platform-deploy-db` are not archived yet] → this delta is ADDED-only with requirement names distinct from both; archive this change after those two, then re-run `openspec validate --all --strict` on main (green on this branch today).
+- [Tasks 3 and 4 need Postgres] → tasks 1 and 2 need none; before task 3 the manager confirms `shopperstop-postgres-1` is up and the `shopperstop_core` role reaches `shopperstop_core_test`.
 - [`go get` needs network access in the worker's sandbox] → tasks 2 and 3 add chi and pgx; a worker without network reports instead of vendoring.
 - [`0001_init.sql` is a no-op] → harmless; it documents the baseline and proves the runner against the real database.

@@ -4,7 +4,7 @@ Status: started
 Change proposed and validated (`openspec validate core-service-foundation --strict` green); waiting for the owner's go, then workers on tasks 1 to 4 in order. Tasks 3 and 4 need Postgres (`make db`).
 ## Found
 - Change: `openspec/changes/core-service-foundation/` (proposal, `specs/platform/spec.md` ADDED-only, design, tasks). No `docs/design/core-P1-L1.md`: design.md carries interfaces, files and test strategy.
-- Delta adds to `platform`: Configured origins are normalised; Log level is configurable; Schema migrations apply once, in order; A failed migration leaves no trace; The OpenAPI file matches the router; Graceful shutdown. No name clash with platform-P1-L3 or platform-P1-L4. Archive after `platform-seed-specs`.
+- Delta adds to `platform`: Configured origins are normalised; Log level is configurable; Schema migrations apply once, in order; A failed migration leaves no trace; The OpenAPI file matches the router; Graceful shutdown. No name clash with the seeded `platform` spec (now on main) or `platform-deploy-db`. Branch rebased on origin/main 6b63030; `openspec validate --all --strict` 5 passed. Archive after `platform-seed-specs` and `platform-deploy-db`.
 - No `internal/pg` in Phase 1: `pgx.BeginFunc` is WithTx, error mapping waits for the first query (design Decision 9). Escalated.
 - `healthz`/`readyz` are listed in `openapi.json` (Spec 1 §11) despite Spec 2 §6 "outside the contract" (Decision 12). Escalated.
 - `SHOPPERSTOP_CORE_FILES_DIR` not read in Phase 1; harmless if the Makefile sets it.
@@ -13,4 +13,4 @@ Change proposed and validated (`openspec validate core-service-foundation --stri
 ## Requests
 - to platform (via core manager): Makefile `test` core step runs `gofmt -l`, `go vet ./...`, `go test -race ./...` in `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL`; `dev` runs `go run ./cmd/core-admin migrate` then `go run ./cmd/core`; CI core job sets the same env against its Postgres service. Postman task reads `openapi.json` with `servers: [{url: "/api/core/v1"}]` and tag `platform`.
 ## Blockers
-- Tasks 3 and 4 need `shopperstop-postgres-1` (platform-P1-L4 not landed).
+- Tasks 3 and 4 need `shopperstop-postgres-1`. platform-P1-L4 landed; port 5432 answers (2026-10-12), role login not checked here (no psql).
