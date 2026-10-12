@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// pruneAt is the key count above which Allow drops keys whose window ended.
+// pruneAt is the key count above which Allow may drop keys whose window ended.
 const pruneAt = 10_000
 
 // bucket is one key's attempts in the window that started at start.
@@ -16,14 +16,17 @@ type bucket struct {
 }
 
 // Limiter counts attempts in fixed windows per key, in memory and per process.
-// ponytail: per process; behind a proxy every client shares the proxy's IP bucket.
+// ponytail: per process; memory is bounded only per window: above pruneAt keys
+// the ended ones are dropped at most once per window, so a flood of distinct
+// keys can hold up to a window's worth of buckets. A proxy shares one IP bucket.
 type Limiter struct {
-	mu       sync.Mutex
-	perEmail int
-	perIP    int
-	window   time.Duration
-	now      func() time.Time
-	hits     map[string]*bucket
+	mu        sync.Mutex
+	perEmail  int
+	perIP     int
+	window    time.Duration
+	now       func() time.Time
+	hits      map[string]*bucket
+	lastPrune time.Time
 }
 
 // NewLimiter returns a limiter allowing perEmail attempts per email and
@@ -39,7 +42,8 @@ func (l *Limiter) Allow(email, ip string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := l.now()
-	if len(l.hits) > pruneAt {
+	if len(l.hits) > pruneAt && now.Sub(l.lastPrune) >= l.window {
+		l.lastPrune = now
 		for key, b := range l.hits {
 			if !now.Before(b.start.Add(l.window)) {
 				delete(l.hits, key)
