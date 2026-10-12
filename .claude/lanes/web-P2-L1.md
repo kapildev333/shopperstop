@@ -1,8 +1,8 @@
 # web-P2-L1 - web-serviceability-catalog: pincode, serviceability, Home, Category, Product, Search (team lead)
 Status: started
 ## Doing
-2026-10-12 task 1 (worker, Haiku): feat committed (pincode, store resolution, banner, store gate); gates green, task 2 next.
-Change proposed and valid (`openspec validate web-serviceability-catalog --strict`; `--all --strict` 8 passed). Waiting for core-P2-L2 on main (task 1) and core-P2-L3, core-P2-L4 on main (tasks 2 to 4); the manager launches workers.
+Task 1 done (1.1 red, 1.2 feat, gates and e2e green). Task 2 not started: waits for the manager.
+
 ## Found
 - Change: `openspec/changes/web-serviceability-catalog/` (proposal; `web-app` delta: MODIFIED "Customer site shell", 10 ADDED requirements, 30 scenarios; design with the scenario → test map; tasks 1 to 4). No `docs/design/web-P2-L1.md`: design.md is enough.
 - Reuses `src/api.ts` (`api`, `queryClient`) and the `session.ts` storage-guard pattern from web-P2-L2; neither file changes.
