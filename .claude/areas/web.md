@@ -3,13 +3,13 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-web-P2-L1 task 1 worker running in `.worktrees/web-P2-L1` and RUNNING THE WEB E2E SUITE on 18080/15173 (admin: ask before yours); web-P2-L3 task 1 (guest cart model, Vitest only) running in `.worktrees/web-P2-L3`.
+No web e2e running (ports free). web-P2-L1 task 1 and web-P2-L3 task 1 landed and reviewed; both lanes wait on core-P2-L3 and L4.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
-| web-P2-L1 | `web-serviceability-catalog` (pincode, Home, Category, Product, Search) | `apps/web/`, `openspec/changes/web-serviceability-catalog/` | proposed 2026-10-12 (10 ADDED + 1 MODIFIED, 30 scenarios, 4 sequential tasks); task 1 waits on core-P2-L2, tasks 2 to 4 on core-P2-L3 and L4; branch `lane/web-P2-L1-browsing` |
-| web-P2-L3 | `web-cart` (guest and server cart, drawer, bar, store change) | `apps/web/`, `openspec/changes/web-cart/` | proposed 2026-10-12 (12 ADDED, 25 scenarios, 3 sequential tasks); task 1 (guest cart model) running now; task 2 waits on core-P2-L4 and web-P2-L1 task 2; task 3 on web-P2-L1 task 4; branch `lane/web-P2-L3-cart` |
+| web-P2-L1 | `web-serviceability-catalog` (pincode, Home, Category, Product, Search) | `apps/web/`, `openspec/changes/web-serviceability-catalog/` | proposed 2026-10-12 (10 ADDED + 1 MODIFIED, 30 scenarios, 4 sequential tasks); task 1 landed (pincode, sheet, store gate, banner search; reviewer approve; e2e 13 green); tasks 2 to 4 wait on core-P2-L3 and L4; task 2 also narrows the serviceability 404 check to code `not_serviceable`; branch `lane/web-P2-L1-browsing` |
+| web-P2-L3 | `web-cart` (guest and server cart, drawer, bar, store change) | `apps/web/`, `openspec/changes/web-cart/` | proposed 2026-10-12 (12 ADDED, 25 scenarios, 3 sequential tasks); task 1 landed (guest cart model; reviewer approve; NaN and threshold pins fixed); task 2 waits on core-P2-L4 and web-P2-L1 task 2; task 3 on web-P2-L1 task 4; branch `lane/web-P2-L3-cart` |
 | web-P2-L2 | `web-accounts` (sign-in, register, account, addresses) | `apps/web/`, `openspec/changes/web-accounts/` | done 2026-10-12: three tasks, reviewers approve (two small fixes with red tests), acceptance pass 23/23, manager verified (make test-web, make e2e admin 3 + web 11, Chrome walk of guard, sign-in, account, address dialog); PR #68 merged; archived in this PR |
 | web-P1-L1 | plan task 10 apps/web shell | `apps/web/`, `openspec/changes/web-apps-web/` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (`make test-web`, `make e2e` admin+web back to back, Chrome look at Home and not-found); PR #50 merged; archived in this PR |
 ## Requests
