@@ -26,6 +26,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D17 | The owner's Figma plan is Starter: three pages per file and a daily MCP tool-call cap. The ShopperStop file (https://www.figma.com/design/pUvvBVQbwM8287Q3Fji8G1) therefore has three pages (`Tokens & Components`, `Customer web`, `Admin web`) with sections instead of the five in Spec 1 §9; the Mobile page is added with the mobile spec. Code Connect and small nits wait for the next call budget | Orchestrator 2026-10-12 |
 | D18 | `packages/ui` pins TypeScript 5.9.3 and openapi-typescript 7.13.0 (openapi-typescript 7 needs TS ^5; nothing needs TS 6); revisit when openapi-typescript supports 6 | Orchestrator 2026-10-12 |
 | D19 | `packages/ui/src/api/core.d.ts` is generated from `services/core/openapi.json` and committed; a ui test fails when it is stale. Cross-area exception: a core lane that changes `openapi.json` runs `make gen` (or `npm run gen:api --workspace packages/ui`) and commits the regenerated `core.d.ts` in the same PR as a mechanical change, like `package-lock.json`; it never hand-edits it. Reviewers treat that file as generated | Orchestrator 2026-10-12 |
+| D20 | `seed-demo` uses fixed, documented ids for the demo stores, products, addresses and orders, so `docs/postman/local.postman_environment.json` ships `storeId`, `productId`, `addressId`, `orderId` and the collection runs top to bottom against `make dev` (Spec 1 §11). Phase 2 core contract: `components.securitySchemes.bearer`, `security` on every authenticated operation, staff routes under `/admin/`, sign-in and register examples carry a string `token` | Orchestrator 2026-10-12 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -53,7 +54,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
 | ui | 9 packages/ui | done #20 (ui-P1-L1); `api/core.d.ts` follows core's openapi.json |
 | web | 10 apps/web | waits on ui task 9 |
-| admin | 11 apps/admin | waits on ui task 9 |
+| admin | 11 apps/admin | admin-P1-L1 change `admin-apps-admin` seen, worker running (served under `/admin/`, dev 5174, preview 15174) |
 | orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#25) |
 
 ## Backlog
@@ -77,3 +78,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: CI workflow and Makefile landed (#15); core defaults recorded (D16); core workers started under D13.
 - 2026-10-12: Figma file built (Task 14, D17); packages/ui landed (#20); web manager still to be started by the owner.
 - 2026-10-12: core tasks 5 to 8 done (#23); `make test` on main green across core and ui (orchestrator); D18, D19 recorded; ui-P1-L2 (api types) running.
+- 2026-10-12: D20; admin-P1-L1 approved; e2e guard chore (#29) so admin's suite runs without web; platform-P1-L8 (Postman) and platform-P1-L11 (README, CLAUDE.md) workers running.
