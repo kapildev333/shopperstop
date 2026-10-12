@@ -215,20 +215,26 @@ func TestSignInValidation(t *testing.T) {
 	}
 }
 
-// TestSignInFailuresLookTheSame also checks equal work. The unknown-email
-// sign-in must take at least a second, because it pays a cost-12 bcrypt
-// compare against the dummy hash. Do not lower that cost to speed this test up:
-// the wrong-password fixture runs at MinCost, so the timing check only proves
-// that the unknown path does not skip bcrypt.
+// TestSignInFailuresLookTheSame checks equal work (Decision 10): the unknown-email
+// sign-in runs a bcrypt compare against the dummy hash, so it must take at
+// least half as long as a wrong-password sign-in, which runs one against the
+// customer's cost-12 hash. A ratio, not a floor, so the check holds on a
+// loaded machine.
 func TestSignInFailuresLookTheSame(t *testing.T) {
 	email := uniqueEmail(t)
-	seedCustomerEmail(t, email)
+	register(t, email)
+	// Warm the dummy hash so its one-time cost-12 hashing is not timed.
+	call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
+		map[string]string{"email": "warm." + email, "password": testPassword})
+
+	start := time.Now()
 	wrongStatus, wrongBody := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": email, "password": "wrong-password"})
-	start := time.Now()
+	wrongTook := time.Since(start)
+	start = time.Now()
 	unknownStatus, unknownBody := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": "nobody." + email, "password": testPassword})
-	elapsed := time.Since(start)
+	unknownTook := time.Since(start)
 	if wrongStatus != http.StatusUnauthorized || unknownStatus != http.StatusUnauthorized {
 		t.Fatalf("wrong password %d, unknown email %d: want both 401", wrongStatus, unknownStatus)
 	}
@@ -239,8 +245,8 @@ func TestSignInFailuresLookTheSame(t *testing.T) {
 	if wrong != unknown {
 		t.Fatalf("messages differ: wrong password %+v, unknown email %+v", wrong, unknown)
 	}
-	if elapsed < time.Second {
-		t.Fatalf("unknown-email sign-in took %v, want at least 1s of bcrypt work (Decision 10)", elapsed)
+	if unknownTook < wrongTook/2 {
+		t.Fatalf("unknown-email sign-in took %v, wrong-password sign-in took %v: want at least half as long (Decision 10: the unknown path must pay bcrypt too)", unknownTook, wrongTook)
 	}
 }
 

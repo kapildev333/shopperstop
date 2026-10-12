@@ -90,6 +90,20 @@ func TestAddressNewDefaultClearsOld(t *testing.T) {
 	}
 }
 
+// TestAddressPatchFalseClearsDefault: isDefault false on the default leaves no default.
+func TestAddressPatchFalseClearsDefault(t *testing.T) {
+	s := newCustomer(t)
+	home := createAddress(t, s.Token, map[string]any{"label": "Home", "line1": "12 Main Rd", "pincode": "560034", "isDefault": true})
+	status, body := call(t, http.MethodPatch, addressesPath+"/"+home.ID, s.Token, map[string]any{"isDefault": false})
+	var got addressJSON
+	if err := json.Unmarshal(body, &got); err != nil || status != http.StatusOK || got.IsDefault {
+		t.Fatalf("patch isDefault false: got %d %s, want 200 with isDefault false", status, body)
+	}
+	if d := defaults(listAddresses(t, s.Token)); len(d) != 0 {
+		t.Fatalf("defaults after isDefault false: %v, want none", d)
+	}
+}
+
 func TestAddressBadPincode(t *testing.T) {
 	s := newCustomer(t)
 	status, body := call(t, http.MethodPost, addressesPath, s.Token,
@@ -128,22 +142,32 @@ func TestAddressEmptyLine2Clears(t *testing.T) {
 	}
 }
 
-// TestAddressOtherCustomer404: another customer sees a 404 for both patch and
-// delete, and the owner's address is unchanged.
+// TestAddressOtherCustomer404: another customer sees a 404 for patch and
+// delete, including a patch with isDefault true. The other customer's own
+// default must survive that request (the transaction rolls back the clear),
+// and the owner's default is unchanged.
 func TestAddressOtherCustomer404(t *testing.T) {
 	owner := newCustomer(t)
 	other := newCustomer(t)
-	home := createAddress(t, owner.Token, map[string]any{"label": "Home", "line1": "12 Main Rd", "pincode": "560034"})
+	home := createAddress(t, owner.Token, map[string]any{"label": "Home", "line1": "12 Main Rd", "pincode": "560034", "isDefault": true})
+	work := createAddress(t, other.Token, map[string]any{"label": "Work", "line1": "1 Park St", "pincode": "560038", "isDefault": true})
 	status, body := call(t, http.MethodPatch, addressesPath+"/"+home.ID, other.Token, map[string]any{"label": "Hijacked"})
 	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
 		t.Fatalf("patch of another customer's address: got %d %s, want 404 not_found", status, body)
+	}
+	status, body = call(t, http.MethodPatch, addressesPath+"/"+home.ID, other.Token, map[string]any{"isDefault": true})
+	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+		t.Fatalf("isDefault true on another customer's address: got %d %s, want 404 not_found", status, body)
 	}
 	status, body = call(t, http.MethodDelete, addressesPath+"/"+home.ID, other.Token, nil)
 	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
 		t.Fatalf("delete of another customer's address: got %d %s, want 404 not_found", status, body)
 	}
-	if l := listAddresses(t, owner.Token); len(l.Items) != 1 || l.Items[0].Label != "Home" {
-		t.Fatalf("owner's list after the other customer's requests: %+v, want Home unchanged", l.Items)
+	if l := listAddresses(t, owner.Token); len(l.Items) != 1 || l.Items[0].Label != "Home" || !l.Items[0].IsDefault {
+		t.Fatalf("owner's list after the other customer's requests: %+v, want Home unchanged and default", l.Items)
+	}
+	if l := listAddresses(t, other.Token); len(l.Items) != 1 || l.Items[0].ID != work.ID || !l.Items[0].IsDefault {
+		t.Fatalf("other customer's list after the 404: %+v, want Work still the default (rollback)", l.Items)
 	}
 }
 
@@ -189,6 +213,10 @@ func TestListPaging(t *testing.T) {
 	}
 	createAddress(t, s.Token, map[string]any{"label": "Home", "line1": "12 Main Rd", "pincode": "560034", "isDefault": true})
 	createAddress(t, s.Token, map[string]any{"label": "Work", "line1": "1 Park St", "pincode": "560038"})
+	status, body = call(t, http.MethodGet, addressesPath+"?page=2147483647&pageSize=100", s.Token, nil)
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "page" {
+		t.Fatalf("page 2147483647 of size 100: got %d %s, want 400 validation field page", status, body)
+	}
 	status, body = call(t, http.MethodGet, addressesPath+"?pageSize=1&page=2", s.Token, nil)
 	var l addressList
 	if err := json.Unmarshal(body, &l); err != nil {

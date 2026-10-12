@@ -48,3 +48,22 @@ func TestPageRejectsOutOfRange(t *testing.T) {
 		t.Fatalf("pageSize=100: got %d, %v; want 100, nil", size, err)
 	}
 }
+
+// TestPageRejectsOffsetTooLarge: (page-1)*pageSize must fit an int32 offset.
+func TestPageRejectsOffsetTooLarge(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/?page=2147483647&pageSize=100", nil)
+	_, _, err := Page(r)
+	var apiErr *Error
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("page=2147483647&pageSize=100: Page returned %v, want *Error", err)
+	}
+	if apiErr.Status != http.StatusBadRequest || apiErr.Code != "validation" || apiErr.Field != "page" {
+		t.Fatalf("page=2147483647&pageSize=100: got %d %s field %q, want 400 validation field page", apiErr.Status, apiErr.Code, apiErr.Field)
+	}
+
+	// The largest page whose offset still fits is accepted.
+	page, size, err := Page(httptest.NewRequest(http.MethodGet, "/?page=2147483647&pageSize=1", nil))
+	if err != nil || page != 2147483647 || size != 1 {
+		t.Fatalf("page=2147483647&pageSize=1: got %d, %d, %v; want accepted", page, size, err)
+	}
+}
