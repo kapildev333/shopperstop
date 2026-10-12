@@ -27,6 +27,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | D18 | `packages/ui` pins TypeScript 5.9.3 and openapi-typescript 7.13.0 (openapi-typescript 7 needs TS ^5; nothing needs TS 6); revisit when openapi-typescript supports 6 | Orchestrator 2026-10-12 |
 | D19 | `packages/ui/src/api/core.d.ts` is generated from `services/core/openapi.json` and committed; a ui test fails when it is stale. Cross-area exception: a core lane that changes `openapi.json` runs `make gen` (or `npm run gen:api --workspace packages/ui`) and commits the regenerated `core.d.ts` in the same PR as a mechanical change, like `package-lock.json`; it never hand-edits it. Reviewers treat that file as generated | Orchestrator 2026-10-12 |
 | D20 | `seed-demo` uses fixed, documented ids for the demo stores, products, addresses and orders, so `docs/postman/local.postman_environment.json` ships `storeId`, `productId`, `addressId`, `orderId` and the collection runs top to bottom against `make dev` (Spec 1 §11). Phase 2 core contract: `components.securitySchemes.bearer`, `security` on every authenticated operation, staff routes under `/admin/`, sign-in and register examples carry a string `token` | Orchestrator 2026-10-12 |
+| D21 | No web manager session was started; the orchestrator session runs the `web` area's lanes itself (acting web manager) so Phase 1 can close, with the same team-lead, worker, reviewer and PR rules. A `/manage web` session may take over any time by reading `.claude/areas/web.md` | Orchestrator 2026-10-12 under D13 |
 
 ## Method
 - Areas: `platform`, `core`, `ui`, `web`, `admin` (later `rider`, `payment`, `receipt`). Scopes in `.claude/areas/<area>.md`; an area's lanes never edit outside it; cross-area needs go through the area plan's `## Requests` and the orchestrator.
@@ -44,8 +45,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | running (orchestrator session, D9) |
 | core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | running (session shopperstop-ed); core-P1-L1 team lead on change core-service-foundation (tasks 5-8); unblocked by #4 |
 | ui | `packages/ui/` | platform (`package.json` workspaces) | ui-P1-L1 landed #20; archive and plan PRs follow; no further Phase 1 tasks |
-| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | **no manager session; packages/ui is on main, so the owner can start `claude --model claude-fable-5-1` then `/manage web` now** |
-| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | running (session shopperstop-75); waits on ui task 9 and core task 8 |
+| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | acting manager: the orchestrator session (D21); web-P1-L1 starting |
+| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | admin-P1-L1 done #41; idle until the Phase 2 package |
 
 ## Phase 1 - Foundation and design system
 | Area | Plan tasks | Status |
@@ -53,8 +54,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | platform | 1 repo root, 2 orchestration files, 3 OpenSpec, 4 deploy and `make db`, 12 Postman, 13 CI and Makefile, 15 README, CLAUDE.md, docs/figma.md | all done: 1, 2 (orchestrator); 3 #3; 4 #4; 12 #36; 13 #15 (CI gate open until Actions billing is fixed, change `platform-ci-makefile` stays unarchived until then); 15 #42; docs/figma.md #25 |
 | core | 5 config, 6 httpx, 7 migrations, 8 server, app, contract test | done #23 (core-P1-L1), archived #24 |
 | ui | 9 packages/ui | done #20 (ui-P1-L1) and #33 (ui-P1-L2 api types, archived #34) |
-| web | 10 apps/web | waits on ui task 9 |
-| admin | 11 apps/admin | admin-P1-L1 change `admin-apps-admin` seen, worker running (served under `/admin/`, dev 5174, preview 15174) |
+| web | 10 apps/web | web-P1-L1 running from the orchestrator session (D21) |
+| admin | 11 apps/admin | done #41 (admin-P1-L1, served under `/admin/`) |
 | orchestrator | 14 Figma (Figma tools live in the main session) | done 2026-10-12: tokens, styles, 19 component sets, customer phone and desktop screens, admin screens; `docs/figma.md` (#25) |
 
 ## Backlog
@@ -81,3 +82,4 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - 2026-10-12: D20; admin-P1-L1 approved; e2e guard chore (#29) so admin's suite runs without web; platform-P1-L8 (Postman) and platform-P1-L11 (README, CLAUDE.md) workers running.
 - 2026-10-12: Postman generator landed (#36) and archived (#38); ui api types landed (#33); README and CLAUDE.md in review fixes.
 - 2026-10-12: README and CLAUDE.md landed (#42, archived #43). Platform Phase 1 complete except the first green CI run. Phase 1 close waits on apps/admin (lane running) and apps/web (no manager yet).
+- 2026-10-12: admin shell landed (#41). D21: orchestrator runs the web lanes. CI still blocked by billing (latest runs start no steps).
