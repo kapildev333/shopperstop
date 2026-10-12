@@ -64,6 +64,9 @@ func logAndRecover(next http.Handler) http.Handler {
 		}()
 		defer func() {
 			if v := recover(); v != nil {
+				if v == http.ErrAbortHandler {
+					panic(v) // net/http aborts the response silently; do not log or answer it
+				}
 				slog.ErrorContext(r.Context(), "panic", "panic", v, "requestId", id, "stack", string(debug.Stack()))
 				WriteError(ww, r, &Error{Status: http.StatusInternalServerError, Code: "internal", Message: "internal error"})
 			}

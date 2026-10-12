@@ -15,13 +15,13 @@ func cors(origins []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
+			w.Header().Add("Vary", "Origin")
 			if origin == "" || !allowed[origin] {
 				next.ServeHTTP(w, r)
 				return
 			}
 			h := w.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
-			h.Add("Vary", "Origin")
 			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 				h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 				h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
