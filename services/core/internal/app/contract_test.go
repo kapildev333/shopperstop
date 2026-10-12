@@ -12,8 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const apiPrefix = "/api/core/v1"
-
 // responseSpec is the part of an OpenAPI response the contract checks.
 type responseSpec struct {
 	Content map[string]struct {
@@ -23,9 +21,10 @@ type responseSpec struct {
 }
 
 // contractProblems compares the served routes with the documented operations
-// and returns one line per mismatch, each naming "METHOD /api/core/v1/path".
-// Every documented operation needs a summary, a description, a tag and at
-// least one response example.
+// and returns one line per mismatch. Documented paths are joined with
+// servers[0].url; each line names "METHOD <server url><path>". Every
+// operation needs a summary, a description, a tag, and an example on every
+// response that declares content (and at least one example overall).
 func contractProblems(routes chi.Routes, doc []byte) []string {
 	served := map[string]bool{}
 	_ = chi.Walk(routes, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
@@ -34,11 +33,18 @@ func contractProblems(routes chi.Routes, doc []byte) []string {
 	})
 
 	var spec struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
 		Paths map[string]map[string]json.RawMessage `json:"paths"`
 	}
 	if err := json.Unmarshal(doc, &spec); err != nil {
 		return []string{fmt.Sprintf("openapi.json does not parse: %v", err)}
 	}
+	if len(spec.Servers) == 0 {
+		return []string{"openapi.json lists no servers"}
+	}
+	base := spec.Servers[0].URL
 
 	var problems []string
 	documented := map[string]bool{}
@@ -49,7 +55,7 @@ func contractProblems(routes chi.Routes, doc []byte) []string {
 			default:
 				continue // path-level keys such as summary or parameters
 			}
-			key := strings.ToUpper(method) + " " + apiPrefix + path
+			key := strings.ToUpper(method) + " " + base + path
 			documented[key] = true
 			var op struct {
 				Summary     string                  `json:"summary"`
@@ -70,8 +76,11 @@ func contractProblems(routes chi.Routes, doc []byte) []string {
 			if len(op.Tags) == 0 {
 				problems = append(problems, key+": missing tag")
 			}
-			if !hasExample(op.Responses) {
+			if !anyExample(op.Responses) {
 				problems = append(problems, key+": missing response example")
+			}
+			for _, code := range withoutExample(op.Responses) {
+				problems = append(problems, fmt.Sprintf("%s: response %s missing example", key, code))
 			}
 		}
 	}
@@ -89,15 +98,36 @@ func contractProblems(routes chi.Routes, doc []byte) []string {
 	return problems
 }
 
-func hasExample(responses map[string]responseSpec) bool {
-	for _, resp := range responses {
-		for _, media := range resp.Content {
-			if len(media.Example) > 0 || len(media.Examples) > 0 {
-				return true
-			}
+// hasExampleIn reports whether a response's content carries an example.
+func hasExampleIn(resp responseSpec) bool {
+	for _, media := range resp.Content {
+		if len(media.Example) > 0 || len(media.Examples) > 0 {
+			return true
 		}
 	}
 	return false
+}
+
+// anyExample reports whether any response carries an example.
+func anyExample(responses map[string]responseSpec) bool {
+	for _, resp := range responses {
+		if hasExampleIn(resp) {
+			return true
+		}
+	}
+	return false
+}
+
+// withoutExample returns the codes of responses that declare content but no example.
+func withoutExample(responses map[string]responseSpec) []string {
+	var codes []string
+	for code, resp := range responses {
+		if len(resp.Content) > 0 && !hasExampleIn(resp) {
+			codes = append(codes, code)
+		}
+	}
+	sort.Strings(codes)
+	return codes
 }
 
 // TestContract checks the real router against the real openapi.json.
@@ -154,15 +184,6 @@ func TestContractNamesMissingExample(t *testing.T) {
 	}
 }
 
-func containsProblem(problems []string, name string) bool {
-	for _, p := range problems {
-		if strings.Contains(p, name) {
-			return true
-		}
-	}
-	return false
-}
-
 // TestContractUsesServersURL joins paths with servers[0].url, not a fixed prefix.
 func TestContractUsesServersURL(t *testing.T) {
 	r := chi.NewRouter()
@@ -181,4 +202,13 @@ func TestContractNamesMissing503Example(t *testing.T) {
 	if !containsProblem(problems, "GET /api/core/v1/extra") || !containsProblem(problems, "503") {
 		t.Fatalf("want a problem naming GET /api/core/v1/extra and response 503, got %q", problems)
 	}
+}
+
+func containsProblem(problems []string, name string) bool {
+	for _, p := range problems {
+		if strings.Contains(p, name) {
+			return true
+		}
+	}
+	return false
 }

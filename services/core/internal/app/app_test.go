@@ -64,8 +64,14 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var held []net.Conn
+	// The accept loop owns its connections: when Accept fails on close, it closes them.
 	go func() {
+		var held []net.Conn
+		defer func() {
+			for _, c := range held {
+				c.Close()
+			}
+		}()
 		for {
 			c, err := ln.Accept()
 			if err != nil {
@@ -74,12 +80,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 			held = append(held, c) // keeps the peer open and silent
 		}
 	}()
-	t.Cleanup(func() {
-		ln.Close()
-		for _, c := range held {
-			c.Close()
-		}
-	})
+	t.Cleanup(func() { ln.Close() })
 
 	url := "postgres://shopperstop_core:shopperstop_core@" + ln.Addr().String() + "/shopperstop_core_test?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), url)

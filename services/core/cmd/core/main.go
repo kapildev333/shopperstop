@@ -51,12 +51,18 @@ func run(cfg config.Config) error {
 		return fmt.Errorf("listen on %s: %w", cfg.Addr, err)
 	}
 	slog.Info("core listening", "addr", ln.Addr().String())
-	srv := &http.Server{Handler: app.New(pool, cfg.WebOrigins)}
+	srv := newHTTPServer(app.New(pool, cfg.WebOrigins))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err
 	}
 	slog.Info("core stopped")
 	return nil
+}
+
+// newHTTPServer bounds how long a client may take to send request headers,
+// so a trickling client cannot hold a graceful shutdown for the whole grace.
+func newHTTPServer(h http.Handler) *http.Server {
+	return &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second}
 }
 
 // serve accepts on ln until ctx is done, then stops accepting and waits up
