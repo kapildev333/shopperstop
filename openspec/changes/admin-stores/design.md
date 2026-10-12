@@ -542,6 +542,8 @@ export function ServiceAreas({ storeId }: { storeId: string }) {
 ```
 
 ## Tests (spiked; scenario → test)
+Fixture fix from task 2 (2026-10-12): "create a store and open it" needs `GET /admin/stores/<created id>` in its fake. After the create, `$storeId.tsx` mounts `useQuery(storeQuery(id))`, and with `staleTime` 0 it refetches the store that `setQueryData` had just written. The spike passed only because the heading was found before the refetch settled into not-found. The worker commits the line as `test: created store is readable after create`.
+
 Every test file starts with L1's `afterEach(() => { clearToken(); vi.unstubAllGlobals() })` and signs in with `setToken('tok')` plus a `GET /admin/me` admin answer.
 
 | Requirement › Scenario | Test (file › name) | Task |
@@ -676,6 +678,8 @@ test('create a store and open it', async () => {
   const calls = fakeCore({
     ...signedIn,
     'POST /admin/stores': () => json(201, created),
+    // The new store's page refetches it on mount (staleTime 0); without this answer it shows not found.
+    [`GET /admin/stores/${created.id}`]: () => json(200, created),
     [`GET /admin/stores/${created.id}/service-areas`]: () => json(200, { pincodes: [] }),
   })
 
@@ -1048,7 +1052,7 @@ test('store staff open the stores page', async ({ page }) => {
 - [core-P2-L2's shapes move before merge] → task 0 diffs A1 to A12 against main's `core.d.ts` and updates this file and the briefs; the code above compiles only if the types match, so `tsc` is the tripwire.
 - [The real-core e2e has not run] → the spike ran it against a stateful fake; task 5 runs it against core with the e2e slot. Its writes are restored in the test (promised minutes back to 10, `560001` removed; the conflict writes nothing), and the global setup reseeds anyway.
 - [Sign-in rate limit, 10 per email per hour per core process] → this suite adds one admin and one store-staff sign-in per run; a reused local core on 18080 reaches the limit after about four full admin runs (`auth.spec` signs in twice). Restart core to clear (L1 Found).
-- [Phone width: the admin nav overflows] → measured in the spike at 375 px: the seven admin links run past the `surface` strip and axe flags "Products" and "Staff" (`ink-muted` on `canvas`, 4.47:1). It is L1's shell, not these pages (the stores table passes at 375 px otherwise). The e2e runs at desktop width. Reported as a request (`TabNav` or the shell needs `overflow-x-auto`).
+- [Phone width: the admin nav overflowed] → measured in the spike at 375 px (axe flagged "Products" and "Staff"); fixed in `TabNav` by ui-P2-L1 (#82, horizontal scroll), so the admin shell needs no change.
 - [`ghost-danger` "Remove" and the `Badge` colours] → axe-clean in the spike at desktop width.
 - [The `fetchQuery` for the conflict's store] → reuses `storeQuery`, so a 403 or 401 there follows L1's rules; for an admin neither happens.
 
