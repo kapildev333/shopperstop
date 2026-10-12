@@ -39,6 +39,15 @@ test('the store page lists its pincodes', async () => {
   await waitFor(() => expect(listed()).toEqual(['560034', '560095']))
   expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeDisabled()
   expect(screen.queryByText('Unsaved changes.')).not.toBeInTheDocument()
+
+  // The note and the button follow the difference from the saved list, not the fact of an edit.
+  await userEvent.click(screen.getByRole('button', { name: 'Remove 560095' }))
+  expect(screen.getByText('Unsaved changes.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeEnabled()
+  await addPincode('560095')
+  expect(listed()).toEqual(['560034', '560095'])
+  expect(screen.queryByText('Unsaved changes.')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Save pincodes' })).toBeDisabled()
 })
 
 test('add and remove pincodes, then save the list with one PUT', async () => {
@@ -58,6 +67,7 @@ test('add and remove pincodes, then save the list with one PUT', async () => {
   const puts = calls.filter((call) => call.method === 'PUT')
   expect(puts).toHaveLength(1)
   expect(await puts[0].json()).toEqual({ pincodes: ['560034', '560047'] })
+  expect(listed()).toEqual(['560034', '560047'])
 })
 
 test('a pincode that is not 6 digits is not added', async () => {
@@ -88,6 +98,10 @@ test('a pincode served by another store names that store', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Pincode 560038 is served by Indiranagar.')
   expect(screen.getByText('Unsaved changes.')).toBeInTheDocument()
+
+  // The next edit clears the alert.
+  await userEvent.click(screen.getByRole('button', { name: 'Remove 560038' }))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
 test('the conflict shows the store id when its name cannot be read', async () => {
