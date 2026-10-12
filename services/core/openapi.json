@@ -971,6 +971,373 @@
           }
         }
       }
+    },
+
+    "/admin/staff-users": {
+      "get": {
+        "operationId": "listStaffUsers",
+        "summary": "List staff users",
+        "description": "Admins only. Answers one page of staff users ordered by email, admins and store staff alike. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every staff user, not just this page.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of staff users. items is [] when there are none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000101",
+                      "email": "admin@shopperstop.local",
+                      "name": "Admin",
+                      "role": "admin",
+                      "isActive": true
+                    },
+                    {
+                      "id": "00000000-0000-4000-8000-000000000103",
+                      "email": "hsr@example.com",
+                      "name": "HSR",
+                      "role": "store_staff",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "isActive": true
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page or pageSize is out of range or not a whole number. The field names the parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100",
+                    "field": "pageSize"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Staff users are admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createStaffUser",
+        "summary": "Create a staff user",
+        "description": "Admins only. Creates an active staff user from email, password, name, role and storeId. role is admin or store_staff; storeId is required for store_staff and refused for admin. The password is stored at bcrypt cost 12. An email taken in any letter case answers 409 on field email. The new user signs in at /admin/auth/sign-in at once.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffCreate"
+              },
+              "example": {
+                "email": "hsr@example.com",
+                "password": "staff12345",
+                "name": "HSR",
+                "role": "store_staff",
+                "storeId": "00000000-0000-4000-8000-000000000401"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The staff user is created. storeId is present for store staff only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Staff"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000103",
+                  "email": "hsr@example.com",
+                  "name": "HSR",
+                  "role": "store_staff",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid. role must be admin or store_staff; storeId is required for store_staff and refused for admin. The field names the problem.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be admin or store_staff",
+                    "field": "role"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Staff users are admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The email is already registered, in any letter case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "email already registered",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/staff-users/{id}": {
+      "patch": {
+        "operationId": "patchStaffUser",
+        "summary": "Change a staff user",
+        "description": "Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account; core-admin create-admin with another email makes a new admin. A null value is refused with 400 naming the field. An id that is not one answers 404.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The staff user id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000101"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffPatch"
+              },
+              "example": {
+                "isActive": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Staff"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000101",
+                  "email": "admin@shopperstop.local",
+                  "name": "Admin",
+                  "role": "admin",
+                  "isActive": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is invalid, or a member is null. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must not be null",
+                    "field": "isActive"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The signed-in staff user is store staff. Staff users are admin-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "admins only"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No staff user has this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1296,6 +1663,100 @@
           },
           "staff": {
             "$ref": "#/components/schemas/Staff"
+          }
+        },
+        "additionalProperties": false
+      },
+
+      "StaffCreate": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "name",
+          "role"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "8 to 72 bytes. Not trimmed."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "store_staff"
+            ]
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required for store_staff; refused for admin."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StaffPatch": {
+        "type": "object",
+        "description": "Every member is optional; a member that is present must not be null.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "A new password; replaces the old one. 8 to 72 bytes."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "false ends the user's signed-in sessions at their next request."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StaffList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Staff"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every staff user, not just this page."
           }
         },
         "additionalProperties": false

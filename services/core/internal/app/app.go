@@ -33,6 +33,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.Post("/api/core/v1/admin/auth/sign-in", a.StaffSignIn)
 	r.With(a.RequireStaff).Post("/api/core/v1/admin/auth/sign-out", a.StaffSignOut)
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/me", a.StaffMe)
+	r.With(a.RequireAdmin).Get("/api/core/v1/admin/staff-users", a.ListStaff)
+	r.With(a.RequireAdmin).Post("/api/core/v1/admin/staff-users", a.CreateStaffUser)
+	r.With(a.RequireAdmin).Patch("/api/core/v1/admin/staff-users/{id}", a.UpdateStaffUser)
 	return r
 }
 
