@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -37,7 +39,48 @@ type sessionBody struct {
 	} `json:"customer"`
 }
 
-// register creates a customer through the router and returns its session.
+// cheapHash is the test password at bcrypt.MinCost. Fixtures store it directly
+// and sign in with it in milliseconds; only registration through the router
+// pays cost 12.
+var cheapHash = sync.OnceValue(func() string {
+	h, err := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.MinCost)
+	if err != nil {
+		panic(err)
+	}
+	return string(h)
+})
+
+// seedCustomerEmail inserts a customer row directly at MinCost, then signs it
+// in through the router, so the returned session is a real one.
+func seedCustomerEmail(t *testing.T, email string) sessionBody {
+	t.Helper()
+	if _, err := testPool.Exec(context.Background(),
+		"insert into customers (email, password_hash, name) values ($1, $2, 'Asha')", email, cheapHash()); err != nil {
+		t.Fatal(err)
+	}
+	status, body := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
+		map[string]string{"email": email, "password": testPassword})
+	var s sessionBody
+	if status != http.StatusOK || json.Unmarshal(body, &s) != nil {
+		t.Fatalf("sign-in of seeded %s: got %d %s, want 200", email, status, body)
+	}
+	return s
+}
+
+// seedCustomer is seedCustomerEmail for a fresh email.
+func seedCustomer(t *testing.T) sessionBody {
+	t.Helper()
+	return seedCustomerEmail(t, uniqueEmail(t))
+}
+
+// newCustomer is the fixture for tests that need a token or a second account.
+func newCustomer(t *testing.T) sessionBody {
+	t.Helper()
+	return seedCustomer(t)
+}
+
+// register creates a customer through the router at cost 12, for the tests
+// about registration itself.
 func register(t *testing.T, email string) sessionBody {
 	t.Helper()
 	status, body := call(t, http.MethodPost, "/api/core/v1/auth/register", "",
@@ -52,38 +95,11 @@ func register(t *testing.T, email string) sessionBody {
 	return s
 }
 
-// newCustomer registers a fresh customer and returns its session.
-func newCustomer(t *testing.T) sessionBody {
-	t.Helper()
-	return register(t, uniqueEmail(t))
-}
-
-var (
-	sharedOnce    sync.Once
-	sharedSession sessionBody
-)
-
-// sharedCustomer is one customer for tests that only read it or are refused
-// before any write, so a bcrypt registration is paid once.
-func sharedCustomer(t *testing.T) sessionBody {
-	t.Helper()
-	sharedOnce.Do(func() { sharedSession = register(t, "shared.customer@example.com") })
-	return sharedSession
-}
-
 func TestRegister(t *testing.T) {
 	email := uniqueEmail(t)
-	status, body := call(t, http.MethodPost, "/api/core/v1/auth/register", "",
-		map[string]string{"email": email, "password": testPassword, "name": "Asha"})
-	if status != http.StatusCreated {
-		t.Fatalf("register: got %d %s, want 201", status, body)
-	}
-	var s sessionBody
-	if err := json.Unmarshal(body, &s); err != nil {
-		t.Fatal(err)
-	}
+	s := register(t, email)
 	if s.Token == "" || s.Customer.Email != email || s.Customer.ID == "" {
-		t.Fatalf("register body %s: want a token and the customer", body)
+		t.Fatalf("register: want a token and the customer, got %+v", s)
 	}
 	status, me := call(t, http.MethodGet, "/api/core/v1/me", s.Token, nil)
 	if status != http.StatusOK {
@@ -98,9 +114,11 @@ func TestRegister(t *testing.T) {
 	}
 }
 
+// TestRegisterEmailTakenInOtherCase seeds the first account, so only the
+// second, refused registration pays for a real hash.
 func TestRegisterEmailTakenInOtherCase(t *testing.T) {
 	email := uniqueEmail(t)
-	register(t, email)
+	seedCustomerEmail(t, email)
 	status, body := call(t, http.MethodPost, "/api/core/v1/auth/register", "",
 		map[string]string{"email": strings.ToUpper(email), "password": testPassword, "name": "Asha"})
 	e := decodeError(t, body)
@@ -122,11 +140,12 @@ func TestRegisterPasswordLength(t *testing.T) {
 
 func TestRegisterInvalidEmailOrName(t *testing.T) {
 	cases := []struct {
-		name, email, field string
-		body               map[string]string
+		name  string
+		body  map[string]string
+		field string
 	}{
-		{"bad email", "not-an-email", "email", map[string]string{"email": "not-an-email", "password": testPassword, "name": "Asha"}},
-		{"blank name", "", "name", map[string]string{"email": uniqueEmail(t), "password": testPassword, "name": "   "}},
+		{"bad email", map[string]string{"email": "not-an-email", "password": testPassword, "name": "Asha"}, "email"},
+		{"blank name", map[string]string{"email": uniqueEmail(t), "password": testPassword, "name": "   "}, "name"},
 	}
 	for _, c := range cases {
 		status, body := call(t, http.MethodPost, "/api/core/v1/auth/register", "", c.body)
@@ -137,8 +156,10 @@ func TestRegisterInvalidEmailOrName(t *testing.T) {
 	}
 }
 
+// TestPasswordStoredAsBcrypt12 registers through the router, the only test
+// that checks the hash the handler stores at cost 12.
 func TestPasswordStoredAsBcrypt12(t *testing.T) {
-	s := newCustomer(t)
+	s := register(t, uniqueEmail(t))
 	var hash string
 	if err := testPool.QueryRow(context.Background(), "select password_hash from customers where id = $1", s.Customer.ID).Scan(&hash); err != nil {
 		t.Fatal(err)
@@ -156,7 +177,7 @@ func TestPasswordStoredAsBcrypt12(t *testing.T) {
 
 func TestSignInKeepsOtherSessions(t *testing.T) {
 	email := uniqueEmail(t)
-	first := register(t, email)
+	first := seedCustomerEmail(t, email)
 	status, body := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": email, "password": testPassword})
 	if status != http.StatusOK {
@@ -176,13 +197,38 @@ func TestSignInKeepsOtherSessions(t *testing.T) {
 	}
 }
 
+func TestSignInValidation(t *testing.T) {
+	cases := []struct {
+		name  string
+		body  map[string]string
+		field string
+	}{
+		{"bad email", map[string]string{"email": "not-an-email", "password": testPassword}, "email"},
+		{"empty password", map[string]string{"email": uniqueEmail(t), "password": ""}, "password"},
+	}
+	for _, c := range cases {
+		status, body := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "", c.body)
+		e := decodeError(t, body)
+		if status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
+			t.Fatalf("%s: got %d %s, want 400 validation field %s", c.name, status, body, c.field)
+		}
+	}
+}
+
+// TestSignInFailuresLookTheSame also checks equal work. The unknown-email
+// sign-in must take at least a second, because it pays a cost-12 bcrypt
+// compare against the dummy hash. Do not lower that cost to speed this test up:
+// the wrong-password fixture runs at MinCost, so the timing check only proves
+// that the unknown path does not skip bcrypt.
 func TestSignInFailuresLookTheSame(t *testing.T) {
 	email := uniqueEmail(t)
-	register(t, email)
+	seedCustomerEmail(t, email)
 	wrongStatus, wrongBody := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": email, "password": "wrong-password"})
+	start := time.Now()
 	unknownStatus, unknownBody := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": "nobody." + email, "password": testPassword})
+	elapsed := time.Since(start)
 	if wrongStatus != http.StatusUnauthorized || unknownStatus != http.StatusUnauthorized {
 		t.Fatalf("wrong password %d, unknown email %d: want both 401", wrongStatus, unknownStatus)
 	}
@@ -193,11 +239,14 @@ func TestSignInFailuresLookTheSame(t *testing.T) {
 	if wrong != unknown {
 		t.Fatalf("messages differ: wrong password %+v, unknown email %+v", wrong, unknown)
 	}
+	if elapsed < time.Second {
+		t.Fatalf("unknown-email sign-in took %v, want at least 1s of bcrypt work (Decision 10)", elapsed)
+	}
 }
 
 func TestSignOutEndsOnlyThatSession(t *testing.T) {
 	email := uniqueEmail(t)
-	a := register(t, email)
+	a := seedCustomerEmail(t, email)
 	status, body := call(t, http.MethodPost, "/api/core/v1/auth/sign-in", "",
 		map[string]string{"email": email, "password": testPassword})
 	var b sessionBody
@@ -236,6 +285,51 @@ func TestRegisterRateLimitedPerEmail(t *testing.T) {
 	}
 }
 
+// TestSignInRateLimitedPerIP: two sign-ins from one client IP pass and the
+// third is refused, though every attempt names a different email and sends a
+// different X-Forwarded-For. Each request opens a new connection, so a new
+// client port: the key must drop the port, and X-Forwarded-For must not be trusted.
+func TestSignInRateLimitedPerIP(t *testing.T) {
+	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now))
+	limited := httptest.NewServer(New(testPool, nil, a))
+	t.Cleanup(limited.Close)
+	signIn := func(email, forwardedFor string) (int, []byte) {
+		t.Helper()
+		b, err := json.Marshal(map[string]string{"email": email, "password": testPassword})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req, err := http.NewRequest(http.MethodPost, limited.URL+"/api/core/v1/auth/sign-in", bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Forwarded-For", forwardedFor)
+		req.Close = true
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var out bytes.Buffer
+		if _, err := out.ReadFrom(resp.Body); err != nil {
+			t.Fatal(err)
+		}
+		return resp.StatusCode, out.Bytes()
+	}
+	for i, forwarded := range []string{"203.0.113.1", "203.0.113.2"} {
+		email := seedCustomer(t).Customer.Email
+		if status, body := signIn(email, forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d: got %d %s, want 200", i+1, status, body)
+		}
+	}
+	email := seedCustomer(t).Customer.Email
+	status, body := signIn(email, "203.0.113.3")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt from one IP: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
 func TestPatchMe(t *testing.T) {
 	s := newCustomer(t)
 	status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token,
@@ -250,6 +344,51 @@ func TestPatchMe(t *testing.T) {
 	_, me := call(t, http.MethodGet, "/api/core/v1/me", s.Token, nil)
 	if err := json.Unmarshal(me, &got.Customer); err != nil || got.Customer.Name != "Asha R" || got.Customer.Phone != "+919800000001" {
 		t.Fatalf("GET /me after PATCH: %s, want the same name and phone", me)
+	}
+}
+
+// TestPatchMePhoneOnlyKeepsName: a PATCH with only phone leaves name unchanged.
+func TestPatchMePhoneOnlyKeepsName(t *testing.T) {
+	s := newCustomer(t)
+	status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token, map[string]string{"phone": "+919800000003"})
+	var got sessionBody
+	if err := json.Unmarshal(body, &got.Customer); err != nil {
+		t.Fatal(err)
+	}
+	if status != http.StatusOK || got.Customer.Name != "Asha" || got.Customer.Phone != "+919800000003" {
+		t.Fatalf("phone-only PATCH: got %d %s, want 200 with name Asha and the new phone", status, body)
+	}
+}
+
+// TestPatchMeNameLength counts the name in characters, not bytes.
+func TestPatchMeNameLength(t *testing.T) {
+	s := newCustomer(t)
+	cases := []struct {
+		name, value string
+		wantStatus  int
+	}{
+		{"101 ASCII characters", strings.Repeat("a", 101), http.StatusBadRequest},
+		{"101 multi-byte characters", strings.Repeat("é", 101), http.StatusBadRequest},
+		{"100 multi-byte characters, 200 bytes", strings.Repeat("é", 100), http.StatusOK},
+	}
+	for _, c := range cases {
+		status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token, map[string]string{"name": c.value})
+		if status != c.wantStatus {
+			t.Fatalf("%s: got %d %s, want %d", c.name, status, body, c.wantStatus)
+		}
+		if c.wantStatus == http.StatusBadRequest {
+			if e := decodeError(t, body); e.Error.Code != "validation" || e.Error.Field != "name" {
+				t.Fatalf("%s: got %s, want validation field name", c.name, body)
+			}
+		}
+	}
+	_, me := call(t, http.MethodGet, "/api/core/v1/me", s.Token, nil)
+	var got sessionBody
+	if err := json.Unmarshal(me, &got.Customer); err != nil {
+		t.Fatal(err)
+	}
+	if n := utf8.RuneCountInString(got.Customer.Name); n != 100 {
+		t.Fatalf("stored name has %d characters, want 100", n)
 	}
 }
 
@@ -275,7 +414,7 @@ func TestPatchMeEmptyPhoneClears(t *testing.T) {
 }
 
 func TestPatchMeBadPhone(t *testing.T) {
-	s := sharedCustomer(t)
+	s := newCustomer(t)
 	status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token, map[string]string{"phone": "call me"})
 	e := decodeError(t, body)
 	if status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "phone" {
@@ -284,7 +423,7 @@ func TestPatchMeBadPhone(t *testing.T) {
 }
 
 func TestPatchMeRejectsNull(t *testing.T) {
-	s := sharedCustomer(t)
+	s := newCustomer(t)
 	status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token, json.RawMessage(`{"phone":null}`))
 	e := decodeError(t, body)
 	if status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "phone" {
@@ -293,26 +432,22 @@ func TestPatchMeRejectsNull(t *testing.T) {
 }
 
 // TestAuthGates sends each authenticated route anonymously and with a customer
-// token. Sign-out ends the token it is given, so that row gets its own customer.
+// token. Every row gets its own customer, since sign-out ends the token it is sent with.
 func TestAuthGates(t *testing.T) {
 	gates := []struct {
 		method, path string
 		body         any
 		allowed      int
-		ends         bool // ends the session it is sent with
 	}{
-		{http.MethodGet, "/api/core/v1/me", nil, http.StatusOK, false},
-		{http.MethodPatch, "/api/core/v1/me", map[string]string{}, http.StatusOK, false},
-		{http.MethodPost, "/api/core/v1/auth/sign-out", nil, http.StatusNoContent, true},
+		{http.MethodGet, "/api/core/v1/me", nil, http.StatusOK},
+		{http.MethodPatch, "/api/core/v1/me", map[string]string{}, http.StatusOK},
+		{http.MethodPost, "/api/core/v1/auth/sign-out", nil, http.StatusNoContent},
 	}
 	for _, g := range gates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
 			t.Fatalf("%s %s anonymous: got %d %s, want 401 unauthorized", g.method, g.path, status, body)
 		}
-		s := sharedCustomer(t)
-		if g.ends {
-			s = newCustomer(t)
-		}
+		s := newCustomer(t)
 		if status, body := call(t, g.method, g.path, s.Token, g.body); status != g.allowed {
 			t.Fatalf("%s %s with a customer token: got %d %s, want %d", g.method, g.path, status, body, g.allowed)
 		}
