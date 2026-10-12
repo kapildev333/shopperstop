@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
-import { admin, apiError, fakeCore, json, koramangala } from './fake-core'
+import { admin, apiError, fakeCore, json, koramangala, storeList } from './fake-core'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -129,4 +129,50 @@ test('an unknown store shows not found', async () => {
   expect(router.state.location.pathname).toBe('/stores/00000000-0000-4000-8000-000000000000')
   const nav = screen.getByRole('navigation', { name: 'Admin' })
   expect(within(nav).getByRole('link', { name: 'Stores' })).toHaveAttribute('aria-current', 'page')
+})
+
+// A fake core that keeps the store: PATCH merges the body, GETs answer the current values.
+function keepsStore() {
+  let current = { ...koramangala }
+  return fakeCore({
+    ...signedIn,
+    'GET /admin/stores': () => storeList([current]),
+    [`GET ${storePath}`]: () => json(200, current),
+    [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
+    [`PATCH ${storePath}`]: async (request) => {
+      current = { ...current, ...(await request.clone().json()) }
+      return json(200, current)
+    },
+  })
+}
+
+test('a second save sends only its own change', async () => {
+  setToken('tok')
+  const calls = keepsStore()
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'closed')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await screen.findByText('Store saved.')
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(patches).toHaveLength(2)
+  expect(await patches[1].json()).toEqual({ isOpen: false })
+})
+
+test('the stores table shows a saved change', async () => {
+  setToken('tok')
+  keepsStore()
+
+  renderApp('/stores')
+  await userEvent.click(await screen.findByRole('link', { name: 'Koramangala' }))
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'Admin' })).getByRole('link', { name: 'Stores' }))
+
+  expect(await within(await screen.findByRole('table', { name: 'Stores' })).findByText('11 min')).toBeInTheDocument()
 })
