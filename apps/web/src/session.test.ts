@@ -22,3 +22,26 @@ test('token restored on load', async () => {
   const { getToken } = await import('./session')
   expect(getToken()).toBe('t-2')
 })
+
+test('storage that throws is tolerated', async () => {
+  const blocked = () => {
+    throw new DOMException('storage blocked', 'SecurityError')
+  }
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked)
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked)
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(blocked)
+
+  const { renderHook, act } = await import('@testing-library/react')
+  const { getToken, setToken, useToken } = await import('./session')
+  expect(getToken()).toBeUndefined()
+
+  const { result } = renderHook(() => useToken())
+  act(() => setToken('abc'))
+  expect(getToken()).toBe('abc')
+  expect(result.current).toBe('abc')
+
+  act(() => setToken(undefined))
+  expect(getToken()).toBeUndefined()
+  expect(result.current).toBeUndefined()
+  vi.restoreAllMocks()
+})
