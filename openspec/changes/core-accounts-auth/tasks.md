@@ -68,7 +68,7 @@ Scope: `services/core/internal/seed/`, `services/core/cmd/core-admin/main.go`. S
 
 Scope: `packages/ui/src/api/core.d.ts` (generated, D19), `docs/postman/shopperstop-core.postman_collection.json` (generated; commit only when the manager confirms the orchestrator extended D19 to it, see design Risks), this change's `tasks.md`. Scenarios: none new; the whole change's gate. No test: generated files, guarded by `packages/ui/src/api/core.test.ts` and `scripts/postman.test.mjs`. Commit: `chore: regenerate api types and postman collection`.
 
-- [ ] 10.1 `PATH=$HOME/.local/node-v22.23.3/bin:$PATH make gen` then `make postman`; if `scripts/postman.test.mjs` fails only on the Phase 1 folder assertion (platform request in design Risks), report it and stop; otherwise verify `make test-core`, `npm run test --workspace packages/ui`, `make gen postman` twice leaves `git status` clean, `openspec validate --all --strict`; commit
+- [x] 10.1 `PATH=$HOME/.local/node-v22.23.3/bin:$PATH make gen` then `make postman`; if `scripts/postman.test.mjs` fails only on the Phase 1 folder assertion (platform request in design Risks), report it and stop; otherwise verify `make test-core`, `npm run test --workspace packages/ui`, `make gen postman` twice leaves `git status` clean, `openspec validate --all --strict`; commit
 
 ## Workflow follow-up
 - Team lead runs `/opsx:verify core-accounts-auth` once 1 to 10 are ticked.
