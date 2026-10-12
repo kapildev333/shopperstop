@@ -9,7 +9,7 @@
 
 ## Simplifications and ceilings
 - Inset ring sits on the link's own edges; links have no horizontal padding, so the ring hugs the first and last glyph. Ceiling: if that reads as cramped, add `[&_a]:px-1` (layout change, needs a design call).
-- No scroll-into-view for the current link: a current link past the fold stays off-screen until scrolled. Add when a nav grows past the phone width with a deep current item.
+- No scroll-into-view for the current link on load: a current link past the fold stays off-screen until scrolled (keyboard focus scrolls natively; verified in Chrome). Add when a nav grows past the phone width with a deep current item.
 
 ## Files
 - `packages/ui/src/tab-nav.tsx`, `packages/ui/src/tab-nav.test.tsx` (area ui only).
