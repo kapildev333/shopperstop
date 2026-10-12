@@ -15,6 +15,7 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/core/internal/app"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 	"github.com/kapildev333/shopperstop/services/core/internal/seed"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
@@ -85,7 +86,7 @@ func signIn(t *testing.T, base, path, email, password string) int {
 func server(t *testing.T) string {
 	t.Helper()
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
-	srv := httptest.NewServer(app.New(testPool, []string{"http://localhost:5173"}, a))
+	srv := httptest.NewServer(app.New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: t.TempDir()}))
 	t.Cleanup(srv.Close)
 	return srv.URL
 }

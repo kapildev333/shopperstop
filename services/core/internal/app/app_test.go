@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
 
@@ -26,16 +27,23 @@ const testPepper = "test-pepper-test-pepper-test-pepper-00"
 var (
 	srv      *httptest.Server
 	testPool *pgxpool.Pool
+	// filesDir is the files directory every test server stores uploads in.
+	filesDir string
 )
 
 func TestMain(m *testing.M) {
 	var cleanup func()
 	testPool, cleanup = testdb.Migrated("app")
+	var err error
+	if filesDir, err = os.MkdirTemp("", "core-app-files-"); err != nil {
+		panic(err)
+	}
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
-	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a))
+	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
 	srv.Close()
 	cleanup()
+	os.RemoveAll(filesDir)
 	os.Exit(code)
 }
 
@@ -156,7 +164,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil)))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil), blob.Disk{Dir: filesDir}))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.

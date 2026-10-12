@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 )
 
 const testPassword = "password123"
@@ -274,7 +275,7 @@ func TestSignOutEndsOnlyThatSession(t *testing.T) {
 // limits. Refused attempts count before validation, so short passwords are enough.
 func TestRegisterRateLimitedPerEmail(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
-	limited := httptest.NewServer(New(testPool, nil, a))
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	email := uniqueEmail(t)
 	for i := range 10 {
@@ -297,7 +298,7 @@ func TestRegisterRateLimitedPerEmail(t *testing.T) {
 // client port: the key must drop the port, and X-Forwarded-For must not be trusted.
 func TestSignInRateLimitedPerIP(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now))
-	limited := httptest.NewServer(New(testPool, nil, a))
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	signIn := func(email, forwardedFor string) (int, []byte) {
 		t.Helper()
@@ -499,6 +500,10 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, "/api/core/v1/admin/staff-users", nil, http.StatusOK},
 		{http.MethodPost, "/api/core/v1/admin/staff-users", map[string]string{}, http.StatusBadRequest},
 		{http.MethodPatch, "/api/core/v1/admin/staff-users/00000000-0000-4000-8000-0000000001ff", map[string]string{}, http.StatusNotFound},
+		{http.MethodGet, categoriesPath, nil, http.StatusOK},
+		{http.MethodPost, categoriesPath, map[string]string{}, http.StatusBadRequest},
+		{http.MethodPatch, categoriesPath + "/" + missingCategoryID, map[string]string{}, http.StatusNotFound},
+		{http.MethodDelete, categoriesPath + "/" + missingCategoryID, nil, http.StatusNotFound},
 	}
 	for _, g := range adminGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
