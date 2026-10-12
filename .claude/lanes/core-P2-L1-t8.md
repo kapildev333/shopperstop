@@ -29,3 +29,19 @@ none
 ## Deferred
 - `storeId` existence check: core-P2-L2 (stores and the foreign key).
 - Regenerating `core.d.ts` and the Postman collection: task 10.
+## Review follow-up (verdict: pass with findings)
+Commits: `9d0d6b0` (test: create-admin exit codes and stdin, staff patch rules, cheaper fixtures; includes the red `TestIsUUID` row, so `internal/httpx` does not build at this commit), `99b8960` (fix: export httpx.IsUUID, staff storeId uses it; drop additionalProperties from staff schemas).
+- Applied: `run` exit 2 for `create-admin` with no email and for `bogus`, no config load; `createAdmin` refuses `""`, `"\n"`, `"abc\n"` before any hash (no row stored); the real create takes `rootpass123\r\n`, asserts the `$2a$12$` prefix instead of a compare, and folds the taken email (second call → 409 naming `email`) into the same test. Two hashes in `cmd/core-admin`.
+- Applied: one PATCH table on cheap `insertStaff` fixtures (`{"name":null}`, short password, empty name → 400 on the field; `{"role":"admin"}` → 200, role unchanged); admin deactivates self → 200, own session 401; `TestListStaff` checks the admin's raw list item has no `storeId`.
+- Applied: `TestSharedLimiterCountsStaffAndCustomer` at limit 1 (one customer attempt, then the staff attempt is 429).
+- Applied: `TestStaffPasswordReset` folded into `TestCreateStoreStaffUser` as the subtest `password reset`, so the created user is the one reset. Cost-12 operations in the merged test: create hash, create-user sign-in, reset hash, refused old sign-in, new sign-in: five, not four (the old-password refusal is a full compare against the new hash).
+- Applied: `httpx.IsUUID` exported (`path.go`), `PathID` uses it, `TestIsUUID` row in `path_test.go`; `auth/staff.go` `uuidPattern` removed in favour of `httpx.IsUUID`.
+- Applied: `additionalProperties: false` removed from the request schemas `RegisterRequest`, `SignInRequest`, `CustomerPatch`, `AddressCreate`, `AddressPatch`, `StaffCreate`, `StaffPatch`, and from `StaffList`. Checked by parsing: the parsed schemas equal the old ones minus that key, and `paths` unchanged. The remaining `false` entries are response schemas (`Status`, `Customer`, `CustomerSession`, `Error`, `Address`, `AddressList`, `Staff`, `StaffSession`), left as they are.
+## Timings (`make test-core`, -race, after the follow-up)
+- `cmd/core` cached; `cmd/core-admin` 6.24 s (target under 7 s: met); `internal/app` 44.49 s (target under 40 s: missed by about 4.5 s); `internal/auth` 9.24 s; `internal/httpx` 1.60 s; `config`, `migrate`, `pg` cached.
+- Slowest app tests (each cost-12 operation is about 2.3 s under -race): `TestCreateStoreStaffUser` 11.6 s, `TestSignInFailuresLookTheSame` 11.5 s (needs a real cost-12 hash for the equal-work comparison), `TestPasswordStoredAsBcrypt12` 4.6 s.
+- `openspec validate --all --strict`: 6 passed.
+- Not cut further: each remaining cost-12 operation is a spec scenario or the equal-work check. Options if the 40 s target matters: (a) `TestSignInFailuresLookTheSame` stores `dummyHash()` as the customer's hash (saves the register hash, about 2.3 s, same equal-work check); (b) `TestPasswordStoredAsBcrypt12` drops its compare (about 2.3 s, sign-in tests still cover the stored hash).
+## Judgement calls (follow-up)
+- The `createAdmin` CRLF test checks the prefix, not a compare, as asked; so the stripping of `\r` is proven only by the create succeeding, not by a password match. Adding one compare costs about 2.3 s under -race and would bring `cmd/core-admin` close to 7 s.
+- The red `IsUUID` row sits in the test commit, so `internal/httpx` does not build at `9d0d6b0`. This is the same red form tasks 1 and 3 used.
