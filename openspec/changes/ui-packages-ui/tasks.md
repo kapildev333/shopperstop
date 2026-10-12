@@ -33,8 +33,8 @@ Scenarios: Form fields are labelled and described (all three).
 Failing tests: `src/form-field.test.tsx` › "label finds the control", "error describes the control"; `src/select.test.tsx` › "select changes value"; `src/input.test.tsx` › "input forwards props and ref".
 Commits: `test: labelled and described form fields`, `feat: Input, FormField, Select`.
 
-- [ ] 3.1 Tests committed red
-- [ ] 3.2 Components green; all four gates green
+- [x] 3.1 Tests committed red
+- [x] 3.2 Components green; all four gates green
 
 ## 4. Price, Stepper, Badge, Chip
 
