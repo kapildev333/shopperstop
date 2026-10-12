@@ -15,10 +15,10 @@ Scope: `CLAUDE.md`, this file's 2.x checkboxes, `.claude/lanes/platform-P1-L11-t
 Test first: no `test:` commit, same reason as task 1. Red step: the `CLAUDE.md` failure lines of `check-docs.sh` before editing, pasted into `.claude/lanes/platform-P1-L11-t2.md`.
 Commit: one commit, `docs: claude.md commands and rules match the makefile, ci and plan decisions`.
 
-- [ ] 2.1 Red: run `check-docs.sh`, record the `CLAUDE.md` lines in `.claude/lanes/platform-P1-L11-t2.md`
-- [ ] 2.2 Apply design.md "CLAUDE.md edits" 1 to 8 in place; `git diff -- CLAUDE.md` touches only those passages and the new `## Commands` section
-- [ ] 2.3 `check-docs.sh` ends with `docs check: ok` and exits 0
-- [ ] 2.4 `openspec validate --all --strict` passes; `git status --short` shows only `CLAUDE.md`, this file and `.claude/lanes/platform-P1-L11-t2.md`
+- [x] 2.1 Red: run `check-docs.sh`, record the `CLAUDE.md` lines in `.claude/lanes/platform-P1-L11-t2.md`
+- [x] 2.2 Apply design.md "CLAUDE.md edits" 1 to 8 in place; `git diff -- CLAUDE.md` touches only those passages and the new `## Commands` section
+- [x] 2.3 `check-docs.sh` ends with `docs check: ok` and exits 0
+- [x] 2.4 `openspec validate --all --strict` passes; `git status --short` shows only `CLAUDE.md`, this file and `.claude/lanes/platform-P1-L11-t2.md`
 
 ## 3. Acceptance (team lead)
 
