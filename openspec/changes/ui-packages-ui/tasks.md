@@ -43,8 +43,8 @@ Scenarios: Price shows MRP when discounted (all three), Stepper adds and removes
 Failing tests: `src/price.test.tsx` › "price formatting", "zero rupees", "price uses tabular numerals", "discounted price shows MRP", "no discount, no MRP"; `src/stepper.test.tsx` › "stepper at zero stock", "stepper at the maximum", "ADD adds one", "decrement reaches zero"; `src/badge.test.tsx` › "badge variant surface"; `src/chip.test.tsx` › "chip toggles".
 Commits: `test: price, stepper, badge and chip`, `feat: Price, formatInr, Stepper, Badge, Chip`.
 
-- [ ] 4.1 Tests committed red
-- [ ] 4.2 Components green; all four gates green
+- [x] 4.1 Tests committed red
+- [x] 4.2 Components green; all four gates green
 
 ## 5. Card, Table, Skeleton
 
