@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 	"github.com/kapildev333/shopperstop/services/core/internal/config"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/migrate"
@@ -103,6 +104,11 @@ func seedDemoCmd(reset bool, stdout, stderr io.Writer) int {
 	}
 	if err := load(ctx, pool); err != nil {
 		fmt.Fprintf(stderr, "core-admin: seed-demo: %v\n", err)
+		return 1
+	}
+	// catalog (core-P2-L3)
+	if err := seed.Files(ctx, blob.Disk{Dir: cfg.FilesDir}); err != nil {
+		fmt.Fprintf(stderr, "core-admin: seed-demo images: %v\n", err)
 		return 1
 	}
 	fmt.Fprintln(stdout, "seed-demo: demo accounts loaded")

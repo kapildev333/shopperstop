@@ -250,8 +250,8 @@ func TestResetLoadsDemoCatalog(t *testing.T) {
 	if err := seed.Load(ctx, testPool); err == nil || !strings.Contains(err.Error(), "duplicate key") {
 		t.Fatalf("load on a seeded database: %v, want a duplicate key error", err)
 	}
-	assertCount(t, "categories after failed load", 49)
-	assertCount(t, "products after failed load", 148)
+	assertCount(t, "categories", 49)
+	assertCount(t, "products", 148)
 }
 
 // TestDemoImagesServed: Files writes the twelve placeholder images, and the
