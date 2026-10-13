@@ -495,6 +495,32 @@ func TestAuthGates(t *testing.T) {
 		}
 	}
 
+	// Cart routes: no token and a staff token get 401; a customer token gets past
+	// the gate. The PUT with an empty body answers 400 storeId, and writes nothing.
+	cartGates := []struct {
+		method, path string
+		body         any
+		allowed      int
+	}{
+		{http.MethodGet, cartPath, nil, http.StatusOK},
+		{http.MethodPut, cartItemsPath, map[string]any{}, http.StatusBadRequest},
+		{http.MethodDelete, cartPath, nil, http.StatusNoContent},
+	}
+	for _, g := range cartGates {
+		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
+			t.Fatalf("%s %s anonymous: got %d %s, want 401 unauthorized", g.method, g.path, status, body)
+		}
+		customer := newCustomer(t)
+		if status, body := call(t, g.method, g.path, customer.Token, g.body); status != g.allowed {
+			t.Fatalf("%s %s with a customer token: got %d %s, want %d", g.method, g.path, status, body, g.allowed)
+		}
+		for _, email := range []string{storeStaffEmail, adminStaffEmail} {
+			if status, body := call(t, g.method, g.path, staffSignIn(t, email), g.body); status != http.StatusUnauthorized {
+				t.Fatalf("%s %s with the staff token of %s: got %d %s, want 401", g.method, g.path, email, status, body)
+			}
+		}
+	}
+
 	// Admin-only routes: no token and a customer token get 401; store staff get
 	// 403; an admin gets past the gate (the body or id then decides the status).
 	adminGates := []struct {
