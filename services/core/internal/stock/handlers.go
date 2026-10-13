@@ -91,6 +91,10 @@ func List(pool *pgxpool.Pool) http.HandlerFunc {
 				httpx.WriteError(w, r, invalid("q", "must be at most 100 characters"))
 				return
 			}
+			if strings.ContainsRune(q, 0) { // Postgres rejects a NUL byte in text (22021)
+				httpx.WriteError(w, r, invalid("q", "must not contain a NUL byte"))
+				return
+			}
 			pat = "%" + likeEscaper.Replace(q) + "%"
 		}
 		var lowStock bool
