@@ -14,7 +14,7 @@ A customer cannot fill a cart and a store cannot be packed from until core knows
 - `openapi.json`: tags `stock` and `cart` (the store-facing reads go under L3's `catalog` tag, public), every stock and cart operation with `security: [{bearer: []}]`, typed schemas, every error code, examples using the fixed demo ids (D20); new `StoreProduct` (L3's `Product` plus `inStock`, `quantity`) and `StoreProductList`.
 - `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json` regenerated (D19, D23, mechanical).
 
-Area: core. Capabilities: `stock` (new), `cart` (new), `catalog` (ADDED requirements on top of core-P2-L3's).
+Area: core. Capabilities: `stock` (new), `cart` (new), `catalog` (ADDED requirements on top of core-P2-L3's), `admin-catalog` (one MODIFIED requirement: the admin product search refuses a NUL byte).
 
 Out of scope: order placement, cancel and the dashboard (core-P2-L5 calls `Reserve`, `Release`, `Lines`, `Clear`, `LowCount`); stock history or audit; reservations that outlive a transaction (a cart holds no stock); guest carts (the web app keeps them in `localStorage` and pushes them line by line at sign-in, Spec 2 §7); a configurable low-stock threshold (fixed at 5, Spec 2 §6); stock for inactive products in any customer-facing answer.
 
@@ -26,6 +26,7 @@ Out of scope: order placement, cancel and the dashboard (core-P2-L5 calls `Reser
 
 ### Modified Capabilities
 - `catalog`: ADDED requirements: store categories list only what is in stock; store products are listed and searched; store products carry their stock; one store product by slug.
+- `admin-catalog`: MODIFIED requirement "Admins list and search products": a `q` containing a NUL byte is 400 `validation` field `q` on `GET /admin/products` (it answered 500; found in the task 4 review, the same three-line check as on the two search routes this change adds, design Decision 18). No other admin catalog behaviour changes.
 
 ## Impact
 - Files: `services/core/` (`migrations/0005_stock_cart.sql`, `sqlc.yaml` two entries, `queries/stock.sql`, `queries/cart.sql`, five queries appended to `queries/catalog.sql`, `internal/{stock,cart}` with `db/`, `internal/catalog/store.go`, `internal/seed`, `internal/app` routes and tests, `openapi.json`), `packages/ui/src/api/core.d.ts` (D19), `docs/postman/shopperstop-core.postman_collection.json` (D23), this change folder, `.claude/lanes/core-P2-L4.md`.
