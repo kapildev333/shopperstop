@@ -54,7 +54,7 @@ Failing tests (group B): `src/product-delete.test.tsx` › "after a delete the p
 No test: `key={product.data.id}` on the product page's `ImageUpload` (design.md Decision 19: no path in the app changes the product id in place).
 - [x] 5b.1 Group A committed (`test: catalog review test gaps`): four tests appended and two tests given more assertions, all green at once because tasks 1 to 5 already built the behaviour (no code commit follows for them; not a test-first violation). Vitest expected `88 passed (88)`
 - [x] 5b.2 Group B committed red (`test: catalog review follow-ups`): seven tests appended, the `banana` import and the trimming line in `keepsProduct`. Vitest expected `7 failed | 88 passed (95)`, the seven named above
-- [ ] 5b.3 The four code files per design.md "Task 5b" (`fix: catalog review follow-ups`); Vitest expected `95 passed (95)`; every gate green (`make test-web` expected ui 54, admin 95, web 20); `routeTree.gen.ts` unchanged
+- [x] 5b.3 The four code files per design.md "Task 5b" (`fix: catalog review follow-ups`); Vitest expected `95 passed (95)`; every gate green (`make test-web` expected ui 54, admin 95, web 20); `routeTree.gen.ts` unchanged
 
 ## 6. Catalog against core (the manager's e2e slot)
 Scope: `apps/admin/e2e/catalog.spec.ts` (fixes only, after a recorded failure), this file's checkboxes, the lane log. Waits on: tasks 1 to 5b and the e2e slot the manager holds. A run made before 5b landed is evidence for tasks 1 to 5 only: 5b changes the delete and the upload the e2e walks through, so 6.1 is ticked on a run of the tree that holds 5b.

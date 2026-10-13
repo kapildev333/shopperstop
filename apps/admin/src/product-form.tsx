@@ -80,12 +80,16 @@ export function ProductForm({ product, categories }: { product?: Product; catego
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(productQuery(saved.id).queryKey, saved)
-      if (!product) await navigate({ to: '/products/$productId', params: { productId: saved.id } })
+      // The form now shows what core stored (text trimmed), so the next save sends only its own change.
+      if (product) setValues(initial(saved))
+      else await navigate({ to: '/products/$productId', params: { productId: saved.id } })
     },
   })
 
   function set(field: Field, value: string) {
     setValues((current) => ({ ...current, [field]: value }))
+    // Editing a field clears its own error and core's last answer.
+    setErrors((current) => ({ ...current, [field]: undefined }))
     save.reset()
   }
 

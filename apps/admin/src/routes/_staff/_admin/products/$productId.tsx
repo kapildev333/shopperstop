@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Button, Card, Dialog, DialogFooter, ErrorBanner, PageHeader, Skeleton } from '@shopperstop/ui'
@@ -12,19 +12,31 @@ import { ProductForm } from '../../../../product-form'
 function DeleteProduct({ product }: { product: Product }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  // The kept list pages still show the product as it was: drop them, so /products loads afresh.
+  // Only inactive queries: this page's own product query is in use and stays.
+  const leave = () => {
+    queryClient.removeQueries({ queryKey: ['admin', 'products'], type: 'inactive' })
+    return navigate({ to: '/products' })
+  }
   const remove = useMutation({
     mutationFn: async () => {
       const { error } = await api.DELETE('/admin/products/{id}', { params: { path: { id: product.id } } })
       if (error) throw error.error
     },
-    onSuccess: () => navigate({ to: '/products' }),
+    onSuccess: leave,
   })
   const deactivate = useMutation({
     mutationFn: async () => {
-      const { error } = await api.PATCH('/admin/products/{id}', { params: { path: { id: product.id } }, body: { isActive: false } })
+      const { data, error } = await api.PATCH('/admin/products/{id}', { params: { path: { id: product.id } }, body: { isActive: false } })
       if (error) throw error.error
+      return data
     },
-    onSuccess: () => navigate({ to: '/products' }),
+    onSuccess: (saved) => {
+      // The product's page reads this the next time it opens, so its form starts at Inactive.
+      queryClient.setQueryData(productQuery(saved.id).queryKey, saved)
+      return leave()
+    },
   })
   const ordered = (remove.error as Partial<ApiError> | null)?.code === 'conflict'
 
@@ -74,7 +86,7 @@ function ProductPage() {
         <ProductForm key={product.data.id} product={product.data} categories={categoryOptions(categories.data.items)} />
       </Card>
       <Card className="p-6">
-        <ImageUpload kind="products" id={product.data.id} name={product.data.name} imageUrl={product.data.imageUrl} />
+        <ImageUpload key={product.data.id} kind="products" id={product.data.id} name={product.data.name} imageUrl={product.data.imageUrl} />
       </Card>
     </div>
   )

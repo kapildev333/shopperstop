@@ -1,7 +1,7 @@
 # admin-P2-L3-T5b - follow-ups from the reviews of tasks 1 to 5 (task 5b of admin-catalog)
-Status: started
+Status: done
 ## Doing
-Group A committed (fb55c11, `test: catalog review test gaps`, 88 green). Group B applied and red as expected (7 failed). Committing `test: catalog review follow-ups`; then the code step.
+Task 5b landed: `test: catalog review test gaps` (fb55c11, 88 green), `test: catalog review follow-ups` (60863c5, 7 red as expected), `fix: catalog review follow-ups` (code, the 5b.3 tick; 95 green). Awaiting team-lead / reviewer.
 ## Found
 - `packages/ui` built once before the first run (exit 0). Baseline before any change: `Test Files  14 passed (14)`, `Tests  84 passed (84)`, as the brief expects.
 - Group A tests pass at once by design (tasks 1 to 5 built the behaviour; the reviews found no test). Commit 1 (`test: catalog review test gaps`) is green with no code commit after it for these tests. This is not a missing red step.
@@ -17,5 +17,11 @@ Group A committed (fb55c11, `test: catalog review test gaps`, 88 green). Group B
     - `product-delete.test.tsx` › "after deactivate instead the table and the product show it inactive": same assertion at line 144.
     - `product-form.test.tsx` › "after a save the form shows the product as core stored it": `toHaveValue('Toned Milk')` at line 207; received "Toned Milk  " (the typed spaces).
     - `product-form.test.tsx` › "an amount error clears when its field is edited": `toHaveAccessibleDescription('At most the MRP.')` at line 231; received "At most the MRP. Enter a price from 0.01 rupees up to the MRP, at most two decimals."
+- Code step: the four whole-file blocks (`categories.tsx`, `product-form.tsx`, `image.tsx`, `$productId.tsx`) applied after checking each worktree file differed from its block only at the lines the heading names. Byte-equal to the blocks afterwards.
+- Green run after code: `Test Files  14 passed (14)`, `Tests  95 passed (95)`.
+- `make test-web` exit 0: ui 54, admin 95, web 20; lint, typecheck, test and build all ran inside it.
+- `openspec validate admin-catalog --type change --strict`: valid.
+- `routeTree.gen.ts` unchanged. `make e2e` and Playwright not run (the manager holds the e2e slot).
 ## Requests
 ## Blockers
+none

@@ -46,6 +46,7 @@ export function CategoryDialog({ category, parents, onClose }: { category?: Cate
     save.mutate(Number(order))
   }
 
+  // Editing a field clears its error: core's last answer (save.reset) and, on the sort order, the form's own.
   const apiError = save.error as Partial<ApiError> | null
   const serverField = apiError?.code === 'validation' && apiError.field && apiError.field in messages ? (apiError.field as Field) : undefined
   const errorFor = (field: Field) => (serverField === field ? messages[field] : undefined)
@@ -55,11 +56,23 @@ export function CategoryDialog({ category, parents, onClose }: { category?: Cate
       <form noValidate onSubmit={submit} className="mt-4 flex flex-col gap-4">
         {save.error && !serverField && <ErrorBanner message="Could not save the category. Try again." />}
         <FormField label="Name" error={errorFor('name')}>
-          <Input value={name} onChange={(event) => setName(event.target.value)} />
+          <Input
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value)
+              save.reset()
+            }}
+          />
         </FormField>
         {!category && (
           <FormField label="Parent" error={errorFor('parentId')}>
-            <Select value={parentId} onChange={(event) => setParentId(event.target.value)}>
+            <Select
+              value={parentId}
+              onChange={(event) => {
+                setParentId(event.target.value)
+                save.reset()
+              }}
+            >
               <option value="">None (top level)</option>
               {parents.map((parent) => (
                 <option key={parent.id} value={parent.id}>{parent.name}</option>
@@ -68,7 +81,15 @@ export function CategoryDialog({ category, parents, onClose }: { category?: Cate
           </FormField>
         )}
         <FormField label="Sort order" hint="Lower numbers come first." error={sortError ?? errorFor('sortOrder')}>
-          <Input inputMode="numeric" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
+          <Input
+            inputMode="numeric"
+            value={sortOrder}
+            onChange={(event) => {
+              setSortOrder(event.target.value)
+              setSortError(undefined)
+              save.reset()
+            }}
+          />
         </FormField>
         {category && <ImageUpload kind="categories" id={category.id} name={category.name} imageUrl={category.imageUrl} />}
         <DialogFooter onCancel={onClose} className="mt-2">

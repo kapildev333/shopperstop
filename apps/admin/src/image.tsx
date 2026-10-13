@@ -59,6 +59,8 @@ export function ImageUpload({ kind, id, name, imageUrl }: { kind: 'products' | '
   function pick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
+    // The input stays enabled while an upload runs, so it keeps keyboard focus; a pick in that time is ignored.
+    if (upload.isPending) return
     upload.reset()
     if (!file) return
     if (!types.includes(file.type) || file.size > maxBytes) return setFileError(fileMessage)
@@ -74,12 +76,12 @@ export function ImageUpload({ kind, id, name, imageUrl }: { kind: 'products' | '
         <input
           type="file"
           accept={types.join(',')}
-          disabled={upload.isPending}
           onChange={pick}
           className="text-body text-ink file:mr-3 file:h-11 file:rounded-control file:border file:border-line-strong file:bg-surface file:px-4 file:text-button file:text-ink sm:file:h-10"
         />
       </FormField>
       {upload.isError && !rejected && <ErrorBanner message="Could not upload the image. Try again." />}
+      {upload.isPending && <StatusMessage>Uploading the image…</StatusMessage>}
       {upload.isSuccess && <StatusMessage tone="success">Image saved.</StatusMessage>}
     </div>
   )
