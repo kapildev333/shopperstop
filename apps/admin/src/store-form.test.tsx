@@ -1,0 +1,178 @@
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, expect, test, vi } from 'vitest'
+import { clearToken, setToken } from './session'
+import { admin, apiError, fakeCore, json, koramangala, storeList } from './fake-core'
+import { renderApp } from './render-app'
+
+afterEach(() => {
+  clearToken()
+  vi.unstubAllGlobals()
+})
+
+const storePath = `/admin/stores/${koramangala.id}`
+const signedIn = { 'GET /admin/me': () => json(200, admin) }
+const withStore = {
+  ...signedIn,
+  [`GET ${storePath}`]: () => json(200, koramangala),
+  [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
+}
+
+async function replace(label: string, value: string) {
+  const field = await screen.findByLabelText(label)
+  await userEvent.clear(field)
+  if (value) await userEvent.type(field, value)
+}
+
+test('create a store and open it', async () => {
+  setToken('tok')
+  const created = { ...koramangala, id: '00000000-0000-4000-8000-000000000499', name: 'HSR Layout', isOpen: false }
+  const calls = fakeCore({
+    ...signedIn,
+    'POST /admin/stores': () => json(201, created),
+    [`GET /admin/stores/${created.id}/service-areas`]: () => json(200, { pincodes: [] }),
+    [`GET /admin/stores/${created.id}`]: () => json(200, created),
+  })
+
+  const router = renderApp('/stores/new')
+  expect(await screen.findByRole('heading', { level: 1, name: 'New store' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Status')).toHaveValue('closed')
+  await replace('Name', 'HSR Layout')
+  await replace('Address', '27th Main, HSR Layout')
+  await replace('Pincode', '560102')
+  await replace('Delivery fee (₹)', '25')
+  await replace('Free delivery above (₹)', '199.50')
+  await replace('Promised minutes', '12')
+  await userEvent.click(screen.getByRole('button', { name: 'Create store' }))
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'HSR Layout' })).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe(`/stores/${created.id}`)
+  const post = calls.find((call) => call.method === 'POST')!
+  expect(await post.json()).toEqual({
+    name: 'HSR Layout',
+    addressLine: '27th Main, HSR Layout',
+    pincode: '560102',
+    isOpen: false,
+    deliveryFeeCents: 2500,
+    freeDeliveryAboveCents: 19950,
+    minOrderCents: 0,
+    promisedMinutes: 12,
+  })
+})
+
+test('edit sends only the changed fields and confirms', async () => {
+  setToken('tok')
+  const calls = fakeCore({
+    ...withStore,
+    [`PATCH ${storePath}`]: () => json(200, { ...koramangala, promisedMinutes: 11, isOpen: false }),
+  })
+
+  renderApp(`/stores/${koramangala.id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Koramangala' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Delivery fee (₹)')).toHaveValue('25')
+  expect(screen.getByLabelText('Free delivery above (₹)')).toHaveValue('199')
+  await replace('Promised minutes', '11')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'closed')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByText('Store saved.')).toBeInTheDocument()
+  const patch = calls.find((call) => call.method === 'PATCH')!
+  expect(await patch.json()).toEqual({ promisedMinutes: 11, isOpen: false })
+  expect(screen.getByLabelText('Promised minutes')).toHaveValue('11')
+})
+
+test('a validation error from core is shown on its field', async () => {
+  setToken('tok')
+  fakeCore({ ...withStore, [`PATCH ${storePath}`]: () => apiError(400, 'validation', 'name must be 1 to 100 characters', 'name') })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Name', '   ')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter 1 to 100 characters.'))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.queryByText('Store saved.')).not.toBeInTheDocument()
+})
+
+test('a value the form cannot send is flagged without a request', async () => {
+  setToken('tok')
+  const calls = fakeCore(withStore)
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Delivery fee (₹)', '-1')
+  await replace('Promised minutes', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByLabelText('Delivery fee (₹)')).toHaveAccessibleDescription('Enter 0 to 100000 rupees, at most two decimals.')
+  expect(screen.getByLabelText('Promised minutes')).toHaveAccessibleDescription('Enter 1 to 240 minutes.')
+  expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(0)
+})
+
+test('any other save error shows a banner', async () => {
+  setToken('tok')
+  fakeCore({ ...withStore, [`PATCH ${storePath}`]: () => apiError(500, 'internal') })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the store. Try again.')
+})
+
+test('an unknown store shows not found', async () => {
+  setToken('tok')
+  fakeCore(signedIn)
+
+  const router = renderApp('/stores/00000000-0000-4000-8000-000000000000')
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/stores/00000000-0000-4000-8000-000000000000')
+  const nav = screen.getByRole('navigation', { name: 'Admin' })
+  expect(within(nav).getByRole('link', { name: 'Stores' })).toHaveAttribute('aria-current', 'page')
+})
+
+// A fake core that keeps the store: PATCH merges the body, GETs answer the current values.
+function keepsStore() {
+  let current = { ...koramangala }
+  return fakeCore({
+    ...signedIn,
+    'GET /admin/stores': () => storeList([current]),
+    [`GET ${storePath}`]: () => json(200, current),
+    [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
+    [`PATCH ${storePath}`]: async (request) => {
+      current = { ...current, ...(await request.clone().json()) }
+      return json(200, current)
+    },
+  })
+}
+
+test('a second save sends only its own change', async () => {
+  setToken('tok')
+  const calls = keepsStore()
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'closed')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await screen.findByText('Store saved.')
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(patches).toHaveLength(2)
+  expect(await patches[1].json()).toEqual({ isOpen: false })
+})
+
+test('the stores table shows a saved change', async () => {
+  setToken('tok')
+  keepsStore()
+
+  renderApp('/stores')
+  await userEvent.click(await screen.findByRole('link', { name: 'Koramangala' }))
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await userEvent.click(within(screen.getByRole('navigation', { name: 'Admin' })).getByRole('link', { name: 'Stores' }))
+
+  expect(await within(await screen.findByRole('table', { name: 'Stores' })).findByText('11 min')).toBeInTheDocument()
+})

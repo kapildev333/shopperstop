@@ -352,3 +352,9 @@ func withBrand(body map[string]any, brand string) map[string]any {
 	body["brand"] = brand
 	return body
 }
+
+// TestListProductsNULInQ: a NUL byte in q is a validation error, not a 500 from Postgres.
+func TestListProductsNULInQ(t *testing.T) {
+	status, body := call(t, http.MethodGet, productsPath+"?q=a%00b", adminToken(t), nil)
+	expectError(t, "q=a%00b", status, body, http.StatusBadRequest, "validation", "q", "")
+}

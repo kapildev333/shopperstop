@@ -3,7 +3,7 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-No web e2e running (ports free). web-P2-L1 task 1 and web-P2-L3 task 1 landed and reviewed; both lanes wait on core-P2-L3 and L4.
+RESUMED 2026-10-13 by a `/manage web` session (`/loop 5min`), which owns the web lanes from now (D21 ends; the orchestrator is session shopperstop-a3). `lane/web-P2-L1-browsing` (task 1 landed, reviewed) and `lane/web-P2-L3-cart` (task 1 landed, reviewed with fixes) rebased onto origin/main d2d48a6, `make test-web` green in both worktrees; local, unpushed. Waiting on core-P2-L4 reaching main (browsing routes in `openapi.json` and `core.d.ts`). Then: rebase `.worktrees/web-P2-L1`, run task 2 (Home and product card; also narrow the serviceability 404 check to code `not_serviceable`), then web-P2-L3 task 2. `ImageTile`: app-level copy until ui lands admin's request (#99). No e2e running.
 
 ## Lanes
 | Lane | Task | Scope | Status |

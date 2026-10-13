@@ -17,7 +17,7 @@ No platform lane running. Phase 1 platform tasks are all on main; the only open 
 
 ## Found
 - 2026-10-12: chores landed: e2e guard on web or admin (#30), `make postman` runs the generator tests (#37), Node floor (#10), root build script (#13).
-- Backlog from lanes: `make dev` could run `npm ci` when `node_modules` is absent (L11 request); pin sqlc when `sqlc.yaml` lands (L9); tighten the lane guard regex to word boundaries (reviewers hit `merge-base`).
+- 2026-10-13: backlog chores landed in #97: the lane guard allows `git merge-base`; `make ui` (so `make dev`, `make test-web`) runs `npm ci` when `node_modules` is absent. sqlc was pinned in #58.
 - 2026-10-12: GitHub Actions blocked by account billing (PLAN.md Blockers); first `ci` run on PR #15 started no steps.
 - 2026-10-12: `psql` is not installed on this host; ad-hoc database checks use a Go pgx client. Recorded for the README.
 - 2026-10-12: the lane guard hook denies `git merge-base` and `git fetch` to reviewers (pattern matches `merge`); reviewers work around with `git rev-parse` and three-dot diffs. Harmless; tighten the regex to word boundaries if it bites again.

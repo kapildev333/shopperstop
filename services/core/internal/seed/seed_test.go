@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"image"
 	_ "image/png"
 	"io"
@@ -411,4 +412,64 @@ func TestDemoImagesServed(t *testing.T) {
 	if len(stored) != 12 {
 		t.Fatalf("stored product images: %d, want 12", len(stored))
 	}
+}
+
+// stockSnapshot reads every stock row as "store product quantity", in order.
+func stockSnapshot(t *testing.T) []string {
+	t.Helper()
+	rows, err := testPool.Query(context.Background(), "select store_id::text, product_id::text, quantity from store_stock order by store_id, product_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var store, product string
+		var quantity int
+		if err := rows.Scan(&store, &product, &quantity); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, fmt.Sprintf("%s %s %d", store, product, quantity))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// TestResetLoadsDemoStock: a reset loads the same stock every time, one row
+// per store and product, a zero and a low count at each store, and drops a
+// cart and a changed quantity left over from before it.
+func TestResetLoadsDemoStock(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, "insert into carts (customer_id, store_id) values ($1, $2)", customerID, storeKoramangala); err != nil {
+		t.Fatalf("insert cart: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, "insert into cart_items (cart_id, product_id, quantity) select id, '00000000-0000-4000-8000-000000000601', 2 from carts"); err != nil {
+		t.Fatalf("insert cart item: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, "update store_stock set quantity = 99 where store_id = $1 and product_id = '00000000-0000-4000-8000-000000000601'", storeKoramangala); err != nil {
+		t.Fatalf("change quantity: %v", err)
+	}
+
+	var snapshots [][]string
+	for i := 0; i < 2; i++ {
+		if err := seed.Reset(ctx, testPool); err != nil {
+			t.Fatalf("reset %d: %v", i+1, err)
+		}
+		snapshots = append(snapshots, stockSnapshot(t))
+	}
+	if fmt.Sprint(snapshots[0]) != fmt.Sprint(snapshots[1]) {
+		t.Fatalf("stock differs between resets:\nfirst  %v\nsecond %v", snapshots[0], snapshots[1])
+	}
+
+	assertSQL(t, "stock rows less stores times products", "select (select count(*) from stores) * (select count(*) from products) - (select count(*) from store_stock)", 0)
+	assertSQL(t, "stores with a zero and a count from 1 to 4", "select count(*) from (select store_id from store_stock group by store_id having count(*) filter (where quantity = 0) > 0 and count(*) filter (where quantity between 1 and 4) > 0) s", 2)
+	assertSQL(t, "banana robusta at 10 or more at both stores", "select count(*) from store_stock where product_id = '00000000-0000-4000-8000-000000000601' and quantity >= 10", 2)
+	assertSQL(t, "changed quantity reverted", "select count(*) from store_stock where quantity = 99", 0)
+	assertCount(t, "carts", 0)
+	assertCount(t, "cart_items", 0)
 }

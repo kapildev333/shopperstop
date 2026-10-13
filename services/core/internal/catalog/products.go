@@ -293,6 +293,9 @@ func productFilters(r *http.Request) (pat *string, categoryID *string, isActive 
 		if utf8.RuneCountInString(q) > 100 {
 			return nil, nil, nil, invalid("q", "must be at most 100 characters")
 		}
+		if strings.ContainsRune(q, 0) { // Postgres rejects a NUL byte in text (22021)
+			return nil, nil, nil, invalid("q", "must not contain a NUL byte")
+		}
 		p := pattern(q)
 		pat = &p
 	}
