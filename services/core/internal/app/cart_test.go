@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"testing"
 )
 
@@ -418,5 +419,41 @@ func TestCartZeroForOtherStoreKeepsCart(t *testing.T) {
 	}
 	if u.StoreID != storeA || len(u.Items) != 1 || u.Items[0].Product.ID != p {
 		t.Fatalf("zero for store B: cart %+v, want store A holding P", u.cartView)
+	}
+}
+
+// TestCartSetSurvivesConcurrentRemoval: a line set while another request removes
+// the cart's last line is kept. Whichever request runs first, the cart holds R.
+func TestCartSetSurvivesConcurrentRemoval(t *testing.T) {
+	storeID := insertStore(t, true)
+	for range 30 {
+		p := cartProduct(t, storeID, stockName(t), 4500)
+		r := cartProduct(t, storeID, stockName(t), 4500)
+		s := newCustomer(t)
+		setLine(t, s.Token, storeID, p, 1)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		var statusA, statusB int
+		var bodyA, bodyB []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			statusA, bodyA = putItem(t, s.Token, map[string]any{"storeId": storeID, "productId": p, "quantity": 0})
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			statusB, bodyB = putItem(t, s.Token, map[string]any{"storeId": storeID, "productId": r, "quantity": 1})
+		}()
+		close(start)
+		wg.Wait()
+		if statusA != http.StatusOK || statusB != http.StatusOK {
+			t.Fatalf("removal %d %s, set %d %s: want both 200", statusA, bodyA, statusB, bodyB)
+		}
+		c := readCart(t, s.Token)
+		if len(c.Items) != 1 || c.Items[0].Product.ID != r || c.Items[0].Quantity != 1 {
+			t.Fatalf("after the race: items %+v, want only R at 1", c.Items)
+		}
 	}
 }
