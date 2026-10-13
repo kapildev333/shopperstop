@@ -260,9 +260,11 @@ func TestCartInactiveOrUnknownProduct(t *testing.T) {
 func TestCartUnknownStore(t *testing.T) {
 	p := cartProduct(t, insertStore(t, true), stockName(t), 4500)
 	s := newCustomer(t)
-	status, body := putItem(t, s.Token, map[string]any{"storeId": missingStoreID, "productId": p, "quantity": 1})
-	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "storeId" {
-		t.Fatalf("unknown store: got %d %s, want 400 validation field storeId", status, body)
+	for _, quantity := range []int{1, 0} {
+		status, body := putItem(t, s.Token, map[string]any{"storeId": missingStoreID, "productId": p, "quantity": quantity})
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "storeId" {
+			t.Fatalf("unknown store, quantity %d: got %d %s, want 400 validation field storeId", quantity, status, body)
+		}
 	}
 }
 

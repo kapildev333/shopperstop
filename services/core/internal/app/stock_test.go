@@ -183,6 +183,13 @@ func TestStockListSearchEscapes(t *testing.T) {
 	}
 }
 
+// TestStockListLongQ: q over 100 characters is a validation error on q.
+func TestStockListLongQ(t *testing.T) {
+	long := strings.Repeat("x", 101)
+	status, body := call(t, http.MethodGet, stockPath(testStoreID)+"?q="+long, adminToken(t), nil)
+	expectError(t, "q of 101 characters", status, body, http.StatusBadRequest, "validation", "q", "")
+}
+
 func TestStockListBadLowStock(t *testing.T) {
 	status, body := call(t, http.MethodGet, stockPath(testStoreID)+"?lowStock=yes", adminToken(t), nil)
 	e := decodeError(t, body)
@@ -270,6 +277,19 @@ func TestStockPutNegative(t *testing.T) {
 		if got := quantityAt(t, testStoreID, p); got != 7 {
 			t.Fatalf("quantity %d: stored %d, want 7 unchanged", q, got)
 		}
+	}
+}
+
+// TestStockPutMissingQuantity: a row without a quantity member refuses the whole request.
+func TestStockPutMissingQuantity(t *testing.T) {
+	p := insertProduct(t, stockName(t), true)
+	setStock(t, testStoreID, p, 7)
+	status, body := call(t, http.MethodPut, stockPath(testStoreID), adminToken(t), map[string]any{"rows": []map[string]any{{"productId": p}}})
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "quantity" {
+		t.Fatalf("row without quantity: got %d %s, want 400 validation field quantity", status, body)
+	}
+	if got := quantityAt(t, testStoreID, p); got != 7 {
+		t.Fatalf("row without quantity: stored %d, want 7 unchanged", got)
 	}
 }
 

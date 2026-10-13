@@ -95,7 +95,7 @@ func TestStoreProductsFilter(t *testing.T) {
 		setStock(t, storeID, p, 5)
 	}
 
-	list := storeProducts(t, storeID, url.Values{"q": {"Zfilt curd"}, "categoryId": {parent.ID}})
+	list := storeProducts(t, storeID, url.Values{"q": {"ZFILT CURD"}, "categoryId": {parent.ID}})
 	got := byName(list)
 	if len(list.Items) != 2 || got["Zfilt curd parent"].ID == "" || got["Zfilt curd child"].ID == "" {
 		t.Fatalf("categoryId and q: got %v, want the parent's curd and the child's curd only", list.Items)
@@ -156,9 +156,13 @@ func TestStoreProductsBadParams(t *testing.T) {
 }
 
 func TestStoreProductsUnknownStore(t *testing.T) {
-	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+missingProductID+"/products", "", nil)
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+missingStoreID+"/products", "", nil)
 	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
 		t.Fatalf("got %d %s, want 404 not_found", status, body)
+	}
+	status, body = call(t, http.MethodGet, "/api/core/v1/stores/"+missingStoreID+"/products/any-slug", "", nil)
+	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+		t.Fatalf("slug under unknown store: got %d %s, want 404 not_found", status, body)
 	}
 }
 
