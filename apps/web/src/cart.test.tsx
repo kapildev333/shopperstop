@@ -1,0 +1,75 @@
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { expect, test } from 'vitest'
+import type { components } from '@shopperstop/ui/api'
+import { queryClient } from './api'
+import { cartKey, mergeGuestCart } from './cart'
+import { keys } from './catalog'
+import { dispatchGuest, getGuestCart } from './guest-cart'
+import { ProductCard } from './product-card'
+import { setPincode } from './pincode'
+import { setToken } from './session'
+import { product, renderInRouter, store } from './test-data'
+
+type Cart = components['schemas']['Cart']
+
+const koramangala = '00000000-0000-4000-8000-000000000401'
+const indiranagar = '00000000-0000-4000-8000-000000000402'
+
+// Resolves 560034 to Koramangala, so the cart is read at that store.
+function resolveStore() {
+  setPincode('560034')
+  queryClient.setQueryData(keys.serviceability('560034'), store())
+}
+
+function serverCart(storeId: string, quantity: number): Cart {
+  const taaza = product()
+  return {
+    storeId,
+    items: [{ product: taaza, quantity }],
+    subtotalCents: taaza.priceCents * quantity,
+    deliveryFeeCents: 0,
+    totalCents: taaza.priceCents * quantity,
+    minOrderCents: 0,
+    shortfallCents: 0,
+  }
+}
+
+test('card adds to the guest cart', async () => {
+  resolveStore()
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Add Amul Taaza' }))
+  const group = screen.getByRole('group', { name: 'Quantity of Amul Taaza' })
+  expect(within(group).getByText('1')).toBeInTheDocument()
+  const stored = JSON.parse(localStorage.getItem('shopperstop:cart') ?? 'null')
+  expect(stored.storeId).toBe(koramangala)
+  expect(stored.items).toEqual([{ product: expect.objectContaining({ id: product().id }), quantity: 1 }])
+})
+
+test('card shows the server cart', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 3))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  const group = await screen.findByRole('group', { name: 'Quantity of Amul Taaza' })
+  expect(within(group).getByText('3')).toBeInTheDocument()
+})
+
+test('card ignores a cart at another store', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(indiranagar, 3))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  expect(await screen.findByRole('button', { name: 'Add Amul Taaza' })).toBeEnabled()
+  expect(screen.queryByRole('group', { name: 'Quantity of Amul Taaza' })).toBeNull()
+})
+
+test('guest cart discarded after merge', async () => {
+  dispatchGuest({ type: 'set', storeId: koramangala, product: product(), quantity: 2 })
+  setToken('t')
+  // Core cannot be reached under jsdom: every push fails, and the guest cart is still discarded.
+  await mergeGuestCart()
+  expect(localStorage.getItem('shopperstop:cart')).toBeNull()
+  expect(getGuestCart()).toEqual({ items: [] })
+})

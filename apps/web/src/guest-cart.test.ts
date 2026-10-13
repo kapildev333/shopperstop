@@ -70,6 +70,18 @@ test('another store replaces the guest cart', () => {
   expect(atB.items).toEqual([{ product: bread, quantity: 1 }])
 })
 
+test('out of stock at another store keeps the guest cart', () => {
+  const taaza = p()
+  const curd = p({ id: 'p-curd', name: 'Nandini Curd', priceCents: 3200 })
+  const out = p({ id: 'p-out', name: 'Old Stock Ghee', inStock: false, quantity: 0 })
+  let cart = set(emptyCart, storeA, taaza, 1)
+  cart = set(cart, storeA, curd, 1)
+  const after = set(cart, storeB, out, 1)
+  expect(after).toBe(cart)
+  expect(after.storeId).toBe(storeA)
+  expect(after.items.map((line) => line.product.id)).toEqual(['p-taaza', 'p-curd'])
+})
+
 test('guest cart persisted and restored', async () => {
   const first = await import('./guest-cart')
   first.dispatchGuest({ type: 'set', storeId: storeA, product: p(), quantity: 2 })
