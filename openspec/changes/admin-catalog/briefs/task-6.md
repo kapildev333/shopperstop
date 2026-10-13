@@ -5,7 +5,7 @@
 - Worktree: `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/admin-P2-L3`
 - Branch: `lane/admin-P2-L3-admin-catalog`
 - OpenSpec change: `admin-catalog`, task 6 in `openspec/changes/admin-catalog/tasks.md`
-- Starts after: tasks 1 to 5 landed and reviewed; the manager holds the e2e slot (one `make e2e` at a time, announced in the area plan's `## Doing`).
+- Starts after: tasks 1 to 5b landed and reviewed (a run before 5b is evidence for tasks 1 to 5 only; 6.1 is ticked on a run of the tree that holds 5b, whose delete and upload changes the e2e walks through); the manager holds the e2e slot (one `make e2e` at a time, announced in the area plan's `## Doing`).
 
 This task has no new test: `apps/admin/e2e/catalog.spec.ts` was committed in task 1 before the pages existed and runs here for the first time against the real core and the demo seed.
 
@@ -14,7 +14,7 @@ This task has no new test: `apps/admin/e2e/catalog.spec.ts` was committed in tas
 - Catalog against core › Store staff open the catalog pages (`e2e/catalog.spec.ts` › "store staff open the catalog pages")
 
 ## Run (the area manager, not a worker)
-`PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" make e2e` from the worktree root. It exports `SHOPPERSTOP_CORE_FILES_DIR` with the other four variables, migrates and reseeds `shopperstop_core_e2e`, builds, and runs Playwright. Expected: admin **8 passed** (`auth`, `smoke`, `stores` 6 as on main, `catalog` 2), web unchanged. Record the summary in the area plan and the lane log, then tick 6.1.
+`PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" make e2e` from the worktree root. It exports `SHOPPERSTOP_CORE_FILES_DIR` with the other four variables, migrates and reseeds `shopperstop_core_e2e`, builds, and runs Playwright. Expected: admin **8 passed** (`auth`, `smoke`, `stores` 6 as on main, `catalog` 2), web unchanged; task 5b adds no e2e test. After 5b an upload shows the status "Uploading the image…" before "Image saved.", and `/products` shows its loading state after a delete instead of a kept table; the spec's selectors (`getByRole('status').filter({ hasText: 'Image saved.' })`, the search after the delete) are expected to hold. Record the summary in the area plan and the lane log, then tick 6.1.
 
 ## If it fails: a fix worker
 Scope paths: `apps/admin/e2e/catalog.spec.ts` only, plus `openspec/changes/admin-catalog/tasks.md` (the 6.1 tick) and `.claude/lanes/admin-P2-L3-T6.md`. The manager pastes the failing Playwright output into the worker's prompt.

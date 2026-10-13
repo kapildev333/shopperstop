@@ -43,6 +43,11 @@ Goals: the pages in the proposal, composed only from `@shopperstop/ui` component
 12. e2e uploads only to a product it creates and deletes; the price it changes is saved back; one admin sign-in per test (core's sign-in rate limit).
 13. Test notes: user-event `selectOptions` matches a value or innerHTML (`&` is escaped there), so tests select categories by id; `userEvent.setup({ applyAccept: false })` in the image tests so a refused type reaches the handler.
 14. (task 0) The `ImageTile` placeholder is an empty `canvas` square, no icon. `lucide-react` is not an `apps/admin` dependency, and declaring it changes the root `package-lock.json`, outside this lane's scope. Ceiling: an image-less tile is a blank square; the icon comes with ui's `ImageTile`, or earlier if the orchestrator lets admin declare `lucide-react` 1.55.0 (the pin web and ui use). No test or scenario depends on the icon; the tile keeps its `data-placeholder` marker.
+15. (task 5b, amends 3 and 9) After a product delete or "Deactivate instead" the kept list pages are removed (`removeQueries` on `['admin', 'products']` with `type: 'inactive'`), so `/products` shows its loading state and then core's answer, never the table kept from before. Not `invalidateQueries`, which review 5 proposed: the lists are not mounted on the product page, so invalidating only marks them stale, which staleTime 0 already does, and it would refetch the mounted product query (a 404 after a delete). The deactivate also writes core's answer into the product's key: the form is built once from the kept product, so without it the page would reopen at Active and the next save would send `isActive: true`. Ceiling: the deleted product's own query is mounted at that moment and is left to expire (5 minutes); going back to its URL in that time shows the kept form until core's 404 arrives.
+16. (task 5b) After a successful change the form is reset to `initial(saved)`: core trims text, and a form still holding the typed spaces would send the name again with the next save. Ceiling: an edit typed while the save is in flight is replaced by the saved values. A product kept in the cache and changed elsewhere still opens with the kept values until the page is reloaded; only this form's own saves and the deactivate keep it current.
+17. (task 5b) Editing a field clears the error on it: in the product form `set` drops that field's own error next to the `save.reset()` it already had; in the category dialog every field calls `save.reset()` and "Sort order" also drops its own error. The category part for the form's own error was in no review; it is here so both forms follow the one rule in the spec.
+18. (task 5b) The file input is never disabled, so it keeps keyboard focus through an upload; `pick` returns while one is pending. "Uploading the image…" (a neutral `StatusMessage`) is new: without `disabled` nothing showed that an upload runs or why a second pick does nothing, and it is the one observable sign of the pending state a test can wait for. Ceiling: the ignored pick is silent beyond that status.
+19. (task 5b) `key={product.data.id}` on the product page's `ImageUpload`, as `ProductForm` has. No test: the tile could only keep another product's image when the product id changes in place to a product already kept in the cache, and no link in the app goes from one product to another, so a test would have to drive the router by hand through a state a user cannot reach.
 
 ## Files (all under `apps/admin/`)
 | Task | Test files (committed first) | Code files |
@@ -52,6 +57,7 @@ Goals: the pages in the proposal, composed only from `@shopperstop/ui` component
 | 3 | `src/product-form.test.tsx` (new) | `src/product-form.tsx` (new), `products/new.tsx` and `products/$productId.tsx` (replace task 1's placeholders; no delete, no image) |
 | 4 | `src/image.test.tsx` (new) | `src/image.tsx` (`ImageUpload` added), `src/categories.tsx` (two lines), `products/$productId.tsx` (import and card) |
 | 5 | `src/product-delete.test.tsx` (new) | `products/$productId.tsx` (`DeleteProduct`, `PageHeader` `actions`) |
+| 5b | `src/products.test.tsx`, `src/categories.test.tsx`, `src/product-form.test.tsx`, `src/product-delete.test.tsx`, `src/image.test.tsx` (tests appended, three small edits) | `src/categories.tsx`, `src/product-form.tsx`, `src/image.tsx`, `products/$productId.tsx` |
 | 6 | none new: runs `e2e/catalog.spec.ts` | fixes only, after a recorded failure |
 
 Nothing else: no `package.json`, `package-lock.json`, vite, Playwright or eslint config change; nothing in `packages/ui` or `services/core`.
@@ -90,10 +96,23 @@ Nothing else: no `package.json`, `package-lock.json`, vite, Playwright or eslint
 | Image upload errors › File refused before upload | same | "a GIF is refused without a request", "a PNG over 5 MB is refused without a request" (one `test.each`) | 4 |
 | Image upload errors › File refused by core | same | "a file core refuses is flagged on the field" | 4 |
 | Image upload errors › Other upload failure | same | "any other upload failure shows a banner" | 4 |
+| Category create › Create a top-level category | `src/categories.test.tsx` | "create a top-level category sends no parent" | 5b (A) |
+| Category delete › Category in use (dialog stays open, one `DELETE`) | same | "a category in use cannot be deleted" (assertions added) | 2, 5b (A) |
+| Catalog field errors clear on edit › Sort order error clears on edit | same | "a sort order error clears when the field is edited" | 5b (B) |
+| Catalog field errors clear on edit › Category field error from core clears on edit | same | "a field error from core clears when its field is edited" | 5b (B) |
+| Catalog field errors clear on edit › Amount error clears on edit | `src/product-form.test.tsx` | "an amount error clears when its field is edited" | 5b (B) |
+| Products search and filters › Filter changed on a later page | `src/products.test.tsx` | "a filter changed on a later page asks for the first page" | 5b (A) |
+| Products pager › Pager (request for `page` 1 on "Previous") | same | "the pager moves between pages" (assertions added) | 1, 5b (A) |
+| Product form shows the saved product › Saved product shown as core stored it | `src/product-form.test.tsx` | "after a save the form shows the product as core stored it" | 5b (B) |
+| Product form errors › Product create failure | same | "a failing create shows a banner and stays on the new page" | 5b (A) |
+| Product delete › Other delete failure | `src/product-delete.test.tsx` | "any other delete failure shows a banner in the dialog" | 5b (A) |
+| Products reload after a delete or a deactivate › Products table after a delete | same | "after a delete the products table loads afresh" | 5b (B) |
+| Products reload after a delete or a deactivate › Deactivated product after returning | same | "after deactivate instead the table and the product show it inactive" | 5b (B) |
+| Image upload in progress › Pick while an upload is pending | `src/image.test.tsx` | "a pick while an upload is pending is ignored and the field stays enabled" | 5b (B) |
 | Catalog against core › Admin runs the catalog | `e2e/catalog.spec.ts` | "admin runs the catalog" | 1 (written), 6 (run) |
 | Catalog against core › Store staff open the catalog pages | same | "store staff open the catalog pages" | 1 (written), 6 (run) |
 
-33 scenarios: 31 Vitest (32 runs) and 2 Playwright. Vitest per file: products 6, categories 10, product-form 8, image 6, product-delete 2; with admin-stores' 52 the suite ends at 84.
+After task 5: 33 scenarios, 31 Vitest (32 runs) and 2 Playwright; Vitest per file products 6, categories 10, product-form 8, image 6, product-delete 2; with admin-stores' 52 the suite is at 84 (measured). After task 5b: 23 requirements, 44 scenarios, 42 Vitest (43 runs) and 2 Playwright; per file products 7, categories 13, product-form 11, image 7, product-delete 5; the suite ends at 95 (expected, not measured: 5b was written without running it). "5b (A)" is a test of behaviour tasks 1 to 5 already built, green when written; "5b (B)" is red until 5b's code.
 
 ## Mutation guards (for the reviewer; each re-run on the final tree on 2026-10-13, 84 tests, only the named tests red)
 | Mutation | Test that turns red |
@@ -103,6 +122,19 @@ Nothing else: no `package.json`, `package-lock.json`, vite, Playwright or eslint
 | diff against `product` instead of `parse(initial(product))` | "edit sends only the changed fields and confirms" (the fixture `tonedMilk` has no description) |
 | drop the upload's `invalidateQueries` | "upload a category image from its dialog" |
 | drop the `?v=` counter | "upload a product image shows the stored image", "upload a category image from its dialog" |
+
+Task 5b's guards, expected from reading the code, not run (for the reviewer to run on the final tree, 95 tests):
+| Mutation | Test expected to turn red |
+|---|---|
+| drop `removeQueries` from `leave` in `$productId.tsx` | "after a delete the products table loads afresh", "after deactivate instead the table and the product show it inactive" |
+| drop the deactivate's `setQueryData` | "after deactivate instead the table and the product show it inactive" (at "Status") |
+| drop `setValues(initial(saved))` in `ProductForm` | "after a save the form shows the product as core stored it" |
+| drop `setErrors` from `set` in `ProductForm` | "an amount error clears when its field is edited" |
+| drop `save.reset()` from the "Sort order" `onChange` in `CategoryDialog` | "a field error from core clears when its field is edited" |
+| drop `setSortError(undefined)` from the same `onChange` | "a sort order error clears when the field is edited" |
+| drop `if (upload.isPending) return` from `pick` | "a pick while an upload is pending is ignored and the field stays enabled" (two `PUT`s) |
+| send `parentId: parentId` always in `CategoryDialog`'s `POST` | "create a top-level category sends no parent" |
+| drop `page: 1` from `filter` in `products/index.tsx` | "a filter changed on a later page asks for the first page" |
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
 Every block below was built in this order on the rebased branch on 2026-10-13, tests first, with the red and green counts in tasks.md. Paths are under `apps/admin/`. A block is the whole file unless its heading says otherwise.
@@ -1808,6 +1840,841 @@ function ProductPage() {
 export const Route = createFileRoute('/_staff/_admin/products/$productId')({ component: ProductPage })
 ```
 
+### Task 5b: follow-ups from the reviews of tasks 1 to 5
+
+Not spiked. The team lead wrote this task on 2026-10-13 by reading the code while the manager's `make e2e` held the worktree, so nothing below was compiled or run: every count is **expected, not measured**. A block that does not compile, a test in group A that is red, a test in group B that is green before the code, or a count that differs: the worker stops and reports. Paths are under `apps/admin/`.
+
+Two groups of tests, in two commits:
+- **Group A, test gaps.** The behaviour already exists (tasks 1 to 5), only its test was missing. These tests pass the moment they are written. That is expected and is not a test-first violation: there is no code commit for them.
+- **Group B, behaviour.** Seven new tests that are red until the code of this task lands.
+
+#### Group A: tests that pass at once (commit `test: catalog review test gaps`)
+
+##### A1 `src/products.test.tsx` (two edits)
+In "the pager moves between pages", replace these two lines (the end of the test)
+```tsx
+  await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
+  expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+```
+with
+```tsx
+  await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
+  expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: 'Banana Robusta' })).toBeInTheDocument()
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('1'))
+```
+Then append at the end of the file:
+```tsx
+
+test('a filter changed on a later page asks for the first page', async () => {
+  setToken('tok')
+  const milk = dairy.children[0]
+  const calls = fakeCore({ ...signedIn, 'GET /admin/products': () => productList([tonedMilk], 30) })
+
+  renderApp('/products')
+  await screen.findByRole('option', { name: 'Dairy, Bread & Eggs › Milk' })
+  await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('2'))
+  await userEvent.selectOptions(screen.getByLabelText('Category'), milk.id)
+  await waitFor(() => expect(lastListQuery(calls)).toEqual({ categoryId: milk.id, page: '1', pageSize: '24' }))
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('2'))
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'Inactive')
+  await waitFor(() => expect(lastListQuery(calls)).toEqual({ categoryId: milk.id, isActive: 'false', page: '1', pageSize: '24' }))
+})
+```
+
+##### A2 `src/categories.test.tsx` (one test replaced, one appended)
+Replace the whole test "a category in use cannot be deleted" (the last test of the file) with:
+```tsx
+test('a category in use cannot be deleted', async () => {
+  setToken('tok')
+  const calls = fakeCore({
+    ...signedIn,
+    'GET /admin/categories': () => categoryTree([fruits, dairy]),
+    [`DELETE /admin/categories/${dairy.id}`]: () => apiError(409, 'conflict', 'category has products or subcategories'),
+  })
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete Dairy, Bread & Eggs' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
+
+  const dialog = screen.getByRole('dialog', { name: 'Delete Dairy, Bread & Eggs?' })
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+    'This category still has subcategories or products. Move or delete them first.',
+  )
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Delete'])
+  expect(calls.filter((call) => call.method === 'DELETE')).toHaveLength(1)
+  expect(names()).toContain('Dairy, Bread & Eggs')
+})
+```
+Then append at the end of the file:
+```tsx
+
+test('create a top-level category sends no parent', async () => {
+  setToken('tok')
+  const calls = keepsCategories()
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'New category' }))
+  const dialog = screen.getByRole('dialog', { name: 'New category' })
+  expect(within(dialog).getByLabelText('Parent')).toHaveValue('')
+  await userEvent.type(within(dialog).getByLabelText('Name'), 'Snacks')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Create category' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(await calls.find((call) => call.method === 'POST')!.json()).toEqual({ name: 'Snacks', sortOrder: 0 })
+})
+```
+
+##### A3 `src/product-form.test.tsx` (append at the end of the file)
+```tsx
+
+test('a failing create shows a banner and stays on the new page', async () => {
+  setToken('tok')
+  fakeCore({ ...signedIn, 'POST /admin/products': () => apiError(500, 'internal') })
+
+  const router = renderApp('/products/new')
+  await replace('Name', 'Curd Cup')
+  await userEvent.selectOptions(screen.getByLabelText('Category'), milk.id)
+  await replace('Unit', '400 g')
+  await replace('MRP (₹)', '40')
+  await replace('Price (₹)', '35.50')
+  await userEvent.click(screen.getByRole('button', { name: 'Create product' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the product. Try again.')
+  expect(router.state.location.pathname).toBe('/products/new')
+  expect(screen.getByRole('heading', { level: 1, name: 'New product' })).toBeInTheDocument()
+})
+```
+
+##### A4 `src/product-delete.test.tsx` (append at the end of the file)
+```tsx
+
+test('any other delete failure shows a banner in the dialog', async () => {
+  setToken('tok')
+  fakeCore({ ...withProduct, [`DELETE ${productPath}`]: () => apiError(500, 'internal') })
+
+  const router = renderApp(`/products/${tonedMilk.id}`)
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete product' }))
+  const dialog = screen.getByRole('dialog')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Could not delete the product. Try again.')
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Delete'])
+  expect(router.state.location.pathname).toBe(`/products/${tonedMilk.id}`)
+})
+```
+
+Expected after group A: `Tests  88 passed (88)`, `Test Files  14 passed (14)` (84 plus the four appended tests; the two edited tests keep their names).
+
+#### Group B: tests that are red until the code lands (commit `test: catalog review follow-ups`)
+
+##### B1 `src/product-delete.test.tsx` (one import edit, two tests appended)
+Replace the import line
+```tsx
+import { admin, apiError, categoryTree, dairy, fakeCore, fruits, json, productList, tonedMilk } from './fake-core'
+```
+with
+```tsx
+import { admin, apiError, banana, categoryTree, dairy, fakeCore, fruits, json, productList, tonedMilk } from './fake-core'
+```
+Then append at the end of the file (after A4's test):
+```tsx
+
+test('after a delete the products table loads afresh', async () => {
+  setToken('tok')
+  let deleted = false
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = () => resolve()
+  })
+  fakeCore({
+    ...withProduct,
+    [`DELETE ${productPath}`]: () => {
+      deleted = true
+      return json(204)
+    },
+    // After the delete the list answers only when the test lets it, so a table kept from before would stay on screen.
+    'GET /admin/products': async () => {
+      if (!deleted) return productList([banana, tonedMilk])
+      await held
+      return productList([banana])
+    },
+  })
+
+  renderApp('/products')
+  await userEvent.click(await screen.findByRole('link', { name: 'Sunny Fields Toned Milk' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete product' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Products' })).toBeInTheDocument()
+  expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  release()
+  expect(await screen.findByRole('link', { name: 'Banana Robusta' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Sunny Fields Toned Milk' })).not.toBeInTheDocument()
+})
+
+test('after deactivate instead the table and the product show it inactive', async () => {
+  setToken('tok')
+  let current = { ...tonedMilk }
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = () => resolve()
+  })
+  fakeCore({
+    ...withProduct,
+    [`GET ${productPath}`]: () => json(200, current),
+    [`DELETE ${productPath}`]: () => apiError(409, 'conflict', 'product was ordered; set isActive to false instead'),
+    [`PATCH ${productPath}`]: () => {
+      current = { ...current, isActive: false }
+      return json(200, current)
+    },
+    // Once the product is inactive the list answers only when the test lets it.
+    'GET /admin/products': async () => {
+      if (current.isActive) return productList([current])
+      await held
+      return productList([current])
+    },
+  })
+
+  renderApp('/products')
+  await userEvent.click(await screen.findByRole('link', { name: 'Sunny Fields Toned Milk' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete product' }))
+  const dialog = screen.getByRole('dialog')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+  await userEvent.click(await within(dialog).findByRole('button', { name: 'Deactivate instead' }))
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Products' })).toBeInTheDocument()
+  expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  release()
+  const table = await screen.findByRole('table', { name: 'Products' })
+  expect(within(table).getByText('Inactive')).toBeInTheDocument()
+
+  // The product page has its own "Status" field; wait for the page before reading it (the list has a "Status" filter).
+  await userEvent.click(within(table).getByRole('link', { name: 'Sunny Fields Toned Milk' }))
+  expect(await screen.findByRole('heading', { level: 1, name: 'Sunny Fields Toned Milk' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Status')).toHaveValue('inactive')
+})
+```
+Expected red, both at `expect(screen.queryByRole('table')).not.toBeInTheDocument()`: today `/products` reopens with the table kept from the first visit.
+
+##### B2 `src/product-form.test.tsx` (one edit in `keepsProduct`, two tests appended)
+In `keepsProduct`, replace
+```tsx
+      current = { ...current, ...(await request.clone().json()) }
+      return json(200, current)
+```
+with
+```tsx
+      current = { ...current, ...(await request.clone().json()) }
+      // Core trims text.
+      current.name = current.name.trim()
+      return json(200, current)
+```
+Then append at the end of the file (after A3's test):
+```tsx
+
+test('after a save the form shows the product as core stored it', async () => {
+  setToken('tok')
+  const calls = keepsProduct()
+
+  renderApp(`/products/${tonedMilk.id}`)
+  await replace('Name', '  Toned Milk  ')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Product saved.')
+  expect(screen.getByLabelText('Name')).toHaveValue('Toned Milk')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'inactive')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await screen.findByText('Product saved.')
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(patches).toHaveLength(2)
+  expect(await patches[0].json()).toEqual({ name: '  Toned Milk  ' })
+  expect(await patches[1].json()).toEqual({ isActive: false })
+})
+
+test('an amount error clears when its field is edited', async () => {
+  setToken('tok')
+  fakeCore(withProduct)
+
+  renderApp(`/products/${tonedMilk.id}`)
+  await replace('MRP (₹)', '30.555')
+  await replace('Price (₹)', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(screen.getByLabelText('Price (₹)')).toHaveAccessibleDescription(
+    'At most the MRP. Enter a price from 0.01 rupees up to the MRP, at most two decimals.',
+  )
+  await userEvent.type(screen.getByLabelText('Price (₹)'), '28')
+
+  expect(screen.getByLabelText('Price (₹)')).toHaveAccessibleDescription('At most the MRP.')
+  expect(screen.getByLabelText('MRP (₹)')).toHaveAccessibleDescription('Enter 0.01 to 1000000 rupees, at most two decimals.')
+})
+```
+Expected red: the first at `toHaveValue('Toned Milk')` (the field still reads the typed spaces), the second at `toHaveAccessibleDescription('At most the MRP.')` (the error stays until the next submit).
+
+##### B3 `src/categories.test.tsx` (two tests appended, after A2's test)
+```tsx
+
+test('a field error from core clears when its field is edited', async () => {
+  setToken('tok')
+  fakeCore({
+    ...signedIn,
+    'GET /admin/categories': () => categoryTree([fruits, dairy]),
+    'POST /admin/categories': () => apiError(400, 'validation', 'must be between 0 and 9999', 'sortOrder'),
+  })
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'New category' }))
+  const dialog = screen.getByRole('dialog')
+  const field = within(dialog).getByLabelText('Sort order')
+  await userEvent.type(within(dialog).getByLabelText('Name'), 'Curd')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Create category' }))
+  await waitFor(() => expect(field).toHaveAccessibleDescription('Lower numbers come first. Enter a whole number from 0 to 9999.'))
+  await userEvent.type(field, '5')
+
+  expect(field).toHaveAccessibleDescription('Lower numbers come first.')
+  expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('a sort order error clears when the field is edited', async () => {
+  setToken('tok')
+  keepsCategories()
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit Milk' }))
+  const field = within(screen.getByRole('dialog')).getByLabelText('Sort order')
+  await userEvent.clear(field)
+  await userEvent.type(field, '-1')
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save changes' }))
+  expect(field).toHaveAccessibleDescription('Lower numbers come first. Enter a whole number from 0 to 9999.')
+  await userEvent.clear(field)
+
+  expect(field).toHaveAccessibleDescription('Lower numbers come first.')
+})
+```
+Expected red, both at the last `toHaveAccessibleDescription('Lower numbers come first.')`.
+
+##### B4 `src/image.test.tsx` (one test appended)
+```tsx
+
+test('a pick while an upload is pending is ignored and the field stays enabled', async () => {
+  setToken('tok')
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = () => resolve()
+  })
+  const calls = fakeCore({
+    ...withProduct,
+    // The upload answers only when the test lets it.
+    [`PUT ${imagePath}`]: async () => {
+      await held
+      return json(200, { ...tonedMilk, imageUrl: storedUrl })
+    },
+  })
+
+  renderApp(`/products/${tonedMilk.id}`)
+  const input = await screen.findByLabelText('Image')
+  await userEvent.upload(input, png())
+  expect(await screen.findByText('Uploading the image…')).toBeInTheDocument()
+  expect(input).toBeEnabled()
+  await userEvent.upload(input, png())
+  release()
+
+  expect(await screen.findByText('Image saved.')).toBeInTheDocument()
+  expect(screen.queryByText('Uploading the image…')).not.toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Image of Sunny Fields Toned Milk' })).toHaveAttribute('src', `${storedUrl}?v=1`)
+  expect(calls.filter((call) => call.method === 'PUT')).toHaveLength(1)
+})
+```
+Expected red at `findByText('Uploading the image…')` (the text does not exist yet; the test waits one second, then fails). The `…` is the single character U+2026, in the test and in the code: copy it, do not type three dots.
+
+Expected after group B, before the code: `Tests  7 failed | 88 passed (95)`, `Test Files  4 failed | 10 passed (14)`. The seven red tests are exactly the seven appended in B1 to B4.
+
+#### Code (commit `fix: catalog review follow-ups`)
+Four files, each given whole: overwrite the file with the block. Each block is the file as it stands after task 5 with only the lines named in its heading changed. If the file in the worktree differs from that in any other line, stop and report.
+
+##### `src/categories.tsx` (whole file; changed: the three `onChange` handlers and one comment)
+```tsx
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
+import { Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Select } from '@shopperstop/ui'
+import { api, type ApiError } from './api'
+import { categoriesQuery, type Category, type CategoryNode } from './catalog'
+import { ImageUpload } from './image'
+
+type Field = 'name' | 'parentId' | 'sortOrder'
+
+const messages: Record<Field, string> = {
+  name: 'Enter 1 to 100 characters.',
+  parentId: 'Choose a top-level category.',
+  sortOrder: 'Enter a whole number from 0 to 9999.',
+}
+
+// Create (no category) or change a category in a dialog. Every save reloads the tree, which orders it.
+export function CategoryDialog({ category, parents, onClose }: { category?: Category; parents: CategoryNode[]; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(category?.name ?? '')
+  const [parentId, setParentId] = useState('')
+  const [sortOrder, setSortOrder] = useState(String(category?.sortOrder ?? 0))
+  const [sortError, setSortError] = useState<string>()
+
+  const save = useMutation({
+    mutationFn: async (order: number) => {
+      // PATCH sends only what differs from the loaded category; the parent never changes.
+      const { error } = category
+        ? await api.PATCH('/admin/categories/{id}', {
+            params: { path: { id: category.id } },
+            body: { ...(name !== category.name && { name }), ...(order !== category.sortOrder && { sortOrder: order }) },
+          })
+        : await api.POST('/admin/categories', { body: { name, sortOrder: order, ...(parentId && { parentId }) } })
+      if (error) throw error.error
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: categoriesQuery.queryKey })
+      onClose()
+    },
+  })
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const order = sortOrder.trim()
+    if (!/^\d{1,4}$/.test(order)) return setSortError(messages.sortOrder)
+    setSortError(undefined)
+    save.mutate(Number(order))
+  }
+
+  // Editing a field clears its error: core's last answer (save.reset) and, on the sort order, the form's own.
+  const apiError = save.error as Partial<ApiError> | null
+  const serverField = apiError?.code === 'validation' && apiError.field && apiError.field in messages ? (apiError.field as Field) : undefined
+  const errorFor = (field: Field) => (serverField === field ? messages[field] : undefined)
+
+  return (
+    <Dialog open onClose={onClose} title={category ? `Edit ${category.name}` : 'New category'}>
+      <form noValidate onSubmit={submit} className="mt-4 flex flex-col gap-4">
+        {save.error && !serverField && <ErrorBanner message="Could not save the category. Try again." />}
+        <FormField label="Name" error={errorFor('name')}>
+          <Input
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value)
+              save.reset()
+            }}
+          />
+        </FormField>
+        {!category && (
+          <FormField label="Parent" error={errorFor('parentId')}>
+            <Select
+              value={parentId}
+              onChange={(event) => {
+                setParentId(event.target.value)
+                save.reset()
+              }}
+            >
+              <option value="">None (top level)</option>
+              {parents.map((parent) => (
+                <option key={parent.id} value={parent.id}>{parent.name}</option>
+              ))}
+            </Select>
+          </FormField>
+        )}
+        <FormField label="Sort order" hint="Lower numbers come first." error={sortError ?? errorFor('sortOrder')}>
+          <Input
+            inputMode="numeric"
+            value={sortOrder}
+            onChange={(event) => {
+              setSortOrder(event.target.value)
+              setSortError(undefined)
+              save.reset()
+            }}
+          />
+        </FormField>
+        {category && <ImageUpload kind="categories" id={category.id} name={category.name} imageUrl={category.imageUrl} />}
+        <DialogFooter onCancel={onClose} className="mt-2">
+          <Button type="submit" loading={save.isPending}>{category ? 'Save changes' : 'Create category'}</Button>
+        </DialogFooter>
+      </form>
+    </Dialog>
+  )
+}
+
+// Confirm, then delete; a category with children or products stays and the dialog says why.
+export function DeleteCategory({ category, onClose }: { category: Category; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await api.DELETE('/admin/categories/{id}', { params: { path: { id: category.id } } })
+      if (error) throw error.error
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: categoriesQuery.queryKey })
+      onClose()
+    },
+  })
+  const inUse = (remove.error as Partial<ApiError> | null)?.code === 'conflict'
+
+  return (
+    <Dialog open onClose={onClose} title={`Delete ${category.name}?`}>
+      {remove.error && (
+        <ErrorBanner
+          className="mt-4"
+          message={inUse ? 'This category still has subcategories or products. Move or delete them first.' : 'Could not delete the category. Try again.'}
+        />
+      )}
+      <DialogFooter onCancel={onClose}>
+        <Button loading={remove.isPending} onClick={() => remove.mutate()}>Delete</Button>
+      </DialogFooter>
+    </Dialog>
+  )
+}
+```
+
+##### `src/product-form.tsx` (whole file; changed: `onSuccess` of `save`, and `set`)
+```tsx
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { useState, type FormEvent } from 'react'
+import type { components } from '@shopperstop/ui/api'
+import { Button, ErrorBanner, FormField, Input, Select, StatusMessage } from '@shopperstop/ui'
+import { api, type ApiError } from './api'
+import { productQuery, type Product } from './catalog'
+import { toCents, toRupees } from './stores'
+
+type ProductCreate = Required<components['schemas']['ProductCreate']>
+type Field = keyof ProductCreate
+type Values = Record<Field, string>
+
+// One message per field: for a value the form cannot send, and for core's 400 naming the field (core's messages speak in cents).
+const messages: Record<Field, string> = {
+  name: 'Enter 1 to 100 characters.',
+  brand: 'Enter at most 60 characters.',
+  categoryId: 'Choose a category.',
+  unitLabel: 'Enter 1 to 30 characters, for example 500 g.',
+  mrpCents: 'Enter 0.01 to 1000000 rupees, at most two decimals.',
+  priceCents: 'Enter a price from 0.01 rupees up to the MRP, at most two decimals.',
+  description: 'Enter at most 2000 characters.',
+  isActive: 'Choose active or inactive.',
+}
+
+function initial(product?: Product): Values {
+  return {
+    name: product?.name ?? '',
+    brand: product?.brand ?? '',
+    categoryId: product?.categoryId ?? '',
+    unitLabel: product?.unitLabel ?? '',
+    mrpCents: product ? toRupees(product.mrpCents) : '',
+    priceCents: product ? toRupees(product.priceCents) : '',
+    description: product?.description ?? '',
+    isActive: !product || product.isActive ? 'active' : 'inactive',
+  }
+}
+
+// The request body for the values, and the amounts that cannot be sent. Text goes as typed: core trims and checks it.
+function parse(values: Values): [ProductCreate, Partial<Values>] {
+  const errors: Partial<Values> = {}
+  const cents = (field: 'mrpCents' | 'priceCents') => {
+    const value = toCents(values[field])
+    if (value === undefined) errors[field] = messages[field]
+    return value ?? 0
+  }
+  const body: ProductCreate = {
+    name: values.name,
+    brand: values.brand,
+    categoryId: values.categoryId,
+    unitLabel: values.unitLabel,
+    mrpCents: cents('mrpCents'),
+    priceCents: cents('priceCents'),
+    description: values.description,
+    isActive: values.isActive === 'active',
+  }
+  return [body, errors]
+}
+
+// PATCH sends only what differs from what the form would send for the loaded product; never null, "" clears brand or description.
+function changed(body: ProductCreate, product: Product) {
+  const [base] = parse(initial(product))
+  return Object.fromEntries(Object.entries(body).filter(([key, value]) => base[key as Field] !== value))
+}
+
+// Create when there is no product (then open it), change it otherwise.
+export function ProductForm({ product, categories }: { product?: Product; categories: { id: string; label: string }[] }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [values, setValues] = useState(() => initial(product))
+  const [errors, setErrors] = useState<Partial<Values>>({})
+
+  const save = useMutation({
+    mutationFn: async (body: ProductCreate) => {
+      const { data, error } = product
+        ? await api.PATCH('/admin/products/{id}', { params: { path: { id: product.id } }, body: changed(body, product) })
+        : await api.POST('/admin/products', { body })
+      if (error) throw error.error
+      return data
+    },
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(productQuery(saved.id).queryKey, saved)
+      // The form now shows what core stored (text trimmed), so the next save sends only its own change.
+      if (product) setValues(initial(saved))
+      else await navigate({ to: '/products/$productId', params: { productId: saved.id } })
+    },
+  })
+
+  function set(field: Field, value: string) {
+    setValues((current) => ({ ...current, [field]: value }))
+    // Editing a field clears its own error and core's last answer.
+    setErrors((current) => ({ ...current, [field]: undefined }))
+    save.reset()
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const [body, found] = parse(values)
+    setErrors(found)
+    if (Object.keys(found).length === 0) save.mutate(body)
+  }
+
+  // A validation error naming a form field goes to that field; anything else to the banner.
+  const apiError = save.error as Partial<ApiError> | null
+  const serverField = apiError?.code === 'validation' && apiError.field && apiError.field in messages ? (apiError.field as Field) : undefined
+  const errorFor = (field: Field) => errors[field] ?? (serverField === field ? messages[field] : undefined)
+  const text = (field: Field, label: string, props: { inputMode?: 'decimal'; hint?: string } = {}) => (
+    <FormField label={label} hint={props.hint} error={errorFor(field)}>
+      <Input inputMode={props.inputMode} value={values[field]} onChange={(event) => set(field, event.target.value)} />
+    </FormField>
+  )
+
+  return (
+    <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+      {save.error && !serverField && <ErrorBanner message="Could not save the product. Try again." />}
+      {text('name', 'Name')}
+      {text('brand', 'Brand', { hint: 'Optional.' })}
+      <FormField label="Category" error={errorFor('categoryId')}>
+        <Select value={values.categoryId} onChange={(event) => set('categoryId', event.target.value)}>
+          <option value="">Choose a category</option>
+          {categories.map((option) => (
+            <option key={option.id} value={option.id}>{option.label}</option>
+          ))}
+        </Select>
+      </FormField>
+      {text('unitLabel', 'Unit', { hint: 'For example 500 g, 1 L or 6 pcs.' })}
+      {text('mrpCents', 'MRP (₹)', { inputMode: 'decimal' })}
+      {text('priceCents', 'Price (₹)', { inputMode: 'decimal', hint: 'At most the MRP.' })}
+      {text('description', 'Description', { hint: 'Optional.' })}
+      <FormField label="Status" hint="Customers do not see inactive products." error={errorFor('isActive')}>
+        <Select value={values.isActive} onChange={(event) => set('isActive', event.target.value)}>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </Select>
+      </FormField>
+      {product && save.isSuccess && <StatusMessage tone="success">Product saved.</StatusMessage>}
+      <div>
+        <Button type="submit" loading={save.isPending}>{product ? 'Save changes' : 'Create product'}</Button>
+      </div>
+    </form>
+  )
+}
+```
+
+##### `src/image.tsx` (whole file; changed: `pick` returns while an upload is pending, the input loses `disabled`, the "Uploading the image…" status)
+```tsx
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, type ChangeEvent } from 'react'
+import { ErrorBanner, FormField, StatusMessage, cn } from '@shopperstop/ui'
+import { api, type ApiError } from './api'
+
+// A 1:1 image tile; the placeholder stands in until an image is uploaded.
+// ponytail: an app-level recipe with an empty placeholder (no icon: lucide-react is not an apps/admin dependency); replace with the packages/ui ImageTile when ui adds it.
+export function ImageTile({ src, alt = '', className }: { src?: string; alt?: string; className?: string }) {
+  return (
+    <div className={cn('aspect-square shrink-0 overflow-hidden rounded-control border border-line bg-surface', className)}>
+      {src ? (
+        <img src={src} alt={alt} className="size-full object-contain" />
+      ) : (
+        <div data-placeholder className="size-full bg-canvas" />
+      )}
+    </div>
+  )
+}
+
+const types = ['image/png', 'image/jpeg', 'image/webp']
+const maxBytes = 5 * 1024 * 1024
+const fileMessage = 'Choose a PNG, JPEG or WebP image of at most 5 MB.'
+
+// Picks an image and uploads it at once with one multipart PUT; the tile shows what core stored.
+export function ImageUpload({ kind, id, name, imageUrl }: { kind: 'products' | 'categories'; id: string; name: string; imageUrl?: string }) {
+  const queryClient = useQueryClient()
+  const [url, setUrl] = useState(imageUrl)
+  // A re-upload of the same type keeps the URL; the counter makes the browser load the new bytes.
+  const [version, setVersion] = useState(0)
+  const [fileError, setFileError] = useState<string>()
+
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      const options = {
+        params: { path: { id } },
+        // openapi-typescript types a binary part as string; the serializer sends the File itself.
+        body: { file: file as unknown as string },
+        bodySerializer: (body: { file: string }) => {
+          const form = new FormData()
+          form.append('file', body.file)
+          return form
+        },
+      }
+      const { data, error } =
+        kind === 'products'
+          ? await api.PUT('/admin/products/{id}/image', options)
+          : await api.PUT('/admin/categories/{id}/image', options)
+      if (error) throw error.error
+      return data
+    },
+    onSuccess: (saved) => {
+      setUrl(saved.imageUrl)
+      setVersion((n) => n + 1)
+      // The tree, the product lists and this product show the new image on their next read.
+      void queryClient.invalidateQueries({ queryKey: ['admin', kind] })
+    },
+  })
+
+  function pick(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    // The input stays enabled while an upload runs, so it keeps keyboard focus; a pick in that time is ignored.
+    if (upload.isPending) return
+    upload.reset()
+    if (!file) return
+    if (!types.includes(file.type) || file.size > maxBytes) return setFileError(fileMessage)
+    setFileError(undefined)
+    upload.mutate(file)
+  }
+
+  const rejected = (upload.error as Partial<ApiError> | null)?.field === 'file'
+  return (
+    <div className="flex flex-col gap-3">
+      <ImageTile src={url && (version ? `${url}?v=${version}` : url)} alt={`Image of ${name}`} className="w-32" />
+      <FormField label="Image" hint="PNG, JPEG or WebP, up to 5 MB. Saved as soon as you pick it." error={fileError ?? (rejected ? fileMessage : undefined)}>
+        <input
+          type="file"
+          accept={types.join(',')}
+          onChange={pick}
+          className="text-body text-ink file:mr-3 file:h-11 file:rounded-control file:border file:border-line-strong file:bg-surface file:px-4 file:text-button file:text-ink sm:file:h-10"
+        />
+      </FormField>
+      {upload.isError && !rejected && <ErrorBanner message="Could not upload the image. Try again." />}
+      {upload.isPending && <StatusMessage>Uploading the image…</StatusMessage>}
+      {upload.isSuccess && <StatusMessage tone="success">Image saved.</StatusMessage>}
+    </div>
+  )
+}
+```
+
+##### `src/routes/_staff/_admin/products/$productId.tsx` (whole file; changed: the `useQueryClient` import, `leave`, both `onSuccess`, the deactivate `mutationFn` returns the product, `key` on `ImageUpload`)
+```tsx
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Button, Card, Dialog, DialogFooter, ErrorBanner, PageHeader, Skeleton } from '@shopperstop/ui'
+import { api, type ApiError } from '../../../../api'
+import { categoriesQuery, categoryOptions, productQuery, type Product } from '../../../../catalog'
+import { ImageUpload } from '../../../../image'
+import { NotFound } from '../../../../not-found'
+import { ProductForm } from '../../../../product-form'
+
+// Confirm, then delete. A product that was ordered stays (409); the dialog offers to deactivate it instead.
+function DeleteProduct({ product }: { product: Product }) {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  // The kept list pages still show the product as it was: drop them, so /products loads afresh.
+  // Only inactive queries: this page's own product query is in use and stays.
+  const leave = () => {
+    queryClient.removeQueries({ queryKey: ['admin', 'products'], type: 'inactive' })
+    return navigate({ to: '/products' })
+  }
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await api.DELETE('/admin/products/{id}', { params: { path: { id: product.id } } })
+      if (error) throw error.error
+    },
+    onSuccess: leave,
+  })
+  const deactivate = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await api.PATCH('/admin/products/{id}', { params: { path: { id: product.id } }, body: { isActive: false } })
+      if (error) throw error.error
+      return data
+    },
+    onSuccess: (saved) => {
+      // The product's page reads this the next time it opens, so its form starts at Inactive.
+      queryClient.setQueryData(productQuery(saved.id).queryKey, saved)
+      return leave()
+    },
+  })
+  const ordered = (remove.error as Partial<ApiError> | null)?.code === 'conflict'
+
+  function close() {
+    setOpen(false)
+    remove.reset()
+    deactivate.reset()
+  }
+
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>Delete product</Button>
+      <Dialog open={open} onClose={close} title={`Delete ${product.name}?`}>
+        {remove.error && (
+          <ErrorBanner
+            className="mt-4"
+            message={ordered ? 'This product was ordered, so it cannot be deleted. Deactivate it instead: customers no longer see it.' : 'Could not delete the product. Try again.'}
+          />
+        )}
+        {deactivate.error && <ErrorBanner className="mt-4" message="Could not deactivate the product. Try again." />}
+        <DialogFooter onCancel={close}>
+          {ordered ? (
+            <Button loading={deactivate.isPending} onClick={() => deactivate.mutate()}>Deactivate instead</Button>
+          ) : (
+            <Button loading={remove.isPending} onClick={() => remove.mutate()}>Delete</Button>
+          )}
+        </DialogFooter>
+      </Dialog>
+    </>
+  )
+}
+
+function ProductPage() {
+  const { productId } = Route.useParams()
+  const product = useQuery(productQuery(productId))
+  const categories = useQuery(categoriesQuery)
+  if (product.isPending || categories.isPending) return <Skeleton variant="list" count={3} />
+  if (product.isError && (product.error as Partial<ApiError>).code === 'not_found') return <NotFound />
+  if (product.isError || categories.isError) {
+    const retry = () => void Promise.all([product.refetch(), categories.refetch()])
+    return <ErrorBanner message="Could not load the product." onRetry={retry} />
+  }
+  return (
+    <div className="flex max-w-2xl flex-col gap-6">
+      <PageHeader title={product.data.name} actions={<DeleteProduct product={product.data} />} />
+      <Card className="p-6">
+        <ProductForm key={product.data.id} product={product.data} categories={categoryOptions(categories.data.items)} />
+      </Card>
+      <Card className="p-6">
+        <ImageUpload key={product.data.id} kind="products" id={product.data.id} name={product.data.name} imageUrl={product.data.imageUrl} />
+      </Card>
+    </div>
+  )
+}
+
+export const Route = createFileRoute('/_staff/_admin/products/$productId')({ component: ProductPage })
+```
+
+Expected after the code: `Tests  95 passed (95)`, `Test Files  14 passed (14)`; `make test-web` exit 0 (ui 54, admin 95, web 20); `src/routeTree.gen.ts` unchanged.
+
+Why each edit is what it is:
+- `leave` removes with `type: 'inactive'`, not `invalidateQueries` (the review's suggestion). The list queries are not mounted on the product page, so invalidating them only marks them stale, which at staleTime 0 they already are: the kept table would still show on the way back. And invalidating the prefix would refetch the mounted product query, a 404 after a delete. Removing the inactive queries drops every kept list page and leaves the mounted one alone.
+- The deactivate writes core's answer with `setQueryData` because the product page builds its form once from the kept product: without it the form would reopen at Active and the next save would send `isActive: true`.
+- `setValues(initial(saved))` only when changing (`product` set); a create navigates away instead.
+- `key` on `ImageUpload` has no test (see Decision 19).
+
 ## Risks / Trade-offs
 - The real-core e2e has run only against a `page.route` fake. Risks in task 6: the seed counts in the spec ("Page 1 of 7, 148 products"), the real multipart answer, the image served through the preview's `/api` proxy. A failure is recorded first, then fixed with `fix:`; an assertion is never weakened.
 - Core's sign-in rate limit (10 per email per hour per process): the catalog spec adds one admin and one store-staff sign-in per run. A reused local core reaches the limit after a few full admin runs; restart core (the manager's call).
@@ -1816,6 +2683,7 @@ export const Route = createFileRoute('/_staff/_admin/products/$productId')({ com
 - `file as unknown as string`: if core's OpenAPI ever types the part differently, the cast hides it from tsc; the image tests read the multipart body, so they would fail instead.
 - `ImageTile` exists twice (web has the same recipe) until ui ships one; the placeholder has no icon (Decision 14).
 - Typed `Link`s need their target routes: task 1 ships the two product placeholders for that reason, and `routeTree.gen.ts` must be regenerated by the build before typecheck in task 1.
+- Task 5b was designed by reading, with the worktree held by the manager's e2e: its blocks were not compiled and its tests not run. The likeliest misses are a test that waits on a render differently than reasoned (the three tests that hold a response back) and a type the reading got wrong. The worker stops on the first count that differs; the fix is the team lead's.
 - Tasks share `$productId.tsx`, `categories.tsx`, `image.tsx` and `fake-core.ts`, so they run in order on the one worktree. Tasks 2 and 3 are file-disjoint and could run in parallel worktrees; the measured counts in tasks.md assume the listed order.
 
 ## Accepted ceilings
@@ -1824,7 +2692,17 @@ export const Route = createFileRoute('/_staff/_admin/products/$productId')({ com
 - Description is a single-line input.
 - No image removal, no upload progress, no leave-page warning for unsaved edits.
 - A failed product load shows only the retry banner, no h1 (as admin-stores).
-- An MRP from 1,000,000.01 to 9,999,999.99 rupees passes the form's shared `toCents` (7 digits) and reaches core's 400, which shows the field message.
+- An MRP from 1,000,000.01 to 9,999,999.99 rupees passes the form's shared `toCents` (7 digits) and reaches core's 400, which shows the field message. The message's "0.01 to 1000000 rupees" stays as worded (review 3, R3-6): core's 400 shows the same text, so it stays true.
+
+Left out of task 5b on the manager's ruling (reviews of tasks 1 to 5), one line each:
+- R1-4: every page or filter change shows the skeleton and hides the pager (no `placeholderData: keepPreviousData`); a flicker only.
+- R2-5, R3-3: "Save" with nothing changed sends `PATCH {}` and confirms; core accepts it. A category name typed with a trailing space is sent and trimmed by core to the same value.
+- R1-3: the products table's category cell is blank while the tree loads or if it fails; no error is shown for it.
+- R4-3: the upload refuses by `file.type`, core judges by content; a real image the browser reports with an empty or wrong type is refused in the form. It never sends what core would refuse.
+- R5-3: after a failed deactivate the dialog shows both banners (the 409 text and "Could not deactivate the product. Try again.").
+- Review 4, further notes: the image tile ignores a later `imageUrl` from a background refetch; an upload still pending when the category dialog closes finishes and refreshes the table.
+- Test gaps left: clearing the search (`q` omitted again); core field errors on a category's `name` and `parentId` clearing, and the name-only `PATCH` body; a core error naming an unknown field (banner); `toCents` for negative, exponent and zero input; no alert next to a file refused in the form; no "Image" field in the "New category" dialog; the deactivate-failure banner; Escape or reopen resetting the 409 state.
+- Task 5b's own ceilings are in Decisions 15, 16 and 18.
 
 ## Migration Plan
 None: no data, config or dependency change. `spike.patch` was a design input and is removed from the change with this file; the PR carries no patch. Rollback is reverting the PR; the two routes fall back to L1's placeholders.

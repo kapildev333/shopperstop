@@ -25,6 +25,10 @@ While the tree loads, `/categories` SHALL show a loading status under its headin
 - **WHEN** an admin opens "New category", enters name "Curd", chooses parent Dairy, Bread & Eggs and sort order `20`, presses "Create category", and core answers 201
 - **THEN** the dialog's buttons were "Cancel" then "Create category", the request body is `{"name":"Curd","sortOrder":20,"parentId":"<Dairy, Bread & Eggs id>"}`, the dialog closes, and the table lists Curd after Milk under Dairy, Bread & Eggs
 
+#### Scenario: Create a top-level category
+- **WHEN** an admin opens "New category", sees "Parent" at "None (top level)", enters name "Snacks" and presses "Create category", and core answers 201
+- **THEN** the request body is `{"name":"Snacks","sortOrder":0}` with no `parentId`, and the dialog closes
+
 ### Requirement: Category change
 "Edit <name>" SHALL open a dialog "Edit <name>" with "Name" and "Sort order" filled from the category and no "Parent" field. "Save changes" SHALL send `PATCH /admin/categories/{id}` with only the fields whose value differs from the category, never `null`; on success the dialog SHALL close and the table SHALL show the tree as core now answers it, in its new order.
 
@@ -47,6 +51,21 @@ A sort order that is not a whole number from 0 to 9999 SHALL be flagged on "Sort
 - **WHEN** core answers a category change with 500
 - **THEN** the dialog shows the alert "Could not save the category. Try again."
 
+### Requirement: Catalog field errors clear on edit
+Editing a field of the category dialog or of the product form SHALL clear the error shown on that field, the form's own or core's, and leave the other fields' errors.
+
+#### Scenario: Sort order error clears on edit
+- **WHEN** an admin edits Milk, saves sort order `-1`, sees "Sort order" described by "Lower numbers come first. Enter a whole number from 0 to 9999.", and then clears the field
+- **THEN** "Sort order" is described by "Lower numbers come first." only
+
+#### Scenario: Category field error from core clears on edit
+- **WHEN** core answers a category create with 400 `validation` and field `sortOrder`, "Sort order" is described by "Lower numbers come first. Enter a whole number from 0 to 9999.", and the admin types in "Sort order"
+- **THEN** "Sort order" is described by "Lower numbers come first." only and the dialog shows no alert
+
+#### Scenario: Amount error clears on edit
+- **WHEN** an admin saves MRP `30.555` with an empty price, sees both fields flagged, and then types `28` in "Price (₹)"
+- **THEN** "Price (₹)" is described by "At most the MRP." only and "MRP (₹)" is still described by "Enter 0.01 to 1000000 rupees, at most two decimals."
+
 ### Requirement: Category delete
 "Delete <name>" SHALL open a dialog "Delete <name>?" whose buttons are "Cancel" then "Delete". "Cancel" SHALL close it without a request. "Delete" SHALL send `DELETE /admin/categories/{id}` and on success close the dialog and show the tree as core now answers it. A 409 `conflict` SHALL keep the dialog open with the alert "This category still has subcategories or products. Move or delete them first."; any other failure with "Could not delete the category. Try again.".
 
@@ -56,7 +75,7 @@ A sort order that is not a whole number from 0 to 9999 SHALL be flagged on "Sort
 
 #### Scenario: Category in use
 - **WHEN** core answers the delete of Dairy, Bread & Eggs with 409 `conflict`
-- **THEN** the dialog shows the alert "This category still has subcategories or products. Move or delete them first." and Dairy, Bread & Eggs is still in the table
+- **THEN** the dialog "Delete Dairy, Bread & Eggs?" stays open with the alert "This category still has subcategories or products. Move or delete them first." and the buttons "Cancel" then "Delete", exactly one `DELETE` was sent, and Dairy, Bread & Eggs is still in the table
 
 ### Requirement: Products table
 `/products` SHALL show "Products" as the level-1 heading with a "New product" link to `/products/new`, and a table named "Products" of `GET /admin/products` with `page` and `pageSize` 24: one row per product in core's order with its image as a 1:1 tile, its name linking to `/products/{id}` with its brand, its category ("Parent › Child" for a child), its unit, its price with the MRP when higher, and an "Active" or "Inactive" badge.
@@ -72,12 +91,16 @@ A sort order that is not a whole number from 0 to 9999 SHALL be flagged on "Sort
 - **WHEN** an admin on page 2 of 30 products searches " milk ", then chooses category Milk and status Inactive
 - **THEN** the search requests `q` `milk`, `page` 1 and `pageSize` 24 only, and the last request has `q` `milk`, `categoryId` Milk's id, `isActive` `false`, `page` 1 and `pageSize` 24
 
+#### Scenario: Filter changed on a later page
+- **WHEN** an admin on page 2 of 30 products chooses category Milk, presses "Next" again, and then chooses status Inactive
+- **THEN** the request after the category change has `categoryId` Milk's id, `page` 1 and `pageSize` 24 only, and the request after the status change has `categoryId` Milk's id, `isActive` `false`, `page` 1 and `pageSize` 24
+
 ### Requirement: Products pager
 Under the table `/products` SHALL show "Page <page> of <pages>, <total> products" between a "Previous" and a "Next" button, which request the page before and after and are disabled on the first and the last page.
 
 #### Scenario: Pager
 - **WHEN** core answers 30 products and the admin presses "Next", then "Previous"
-- **THEN** "Page 1 of 2, 30 products" is shown with "Previous" disabled, then "Page 2 of 2, 30 products" with page 2's product and "Next" disabled after a request for `page` 2, then page 1 again
+- **THEN** "Page 1 of 2, 30 products" is shown with "Previous" disabled, then "Page 2 of 2, 30 products" with page 2's product and "Next" disabled after a request for `page` 2, then "Page 1 of 2, 30 products" with page 1's product after a request for `page` 1
 
 ### Requirement: Products table states
 While the list loads, `/products` SHALL show a loading status under its heading; with no product matching, "No products found" instead of the table; when the request fails, the alert "Could not load the products." with a "Try again" button that requests the list again.
@@ -116,6 +139,13 @@ While the list loads, `/products` SHALL show a loading status under its heading;
 - **WHEN** an admin opens Sunny Fields Toned Milk from `/products`, saves price `28` and returns to "Products" through the navigation
 - **THEN** the "Products" table shows ₹28
 
+### Requirement: Product form shows the saved product
+After a successful "Save changes" the product form SHALL show the product as core answered it (core trims text), so that the next save sends only what the admin changed since.
+
+#### Scenario: Saved product shown as core stored it
+- **WHEN** an admin sets "Name" to "  Toned Milk  " and saves, core answers the product named "Toned Milk", and the admin then changes only "Status" to Inactive and saves again
+- **THEN** the first `PATCH` body is `{"name":"  Toned Milk  "}`, "Name" reads "Toned Milk" after the first save, and the second `PATCH` body is exactly `{"isActive":false}`
+
 ### Requirement: Unknown product shows not found
 A product id that core answers with 404 `not_found` SHALL show the not-found page at that path, with the "Products" section still marked in the navigation.
 
@@ -124,7 +154,7 @@ A product id that core answers with 404 `not_found` SHALL show the not-found pag
 - **THEN** "Page not found" is the level-1 heading, the path is unchanged and the "Products" navigation link carries `aria-current="page"`
 
 ### Requirement: Product form errors
-An MRP or price the form cannot convert SHALL be flagged on its field without a request. A core `validation` error naming a form field SHALL be shown on that field with the form's own message (core's messages speak in paise and JSON names; a price above the MRP is core's 400 on `priceCents`); any other failure SHALL show the alert "Could not save the product. Try again.".
+An MRP or price the form cannot convert SHALL be flagged on its field without a request. A core `validation` error naming a form field SHALL be shown on that field with the form's own message (core's messages speak in paise and JSON names; a price above the MRP is core's 400 on `priceCents`); any other failure, of a change or a create, SHALL show the alert "Could not save the product. Try again." and stay on the page.
 
 #### Scenario: Amount the form cannot send
 - **WHEN** an admin sets "MRP (₹)" to `30.555`, clears "Price (₹)" and presses "Save changes"
@@ -138,12 +168,20 @@ An MRP or price the form cannot convert SHALL be flagged on its field without a 
 - **WHEN** core answers the save with 500
 - **THEN** the alert "Could not save the product. Try again." is shown
 
+#### Scenario: Product create failure
+- **WHEN** an admin on `/products/new` fills the form and presses "Create product", and core answers 500
+- **THEN** the alert "Could not save the product. Try again." is shown, the path is still `/products/new` and "New product" is still the level-1 heading
+
 ### Requirement: Product delete
-The product page SHALL have a "Delete product" button that opens a dialog "Delete <name>?" whose buttons are "Cancel" then "Delete". "Cancel" SHALL close it without a request. "Delete" SHALL send `DELETE /admin/products/{id}` and on success open `/products`; a failure other than 409 SHALL show "Could not delete the product. Try again." in the dialog.
+The product page SHALL have a "Delete product" button that opens a dialog "Delete <name>?" whose buttons are "Cancel" then "Delete". "Cancel" SHALL close it without a request. "Delete" SHALL send `DELETE /admin/products/{id}` and on success open `/products`; a failure other than 409 SHALL show "Could not delete the product. Try again." in the dialog, which stays open on the product's page.
 
 #### Scenario: Delete a product after confirming
 - **WHEN** an admin presses "Delete product", then "Cancel", then "Delete product" and "Delete", and core answers 204
 - **THEN** the dialog's buttons were "Cancel" then "Delete", exactly one `DELETE` was sent, and `/products` opens
+
+#### Scenario: Other delete failure
+- **WHEN** core answers the delete with 500
+- **THEN** the dialog shows the alert "Could not delete the product. Try again." with the buttons "Cancel" then "Delete", and the path is still the product's
 
 ### Requirement: Ordered product is deactivated instead
 A 409 `conflict` to the delete SHALL keep the dialog open with the alert "This product was ordered, so it cannot be deleted. Deactivate it instead: customers no longer see it." and the buttons "Cancel" then "Deactivate instead", which SHALL send `PATCH /admin/products/{id}` with `{"isActive":false}` and on success open `/products`; a failure SHALL show "Could not deactivate the product. Try again.".
@@ -151,6 +189,17 @@ A 409 `conflict` to the delete SHALL keep the dialog open with the alert "This p
 #### Scenario: Ordered product is deactivated instead
 - **WHEN** core answers the delete with 409 `conflict` and the admin presses "Deactivate instead", and core answers the `PATCH` with the inactive product
 - **THEN** the alert and the buttons "Cancel" then "Deactivate instead" were shown, the `PATCH` body is `{"isActive":false}`, and `/products` opens with the product marked "Inactive"
+
+### Requirement: Products reload after a delete or a deactivate
+After a product delete or "Deactivate instead", `/products` SHALL load the list from core again and show no list kept from before meanwhile. After "Deactivate instead" the product's page SHALL next open with "Status" Inactive.
+
+#### Scenario: Products table after a delete
+- **WHEN** an admin opens Sunny Fields Toned Milk from the `/products` table (Banana Robusta and Sunny Fields Toned Milk), deletes it, and core has not yet answered the list again
+- **THEN** `/products` shows its heading and no table, and once core answers Banana Robusta alone the table lists Banana Robusta and not Sunny Fields Toned Milk
+
+#### Scenario: Deactivated product after returning
+- **WHEN** an admin opens Sunny Fields Toned Milk from the `/products` table, presses "Delete product", "Delete" (409) and "Deactivate instead", and core has not yet answered the list again
+- **THEN** `/products` shows its heading and no table, once core answers the table marks the product "Inactive", and opening the product from the table shows "Status" Inactive
 
 ### Requirement: Catalog image upload
 The product page and the category edit dialog SHALL have an "Image" file field accepting `image/png,image/jpeg,image/webp` and a 1:1 tile "Image of <name>". Picking a file SHALL upload it at once with one `PUT` to the product's or category's `/image` route, the file as `multipart/form-data` part `file`, then show "Image saved." and the image core answers, loaded afresh even when its URL is unchanged; a category upload SHALL also refresh the categories table.
@@ -162,6 +211,13 @@ The product page and the category edit dialog SHALL have an "Image" file field a
 #### Scenario: Category image uploaded from its dialog
 - **WHEN** an admin opens "Edit Milk", picks a PNG and core answers 200 with the category's `imageUrl`, then closes the dialog
 - **THEN** exactly one `PUT /admin/categories/<Milk's id>/image` was sent, the dialog showed "Image saved." and the tile "Image of Milk", and Milk's row in the table shows the new image
+
+### Requirement: Image upload in progress
+While an upload is pending the "Image" field SHALL stay enabled, so it keeps keyboard focus, "Uploading the image…" SHALL be shown as a status, and another pick SHALL be ignored.
+
+#### Scenario: Pick while an upload is pending
+- **WHEN** an admin picks a PNG, core has not answered the upload yet, the admin picks a second PNG, and core then answers the first with 200
+- **THEN** "Uploading the image…" was shown with the "Image" field enabled, exactly one `PUT` was sent, and "Image saved." and the tile at `?v=1` are shown without "Uploading the image…"
 
 ### Requirement: Image upload errors
 A file that is not PNG, JPEG or WebP, or is over 5 MiB, SHALL be flagged on "Image" with "Choose a PNG, JPEG or WebP image of at most 5 MB." without a request; core's 400 `validation` on `file` SHALL show the same message on the field; any other failure SHALL show the alert "Could not upload the image. Try again.".
