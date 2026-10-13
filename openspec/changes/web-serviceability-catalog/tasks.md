@@ -29,7 +29,7 @@ Scenarios: Customer category page › "Category tabs", "Unknown category", "Brow
 Failing tests: `src/category.test.tsx` › "category tabs", "unknown category", "load more while pages remain"; `src/search.test.tsx` › "no results suggests categories"; `e2e/browse.spec.ts` › "browse a category against core", "search and load more against core".
 
 - [ ] 3.1 Tests committed red (`test: category tabs, paging and search`)
-- [ ] 3.2 `useProductFeed`, `findCategory`, `product-feed.tsx`, `/c/$slug`, `/search` (`feat: category and search pages`); all gates green, e2e green
+- [ ] 3.2 `useProductFeed`, `findCategory`, `product-feed.tsx`, `/c/$slug`, `/search` (`feat: category and search pages`); all gates green, e2e green; remove the `/c/$slug` Link cast in `routes/index.tsx`
 
 ## 4. Product page
 
@@ -38,7 +38,7 @@ Scenarios: Customer product page › all five.
 Failing tests: `src/product.test.tsx` › "product with savings", "plenty in stock", "out of stock product", "unknown product"; `e2e/browse.spec.ts` › "product pages against core".
 
 - [ ] 4.1 Tests committed red (`test: product page states`)
-- [ ] 4.2 `useProduct`, `/p/$slug` (`feat: product page`); all gates green, e2e green
+- [ ] 4.2 `useProduct`, `/p/$slug` (`feat: product page`); all gates green, e2e green; remove the `/p/$slug` Link cast in `product-card.tsx`
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-serviceability-catalog` after 4.2 lands.
