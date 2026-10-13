@@ -29,7 +29,7 @@ Failing tests: `src/categories.test.tsx` › "the categories table lists parents
 Scope: `apps/admin/src/product-form.test.tsx` (new), `src/product-form.tsx` (new), `src/routes/_staff/_admin/products/new.tsx` and `src/routes/_staff/_admin/products/$productId.tsx` (overwrite task 1's placeholders; `$productId.tsx` in the task-3 shape in design.md), this file's checkboxes, the worker's lane log.
 Scenarios: Product create › Create a product; Product change › Change sends only the changed fields, A second product save sends only its own change, Saved product shows in the table; Unknown product shows not found › Unknown product; Product form errors › Amount the form cannot send, Product field error from core, Other product save failure.
 Failing tests: `src/product-form.test.tsx` › "create a product and open it", "edit sends only the changed fields and confirms", "a value the form cannot send is flagged without a request", "a validation error from core is shown on its field", "any other product save error shows a banner", "an unknown product shows not found", "a second product save sends only its own change", "the products table shows a saved change".
-- [ ] 3.1 Tests committed red (`test: product create and change`); Vitest `8 failed | 68 passed (76)`
+- [x] 3.1 Tests committed red (`test: product create and change`); Vitest `8 failed | 68 passed (76)`
 - [ ] 3.2 `src/product-form.tsx`, `products/new.tsx`, `products/$productId.tsx` without `DeleteProduct` and `ImageUpload` (`feat: product create and change`); Vitest `76 passed (76)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## 4. Image upload
