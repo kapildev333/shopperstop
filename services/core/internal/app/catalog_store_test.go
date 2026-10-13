@@ -353,3 +353,10 @@ func TestStoreProductsSearchEscapesAndMatchesBrand(t *testing.T) {
 		t.Errorf("upper-case q: lower-case name not matched")
 	}
 }
+
+// TestStoreProductsNULInQ: a NUL byte in q is a validation error, not a 500 from Postgres.
+func TestStoreProductsNULInQ(t *testing.T) {
+	storeID := insertStore(t, true)
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+storeID+"/products?q=a%00b", "", nil)
+	expectError(t, "q=a%00b", status, body, http.StatusBadRequest, "validation", "q", "")
+}

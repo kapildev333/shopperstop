@@ -310,3 +310,9 @@ func TestStockPutBadProductID(t *testing.T) {
 		t.Fatalf("productId abc: got %d %s, want 400 validation field productId", status, body)
 	}
 }
+
+// TestStockListNULInQ: a NUL byte in q is a validation error, not a 500 from Postgres.
+func TestStockListNULInQ(t *testing.T) {
+	status, body := call(t, http.MethodGet, stockPath(testStoreID)+"?q=a%00b", adminToken(t), nil)
+	expectError(t, "q=a%00b", status, body, http.StatusBadRequest, "validation", "q", "")
+}
