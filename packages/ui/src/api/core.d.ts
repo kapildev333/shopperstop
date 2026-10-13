@@ -176,6 +176,50 @@ export interface paths {
         patch: operations["patchMeAddress"];
         trace?: never;
     };
+    "/me/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the cart
+         * @description The signed-in customer's cart: its store, its lines and its totals, computed now from the products' current prices. Each line's product carries its stock at the cart's store. A customer with no cart gets the empty cart: no storeId, items [] and every amount 0. The delivery fee is the store's, or 0 when the subtotal is at or above its free-delivery threshold; totalCents is the subtotal plus the fee; shortfallCents is what is missing to free delivery, never below 0. A deactivated product stays in the cart with inStock false and quantity 0. A missing token, an unknown token or a staff token answers 401.
+         */
+        get: operations["getMeCart"];
+        put?: never;
+        post?: never;
+        /**
+         * Clear the cart
+         * @description Deletes the signed-in customer's cart and all its lines. Answers 204 also when the customer has no cart. A missing token, an unknown token or a staff token answers 401.
+         */
+        delete: operations["deleteMeCart"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set one cart line
+         * @description Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. storeId must name an existing store whatever the quantity, and a quantity from 1 to 20 also needs productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. A quantity above 0 for a store other than the cart's empties the cart and moves it to that store, answering replaced true, unless that store holds none of the product: then the cart is left as it is and the answer is clamped true and replaced false; a quantity of 0 for another store changes nothing. A quantity above the stock the store holds is cut to that stock and answers clamped true; with no stock the line is absent. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.
+         */
+        put: operations["putMeCartItem"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/auth/sign-in": {
         parameters: {
             query?: never;
@@ -356,6 +400,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/stores/{id}/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's stock
+         * @description Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         */
+        get: operations["getStock"];
+        /**
+         * Set a store's stock
+         * @description Admins for any store; store staff only for their own store. Sets the quantity of each listed product at the store in one transaction, creating the row where the store has none. Takes 1 to 500 rows; each product id is a uuid, names a product that exists and appears once; each quantity is from 0 to 100000. Any invalid row refuses the whole request with 400 naming the field, and nothing changes. Answers 204 with no body; the admin page reads the list again. Another store's staff and an unknown store answer 404 not_found.
+         */
+        put: operations["putStock"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/serviceability": {
         parameters: {
             query?: never;
@@ -388,6 +456,66 @@ export interface paths {
          * @description Public, no session. The fields checkout shows, open or closed; the address and pincode stay admin-only. An id that is not a store, or not a uuid, answers 404 not_found.
          */
         get: operations["getStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/{id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's categories
+         * @description Public, no session. The category tree a store sells from: each parent with its children array, parents and children ordered by sortOrder then name. A category is listed only when it, or one of its children, has an active product with a quantity above 0 at this store. A parent is listed through a stocked child; a child is listed only when it qualifies itself, so out-of-stock children are hidden. The tree is not paged. An unknown store answers 404 not_found.
+         */
+        get: operations["getStoreCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's products
+         * @description Public, no session. The paged active products a store sells, ordered by name, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them. Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match, not just this page. An unknown store answers 404 not_found; a bad q or categoryId answers 400 naming the field.
+         */
+        get: operations["getStoreProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/{id}/products/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one product of a store by slug
+         * @description Public, no session. One active product by its slug, with inStock and quantity at this store as in the list. An unknown store, a slug no product has, or an inactive product answers 404 not_found.
+         */
+        get: operations["getStoreProduct"];
         put?: never;
         post?: never;
         delete?: never;
@@ -779,6 +907,92 @@ export interface components {
                 storeId?: string;
             };
         };
+        /** @description An active product with its quantity at one store. */
+        StockRow: {
+            /** Format: uuid */
+            productId: string;
+            name: string;
+            /** @description Omitted when empty. */
+            brand?: string;
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Selling price in paise.
+             */
+            priceCents: number;
+            /** @description The store's quantity; 0 when it has no row. */
+            quantity: number;
+        };
+        StockList: {
+            items: components["schemas"]["StockRow"][];
+            page: number;
+            pageSize: number;
+            /** @description Every active product that matches the filters, not just this page. */
+            total: number;
+        };
+        /** @description The rows to set: 1 to 500, each product once. */
+        StockUpdate: {
+            rows: {
+                /** Format: uuid */
+                productId: string;
+                quantity: number;
+            }[];
+        };
+        /** @description A customer's cart with its totals. An empty cart has no storeId, items [] and every amount 0. */
+        Cart: {
+            /**
+             * Format: uuid
+             * @description The store the cart is at. Omitted for an empty cart.
+             */
+            storeId?: string;
+            items: components["schemas"]["CartLine"][];
+            /**
+             * Format: int64
+             * @description Sum of price times quantity over every line, at current prices.
+             */
+            subtotalCents: number;
+            /**
+             * Format: int64
+             * @description The store's delivery fee, or 0 when subtotalCents is at or above its free-delivery threshold.
+             */
+            deliveryFeeCents: number;
+            /**
+             * Format: int64
+             * @description subtotalCents plus deliveryFeeCents.
+             */
+            totalCents: number;
+            /**
+             * Format: int64
+             * @description The store's minimum order. Checkout shows a notice while subtotalCents is below it.
+             */
+            minOrderCents: number;
+            /**
+             * Format: int64
+             * @description What is missing to reach free delivery; never below 0.
+             */
+            shortfallCents: number;
+        };
+        /** @description One product in the cart and its quantity. */
+        CartLine: {
+            product: components["schemas"]["StoreProduct"];
+            quantity: number;
+        };
+        /** @description Sets the quantity of one product in the customer's cart at a store. Quantity 0 removes the line. */
+        CartItemSet: {
+            /** Format: uuid */
+            storeId: string;
+            /** Format: uuid */
+            productId: string;
+            /** @description The line's new quantity; 0 removes the line. */
+            quantity: number;
+        };
+        /** @description The cart after a line was set, with what the change did. */
+        CartUpdate: components["schemas"]["Cart"] & {
+            /** @description True when the cart was at another store and this change, a quantity above 0, emptied it and moved it to the line's store; the lines it held before are gone. */
+            replaced: boolean;
+            /** @description True when the quantity was cut to the stock the store holds. A line cut to 0 is absent from items; when it was for a store other than the cart's, the cart is unchanged and replaced is false. */
+            clamped: boolean;
+        };
         /** @description The public view of a store: what checkout shows. Open or closed. */
         Store: {
             /** Format: uuid */
@@ -806,6 +1020,43 @@ export interface components {
         };
         Serviceability: {
             store: components["schemas"]["Store"];
+        };
+        /** @description An active product as a store shows it: the product fields without isActive, plus its stock at that store. */
+        StoreProduct: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @description Omitted when empty. */
+            description?: string;
+            /** @description Omitted when empty. */
+            brand?: string;
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Maximum retail price in paise.
+             */
+            mrpCents: number;
+            /**
+             * Format: int64
+             * @description Selling price in paise.
+             */
+            priceCents: number;
+            /** Format: uuid */
+            categoryId: string;
+            /** @description Path of the product image. Omitted until one is uploaded. */
+            imageUrl?: string;
+            /** @description True when the store holds more than 0 of it. */
+            inStock: boolean;
+            /** @description The store's quantity, capped at 10 for display; 0 when it holds none. */
+            quantity: number;
+        };
+        StoreProductList: {
+            items: components["schemas"]["StoreProduct"][];
+            page: number;
+            pageSize: number;
+            /** @description Every active product that matches the filters, not just this page. */
+            total: number;
         };
         Category: {
             /** Format: uuid */
@@ -1672,6 +1923,198 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMeCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cart with its totals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "items": [
+                     *         {
+                     *           "product": {
+                     *             "id": "00000000-0000-4000-8000-000000000601",
+                     *             "name": "Banana Robusta",
+                     *             "slug": "banana-robusta",
+                     *             "unitLabel": "1 kg",
+                     *             "mrpCents": 8000,
+                     *             "priceCents": 7000,
+                     *             "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *             "inStock": true,
+                     *             "quantity": 10
+                     *           },
+                     *           "quantity": 2
+                     *         }
+                     *       ],
+                     *       "subtotalCents": 14000,
+                     *       "deliveryFeeCents": 2500,
+                     *       "totalCents": 16500,
+                     *       "minOrderCents": 9900,
+                     *       "shortfallCents": 5900
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteMeCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cart is cleared. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putMeCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "storeId": "00000000-0000-4000-8000-000000000401",
+                 *       "productId": "00000000-0000-4000-8000-000000000601",
+                 *       "quantity": 2
+                 *     }
+                 */
+                "application/json": components["schemas"]["CartItemSet"];
+            };
+        };
+        responses: {
+            /** @description The cart after the change, with replaced and clamped. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "items": [
+                     *         {
+                     *           "product": {
+                     *             "id": "00000000-0000-4000-8000-000000000601",
+                     *             "name": "Banana Robusta",
+                     *             "slug": "banana-robusta",
+                     *             "unitLabel": "1 kg",
+                     *             "mrpCents": 8000,
+                     *             "priceCents": 7000,
+                     *             "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *             "inStock": true,
+                     *             "quantity": 10
+                     *           },
+                     *           "quantity": 2
+                     *         }
+                     *       ],
+                     *       "subtotalCents": 14000,
+                     *       "deliveryFeeCents": 2500,
+                     *       "totalCents": 16500,
+                     *       "minOrderCents": 9900,
+                     *       "shortfallCents": 5900,
+                     *       "replaced": false,
+                     *       "clamped": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CartUpdate"];
+                };
+            };
+            /** @description storeId or productId is not a uuid, quantity is missing or outside 0 to 20, the store is unknown, or the product is inactive or unknown. The field names it; the cart is unchanged. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "0 to 20",
+                     *         "field": "quantity"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
                      *       }
                      *     }
                      */
@@ -2921,6 +3364,211 @@ export interface operations {
             };
         };
     };
+    getStock: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.
+                 * @example milk
+                 */
+                q?: string;
+                /**
+                 * @description true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.
+                 * @example true
+                 */
+                lowStock?: boolean;
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the store's stock. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "priceCents": 7000,
+                     *           "quantity": 17
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StockList"];
+                };
+            };
+            /** @description A q, lowStock, page or pageSize is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be true or false",
+                     *         "field": "lowStock"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "rows": [
+                 *         {
+                 *           "productId": "00000000-0000-4000-8000-000000000601",
+                 *           "quantity": 25
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["StockUpdate"];
+            };
+        };
+        responses: {
+            /** @description Every row is set. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A row is invalid, or the rows are not 1 to 500, or a product is listed twice or does not exist. The field names it; nothing changed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "product listed twice",
+                     *         "field": "rows"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getServiceability: {
         parameters: {
             query: {
@@ -3031,6 +3679,235 @@ export interface operations {
                 };
             };
             /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The store's category tree, holding only categories in stock there. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000501",
+                     *           "name": "Fruits & Vegetables",
+                     *           "slug": "fruits-vegetables",
+                     *           "sortOrder": 10,
+                     *           "children": [
+                     *             {
+                     *               "id": "00000000-0000-4000-8000-000000000521",
+                     *               "name": "Fresh Fruits",
+                     *               "slug": "fresh-fruits",
+                     *               "sortOrder": 10,
+                     *               "parentId": "00000000-0000-4000-8000-000000000501"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CategoryTree"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreProducts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.
+                 * @example banana
+                 */
+                q?: string;
+                /**
+                 * @description That category and its children.
+                 * @example 00000000-0000-4000-8000-000000000521
+                 */
+                categoryId?: string;
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the store's active products. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "slug": "banana-robusta",
+                     *           "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *           "unitLabel": "1 kg",
+                     *           "mrpCents": 6000,
+                     *           "priceCents": 5500,
+                     *           "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *           "inStock": true,
+                     *           "quantity": 10
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StoreProductList"];
+                };
+            };
+            /** @description A q or categoryId is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be at most 100 characters",
+                     *         "field": "q"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStoreProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+                /**
+                 * @description The product slug.
+                 * @example banana-robusta
+                 */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The active product with its stock at the store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000601",
+                     *       "name": "Banana Robusta",
+                     *       "slug": "banana-robusta",
+                     *       "description": "Ripe robusta bananas, sold by the kilogram.",
+                     *       "unitLabel": "1 kg",
+                     *       "mrpCents": 6000,
+                     *       "priceCents": 5500,
+                     *       "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *       "inStock": true,
+                     *       "quantity": 10
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StoreProduct"];
+                };
+            };
+            /** @description No active product has this slug at a store that exists. */
             404: {
                 headers: {
                     [name: string]: unknown;

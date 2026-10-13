@@ -10376,8 +10376,662 @@
     },
     {
       "name": "catalog",
-      "description": "Public catalog files: the product and category images, served without a token.",
+      "description": "Public catalog: a store's category tree and products, and the product and category images, served without a token.",
       "item": [
+        {
+          "name": "List a store's categories",
+          "request": {
+            "name": "List a store's categories",
+            "description": {
+              "content": "Public, no session. The category tree a store sells from: each parent with its children array, parents and children ordered by sortOrder then name. A category is listed only when it, or one of its children, has an active product with a quantity above 0 at this store. A parent is listed through a stocked child; a child is listed only when it qualifies itself, so out-of-stock children are hidden. The tree is not paged. An unknown store answers 404 not_found.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "stores",
+                ":id",
+                "categories"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The store's category tree, holding only categories in stock there.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "categories"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000501\",\n      \"name\": \"Fruits & Vegetables\",\n      \"slug\": \"fruits-vegetables\",\n      \"sortOrder\": 10,\n      \"children\": [\n        {\n          \"id\": \"00000000-0000-4000-8000-000000000521\",\n          \"name\": \"Fresh Fruits\",\n          \"slug\": \"fresh-fruits\",\n          \"sortOrder\": 10,\n          \"parentId\": \"00000000-0000-4000-8000-000000000501\"\n        }\n      ]\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "categories"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "List a store's products",
+          "request": {
+            "name": "List a store's products",
+            "description": {
+              "content": "Public, no session. The paged active products a store sells, ordered by name, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them. Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match, not just this page. An unknown store answers 404 not_found; a bad q or categoryId answers 400 naming the field.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "stores",
+                ":id",
+                "products"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                    "type": "text/plain"
+                  },
+                  "key": "q",
+                  "value": "banana"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "That category and its children.",
+                    "type": "text/plain"
+                  },
+                  "key": "categoryId",
+                  "value": "00000000-0000-4000-8000-000000000521"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Page number, from 1. Default 1.",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Items per page, from 1 to 100. Default 24.",
+                    "type": "text/plain"
+                  },
+                  "key": "pageSize",
+                  "value": "24"
+                }
+              ],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "One page of the store's active products.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "products"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "banana"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "That category and its children.",
+                        "type": "text/plain"
+                      },
+                      "key": "categoryId",
+                      "value": "00000000-0000-4000-8000-000000000521"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"slug\": \"banana-robusta\",\n      \"description\": \"Ripe robusta bananas, sold by the kilogram.\",\n      \"unitLabel\": \"1 kg\",\n      \"mrpCents\": 6000,\n      \"priceCents\": 5500,\n      \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n      \"inStock\": true,\n      \"quantity\": 10\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A q or categoryId is invalid. The field names it.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "products"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "banana"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "That category and its children.",
+                        "type": "text/plain"
+                      },
+                      "key": "categoryId",
+                      "value": "00000000-0000-4000-8000-000000000521"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be at most 100 characters\",\n    \"field\": \"q\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "products"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "banana"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "That category and its children.",
+                        "type": "text/plain"
+                      },
+                      "key": "categoryId",
+                      "value": "00000000-0000-4000-8000-000000000521"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Get one product of a store by slug",
+          "request": {
+            "name": "Get one product of a store by slug",
+            "description": {
+              "content": "Public, no session. One active product by its slug, with inStock and quantity at this store as in the list. An unknown store, a slug no product has, or an inactive product answers 404 not_found.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "stores",
+                ":id",
+                "products",
+                ":slug"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                },
+                {
+                  "type": "any",
+                  "value": "banana-robusta",
+                  "key": "slug",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The product slug.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The active product with its stock at the store.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "products",
+                    ":slug"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The product slug.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "banana-robusta",
+                      "key": "slug"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000601\",\n  \"name\": \"Banana Robusta\",\n  \"slug\": \"banana-robusta\",\n  \"description\": \"Ripe robusta bananas, sold by the kilogram.\",\n  \"unitLabel\": \"1 kg\",\n  \"mrpCents\": 6000,\n  \"priceCents\": 5500,\n  \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n  \"inStock\": true,\n  \"quantity\": 10\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No active product has this slug at a store that exists.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "stores",
+                    ":id",
+                    "products",
+                    ":slug"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The product slug.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "banana-robusta",
+                      "key": "slug"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
         {
           "name": "Read a catalog image",
           "request": {
@@ -10586,6 +11240,1304 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "stock",
+      "description": "Per-store stock: a store's product quantities for its staff and the admin stock page.",
+      "item": [
+        {
+          "name": "List a store's stock",
+          "request": {
+            "name": "List a store's stock",
+            "description": {
+              "content": "Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "stores",
+                ":id",
+                "stock"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                    "type": "text/plain"
+                  },
+                  "key": "q",
+                  "value": "milk"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                    "type": "text/plain"
+                  },
+                  "key": "lowStock",
+                  "value": "true"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Page number, from 1. Default 1.",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Items per page, from 1 to 100. Default 24.",
+                    "type": "text/plain"
+                  },
+                  "key": "pageSize",
+                  "value": "24"
+                }
+              ],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "One page of the store's stock.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "milk"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                        "type": "text/plain"
+                      },
+                      "key": "lowStock",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"priceCents\": 7000,\n      \"quantity\": 17\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A q, lowStock, page or pageSize is invalid. The field names it.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "milk"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                        "type": "text/plain"
+                      },
+                      "key": "lowStock",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be true or false\",\n    \"field\": \"lowStock\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "milk"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                        "type": "text/plain"
+                      },
+                      "key": "lowStock",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "milk"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                        "type": "text/plain"
+                      },
+                      "key": "lowStock",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Set a store's stock",
+          "request": {
+            "name": "Set a store's stock",
+            "description": {
+              "content": "Admins for any store; store staff only for their own store. Sets the quantity of each listed product at the store in one transaction, creating the row where the store has none. Takes 1 to 500 rows; each product id is a uuid, names a product that exists and appears once; each quantity is from 0 to 100000. Any invalid row refuses the whole request with 400 naming the field, and nothing changes. Answers 204 with no body; the admin page reads the list again. Another store's staff and an unknown store answer 404 not_found.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "stores",
+                ":id",
+                "stock"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{storeId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The store id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Every row is set.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "A row is invalid, or the rows are not 1 to 500, or a product is listed twice or does not exist. The field names it; nothing changed.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"product listed twice\",\n    \"field\": \"rows\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "cart",
+      "description": "The signed-in customer's one cart: its lines at one store, live totals, and setting or clearing lines.",
+      "item": [
+        {
+          "name": "Read the cart",
+          "request": {
+            "name": "Read the cart",
+            "description": {
+              "content": "The signed-in customer's cart: its store, its lines and its totals, computed now from the products' current prices. Each line's product carries its stock at the cart's store. A customer with no cart gets the empty cart: no storeId, items [] and every amount 0. The delivery fee is the store's, or 0 when the subtotal is at or above its free-delivery threshold; totalCents is the subtotal plus the fee; shortfallCents is what is missing to free delivery, never below 0. A deactivated product stays in the cart with inStock false and quantity 0. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart with its totals.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"items\": [\n    {\n      \"product\": {\n        \"id\": \"00000000-0000-4000-8000-000000000601\",\n        \"name\": \"Banana Robusta\",\n        \"slug\": \"banana-robusta\",\n        \"unitLabel\": \"1 kg\",\n        \"mrpCents\": 8000,\n        \"priceCents\": 7000,\n        \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n        \"inStock\": true,\n        \"quantity\": 10\n      },\n      \"quantity\": 2\n    }\n  ],\n  \"subtotalCents\": 14000,\n  \"deliveryFeeCents\": 2500,\n  \"totalCents\": 16500,\n  \"minOrderCents\": 9900,\n  \"shortfallCents\": 5900\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Clear the cart",
+          "request": {
+            "name": "Clear the cart",
+            "description": {
+              "content": "Deletes the signed-in customer's cart and all its lines. Answers 204 also when the customer has no cart. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart is cleared. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "DELETE",
+                "body": {}
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "DELETE",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Set one cart line",
+          "request": {
+            "name": "Set one cart line",
+            "description": {
+              "content": "Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. storeId must name an existing store whatever the quantity, and a quantity from 1 to 20 also needs productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. A quantity above 0 for a store other than the cart's empties the cart and moves it to that store, answering replaced true, unless that store holds none of the product: then the cart is left as it is and the answer is clamped true and replaced false; a quantity of 0 for another store changes nothing. A quantity above the stock the store holds is cut to that stock and answers clamped true; with no stock the line is absent. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart",
+                "items"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart after the change, with replaced and clamped.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"items\": [\n    {\n      \"product\": {\n        \"id\": \"00000000-0000-4000-8000-000000000601\",\n        \"name\": \"Banana Robusta\",\n        \"slug\": \"banana-robusta\",\n        \"unitLabel\": \"1 kg\",\n        \"mrpCents\": 8000,\n        \"priceCents\": 7000,\n        \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n        \"inStock\": true,\n        \"quantity\": 10\n      },\n      \"quantity\": 2\n    }\n  ],\n  \"subtotalCents\": 14000,\n  \"deliveryFeeCents\": 2500,\n  \"totalCents\": 16500,\n  \"minOrderCents\": 9900,\n  \"shortfallCents\": 5900,\n  \"replaced\": false,\n  \"clamped\": false\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "storeId or productId is not a uuid, quantity is missing or outside 0 to 20, the store is unknown, or the product is inactive or unknown. The field names it; the cart is unchanged.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"0 to 20\",\n    \"field\": \"quantity\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }

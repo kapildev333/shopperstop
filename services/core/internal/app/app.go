@@ -13,8 +13,10 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/blob"
+	"github.com/kapildev333/shopperstop/services/core/internal/cart"
 	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
+	"github.com/kapildev333/shopperstop/services/core/internal/stock"
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
@@ -27,6 +29,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.Get("/api/core/v1/readyz", readyz(pool))
 	r.Get("/api/core/v1/serviceability", store.Serviceability(pool))
 	r.Get("/api/core/v1/stores/{id}", store.PublicGet(pool))
+	r.Get("/api/core/v1/stores/{id}/categories", catalog.StoreCategories(pool))
+	r.Get("/api/core/v1/stores/{id}/products", catalog.StoreProducts(pool))
+	r.Get("/api/core/v1/stores/{id}/products/{slug}", catalog.StoreProductBySlug(pool))
 	r.Post("/api/core/v1/auth/register", a.Register)
 	r.Post("/api/core/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireCustomer).Post("/api/core/v1/auth/sign-out", a.SignOut)
@@ -36,6 +41,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireCustomer).Post("/api/core/v1/me/addresses", address.Create(pool))
 	r.With(a.RequireCustomer).Patch("/api/core/v1/me/addresses/{id}", address.Update(pool))
 	r.With(a.RequireCustomer).Delete("/api/core/v1/me/addresses/{id}", address.Delete(pool))
+	r.With(a.RequireCustomer).Get("/api/core/v1/me/cart", cart.Get(pool))
+	r.With(a.RequireCustomer).Put("/api/core/v1/me/cart/items", cart.PutItem(pool))
+	r.With(a.RequireCustomer).Delete("/api/core/v1/me/cart", cart.Delete(pool))
 	r.Post("/api/core/v1/admin/auth/sign-in", a.StaffSignIn)
 	r.With(a.RequireStaff).Post("/api/core/v1/admin/auth/sign-out", a.StaffSignOut)
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/me", a.StaffMe)
@@ -62,6 +70,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireAdmin).Delete("/api/core/v1/admin/stores/{id}", store.Delete(pool))
 	r.With(a.RequireAdmin).Get("/api/core/v1/admin/stores/{id}/service-areas", store.ServiceAreas(pool))
 	r.With(a.RequireAdmin).Put("/api/core/v1/admin/stores/{id}/service-areas", store.ReplaceServiceAreas(pool))
+	r.With(a.RequireStaff).Get("/api/core/v1/admin/stores/{id}/stock", stock.List(pool))
+	r.With(a.RequireStaff).Put("/api/core/v1/admin/stores/{id}/stock", stock.Put(pool))
 	return r
 }
 

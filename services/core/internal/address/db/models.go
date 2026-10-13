@@ -112,6 +112,23 @@ type Address struct {
 	UpdatedAt  pgtype.Timestamptz
 }
 
+type Cart struct {
+	ID         string
+	CustomerID string
+	StoreID    string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type CartItem struct {
+	ID        string
+	CartID    string
+	ProductID string
+	Quantity  int32
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type Category struct {
 	ID        string
 	Name      string
@@ -190,6 +207,15 @@ type StoreServiceArea struct {
 	ID        string
 	StoreID   string
 	Pincode   string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type StoreStock struct {
+	ID        string
+	StoreID   string
+	ProductID string
+	Quantity  int32
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 }
