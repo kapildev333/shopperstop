@@ -147,3 +147,22 @@ Confirming the store change SHALL empty the guest cart, or send `DELETE /me/cart
 #### Scenario: Emptying the server cart fails
 - **WHEN** a signed-in customer's cart at Koramangala holds a line, `560038` is saved, and "Empty cart and change" is chosen while core cannot be reached
 - **THEN** the dialog stays open with an alert "Could not empty your cart." and the stored pincode is still `560034`
+
+### Requirement: Customer cart replaced notice
+When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or in the merge at sign-in, the cart drawer and the cart bar SHALL show, until the next cart change or reload, a `StatusMessage` (role `status`) reading "Your cart from <store> was replaced. A cart holds products from one store.", where <store> is the name `GET /stores/{id}` answers for the store the cart was at, or "another store" while that store or its name is not known.
+
+#### Scenario: Replaced notice names the old store
+- **WHEN** a token is held, Indiranagar is resolved, the last `PUT /me/cart/items` answered a cart of one line at Indiranagar with `replaced: true`, the cart was at Koramangala before, and `/` renders with the drawer open
+- **THEN** the cart bar and the drawer each show a status "Your cart from Koramangala was replaced. A cart holds products from one store."
+
+#### Scenario: Replaced notice without the old store
+- **WHEN** the same answer is shown while the store the cart was at is not known; and separately an answer with `replaced: false` is shown
+- **THEN** the bar and the drawer show "Your cart from another store was replaced. A cart holds products from one store." the first time, and no "was replaced" text the second
+
+#### Scenario: Replaced notice against core
+- **WHEN** a signed-in customer whose cart holds a product at Koramangala opens `/` on a 390 px wide screen with `560038` chosen, and chooses "Add" on a product card
+- **THEN** the bar reads "1 item" and shows "Your cart from Koramangala was replaced. A cart holds products from one store.", the drawer shows it too after "View cart", `GET /me/cart` answers one line at Indiranagar, and axe reports no violations with the notice shown
+
+#### Scenario: Merge replaces another store's cart
+- **WHEN** a customer whose cart holds a product at Koramangala adds a product as a guest with `560038` chosen and signs in on `/sign-in`
+- **THEN** the cart drawer holds only the guest's product and shows "Your cart from Koramangala was replaced. A cart holds products from one store."
