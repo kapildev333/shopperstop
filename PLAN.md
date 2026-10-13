@@ -48,10 +48,10 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
 | platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | Phase 1 done; backlog chores #97; orchestrator session (D9) |
-| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | manager session running since 2026-10-13; Phase 2 L1 #63, L2 #76, L3 #87 merged; core-P2-L4 (stock, cart, browsing routes) building; L5 proposed |
+| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | manager session running since 2026-10-13; Phase 2 L1 #63, L2 #76, L3 #87, L4 #106 merged; core-P2-L5 `core-orders` next, then L6 |
 | ui | `packages/ui/` | platform (`package.json` workspaces) | no session; ui-P2-L1 #82 merged; ui-P2-L2 `ImageTile` requested by admin (in `.claude/areas/ui.md`) |
-| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13 (D21 ended); web-P2-L2 #68 merged; web-P2-L1 and web-P2-L3 at task 1, waiting on core-P2-L4 |
-| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13; admin-P2-L1 #71, L2 #91 merged; admin-P2-L3 `admin-catalog` workers running; L4 waits on core-P2-L4 |
+| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13 (D21 ended); web-P2-L2 #68 merged; web-P2-L1 and web-P2-L3 at task 1, unblocked by #106 |
+| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13; admin-P2-L1 #71, L2 #91 merged; admin-P2-L3 `admin-catalog` at its review follow-ups and e2e; L4 `admin-stock` unblocked by #106 |
 
 ## Phase 1 - Foundation and design system (closed 2026-10-12, tag v0.1.0)
 | Area | Plan tasks | Status |
@@ -68,6 +68,7 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 
 ## Backlog
 - Figma (next MCP call budget): Orders board column badges show counts; IconButton icons; TabNav component note "scrolls horizontally, never wraps" (ui-P2-L1, #82); Code Connect.
+- The `public` schema of `shopperstop_core_test` holds leftover tables and types up to 0003 with no `schema_migrations`, so a plain `core-admin migrate` there fails; the suites use their own schemas and are unaffected. Reset it when no suite is running (citext lives in `public`).
 - Running `make db` from a second checkout (different compose file path) recreates `shopperstop-postgres-1`; the data volume persists. Use one checkout for `make db`.
 
 ## Blockers needing the owner
@@ -105,3 +106,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-13: core and admin managers resumed in their own sessions (each `/loop 5min /orchestrate manage <area>`, acting as manager only): core-P2-L4 at task 5 of 6, admin-catalog seen under D13 with workers running (#99). Admin's `ImageTile` request relayed to `.claude/areas/ui.md` (ui-P2-L2, no ui session confirmed yet); admin and web carry an app-level copy until it lands. A third session started and rebased the web lane worktrees; asked which area it manages.
 - 2026-10-13: the third session is the web manager (`/loop 5min /orchestrate manage web`); D21 ended, it owns web-P2-L1 and web-P2-L3 (rebased on d2d48a6, `make test-web` green by its report) and waits on core-P2-L4. Its one pull in the root checkout was acknowledged and will not recur. The orchestrator messages web and admin when core-P2-L4 merges.
 - 2026-10-13: admin's `make e2e` failed on main (#104): `shopperstop_core_e2e` carried core-P2-L4's unmerged `0005_stock_cart`. Orchestrator reset the e2e schema with a pgx client and ran main's `migrate` and `seed-demo --reset` twice, exit 0; D26. The dev database also carries 0005, left until L4 merges. admin-catalog tasks 1 to 5 reviewed (#103); its e2e slot is unblocked.
+- 2026-10-13: core-P2-L4 merged (#106): stock, cart, the three customer browsing routes, staff stock routes, migration 0005, demo stock for both stores. Orchestrator confirmed the routes in `openapi.json` and `core.d.ts` on main and messaged web (browsing and cart tasks unblocked, cart rules) and admin (`admin-stock` unblocked). Core verifies unmerged migrations on the test database (D26) and moves to core-P2-L5.
