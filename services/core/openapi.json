@@ -42,6 +42,10 @@
     {
       "name": "stock",
       "description": "Per-store stock: a store's product quantities for its staff and the admin stock page."
+    },
+    {
+      "name": "cart",
+      "description": "The signed-in customer's one cart: its lines at one store, live totals, and setting or clearing lines."
     }
   ],
   "paths": {
@@ -817,6 +821,208 @@
                   "error": {
                     "code": "not_found",
                     "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/cart": {
+      "get": {
+        "operationId": "getMeCart",
+        "summary": "Read the cart",
+        "description": "The signed-in customer's cart: its store, its lines and its totals, computed now from the products' current prices. Each line's product carries its stock at the cart's store. A customer with no cart gets the empty cart: no storeId, items [] and every amount 0. The delivery fee is the store's, or 0 when the subtotal is at or above its free-delivery threshold; totalCents is the subtotal plus the fee; shortfallCents is what is missing to free delivery, never below 0. A deactivated product stays in the cart with inStock false and quantity 0. A missing token, an unknown token or a staff token answers 401.",
+        "tags": [
+          "cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cart with its totals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                },
+                "example": {
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "items": [
+                    {
+                      "product": {
+                        "id": "00000000-0000-4000-8000-000000000601",
+                        "name": "Banana Robusta",
+                        "slug": "banana-robusta",
+                        "unitLabel": "1 kg",
+                        "mrpCents": 8000,
+                        "priceCents": 7000,
+                        "categoryId": "00000000-0000-4000-8000-000000000521",
+                        "inStock": true,
+                        "quantity": 10
+                      },
+                      "quantity": 2
+                    }
+                  ],
+                  "subtotalCents": 14000,
+                  "deliveryFeeCents": 2500,
+                  "totalCents": 16500,
+                  "minOrderCents": 9900,
+                  "shortfallCents": 5900
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMeCart",
+        "summary": "Clear the cart",
+        "description": "Deletes the signed-in customer's cart and all its lines. Answers 204 also when the customer has no cart. A missing token, an unknown token or a staff token answers 401.",
+        "tags": [
+          "cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The cart is cleared. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/cart/items": {
+      "put": {
+        "operationId": "putMeCartItem",
+        "summary": "Set one cart line",
+        "description": "Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. A quantity from 1 to 20 needs storeId to name an existing store and productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.",
+        "tags": [
+          "cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartItemSet"
+              },
+              "example": {
+                "storeId": "00000000-0000-4000-8000-000000000401",
+                "productId": "00000000-0000-4000-8000-000000000601",
+                "quantity": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The cart after the change, with replaced and clamped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartUpdate"
+                },
+                "example": {
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "items": [
+                    {
+                      "product": {
+                        "id": "00000000-0000-4000-8000-000000000601",
+                        "name": "Banana Robusta",
+                        "slug": "banana-robusta",
+                        "unitLabel": "1 kg",
+                        "mrpCents": 8000,
+                        "priceCents": 7000,
+                        "categoryId": "00000000-0000-4000-8000-000000000521",
+                        "inStock": true,
+                        "quantity": 10
+                      },
+                      "quantity": 2
+                    }
+                  ],
+                  "subtotalCents": 14000,
+                  "deliveryFeeCents": 2500,
+                  "totalCents": 16500,
+                  "minOrderCents": 9900,
+                  "shortfallCents": 5900,
+                  "replaced": false,
+                  "clamped": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "storeId or productId is not a uuid, quantity is missing or outside 0 to 20, the store is unknown, or the product is inactive or unknown. The field names it; the cart is unchanged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "0 to 20",
+                    "field": "quantity"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
                   }
                 }
               }
@@ -4971,6 +5177,129 @@
             }
           }
         }
+      },
+      "Cart": {
+        "type": "object",
+        "description": "A customer's cart with its totals. An empty cart has no storeId, items [] and every amount 0.",
+        "required": [
+          "items",
+          "subtotalCents",
+          "deliveryFeeCents",
+          "totalCents",
+          "minOrderCents",
+          "shortfallCents"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The store the cart is at. Omitted for an empty cart."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartLine"
+            }
+          },
+          "subtotalCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Sum of price times quantity over every line, at current prices."
+          },
+          "deliveryFeeCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "The store's delivery fee, or 0 when subtotalCents is at or above its free-delivery threshold."
+          },
+          "totalCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "subtotalCents plus deliveryFeeCents."
+          },
+          "minOrderCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "The store's minimum order. Checkout shows a notice while subtotalCents is below it."
+          },
+          "shortfallCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "What is missing to reach free delivery; never below 0."
+          }
+        }
+      },
+      "CartLine": {
+        "type": "object",
+        "description": "One product in the cart and its quantity.",
+        "required": [
+          "product",
+          "quantity"
+        ],
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/StoreProduct"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "CartItemSet": {
+        "type": "object",
+        "description": "Sets the quantity of one product in the customer's cart at a store. Quantity 0 removes the line.",
+        "required": [
+          "storeId",
+          "productId",
+          "quantity"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "The line's new quantity; 0 removes the line."
+          }
+        }
+      },
+      "CartUpdate": {
+        "description": "The cart after a line was set, with what the change did.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Cart"
+          },
+          {
+            "type": "object",
+            "required": [
+              "replaced",
+              "clamped"
+            ],
+            "properties": {
+              "replaced": {
+                "type": "boolean",
+                "description": "True when the cart moved to the line's store, emptied first, because it was at another store."
+              },
+              "clamped": {
+                "type": "boolean",
+                "description": "True when the quantity was cut to the stock the store holds."
+              }
+            }
+          }
+        ]
       },
       "Store": {
         "type": "object",

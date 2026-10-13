@@ -176,6 +176,50 @@ export interface paths {
         patch: operations["patchMeAddress"];
         trace?: never;
     };
+    "/me/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the cart
+         * @description The signed-in customer's cart: its store, its lines and its totals, computed now from the products' current prices. Each line's product carries its stock at the cart's store. A customer with no cart gets the empty cart: no storeId, items [] and every amount 0. The delivery fee is the store's, or 0 when the subtotal is at or above its free-delivery threshold; totalCents is the subtotal plus the fee; shortfallCents is what is missing to free delivery, never below 0. A deactivated product stays in the cart with inStock false and quantity 0. A missing token, an unknown token or a staff token answers 401.
+         */
+        get: operations["getMeCart"];
+        put?: never;
+        post?: never;
+        /**
+         * Clear the cart
+         * @description Deletes the signed-in customer's cart and all its lines. Answers 204 also when the customer has no cart. A missing token, an unknown token or a staff token answers 401.
+         */
+        delete: operations["deleteMeCart"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set one cart line
+         * @description Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. A quantity from 1 to 20 needs storeId to name an existing store and productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.
+         */
+        put: operations["putMeCartItem"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/auth/sign-in": {
         parameters: {
             query?: never;
@@ -893,6 +937,61 @@ export interface components {
                 productId: string;
                 quantity: number;
             }[];
+        };
+        /** @description A customer's cart with its totals. An empty cart has no storeId, items [] and every amount 0. */
+        Cart: {
+            /**
+             * Format: uuid
+             * @description The store the cart is at. Omitted for an empty cart.
+             */
+            storeId?: string;
+            items: components["schemas"]["CartLine"][];
+            /**
+             * Format: int64
+             * @description Sum of price times quantity over every line, at current prices.
+             */
+            subtotalCents: number;
+            /**
+             * Format: int64
+             * @description The store's delivery fee, or 0 when subtotalCents is at or above its free-delivery threshold.
+             */
+            deliveryFeeCents: number;
+            /**
+             * Format: int64
+             * @description subtotalCents plus deliveryFeeCents.
+             */
+            totalCents: number;
+            /**
+             * Format: int64
+             * @description The store's minimum order. Checkout shows a notice while subtotalCents is below it.
+             */
+            minOrderCents: number;
+            /**
+             * Format: int64
+             * @description What is missing to reach free delivery; never below 0.
+             */
+            shortfallCents: number;
+        };
+        /** @description One product in the cart and its quantity. */
+        CartLine: {
+            product: components["schemas"]["StoreProduct"];
+            quantity: number;
+        };
+        /** @description Sets the quantity of one product in the customer's cart at a store. Quantity 0 removes the line. */
+        CartItemSet: {
+            /** Format: uuid */
+            storeId: string;
+            /** Format: uuid */
+            productId: string;
+            /** @description The line's new quantity; 0 removes the line. */
+            quantity: number;
+        };
+        /** @description The cart after a line was set, with what the change did. */
+        CartUpdate: components["schemas"]["Cart"] & {
+            /** @description True when the cart moved to the line's store, emptied first, because it was at another store. */
+            replaced: boolean;
+            /** @description True when the quantity was cut to the stock the store holds. */
+            clamped: boolean;
         };
         /** @description The public view of a store: what checkout shows. Open or closed. */
         Store: {
@@ -1824,6 +1923,198 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMeCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cart with its totals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "items": [
+                     *         {
+                     *           "product": {
+                     *             "id": "00000000-0000-4000-8000-000000000601",
+                     *             "name": "Banana Robusta",
+                     *             "slug": "banana-robusta",
+                     *             "unitLabel": "1 kg",
+                     *             "mrpCents": 8000,
+                     *             "priceCents": 7000,
+                     *             "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *             "inStock": true,
+                     *             "quantity": 10
+                     *           },
+                     *           "quantity": 2
+                     *         }
+                     *       ],
+                     *       "subtotalCents": 14000,
+                     *       "deliveryFeeCents": 2500,
+                     *       "totalCents": 16500,
+                     *       "minOrderCents": 9900,
+                     *       "shortfallCents": 5900
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteMeCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cart is cleared. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putMeCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "storeId": "00000000-0000-4000-8000-000000000401",
+                 *       "productId": "00000000-0000-4000-8000-000000000601",
+                 *       "quantity": 2
+                 *     }
+                 */
+                "application/json": components["schemas"]["CartItemSet"];
+            };
+        };
+        responses: {
+            /** @description The cart after the change, with replaced and clamped. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "items": [
+                     *         {
+                     *           "product": {
+                     *             "id": "00000000-0000-4000-8000-000000000601",
+                     *             "name": "Banana Robusta",
+                     *             "slug": "banana-robusta",
+                     *             "unitLabel": "1 kg",
+                     *             "mrpCents": 8000,
+                     *             "priceCents": 7000,
+                     *             "categoryId": "00000000-0000-4000-8000-000000000521",
+                     *             "inStock": true,
+                     *             "quantity": 10
+                     *           },
+                     *           "quantity": 2
+                     *         }
+                     *       ],
+                     *       "subtotalCents": 14000,
+                     *       "deliveryFeeCents": 2500,
+                     *       "totalCents": 16500,
+                     *       "minOrderCents": 9900,
+                     *       "shortfallCents": 5900,
+                     *       "replaced": false,
+                     *       "clamped": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["CartUpdate"];
+                };
+            };
+            /** @description storeId or productId is not a uuid, quantity is missing or outside 0 to 20, the store is unknown, or the product is inactive or unknown. The field names it; the cart is unchanged. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "0 to 20",
+                     *         "field": "quantity"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
                      *       }
                      *     }
                      */

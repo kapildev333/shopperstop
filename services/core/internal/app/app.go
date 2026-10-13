@@ -13,6 +13,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/address"
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/blob"
+	"github.com/kapildev333/shopperstop/services/core/internal/cart"
 	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/stock"
@@ -40,6 +41,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireCustomer).Post("/api/core/v1/me/addresses", address.Create(pool))
 	r.With(a.RequireCustomer).Patch("/api/core/v1/me/addresses/{id}", address.Update(pool))
 	r.With(a.RequireCustomer).Delete("/api/core/v1/me/addresses/{id}", address.Delete(pool))
+	r.With(a.RequireCustomer).Get("/api/core/v1/me/cart", cart.Get(pool))
+	r.With(a.RequireCustomer).Put("/api/core/v1/me/cart/items", cart.PutItem(pool))
+	r.With(a.RequireCustomer).Delete("/api/core/v1/me/cart", cart.Delete(pool))
 	r.Post("/api/core/v1/admin/auth/sign-in", a.StaffSignIn)
 	r.With(a.RequireStaff).Post("/api/core/v1/admin/auth/sign-out", a.StaffSignOut)
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/me", a.StaffMe)

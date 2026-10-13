@@ -12060,6 +12060,494 @@
           }
         }
       ]
+    },
+    {
+      "name": "cart",
+      "description": "The signed-in customer's one cart: its lines at one store, live totals, and setting or clearing lines.",
+      "item": [
+        {
+          "name": "Read the cart",
+          "request": {
+            "name": "Read the cart",
+            "description": {
+              "content": "The signed-in customer's cart: its store, its lines and its totals, computed now from the products' current prices. Each line's product carries its stock at the cart's store. A customer with no cart gets the empty cart: no storeId, items [] and every amount 0. The delivery fee is the store's, or 0 when the subtotal is at or above its free-delivery threshold; totalCents is the subtotal plus the fee; shortfallCents is what is missing to free delivery, never below 0. A deactivated product stays in the cart with inStock false and quantity 0. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart with its totals.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"items\": [\n    {\n      \"product\": {\n        \"id\": \"00000000-0000-4000-8000-000000000601\",\n        \"name\": \"Banana Robusta\",\n        \"slug\": \"banana-robusta\",\n        \"unitLabel\": \"1 kg\",\n        \"mrpCents\": 8000,\n        \"priceCents\": 7000,\n        \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n        \"inStock\": true,\n        \"quantity\": 10\n      },\n      \"quantity\": 2\n    }\n  ],\n  \"subtotalCents\": 14000,\n  \"deliveryFeeCents\": 2500,\n  \"totalCents\": 16500,\n  \"minOrderCents\": 9900,\n  \"shortfallCents\": 5900\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Clear the cart",
+          "request": {
+            "name": "Clear the cart",
+            "description": {
+              "content": "Deletes the signed-in customer's cart and all its lines. Answers 204 also when the customer has no cart. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart is cleared. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "DELETE",
+                "body": {}
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "DELETE",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Set one cart line",
+          "request": {
+            "name": "Set one cart line",
+            "description": {
+              "content": "Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. A quantity from 1 to 20 needs storeId to name an existing store and productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "cart",
+                "items"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The cart after the change, with replaced and clamped.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"items\": [\n    {\n      \"product\": {\n        \"id\": \"00000000-0000-4000-8000-000000000601\",\n        \"name\": \"Banana Robusta\",\n        \"slug\": \"banana-robusta\",\n        \"unitLabel\": \"1 kg\",\n        \"mrpCents\": 8000,\n        \"priceCents\": 7000,\n        \"categoryId\": \"00000000-0000-4000-8000-000000000521\",\n        \"inStock\": true,\n        \"quantity\": 10\n      },\n      \"quantity\": 2\n    }\n  ],\n  \"subtotalCents\": 14000,\n  \"deliveryFeeCents\": 2500,\n  \"totalCents\": 16500,\n  \"minOrderCents\": 9900,\n  \"shortfallCents\": 5900,\n  \"replaced\": false,\n  \"clamped\": false\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "storeId or productId is not a uuid, quantity is missing or outside 0 to 20, the store is unknown, or the product is inactive or unknown. The field names it; the cart is unchanged.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"0 to 20\",\n    \"field\": \"quantity\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "cart",
+                    "items"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"productId\": \"00000000-0000-4000-8000-000000000601\",\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
     }
   ],
   "event": [],
