@@ -1,15 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
 
 export type Store = components['schemas']['Store']
 export type StoreProduct = components['schemas']['StoreProduct']
+export type StoreProductList = components['schemas']['StoreProductList']
+export type Category = components['schemas']['Category']
 export type CategoryNode = components['schemas']['CategoryNode']
 
 export const keys = {
   serviceability: (pincode: string) => ['serviceability', pincode] as const,
   categories: (storeId: string) => ['categories', storeId] as const,
   picked: (storeId: string) => ['picked', storeId] as const,
+  feed: (storeId: string, filter: { categoryId?: string; q?: string }) => ['feed', storeId, filter] as const,
 }
 // ponytail: a resolved store, category tree or first page is trusted for a minute, so moving between pages does not ask core again.
 const staleTime = 60_000
@@ -68,4 +71,33 @@ export function usePicked(storeId: string) {
     },
     select: inStockPicks,
   })
+}
+
+export const feedPageSize = 24
+
+// Pages of 24; the next page exists while page × pageSize is below total.
+export function useProductFeed(storeId: string, filter: { categoryId?: string; q?: string }) {
+  return useInfiniteQuery({
+    queryKey: keys.feed(storeId, filter),
+    staleTime,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<StoreProductList> => {
+      const { data, error } = await api.GET('/stores/{id}/products', {
+        params: { path: { id: storeId }, query: { ...filter, page: pageParam, pageSize: feedPageSize } },
+      })
+      if (error) throw error
+      return data
+    },
+    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
+  })
+}
+
+// The parent of a slug, and the selected node: the parent itself, or one of its children.
+export function findCategory(tree: CategoryNode[], slug: string): { parent: CategoryNode; selected: Category } | undefined {
+  for (const parent of tree) {
+    if (parent.slug === slug) return { parent, selected: parent }
+    const child = parent.children.find((node) => node.slug === slug)
+    if (child) return { parent, selected: child }
+  }
+  return undefined
 }

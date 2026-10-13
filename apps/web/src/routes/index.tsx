@@ -24,11 +24,6 @@ function HomeContent({ storeId }: { storeId: string }) {
   )
 }
 
-// ponytail: cast until task 3 adds /c/$slug
-function categoryPath(slug: string) {
-  return `/c/${slug}` as '/'
-}
-
 function Categories({ storeId }: { storeId: string }) {
   const { data, error, refetch } = useCategories(storeId)
   if (error) return <ErrorBanner message="Could not load categories." onRetry={() => refetch()} />
@@ -39,7 +34,7 @@ function Categories({ storeId }: { storeId: string }) {
         <ul className="flex w-max gap-2">
           {data.map((parent) => (
             <li key={parent.id}>
-              <Link to={categoryPath(parent.slug)} className={buttonClass({ variant: 'secondary' })}>
+              <Link to="/c/$slug" params={{ slug: parent.slug }} className={buttonClass({ variant: 'secondary' })}>
                 {parent.name}
               </Link>
             </li>
@@ -53,7 +48,7 @@ function Categories({ storeId }: { storeId: string }) {
         <ul className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-12">
           {data.map((parent) => (
             <li key={parent.id}>
-              <Link to={categoryPath(parent.slug)} className="flex flex-col items-center gap-2">
+              <Link to="/c/$slug" params={{ slug: parent.slug }} className="flex flex-col items-center gap-2">
                 <ImageTile src={parent.imageUrl} />
                 <span className="text-center text-small text-ink">{parent.name}</span>
               </Link>
