@@ -86,13 +86,24 @@ func view(ctx context.Context, d db.DBTX, customerID string) (Cart, error) {
 	return out, nil
 }
 
-// set sets productID's line in the customer's cart to quantity, in tx. A
-// quantity above 0 creates the cart at storeID when there is none. A cart at
-// another store is emptied and moved to storeID when quantity is above 0 (replaced);
-// with quantity 0 it is left alone. A quantity above 0 is clamped to the stock at
-// storeID (clamped); a line clamped to 0 is absent. A quantity of 0 removes the line,
-// and the cart is deleted when its last line goes.
+// set sets productID's line in the customer's cart to quantity, in tx. The stock
+// at storeID is read first: a quantity above 0 is clamped to it (clamped), and a
+// line clamped to 0 is handled as a quantity of 0. A quantity above 0 creates the
+// cart at storeID when there is none. A cart at another store is emptied and moved
+// to storeID when the quantity is still above 0 (replaced); with a quantity of 0,
+// or a line clamped to 0, it is left alone, so a line another store holds none of
+// keeps the cart. A quantity of 0 removes the line, and the cart is deleted when
+// its last line goes.
 func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, quantity int32) (replaced, clamped bool, err error) {
+	if quantity > 0 {
+		available, err := stock.Quantity(ctx, tx, storeID, productID)
+		if err != nil {
+			return false, false, err
+		}
+		if quantity > available {
+			quantity, clamped = available, true
+		}
+	}
 	q := db.New(tx)
 	if quantity > 0 {
 		if err := q.EnsureCart(ctx, db.EnsureCartParams{CustomerID: customerID, StoreID: storeID}); err != nil {
@@ -108,14 +119,14 @@ func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, 
 		c, err = q.LockCart(ctx, customerID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, false, nil // quantity 0 and no cart: nothing to remove
+		return false, clamped, nil // quantity 0 and no cart: nothing to remove
 	}
 	if err != nil {
 		return false, false, err
 	}
 	if c.StoreID != storeID {
 		if quantity == 0 {
-			return false, false, nil // removing from another store's cart changes nothing
+			return false, clamped, nil // removing from another store's cart changes nothing
 		}
 		if err := q.ClearCart(ctx, c.ID); err != nil {
 			return false, false, err
@@ -124,15 +135,6 @@ func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, 
 			return false, false, err
 		}
 		replaced = true
-	}
-	if quantity > 0 {
-		available, err := stock.Quantity(ctx, tx, storeID, productID)
-		if err != nil {
-			return false, false, err
-		}
-		if quantity > available {
-			quantity, clamped = available, true
-		}
 	}
 	if quantity == 0 {
 		err = q.DeleteCartItem(ctx, db.DeleteCartItemParams{CartID: c.ID, ProductID: productID})
