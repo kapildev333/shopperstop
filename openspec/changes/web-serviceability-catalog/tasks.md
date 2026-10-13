@@ -28,7 +28,7 @@ Scope: `apps/web/src/catalog.ts` (`feedPageSize`, `useProductFeed`, `findCategor
 Scenarios: Customer category page › "Category tabs", "Unknown category", "Browse a category against core"; Customer paged product lists › "Load more while pages remain"; Customer search › "No results suggests categories", "Search and load more against core".
 Failing tests: `src/category.test.tsx` › "category tabs", "unknown category", "load more while pages remain"; `src/search.test.tsx` › "no results suggests categories"; `e2e/browse.spec.ts` › "browse a category against core", "search and load more against core".
 
-- [ ] 3.1 Tests committed red (`test: category tabs, paging and search`)
+- [x] 3.1 Tests committed red (`test: category tabs, paging and search`)
 - [ ] 3.2 `useProductFeed`, `findCategory`, `product-feed.tsx`, `/c/$slug`, `/search` (`feat: category and search pages`); all gates green, e2e green; remove the `/c/$slug` Link cast in `routes/index.tsx`
 
 ## 4. Product page

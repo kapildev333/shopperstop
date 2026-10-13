@@ -22,3 +22,9 @@ test('add shows the count', async () => {
   const group = screen.getByRole('group', { name: 'Quantity of Amul Taaza' })
   expect(within(group).getByText('1')).toBeInTheDocument()
 })
+
+test('out of stock card', async () => {
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza', inStock: false, quantity: 0 })} />)
+  expect(await screen.findByRole('button', { name: 'Out of stock' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: 'Add Amul Taaza' })).not.toBeInTheDocument()
+})
