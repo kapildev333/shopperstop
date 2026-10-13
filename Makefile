@@ -32,7 +32,7 @@ core:
 	else echo "core: services/core absent, skipping"; fi
 
 ui:
-	@if test -d packages/ui; then npm run build --workspace packages/ui; \
+	@if test -d packages/ui; then test -d node_modules || npm ci; npm run build --workspace packages/ui; \
 	else echo "ui: packages/ui absent, skipping"; fi
 
 web: ui

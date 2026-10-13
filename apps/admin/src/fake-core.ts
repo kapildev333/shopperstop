@@ -1,5 +1,8 @@
 import { vi } from 'vitest'
+import type { components } from '@shopperstop/ui/api'
 import type { Staff } from './api'
+
+type AdminStore = components['schemas']['AdminStore']
 
 type Handler = (request: Request) => Response | Promise<Response>
 
@@ -24,4 +27,29 @@ export function fakeCore(routes: Record<string, Handler>) {
     return handler ? handler(request) : apiError(404, 'not_found')
   })
   return calls
+}
+
+export const koramangala: AdminStore = {
+  id: '00000000-0000-4000-8000-000000000401',
+  name: 'Koramangala',
+  addressLine: '80 Feet Rd, Koramangala',
+  pincode: '560034',
+  isOpen: true,
+  deliveryFeeCents: 2500,
+  freeDeliveryAboveCents: 19900,
+  minOrderCents: 9900,
+  promisedMinutes: 10,
+}
+export const indiranagar: AdminStore = {
+  ...koramangala,
+  id: '00000000-0000-4000-8000-000000000402',
+  name: 'Indiranagar',
+  addressLine: '100 Feet Rd, Indiranagar',
+  pincode: '560038',
+  isOpen: false,
+  promisedMinutes: 12,
+}
+
+export function storeList(items: AdminStore[]) {
+  return json(200, { items, page: 1, pageSize: 100, total: items.length })
 }
