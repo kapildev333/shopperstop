@@ -10,6 +10,7 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/core/internal/cart/db"
 	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
+	"github.com/kapildev333/shopperstop/services/core/internal/stock"
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
@@ -86,23 +87,45 @@ func view(ctx context.Context, d db.DBTX, customerID string) (Cart, error) {
 }
 
 // set sets productID's line in the customer's cart to quantity, in tx. A
-// quantity of 0 removes the line, and the cart is deleted when its last line
-// goes; a quantity above 0 creates the cart at storeID when there is none.
-// Store replacement and clamping to stock are not here yet (task 6): a line
-// for another store is set in the cart that exists.
-func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, quantity int32) error {
+// quantity above 0 creates the cart at storeID when there is none. A cart at
+// another store is emptied and moved to storeID when quantity is above 0 (replaced);
+// with quantity 0 it is left alone. A quantity above 0 is clamped to the stock at
+// storeID (clamped); a line clamped to 0 is absent. A quantity of 0 removes the line,
+// and the cart is deleted when its last line goes.
+func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, quantity int32) (replaced, clamped bool, err error) {
 	q := db.New(tx)
 	if quantity > 0 {
 		if err := q.EnsureCart(ctx, db.EnsureCartParams{CustomerID: customerID, StoreID: storeID}); err != nil {
-			return err
+			return false, false, err
 		}
 	}
 	c, err := q.LockCart(ctx, customerID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil // quantity 0 and no cart: nothing to remove
+		return false, false, nil // quantity 0 and no cart: nothing to remove
 	}
 	if err != nil {
-		return err
+		return false, false, err
+	}
+	if c.StoreID != storeID {
+		if quantity == 0 {
+			return false, false, nil // removing from another store's cart changes nothing
+		}
+		if err := q.ClearCart(ctx, c.ID); err != nil {
+			return false, false, err
+		}
+		if err := q.MoveCart(ctx, db.MoveCartParams{ID: c.ID, StoreID: storeID}); err != nil {
+			return false, false, err
+		}
+		replaced = true
+	}
+	if quantity > 0 {
+		available, err := stock.Quantity(ctx, tx, storeID, productID)
+		if err != nil {
+			return false, false, err
+		}
+		if quantity > available {
+			quantity, clamped = available, true
+		}
 	}
 	if quantity == 0 {
 		err = q.DeleteCartItem(ctx, db.DeleteCartItemParams{CartID: c.ID, ProductID: productID})
@@ -110,9 +133,34 @@ func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, 
 		err = q.SetCartItem(ctx, db.SetCartItemParams{CartID: c.ID, ProductID: productID, Quantity: quantity})
 	}
 	if err != nil {
-		return err
+		return false, false, err
 	}
-	return q.DeleteEmptyCart(ctx, c.ID)
+	if err := q.DeleteEmptyCart(ctx, c.ID); err != nil {
+		return false, false, err
+	}
+	return replaced, clamped, nil
+}
+
+// Lines locks the customer's cart inside tx, for placing an order, and answers
+// its store and its lines in insertion order. No cart answers "", nil, nil.
+func Lines(ctx context.Context, tx pgx.Tx, customerID string) (storeID string, lines []stock.Line, err error) {
+	q := db.New(tx)
+	c, err := q.LockCart(ctx, customerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil, nil
+	}
+	if err != nil {
+		return "", nil, err
+	}
+	items, err := q.CartItems(ctx, c.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	lines = make([]stock.Line, len(items))
+	for i, it := range items {
+		lines[i] = stock.Line{ProductID: it.ProductID, Quantity: it.Quantity}
+	}
+	return c.StoreID, lines, nil
 }
 
 // Clear deletes the customer's cart and its lines. No cart is not an error.

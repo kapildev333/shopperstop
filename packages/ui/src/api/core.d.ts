@@ -210,7 +210,7 @@ export interface paths {
         get?: never;
         /**
          * Set one cart line
-         * @description Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. A quantity from 1 to 20 needs storeId to name an existing store and productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.
+         * @description Sets the quantity of one product in the signed-in customer's cart to exactly quantity, creating the cart and the line when absent; it is not added to. A quantity of 0 removes the line, and the cart is deleted when its last line goes. storeId must name an existing store whatever the quantity, and a quantity from 1 to 20 also needs productId to name an active product. Each field is checked in turn, and the first refused field answers 400 naming it, with the cart unchanged. A quantity above 0 for a store other than the cart's empties the cart and moves it to that store, answering replaced true; a quantity of 0 for another store changes nothing. A quantity above the stock the store holds is cut to that stock and answers clamped true; with no stock the line is absent. Answers 200 with the cart as GET /me/cart returns it, plus replaced and clamped. A missing token, an unknown token or a staff token answers 401.
          */
         put: operations["putMeCartItem"];
         post?: never;
@@ -988,9 +988,9 @@ export interface components {
         };
         /** @description The cart after a line was set, with what the change did. */
         CartUpdate: components["schemas"]["Cart"] & {
-            /** @description True when the cart moved to the line's store, emptied first, because it was at another store. */
+            /** @description True when the cart was at another store and this change, a quantity above 0, emptied it and moved it to the line's store; the lines it held before are gone. */
             replaced: boolean;
-            /** @description True when the quantity was cut to the stock the store holds. */
+            /** @description True when the quantity was cut to the stock the store holds. A line cut to 0 is absent from items. */
             clamped: boolean;
         };
         /** @description The public view of a store: what checkout shows. Open or closed. */

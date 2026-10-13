@@ -41,8 +41,8 @@ Scope: `services/core/internal/cart/` (`cart.go`, `handlers.go`), `services/core
 
 Scope: `services/core/internal/cart/` (`handlers.go`, `cart.go`, `cart_test.go`), `services/core/internal/app/cart_test.go`, `services/core/openapi.json` (examples only, if a `replaced` or `clamped` true example is added; then `make gen postman`). Scenarios: cart "Cart lines are clamped to stock" (both), "A different store replaces the cart" (both). Start from `internal/app/cart_test.go` `TestCartClampedToStock`. Commits: `test: clamping to stock and replacing the cart`, then `feat: cart clamps to stock and replaces on store change; Lines for placement`.
 
-- [ ] 6.1 `internal/app/cart_test.go`: `TestCartClampedToStock` (5 at stock 3: `clamped` true, line 3), `TestCartOutOfStockClampsToNothing` (1 at stock 0: `clamped` true, no line), `TestCartOtherStoreReplaces` (P, Q at A, then R at B: `replaced` true, `storeId` B, only R), `TestCartZeroForOtherStoreKeepsCart`; `internal/cart/cart_test.go` (package `cart_test`, `testdb.Migrated("cart")`): `TestLinesReadsCart` (cart with two lines in a transaction: store id and both lines in insertion order; no cart: `""`, nil), `TestClearWithoutCart` (nil error); verify they fail, commit
-- [ ] 6.2 the replacement and clamp branches of Decision 5, `Lines` per the Interfaces; verify the gates, commit
+- [x] 6.1 `internal/app/cart_test.go`: `TestCartClampedToStock` (5 at stock 3: `clamped` true, line 3), `TestCartOutOfStockClampsToNothing` (1 at stock 0: `clamped` true, no line), `TestCartOtherStoreReplaces` (P, Q at A, then R at B: `replaced` true, `storeId` B, only R), `TestCartZeroForOtherStoreKeepsCart`; `internal/cart/cart_test.go` (package `cart_test`, `testdb.Migrated("cart")`): `TestLinesReadsCart` (cart with two lines in a transaction: store id and both lines in insertion order; no cart: `""`, nil), `TestClearWithoutCart` (nil error); verify they fail, commit
+- [x] 6.2 the replacement and clamp branches of Decision 5, `Lines` per the Interfaces; verify the gates, commit
 
 ## Workflow follow-up
 - Team lead re-reads L2's and L3's landed designs and lane logs after the rebase and refreshes briefs 2 to 6 if names moved.

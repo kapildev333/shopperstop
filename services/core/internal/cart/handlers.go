@@ -58,8 +58,10 @@ func Get(pool *pgxpool.Pool) http.HandlerFunc {
 }
 
 // PutItem sets one line of the customer's cart to an absolute quantity and
-// answers 200 with the cart. A quantity above 0 needs an active product; the
-// store must exist. The validation is outside the transaction, the write inside.
+// answers 200 with the cart, whether it was replaced by another store's cart
+// and whether the quantity was clamped to stock. A quantity above 0 needs an
+// active product; the store must exist. The validation is outside the
+// transaction, the write inside.
 func PutItem(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -94,8 +96,11 @@ func PutItem(pool *pgxpool.Pool) http.HandlerFunc {
 			}
 		}
 		customerID := auth.CustomerID(ctx)
+		var replaced, clamped bool
 		err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
-			return set(ctx, tx, customerID, in.StoreID, in.ProductID, int32(*in.Quantity))
+			var err error
+			replaced, clamped, err = set(ctx, tx, customerID, in.StoreID, in.ProductID, int32(*in.Quantity))
+			return err
 		})
 		if err != nil {
 			httpx.WriteError(w, r, err)
@@ -106,7 +111,7 @@ func PutItem(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Update{Cart: c})
+		httpx.WriteJSON(w, http.StatusOK, Update{Cart: c, Replaced: replaced, Clamped: clamped})
 	}
 }
 
