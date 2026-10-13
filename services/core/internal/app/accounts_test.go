@@ -468,23 +468,28 @@ func TestAuthGates(t *testing.T) {
 	// Staff routes: no token and a customer token get 401; store staff and admins
 	// are allowed. Each row signs in fresh, since sign-out ends the token it sends.
 	seedStaff(t)
+	// The stock rows use testStoreID, which the store-staff fixture belongs to:
+	// a PUT with no rows gets past the gate and answers 400 rows.
 	staffGates := []struct {
 		method, path string
+		body         any
 		allowed      int
 	}{
-		{http.MethodPost, "/api/core/v1/admin/auth/sign-out", http.StatusNoContent},
-		{http.MethodGet, "/api/core/v1/admin/me", http.StatusOK},
+		{http.MethodPost, "/api/core/v1/admin/auth/sign-out", nil, http.StatusNoContent},
+		{http.MethodGet, "/api/core/v1/admin/me", nil, http.StatusOK},
+		{http.MethodGet, stockPath(testStoreID), nil, http.StatusOK},
+		{http.MethodPut, stockPath(testStoreID), map[string]any{"rows": []any{}}, http.StatusBadRequest},
 	}
 	for _, g := range staffGates {
-		if status, body := call(t, g.method, g.path, "", nil); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
+		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
 			t.Fatalf("%s %s anonymous: got %d %s, want 401 unauthorized", g.method, g.path, status, body)
 		}
 		customer := newCustomer(t)
-		if status, body := call(t, g.method, g.path, customer.Token, nil); status != http.StatusUnauthorized {
+		if status, body := call(t, g.method, g.path, customer.Token, g.body); status != http.StatusUnauthorized {
 			t.Fatalf("%s %s with a customer token: got %d %s, want 401", g.method, g.path, status, body)
 		}
 		for _, email := range []string{storeStaffEmail, adminStaffEmail} {
-			if status, body := call(t, g.method, g.path, staffSignIn(t, email), nil); status != g.allowed {
+			if status, body := call(t, g.method, g.path, staffSignIn(t, email), g.body); status != g.allowed {
 				t.Fatalf("%s %s with the staff token of %s: got %d %s, want %d", g.method, g.path, email, status, body, g.allowed)
 			}
 		}
