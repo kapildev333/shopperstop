@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Customer guest cart lines
-While no customer token is held, setting a line of the guest cart SHALL set it to exactly the given quantity, clamped to the product's maximum (its `quantity` while in stock, at most 20; 0 when out of stock); 0 SHALL remove the line, and a cart whose last line goes SHALL have no `storeId`. A quantity above 0 at a store other than the cart's SHALL replace the cart with that one line; 0 at another store SHALL leave it unchanged.
+While no customer token is held, setting a line of the guest cart SHALL set it to exactly the given quantity, clamped to the product's maximum (its `quantity` while in stock, at most 20; 0 when out of stock); 0 SHALL remove the line, and a cart whose last line goes SHALL have no `storeId`. At a store other than the cart's, a quantity still above 0 after the clamp SHALL replace the cart with that one line; 0, asked for or clamped, SHALL leave it unchanged.
 
 #### Scenario: Guest line set and removed
 - **WHEN** an empty guest cart sets product P to 1 at store A, then P to 3, then product Q to 1, then P to 0
@@ -14,6 +14,10 @@ While no customer token is held, setting a line of the guest cart SHALL set it t
 #### Scenario: Another store replaces the guest cart
 - **WHEN** a guest cart at store A holds P and Q, then R is set to 0 at store B, then R is set to 1 at store B
 - **THEN** after the first set the cart is still at A with P and Q, and after the second it is at B holding only R
+
+#### Scenario: Out of stock at another store keeps the guest cart
+- **WHEN** a guest cart at store A holds P and Q, and R, which has `inStock` false and `quantity` 0, is set to 1 at store B
+- **THEN** the cart is still at A with P and Q
 
 ### Requirement: Customer guest cart storage
 The site SHALL keep the guest cart `{storeId, items: [{product, quantity}]}` in memory and in `localStorage` under `shopperstop:cart`, SHALL read it when the app loads, and SHALL treat a stored value that does not parse as that shape as an empty cart. When storage throws (blocked or full), the cart SHALL still be held in memory for the page.
@@ -34,7 +38,7 @@ The guest cart SHALL show the same totals core computes for a server cart, from 
 - **THEN** the cart shows `subtotalCents` 9000, `deliveryFeeCents` 2500, `totalCents` 11500, `minOrderCents` 9900 and `shortfallCents` 10900; with 5 of it, `deliveryFeeCents` 0, `totalCents` 22500 and `shortfallCents` 0
 
 ### Requirement: Customer cart behind every Stepper
-Every product `Stepper` SHALL show the product's quantity in the cart of the resolved store and SHALL set that line through the cart: the guest cart while no token is held, the server cart while one is.
+Every product `Stepper` SHALL show the product's quantity in the cart while the cart's `storeId` is the resolved store's, and 0 while the cart is empty or at another store, and SHALL set that line at the resolved store through the cart: the guest cart while no token is held, the server cart while one is.
 
 #### Scenario: Card adds to the guest cart
 - **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza" is chosen on its card
@@ -44,15 +48,23 @@ Every product `Stepper` SHALL show the product's quantity in the cart of the res
 - **WHEN** a token is held and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza
 - **THEN** its card's group "Quantity of Amul Taaza" shows 3
 
+#### Scenario: Card ignores a cart at another store
+- **WHEN** a token is held, Koramangala is the resolved store, and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza at Indiranagar
+- **THEN** its card shows the "Add Amul Taaza" button and no group "Quantity of Amul Taaza"
+
 ### Requirement: Customer server cart
-While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the cart that response answers. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the next change or reload.
+While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and `storeId` that response answers, never the ones it sent. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the next change or reload, also when the cart is then empty.
 
 #### Scenario: Server cart clamps above stock
 - **WHEN** a signed-in customer has 2 of a product in the cart, the store's stock of it drops to 1, and "Add one" is chosen on its page; then the stock drops to 0, the page is reloaded, and "Remove <name>" is chosen in the cart drawer
 - **THEN** its quantity shows 1 and the open cart drawer shows "Some quantities were lowered to what the store has."; after the removal the drawer shows "Your cart is empty"
 
+#### Scenario: Line clamped away
+- **WHEN** a token is held and the last `PUT /me/cart/items` answered an empty cart with `clamped: true`, and the drawer opens
+- **THEN** it shows "Some quantities were lowered to what the store has." and "Your cart is empty"
+
 ### Requirement: Customer cart merge at sign-in
-When sign-in or register succeeds and the guest cart has lines, the site SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with the guest cart's `storeId` and the line's quantity, and then SHALL empty the guest cart, also when a line's request fails. Lines the server already holds at that store and the guest cart does not name SHALL stay.
+When sign-in or register succeeds and the guest cart has lines, the site SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with the guest cart's `storeId` and the line's quantity, and then SHALL empty the guest cart, also when a line's request fails, and show core's cart as answered. Lines the server already holds at that store and the guest cart does not name SHALL stay.
 
 #### Scenario: Merge bodies in guest order
 - **WHEN** the guest cart at store A holds P with 2 and then Q with 1
