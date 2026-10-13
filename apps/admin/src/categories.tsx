@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Select } from '@shopperstop/ui'
 import { api, type ApiError } from './api'
 import { categoriesQuery, type Category, type CategoryNode } from './catalog'
+import { ImageUpload } from './image'
 
 type Field = 'name' | 'parentId' | 'sortOrder'
 
@@ -69,6 +70,7 @@ export function CategoryDialog({ category, parents, onClose }: { category?: Cate
         <FormField label="Sort order" hint="Lower numbers come first." error={sortError ?? errorFor('sortOrder')}>
           <Input inputMode="numeric" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
         </FormField>
+        {category && <ImageUpload kind="categories" id={category.id} name={category.name} imageUrl={category.imageUrl} />}
         <DialogFooter onCancel={onClose} className="mt-2">
           <Button type="submit" loading={save.isPending}>{category ? 'Save changes' : 'Create category'}</Button>
         </DialogFooter>

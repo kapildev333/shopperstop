@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Card, ErrorBanner, PageHeader, Skeleton } from '@shopperstop/ui'
 import type { ApiError } from '../../../../api'
 import { categoriesQuery, categoryOptions, productQuery } from '../../../../catalog'
+import { ImageUpload } from '../../../../image'
 import { NotFound } from '../../../../not-found'
 import { ProductForm } from '../../../../product-form'
 
@@ -21,6 +22,9 @@ function ProductPage() {
       <PageHeader title={product.data.name} />
       <Card className="p-6">
         <ProductForm key={product.data.id} product={product.data} categories={categoryOptions(categories.data.items)} />
+      </Card>
+      <Card className="p-6">
+        <ImageUpload kind="products" id={product.data.id} name={product.data.name} imageUrl={product.data.imageUrl} />
       </Card>
     </div>
   )
