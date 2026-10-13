@@ -22,7 +22,7 @@ Failing tests: `src/products.test.tsx` › "products table lists a page of produ
 Scope: `apps/admin/src/categories.test.tsx` (new), `src/categories.tsx` (new, without the `ImageUpload` import and line), `src/routes/_staff/_admin/categories.tsx` (replace the placeholder), this file's checkboxes, the worker's lane log.
 Scenarios: Categories table › Categories listed; Categories table states › No categories, Categories load failure; Category create › Create a child category; Category change › Change sends only the changed fields and reorders the tree; Category form errors › Sort order the form cannot send, Category field error from core, Other category save failure; Category delete › Delete a category after confirming, Category in use.
 Failing tests: `src/categories.test.tsx` › "the categories table lists parents, each followed by its children", "no categories shows the empty state", "categories load failure shows a retry that reloads", "create a child category", "a change sends only the changed fields and reorders the tree", "a sort order the form cannot send is flagged without a request", "a validation error from core is shown on its field", "any other category save error shows a banner", "delete asks first, then removes the category", "a category in use cannot be deleted".
-- [ ] 2.1 Tests committed red (`test: categories page`); Vitest `10 failed | 58 passed (68)`
+- [x] 2.1 Tests committed red (`test: categories page`); Vitest `10 failed | 58 passed (68)`
 - [ ] 2.2 `src/categories.tsx` and the route per design.md task 2 (`feat: categories table, create, change and delete`); Vitest `68 passed (68)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## 3. Product form: create and change
