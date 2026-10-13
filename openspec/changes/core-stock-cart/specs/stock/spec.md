@@ -25,6 +25,13 @@ The core service SHALL hold at most one stock quantity per store and product, ne
 - **WHEN** a product is inactive and has a stock row at the store
 - **THEN** the store's stock list does not contain it
 
+### Requirement: The stock search refuses a NUL byte
+The stock list SHALL answer 400 `validation` naming field `q` when `q` contains a NUL byte.
+
+#### Scenario: NUL byte in q
+- **WHEN** an admin lists a store's stock with `q=milk%00`
+- **THEN** the response is 400 with code `validation` and field `q`
+
 ### Requirement: Stock routes answer the store's own staff and admins
 The stock list and the stock update SHALL answer admins for any existing store and store staff only for their own store. Store staff naming another store, and anyone naming a store that does not exist, SHALL get 404 `not_found` without anything changing; a request without a staff session SHALL get 401 `unauthorized`.
 

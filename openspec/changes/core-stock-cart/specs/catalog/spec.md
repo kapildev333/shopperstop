@@ -16,7 +16,7 @@
 - **THEN** the response is 404 with code `not_found`
 
 ### Requirement: Store products are listed and searched
-`GET /api/core/v1/stores/{id}/products` SHALL answer the paged active products ordered by name, filtered by `q` and `categoryId` exactly as the admin product list filters them. Inactive products SHALL not be listed. An unknown store SHALL answer 404 `not_found`. No session is needed.
+`GET /api/core/v1/stores/{id}/products` SHALL answer the paged active products ordered by name, filtered by `q` and `categoryId` exactly as the admin product list filters them. Inactive products SHALL not be listed. A `q` containing a NUL byte SHALL be 400 `validation` naming field `q`. An unknown store SHALL answer 404 `not_found`. No session is needed.
 
 #### Scenario: Category with children and search
 - **WHEN** a client lists the store's products with `categoryId` of a parent and `q=CURD`
@@ -25,6 +25,10 @@
 #### Scenario: Inactive product hidden
 - **WHEN** an inactive product has quantity 9 at the store
 - **THEN** the store's product list does not contain it
+
+#### Scenario: NUL byte in q
+- **WHEN** a client lists the store's products with `q=milk%00`
+- **THEN** the response is 400 with code `validation` and field `q`
 
 #### Scenario: Unknown store
 - **WHEN** a client lists the products of a store id that does not exist

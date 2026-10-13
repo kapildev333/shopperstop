@@ -67,7 +67,7 @@ When the requested quantity is above the product's stock at the store, the line 
 - **THEN** the response is 200 with `clamped` true and no line of P
 
 ### Requirement: A different store replaces the cart
-A customer SHALL have at most one cart, at one store. Setting a line with a quantity above 0 for a store other than the cart's SHALL empty the cart, move it to the new store, then set the line, and the response SHALL say `replaced: true`. Setting a quantity of 0 for another store SHALL leave the cart as it is.
+A customer SHALL have at most one cart, at one store. Setting a line with a quantity above 0 for a store other than the cart's SHALL empty the cart, move it to that store and set the line, answering `replaced: true`; when that store holds none of the product, the cart SHALL instead stay as it is, answering `clamped: true` and `replaced: false`. Setting a quantity of 0 for another store SHALL leave the cart as it is.
 
 #### Scenario: Switching store
 - **WHEN** a customer's cart at store A holds P and Q, and the customer sets R to 1 at store B
@@ -76,6 +76,14 @@ A customer SHALL have at most one cart, at one store. Setting a line with a quan
 #### Scenario: Zero for another store
 - **WHEN** a customer's cart at store A holds P, and the customer sets R to 0 at store B
 - **THEN** the response is 200 with `replaced` false and the cart is still at store A holding P
+
+#### Scenario: Out of stock at the other store
+- **WHEN** a customer's cart at store A holds 2 of P and 1 of Q, and the customer sets R to 1 at store B, which holds none of R
+- **THEN** the response is 200 with `clamped` true, `replaced` false, `storeId` A and the lines of P with `quantity` 2 and Q with `quantity` 1, and `GET /me/cart` answers the same cart
+
+#### Scenario: Short of stock at the other store
+- **WHEN** a customer's cart at store A holds P, and the customer sets R to 5 at store B, which holds 3 of R
+- **THEN** the response is 200 with `replaced` true, `clamped` true, `storeId` B and R as the only line, with `quantity` 3
 
 ### Requirement: Customers clear their cart
 `DELETE /api/core/v1/me/cart` SHALL delete the customer's cart and its lines and answer 204, also when there is no cart.
