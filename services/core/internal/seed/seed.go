@@ -135,5 +135,22 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		return fmt.Errorf("insert demo store staff: %w", err)
 	}
 	// catalog (core-P2-L3)
-	return loadCatalog(ctx, tx)
+	if err := loadCatalog(ctx, tx); err != nil {
+		return err
+	}
+	// stock (core-P2-L4, design Decision 15): one row per store and product. Fixed
+	// ids order the rows, so every reset loads the same quantities: per store a
+	// zero and a 1 to 4 every 15 products, the rest 10 to 49.
+	if _, err := tx.Exec(ctx, `insert into store_stock (store_id, product_id, quantity)
+		select s.id, p.id,
+		       case (p.n + 3 * s.k) % 15
+		           when 0 then 0
+		           when 7 then 1 + p.n % 4
+		           else 10 + (7 * p.n + 5 * s.k) % 40
+		       end
+		from (select id, row_number() over (order by id) - 1 as k from stores) s
+		cross join (select id, row_number() over (order by id) as n from products) p`); err != nil {
+		return fmt.Errorf("insert demo stock: %w", err)
+	}
+	return nil
 }

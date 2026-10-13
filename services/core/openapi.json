@@ -38,6 +38,10 @@
     {
       "name": "catalog",
       "description": "Public catalog: a store's category tree and products, and the product and category images, served without a token."
+    },
+    {
+      "name": "stock",
+      "description": "Per-store stock: a store's product quantities for its staff and the admin stock page."
     }
   ],
   "paths": {
@@ -2155,6 +2159,253 @@
                     "field": "pincodes",
                     "pincode": "560038",
                     "storeId": "00000000-0000-4000-8000-000000000402"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/stores/{id}/stock": {
+      "get": {
+        "operationId": "getStock",
+        "summary": "List a store's stock",
+        "description": "Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.",
+        "tags": [
+          "stock"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "example": "milk"
+          },
+          {
+            "name": "lowStock",
+            "in": "query",
+            "required": false,
+            "description": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+            "schema": {
+              "type": "boolean"
+            },
+            "example": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the store's stock.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "priceCents": 7000,
+                      "quantity": 17
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A q, lowStock, page or pageSize is invalid. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be true or false",
+                    "field": "lowStock"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putStock",
+        "summary": "Set a store's stock",
+        "description": "Admins for any store; store staff only for their own store. Sets the quantity of each listed product at the store in one transaction, creating the row where the store has none. Takes 1 to 500 rows; each product id is a uuid, names a product that exists and appears once; each quantity is from 0 to 100000. Any invalid row refuses the whole request with 400 naming the field, and nothing changes. Answers 204 with no body; the admin page reads the list again. Another store's staff and an unknown store answer 404 not_found.",
+        "tags": [
+          "stock"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockUpdate"
+              },
+              "example": {
+                "rows": [
+                  {
+                    "productId": "00000000-0000-4000-8000-000000000601",
+                    "quantity": 25
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Every row is set."
+          },
+          "400": {
+            "description": "A row is invalid, or the rows are not 1 to 500, or a product is listed twice or does not exist. The field names it; nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "product listed twice",
+                    "field": "rows"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
                   }
                 }
               }
@@ -4618,6 +4869,108 @@
           }
         },
         "additionalProperties": false
+      },
+      "StockRow": {
+        "type": "object",
+        "description": "An active product with its quantity at one store.",
+        "required": [
+          "productId",
+          "name",
+          "unitLabel",
+          "priceCents",
+          "quantity"
+        ],
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string",
+            "description": "Omitted when empty."
+          },
+          "unitLabel": {
+            "type": "string"
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Selling price in paise."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "The store's quantity; 0 when it has no row."
+          }
+        }
+      },
+      "StockList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockRow"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every active product that matches the filters, not just this page."
+          }
+        }
+      },
+      "StockUpdate": {
+        "type": "object",
+        "description": "The rows to set: 1 to 500, each product once.",
+        "required": [
+          "rows"
+        ],
+        "properties": {
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "required": [
+                "productId",
+                "quantity"
+              ],
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                }
+              }
+            }
+          }
+        }
       },
       "Store": {
         "type": "object",

@@ -356,6 +356,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/stores/{id}/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's stock
+         * @description Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         */
+        get: operations["getStock"];
+        /**
+         * Set a store's stock
+         * @description Admins for any store; store staff only for their own store. Sets the quantity of each listed product at the store in one transaction, creating the row where the store has none. Takes 1 to 500 rows; each product id is a uuid, names a product that exists and appears once; each quantity is from 0 to 100000. Any invalid row refuses the whole request with 400 naming the field, and nothing changes. Answers 204 with no body; the admin page reads the list again. Another store's staff and an unknown store answer 404 not_found.
+         */
+        put: operations["putStock"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/serviceability": {
         parameters: {
             query?: never;
@@ -838,6 +862,37 @@ export interface components {
                  */
                 storeId?: string;
             };
+        };
+        /** @description An active product with its quantity at one store. */
+        StockRow: {
+            /** Format: uuid */
+            productId: string;
+            name: string;
+            /** @description Omitted when empty. */
+            brand?: string;
+            unitLabel: string;
+            /**
+             * Format: int64
+             * @description Selling price in paise.
+             */
+            priceCents: number;
+            /** @description The store's quantity; 0 when it has no row. */
+            quantity: number;
+        };
+        StockList: {
+            items: components["schemas"]["StockRow"][];
+            page: number;
+            pageSize: number;
+            /** @description Every active product that matches the filters, not just this page. */
+            total: number;
+        };
+        /** @description The rows to set: 1 to 500, each product once. */
+        StockUpdate: {
+            rows: {
+                /** Format: uuid */
+                productId: string;
+                quantity: number;
+            }[];
         };
         /** @description The public view of a store: what checkout shows. Open or closed. */
         Store: {
@@ -3014,6 +3069,211 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["PincodeConflict"];
+                };
+            };
+        };
+    };
+    getStock: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.
+                 * @example milk
+                 */
+                q?: string;
+                /**
+                 * @description true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.
+                 * @example true
+                 */
+                lowStock?: boolean;
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the store's stock. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "priceCents": 7000,
+                     *           "quantity": 17
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StockList"];
+                };
+            };
+            /** @description A q, lowStock, page or pageSize is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be true or false",
+                     *         "field": "lowStock"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "rows": [
+                 *         {
+                 *           "productId": "00000000-0000-4000-8000-000000000601",
+                 *           "quantity": 25
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["StockUpdate"];
+            };
+        };
+        responses: {
+            /** @description Every row is set. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A row is invalid, or the rows are not 1 to 500, or a product is listed twice or does not exist. The field names it; nothing changed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "product listed twice",
+                     *         "field": "rows"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
