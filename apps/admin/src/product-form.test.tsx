@@ -141,6 +141,8 @@ function keepsProduct() {
     [`GET ${productPath}`]: () => json(200, current),
     [`PATCH ${productPath}`]: async (request) => {
       current = { ...current, ...(await request.clone().json()) }
+      // Core trims text.
+      current.name = current.name.trim()
       return json(200, current)
     },
   })
@@ -192,4 +194,40 @@ test('a failing create shows a banner and stays on the new page', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the product. Try again.')
   expect(router.state.location.pathname).toBe('/products/new')
   expect(screen.getByRole('heading', { level: 1, name: 'New product' })).toBeInTheDocument()
+})
+
+test('after a save the form shows the product as core stored it', async () => {
+  setToken('tok')
+  const calls = keepsProduct()
+
+  renderApp(`/products/${tonedMilk.id}`)
+  await replace('Name', '  Toned Milk  ')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Product saved.')
+  expect(screen.getByLabelText('Name')).toHaveValue('Toned Milk')
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'inactive')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await screen.findByText('Product saved.')
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(patches).toHaveLength(2)
+  expect(await patches[0].json()).toEqual({ name: '  Toned Milk  ' })
+  expect(await patches[1].json()).toEqual({ isActive: false })
+})
+
+test('an amount error clears when its field is edited', async () => {
+  setToken('tok')
+  fakeCore(withProduct)
+
+  renderApp(`/products/${tonedMilk.id}`)
+  await replace('MRP (₹)', '30.555')
+  await replace('Price (₹)', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(screen.getByLabelText('Price (₹)')).toHaveAccessibleDescription(
+    'At most the MRP. Enter a price from 0.01 rupees up to the MRP, at most two decimals.',
+  )
+  await userEvent.type(screen.getByLabelText('Price (₹)'), '28')
+
+  expect(screen.getByLabelText('Price (₹)')).toHaveAccessibleDescription('At most the MRP.')
+  expect(screen.getByLabelText('MRP (₹)')).toHaveAccessibleDescription('Enter 0.01 to 1000000 rupees, at most two decimals.')
 })

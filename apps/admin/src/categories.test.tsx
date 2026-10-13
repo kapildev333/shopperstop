@@ -232,3 +232,40 @@ test('create a top-level category sends no parent', async () => {
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(await calls.find((call) => call.method === 'POST')!.json()).toEqual({ name: 'Snacks', sortOrder: 0 })
 })
+
+test('a field error from core clears when its field is edited', async () => {
+  setToken('tok')
+  fakeCore({
+    ...signedIn,
+    'GET /admin/categories': () => categoryTree([fruits, dairy]),
+    'POST /admin/categories': () => apiError(400, 'validation', 'must be between 0 and 9999', 'sortOrder'),
+  })
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'New category' }))
+  const dialog = screen.getByRole('dialog')
+  const field = within(dialog).getByLabelText('Sort order')
+  await userEvent.type(within(dialog).getByLabelText('Name'), 'Curd')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Create category' }))
+  await waitFor(() => expect(field).toHaveAccessibleDescription('Lower numbers come first. Enter a whole number from 0 to 9999.'))
+  await userEvent.type(field, '5')
+
+  expect(field).toHaveAccessibleDescription('Lower numbers come first.')
+  expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('a sort order error clears when the field is edited', async () => {
+  setToken('tok')
+  keepsCategories()
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit Milk' }))
+  const field = within(screen.getByRole('dialog')).getByLabelText('Sort order')
+  await userEvent.clear(field)
+  await userEvent.type(field, '-1')
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save changes' }))
+  expect(field).toHaveAccessibleDescription('Lower numbers come first. Enter a whole number from 0 to 9999.')
+  await userEvent.clear(field)
+
+  expect(field).toHaveAccessibleDescription('Lower numbers come first.')
+})

@@ -114,3 +114,32 @@ test('upload a category image from its dialog', async () => {
   const milkRow = within(screen.getByRole('table', { name: 'Categories' })).getAllByRole('row')[4]
   await waitFor(() => expect(milkRow.querySelector('img')).toHaveAttribute('src', url))
 })
+
+test('a pick while an upload is pending is ignored and the field stays enabled', async () => {
+  setToken('tok')
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = () => resolve()
+  })
+  const calls = fakeCore({
+    ...withProduct,
+    // The upload answers only when the test lets it.
+    [`PUT ${imagePath}`]: async () => {
+      await held
+      return json(200, { ...tonedMilk, imageUrl: storedUrl })
+    },
+  })
+
+  renderApp(`/products/${tonedMilk.id}`)
+  const input = await screen.findByLabelText('Image')
+  await userEvent.upload(input, png())
+  expect(await screen.findByText('Uploading the image…')).toBeInTheDocument()
+  expect(input).toBeEnabled()
+  await userEvent.upload(input, png())
+  release()
+
+  expect(await screen.findByText('Image saved.')).toBeInTheDocument()
+  expect(screen.queryByText('Uploading the image…')).not.toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Image of Sunny Fields Toned Milk' })).toHaveAttribute('src', `${storedUrl}?v=1`)
+  expect(calls.filter((call) => call.method === 'PUT')).toHaveLength(1)
+})
