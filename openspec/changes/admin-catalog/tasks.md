@@ -43,8 +43,8 @@ Failing tests: `src/image.test.tsx` › "upload a product image shows the stored
 Scope: `apps/admin/src/product-delete.test.tsx` (new), `src/routes/_staff/_admin/products/$productId.tsx`, this file's checkboxes, the worker's lane log.
 Scenarios: Product delete › Delete a product after confirming; Ordered product is deactivated instead › Ordered product is deactivated instead.
 Failing tests: `src/product-delete.test.tsx` › "delete asks first, then removes the product", "an ordered product offers to deactivate instead".
-- [ ] 5.1 Tests committed red (`test: product delete with deactivate instead`); Vitest `2 failed | 82 passed (84)`
-- [ ] 5.2 `DeleteProduct` and the `PageHeader` `actions` per design.md task 5 (`feat: product delete with deactivate instead`); Vitest `84 passed (84)`; every gate green; `routeTree.gen.ts` unchanged
+- [x] 5.1 Tests committed red (`test: product delete with deactivate instead`); Vitest `2 failed | 82 passed (84)`
+- [x] 5.2 `DeleteProduct` and the `PageHeader` `actions` per design.md task 5 (`feat: product delete with deactivate instead`); Vitest `84 passed (84)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## 6. Catalog against core (the manager's e2e slot)
 Scope: `apps/admin/e2e/catalog.spec.ts` (fixes only, after a recorded failure), this file's checkboxes, the lane log. Waits on: tasks 1 to 5 and the e2e slot the manager holds.
