@@ -176,3 +176,20 @@ test('the products table shows a saved change', async () => {
 
   expect(await within(await screen.findByRole('table', { name: 'Products' })).findByText('₹28')).toBeInTheDocument()
 })
+
+test('a failing create shows a banner and stays on the new page', async () => {
+  setToken('tok')
+  fakeCore({ ...signedIn, 'POST /admin/products': () => apiError(500, 'internal') })
+
+  const router = renderApp('/products/new')
+  await replace('Name', 'Curd Cup')
+  await userEvent.selectOptions(screen.getByLabelText('Category'), milk.id)
+  await replace('Unit', '400 g')
+  await replace('MRP (₹)', '40')
+  await replace('Price (₹)', '35.50')
+  await userEvent.click(screen.getByRole('button', { name: 'Create product' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the product. Try again.')
+  expect(router.state.location.pathname).toBe('/products/new')
+  expect(screen.getByRole('heading', { level: 1, name: 'New product' })).toBeInTheDocument()
+})

@@ -80,6 +80,8 @@ test('the pager moves between pages', async () => {
   expect(lastListQuery(calls).page).toBe('2')
   await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
   expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: 'Banana Robusta' })).toBeInTheDocument()
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('1'))
 })
 
 test('no products shows the empty state', async () => {
@@ -116,4 +118,22 @@ test('products load failure shows a retry that reloads', async () => {
   await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
   expect(await screen.findByRole('link', { name: 'Banana Robusta' })).toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('a filter changed on a later page asks for the first page', async () => {
+  setToken('tok')
+  const milk = dairy.children[0]
+  const calls = fakeCore({ ...signedIn, 'GET /admin/products': () => productList([tonedMilk], 30) })
+
+  renderApp('/products')
+  await screen.findByRole('option', { name: 'Dairy, Bread & Eggs › Milk' })
+  await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('2'))
+  await userEvent.selectOptions(screen.getByLabelText('Category'), milk.id)
+  await waitFor(() => expect(lastListQuery(calls)).toEqual({ categoryId: milk.id, page: '1', pageSize: '24' }))
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(lastListQuery(calls).page).toBe('2'))
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'Inactive')
+  await waitFor(() => expect(lastListQuery(calls)).toEqual({ categoryId: milk.id, isActive: 'false', page: '1', pageSize: '24' }))
 })

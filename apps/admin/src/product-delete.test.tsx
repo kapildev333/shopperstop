@@ -62,3 +62,17 @@ test('an ordered product offers to deactivate instead', async () => {
   const table = await screen.findByRole('table', { name: 'Products' })
   expect(within(table).getByText('Inactive')).toBeInTheDocument()
 })
+
+test('any other delete failure shows a banner in the dialog', async () => {
+  setToken('tok')
+  fakeCore({ ...withProduct, [`DELETE ${productPath}`]: () => apiError(500, 'internal') })
+
+  const router = renderApp(`/products/${tonedMilk.id}`)
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete product' }))
+  const dialog = screen.getByRole('dialog')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Could not delete the product. Try again.')
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Delete'])
+  expect(router.state.location.pathname).toBe(`/products/${tonedMilk.id}`)
+})

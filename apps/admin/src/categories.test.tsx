@@ -199,7 +199,7 @@ test('delete asks first, then removes the category', async () => {
 
 test('a category in use cannot be deleted', async () => {
   setToken('tok')
-  fakeCore({
+  const calls = fakeCore({
     ...signedIn,
     'GET /admin/categories': () => categoryTree([fruits, dairy]),
     [`DELETE /admin/categories/${dairy.id}`]: () => apiError(409, 'conflict', 'category has products or subcategories'),
@@ -209,8 +209,26 @@ test('a category in use cannot be deleted', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Delete Dairy, Bread & Eggs' }))
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
 
-  expect(await within(screen.getByRole('dialog')).findByRole('alert')).toHaveTextContent(
+  const dialog = screen.getByRole('dialog', { name: 'Delete Dairy, Bread & Eggs?' })
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(
     'This category still has subcategories or products. Move or delete them first.',
   )
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Delete'])
+  expect(calls.filter((call) => call.method === 'DELETE')).toHaveLength(1)
   expect(names()).toContain('Dairy, Bread & Eggs')
+})
+
+test('create a top-level category sends no parent', async () => {
+  setToken('tok')
+  const calls = keepsCategories()
+
+  renderApp('/categories')
+  await userEvent.click(await screen.findByRole('button', { name: 'New category' }))
+  const dialog = screen.getByRole('dialog', { name: 'New category' })
+  expect(within(dialog).getByLabelText('Parent')).toHaveValue('')
+  await userEvent.type(within(dialog).getByLabelText('Name'), 'Snacks')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Create category' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(await calls.find((call) => call.method === 'POST')!.json()).toEqual({ name: 'Snacks', sortOrder: 0 })
 })
