@@ -66,8 +66,6 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 Work packages are written into `.claude/areas/<area>.md`; order: core (auth, serviceability, catalog, stock, accounts, cart, orders, admin routes, seed-demo with fixed ids per D20), then ui (api types per D19, any new components), then admin and web pages. Each area's team leads turn the package into OpenSpec changes; capabilities serviceability, catalog, stock, accounts, cart, orders, admin-stores, admin-catalog, admin-staff are seeded by their first change (D4).
 
 ## Backlog
-- Makefile: `make dev` runs `npm ci` when `node_modules` is absent (L11 request).
-- Lane guard hook: match `git merge` on a word boundary so `merge-base` is allowed to reviewers.
 - Figma (next MCP call budget): Orders board column badges show counts; IconButton icons; TabNav component note "scrolls horizontally, never wraps" (ui-P2-L1, #82); Code Connect.
 - Running `make db` from a second checkout (different compose file path) recreates `shopperstop-postgres-1`; the data volume persists. Use one checkout for `make db`.
 
@@ -103,3 +101,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-12: ui-P2-L1 TabNav scroll fix (#82) from admin's axe finding; web-P2-L1 task 1 (pincode, store gate) and web-P2-L3 task 1 (guest cart model) landed and reviewed on their branches; admin-P2-L2 building; core L3 at its last task, L4 next.
 - 2026-10-12: core-P2-L3 catalog merged (#87, archived #88): admin categories and products, images, /files, seed with 148 products; SHOPPERSTOP_CORE_FILES_DIR now required. core L4 (stock, cart, browsing routes) building; admin-stores at its e2e; web browsing and cart lanes wait on L4.
 - 2026-10-12 (end of day): paused by the owner. State: Phase 2 core L1, L2, L3 merged; core L4 (stock, cart, browsing routes) at task 2 of 6 in its worktree; L5 proposed; admin L1 and L2 merged (#71, #91), admin-catalog proposing; ui L1 merged (#82); web-accounts merged (#68); web browsing (web-P2-L1, task 1 landed on its branch, tasks 2 to 4 wait on core L4) and web cart (web-P2-L3, task 1 landed, tasks 2 and 3 wait on core L4 and web-P2-L1) sit in `.worktrees/web-P2-L1` and `.worktrees/web-P2-L3`, unpushed. Resume: start `/loop 10min /manage Platform /orchestrate` here and `/manage core`, `/manage admin`, `/manage ui` in their terminals; the orchestrator messages each core merge to admin and cuts the web tasks. CI still blocked by billing.
+- 2026-10-13: resumed (`/loop 5min /orchestrate manage platform`). Postgres healthy, no open PRs, lane worktrees as left at the pause. Platform backlog chores landed (#97): the lane guard allows `git merge-base`, `make ui` runs `npm ci` when `node_modules` is absent. CI still blocked by billing.
