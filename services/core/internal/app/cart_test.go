@@ -347,3 +347,76 @@ func TestCartIsPerCustomer(t *testing.T) {
 	}
 	requireEmptyCart(t, body)
 }
+
+func TestCartClampedToStock(t *testing.T) {
+	storeID := insertStore(t, true)
+	p := insertProduct(t, stockName(t), true)
+	setStock(t, storeID, p, 3)
+	s := newCustomer(t)
+	u := setLine(t, s.Token, storeID, p, 5)
+	if !u.Clamped || u.Replaced {
+		t.Fatalf("set 5 of 3 in stock: clamped %v replaced %v, want clamped true and replaced false", u.Clamped, u.Replaced)
+	}
+	if len(u.Items) != 1 || u.Items[0].Quantity != 3 {
+		t.Fatalf("set 5 of 3 in stock: items %+v, want one line of 3", u.Items)
+	}
+	if c := readCart(t, s.Token); len(c.Items) != 1 || c.Items[0].Quantity != 3 {
+		t.Fatalf("GET after the clamp: items %+v, want one line of 3", c.Items)
+	}
+}
+
+func TestCartOutOfStockClampsToNothing(t *testing.T) {
+	storeID := insertStore(t, true)
+	p := insertProduct(t, stockName(t), true)
+	setStock(t, storeID, p, 0)
+	s := newCustomer(t)
+	status, body := putItem(t, s.Token, map[string]any{"storeId": storeID, "productId": p, "quantity": 1})
+	var u cartUpdateView
+	if status != http.StatusOK || json.Unmarshal(body, &u) != nil {
+		t.Fatalf("set 1 of 0 in stock: got %d %s, want 200", status, body)
+	}
+	if !u.Clamped || len(u.Items) != 0 {
+		t.Fatalf("set 1 of 0 in stock: clamped %v items %+v, want clamped true and no line", u.Clamped, u.Items)
+	}
+	if n := cartRows(t, s.Customer.ID); n != 0 {
+		t.Fatalf("%d cart rows after the only line clamped away, want 0", n)
+	}
+}
+
+func TestCartOtherStoreReplaces(t *testing.T) {
+	storeA := insertStore(t, true)
+	storeB := insertStore(t, true)
+	p := cartProduct(t, storeA, stockName(t), 4500)
+	q := cartProduct(t, storeA, stockName(t), 4500)
+	r := cartProduct(t, storeB, stockName(t), 4500)
+	s := newCustomer(t)
+	setLine(t, s.Token, storeA, p, 2)
+	setLine(t, s.Token, storeA, q, 1)
+	u := setLine(t, s.Token, storeB, r, 1)
+	if !u.Replaced || u.Clamped {
+		t.Fatalf("switch to store B: replaced %v clamped %v, want replaced true and clamped false", u.Replaced, u.Clamped)
+	}
+	if u.StoreID != storeB || len(u.Items) != 1 || u.Items[0].Product.ID != r {
+		t.Fatalf("switch to store B: cart %+v, want store B holding only R", u.cartView)
+	}
+	c := readCart(t, s.Token)
+	if c.StoreID != storeB || len(c.Items) != 1 || c.Items[0].Product.ID != r {
+		t.Fatalf("GET after the switch: cart %+v, want store B holding only R", c)
+	}
+}
+
+func TestCartZeroForOtherStoreKeepsCart(t *testing.T) {
+	storeA := insertStore(t, true)
+	storeB := insertStore(t, true)
+	p := cartProduct(t, storeA, stockName(t), 4500)
+	r := cartProduct(t, storeB, stockName(t), 4500)
+	s := newCustomer(t)
+	setLine(t, s.Token, storeA, p, 2)
+	u := setLine(t, s.Token, storeB, r, 0)
+	if u.Replaced || u.Clamped {
+		t.Fatalf("zero for store B: replaced %v clamped %v, want both false", u.Replaced, u.Clamped)
+	}
+	if u.StoreID != storeA || len(u.Items) != 1 || u.Items[0].Product.ID != p {
+		t.Fatalf("zero for store B: cart %+v, want store A holding P", u.cartView)
+	}
+}
