@@ -30,7 +30,7 @@ Scope: `apps/admin/src/product-form.test.tsx` (new), `src/product-form.tsx` (new
 Scenarios: Product create › Create a product; Product change › Change sends only the changed fields, A second product save sends only its own change, Saved product shows in the table; Unknown product shows not found › Unknown product; Product form errors › Amount the form cannot send, Product field error from core, Other product save failure.
 Failing tests: `src/product-form.test.tsx` › "create a product and open it", "edit sends only the changed fields and confirms", "a value the form cannot send is flagged without a request", "a validation error from core is shown on its field", "any other product save error shows a banner", "an unknown product shows not found", "a second product save sends only its own change", "the products table shows a saved change".
 - [x] 3.1 Tests committed red (`test: product create and change`); Vitest `8 failed | 68 passed (76)`
-- [ ] 3.2 `src/product-form.tsx`, `products/new.tsx`, `products/$productId.tsx` without `DeleteProduct` and `ImageUpload` (`feat: product create and change`); Vitest `76 passed (76)`; every gate green; `routeTree.gen.ts` unchanged
+- [x] 3.2 `src/product-form.tsx`, `products/new.tsx`, `products/$productId.tsx` without `DeleteProduct` and `ImageUpload` (`feat: product create and change`); Vitest `76 passed (76)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## 4. Image upload
 Scope: `apps/admin/src/image.test.tsx` (new), `src/image.tsx` (add `ImageUpload`), `src/categories.tsx` (two lines), `src/routes/_staff/_admin/products/$productId.tsx` (one import, one card), this file's checkboxes, the worker's lane log.
