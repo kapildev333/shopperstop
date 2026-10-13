@@ -52,7 +52,7 @@ A sort order that is not a whole number from 0 to 9999 SHALL be flagged on "Sort
 - **THEN** the dialog shows the alert "Could not save the category. Try again."
 
 ### Requirement: Catalog field errors clear on edit
-Editing a field of the category dialog or of the product form SHALL clear the error shown on that field, the form's own or core's, and leave the other fields' errors.
+In the category dialog and the product form, an error the form itself raised on a field SHALL clear when that field is edited, and the form's own errors on other fields SHALL stay. An error from core's last answer, on a field or as the alert, SHALL clear on the next edit of any field of that form: core validates again on the next save.
 
 #### Scenario: Sort order error clears on edit
 - **WHEN** an admin edits Milk, saves sort order `-1`, sees "Sort order" described by "Lower numbers come first. Enter a whole number from 0 to 9999.", and then clears the field
