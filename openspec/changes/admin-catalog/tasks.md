@@ -36,7 +36,7 @@ Failing tests: `src/product-form.test.tsx` › "create a product and open it", "
 Scope: `apps/admin/src/image.test.tsx` (new), `src/image.tsx` (add `ImageUpload`), `src/categories.tsx` (two lines), `src/routes/_staff/_admin/products/$productId.tsx` (one import, one card), this file's checkboxes, the worker's lane log.
 Scenarios: Catalog image upload › Product image uploaded, Category image uploaded from its dialog; Image upload errors › File refused before upload, File refused by core, Other upload failure.
 Failing tests: `src/image.test.tsx` › "upload a product image shows the stored image", "a GIF is refused without a request", "a PNG over 5 MB is refused without a request", "a file core refuses is flagged on the field", "any other upload failure shows a banner", "upload a category image from its dialog".
-- [ ] 4.1 Tests committed red (`test: catalog image upload`); Vitest `6 failed | 76 passed (82)`
+- [x] 4.1 Tests committed red (`test: catalog image upload`); Vitest `6 failed | 76 passed (82)`
 - [ ] 4.2 `ImageUpload` in `src/image.tsx`, the line in `src/categories.tsx`, the card in `products/$productId.tsx` per design.md task 4 (`feat: catalog image upload`); Vitest `82 passed (82)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## 5. Product delete with "Deactivate instead"
