@@ -71,3 +71,13 @@ test('notices against core', async ({ page, request }) => {
   await expect(page.getByRole('heading', { level: 2, name: `${closedName} is closed right now` })).toBeVisible()
   await expectNoViolations(page)
 })
+
+test('home against core', async ({ page }) => {
+  await page.goto('/')
+  await savePincode(page, '560034')
+  const picked = page.getByRole('region', { name: 'Picked for you' })
+  await expect(picked.getByRole('link')).toHaveCount(12)
+  const shop = page.getByRole('region', { name: 'Shop by category' })
+  await expect(shop.getByRole('link', { name: 'Fruits & Vegetables' })).toHaveAttribute('href', '/c/fruits-vegetables')
+  await expectNoViolations(page)
+})
