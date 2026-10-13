@@ -1,7 +1,7 @@
 # Proposal
 
 ## Why
-A customer can browse, fill a cart and pick an address (core-P2-L1 to L4), but cannot order, and store staff have nothing to work on. This change, core-P2-L5 (Spec 2 §3, §4, §6, §9, §11, §12, §13; PLAN.md D7, D19, D20, D22, D23, D24), adds orders end to end: placement as one transaction from the cart, the status machine with its audit trail, cancel with stock restored, the customer and staff order routes with store-staff isolation, the staff dashboard, and three demo orders with fixed ids.
+A customer can browse, fill a cart and pick an address (core-P2-L1 to L4), but cannot order, and store staff have nothing to work on. This change, core-P2-L5 (Spec 2 §3, §4, §6, §9, §11, §12, §13; PLAN.md D7, D19, D20, D22, D23, D24, D25, D26), adds orders end to end: placement as one transaction from the cart, the status machine with its audit trail, cancel with stock restored, the customer and staff order routes with store-staff isolation, the staff dashboard, and three demo orders with fixed ids.
 
 ## What Changes
 - Migration `0006_orders.sql`: `orders` (number `SS-` + 8 base32 characters, snapshots of the customer's name and phone and of the address, money in cents, `cancel_reason`, `delivered_at`, `cancelled_at`; `store_id` and `customer_id` foreign keys with no `on delete`), `order_items` (product snapshots, `product_id ... on delete restrict`), `order_events` (from, to, actor, note).
@@ -9,7 +9,7 @@ A customer can browse, fill a cart and pick an address (core-P2-L1 to L4), but c
 - `internal/order`: placement (`cart.Lines`, `address.Get`, `auth.CustomerByID`, `store.ForPincode`, `stock.Reserve`, `catalog.ProductsByID`, inserts, `cart.Clear`, all in one `pgx.BeginFunc`), the transitions table, `Transition` (cancel calls `stock.Release`), one log line per transition, customer and staff handlers, `Today` counts for the dashboard.
 - `internal/staff`: `GET /admin/dashboard` (calls `store`, `order` and `stock`).
 - `httpx.Error` gains `ProductIDs` (`productIds`, only with `out_of_stock`).
-- Three exported readers in core packages owned by earlier lanes, no new behaviour: `address.Get` (one query appended to `queries/address.sql`), `auth.CustomerByID` (existing query), `store.All` (existing `ListStores` query).
+- Three exported readers in core packages owned by earlier lanes, no new behaviour (granted by the core manager, D25): `address.Get` (one query appended to `queries/address.sql`), `auth.CustomerByID` (existing query), `store.All` (existing `ListStores` query).
 - Routes under `/api/core/v1`: `POST /orders`, `GET /orders`, `GET /orders/{id}`, `POST /orders/{id}/cancel`, `GET /admin/stores/{id}/orders`, `GET /admin/orders/{id}`, `POST /admin/orders/{id}/status`, `GET /admin/dashboard`.
 - `core-admin seed-demo --reset` adds three demo orders `...0701` (delivered), `...0702` (cancelled), `...0703` (placed) for the demo customer at Koramangala, two of them with product `...0601`.
 - `openapi.json`: tag `orders` and the dashboard under `admin-staff`, `security` on all eight operations, examples on every response (including `out_of_stock` with `productIds`); regenerated `packages/ui/src/api/core.d.ts` (D19) and Postman collection (D23).
