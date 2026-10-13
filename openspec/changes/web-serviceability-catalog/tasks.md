@@ -20,7 +20,7 @@ Scenarios: Customer product card › "Card links and prices", "Add shows the cou
 Failing tests: `src/product-card.test.tsx` › "card links and prices", "add shows the count"; `src/home.test.tsx` › "home lists categories and picks"; `e2e/browse.spec.ts` › "home against core".
 
 - [x] 2.1 Tests committed red (`test: home and product card`)
-- [ ] 2.2 `useCategories`, `usePicked`, `cart.ts`, `product-card.tsx`, Home content (`feat: home with categories and picked for you`); all gates green, e2e green
+- [x] 2.2 `useCategories`, `usePicked`, `cart.ts`, `product-card.tsx`, Home content (`feat: home with categories and picked for you`); all gates green, e2e green
 
 ## 3. Category and search
 
