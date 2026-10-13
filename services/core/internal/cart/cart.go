@@ -100,6 +100,13 @@ func set(ctx context.Context, tx pgx.Tx, customerID, storeID, productID string, 
 		}
 	}
 	c, err := q.LockCart(ctx, customerID)
+	for errors.Is(err, pgx.ErrNoRows) && quantity > 0 {
+		// A concurrent removal of the last line deleted the cart after the ensure: ensure again.
+		if err := q.EnsureCart(ctx, db.EnsureCartParams{CustomerID: customerID, StoreID: storeID}); err != nil {
+			return false, false, err
+		}
+		c, err = q.LockCart(ctx, customerID)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil // quantity 0 and no cart: nothing to remove
 	}
