@@ -8,6 +8,11 @@ export const keys = {
   serviceability: (pincode: string) => ['serviceability', pincode] as const,
 }
 
+// Only core's 404 not_serviceable means no store delivers; any other 404 is a lookup failure.
+export function serviceabilityMissing(status: number, error: components['schemas']['Error'] | undefined) {
+  return status === 404 && error?.error?.code === 'not_serviceable'
+}
+
 // Core answers 404 not_serviceable for a pincode no store delivers to: null, a notice, not an error.
 // ponytail: a resolved store is trusted for a minute, so moving between pages does not ask core again.
 export function useServiceability(pincode: string | undefined) {
@@ -19,9 +24,11 @@ export function useServiceability(pincode: string | undefined) {
       const { data, error, response } = await api.GET('/serviceability', {
         params: { query: { pincode: pincode ?? '' } },
       })
-      if (response.status === 404) return null
+      if (serviceabilityMissing(response.status, error)) return null
       if (error) throw error
-      return data.store
+      const store = data?.store
+      if (!store) throw new Error(`serviceability answered ${response.status} without a store`)
+      return store
     },
   })
 }
