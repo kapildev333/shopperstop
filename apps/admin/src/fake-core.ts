@@ -3,6 +3,8 @@ import type { components } from '@shopperstop/ui/api'
 import type { Staff } from './api'
 
 type AdminStore = components['schemas']['AdminStore']
+type CategoryNode = components['schemas']['CategoryNode']
+type Product = components['schemas']['Product']
 
 type Handler = (request: Request) => Response | Promise<Response>
 
@@ -52,4 +54,51 @@ export const indiranagar: AdminStore = {
 
 export function storeList(items: AdminStore[]) {
   return json(200, { items, page: 1, pageSize: 100, total: items.length })
+}
+
+export const fruits: CategoryNode = {
+  id: '00000000-0000-4000-8000-000000000501',
+  name: 'Fruits & Vegetables',
+  slug: 'fruits-vegetables',
+  sortOrder: 10,
+  imageUrl: '/api/core/v1/files/categories/seed-fruits-vegetables.png',
+  children: [{ id: '00000000-0000-4000-8000-000000000521', name: 'Fresh Fruits', slug: 'fresh-fruits', parentId: '00000000-0000-4000-8000-000000000501', sortOrder: 10 }],
+}
+export const dairy: CategoryNode = {
+  id: '00000000-0000-4000-8000-000000000502',
+  name: 'Dairy, Bread & Eggs',
+  slug: 'dairy-bread-eggs',
+  sortOrder: 20,
+  children: [{ id: '00000000-0000-4000-8000-000000000525', name: 'Milk', slug: 'milk', parentId: '00000000-0000-4000-8000-000000000502', sortOrder: 10 }],
+}
+
+export function categoryTree(items: CategoryNode[]) {
+  return json(200, { items })
+}
+
+export const banana: Product = {
+  id: '00000000-0000-4000-8000-000000000601',
+  name: 'Banana Robusta',
+  slug: 'banana-robusta',
+  unitLabel: '1 kg',
+  mrpCents: 7000,
+  priceCents: 7000,
+  categoryId: '00000000-0000-4000-8000-000000000521',
+  isActive: false,
+  imageUrl: '/api/core/v1/files/products/seed-fruits-vegetables.png',
+}
+export const tonedMilk: Product = {
+  id: '00000000-0000-4000-8000-000000000612',
+  name: 'Sunny Fields Toned Milk',
+  slug: 'sunny-fields-toned-milk',
+  brand: 'Sunny Fields',
+  unitLabel: '500 ml',
+  mrpCents: 3000,
+  priceCents: 2799,
+  categoryId: '00000000-0000-4000-8000-000000000525',
+  isActive: true,
+}
+
+export function productList(items: Product[], total = items.length, page = 1) {
+  return json(200, { items, page, pageSize: 24, total })
 }
