@@ -422,6 +422,83 @@ func TestCartZeroForOtherStoreKeepsCart(t *testing.T) {
 	}
 }
 
+// TestCartOtherStoreOutOfStockKeepsCart: a line for store B that B holds none
+// of leaves the cart at store A as it was.
+func TestCartOtherStoreOutOfStockKeepsCart(t *testing.T) {
+	storeA := insertStore(t, true)
+	storeB := insertStore(t, true)
+	p := cartProduct(t, storeA, stockName(t), 4500)
+	q := cartProduct(t, storeA, stockName(t), 4500)
+	r := insertProduct(t, stockName(t), true)
+	setStock(t, storeB, r, 0)
+	s := insertProduct(t, stockName(t), true)
+	c := newCustomer(t)
+	setLine(t, c.Token, storeA, p, 2)
+	setLine(t, c.Token, storeA, q, 1)
+	for _, product := range []string{r, s} {
+		u := setLine(t, c.Token, storeB, product, 1)
+		if !u.Clamped || u.Replaced {
+			t.Fatalf("set 1 at store B: clamped %v replaced %v, want clamped true and replaced false", u.Clamped, u.Replaced)
+		}
+		if u.StoreID != storeA || len(u.Items) != 2 || u.Items[0].Product.ID != p || u.Items[0].Quantity != 2 ||
+			u.Items[1].Product.ID != q || u.Items[1].Quantity != 1 || u.SubtotalCents != 13500 {
+			t.Fatalf("set 1 at store B: cart %+v, want store A holding P 2 and Q 1 with subtotal 13500", u.cartView)
+		}
+	}
+	got := readCart(t, c.Token)
+	if got.StoreID != storeA || len(got.Items) != 2 || got.Items[0].Product.ID != p || got.Items[0].Quantity != 2 ||
+		got.Items[1].Product.ID != q || got.Items[1].Quantity != 1 {
+		t.Fatalf("GET after the refused lines: cart %+v, want store A holding P 2 and Q 1", got)
+	}
+	if n := cartRows(t, c.Customer.ID); n != 1 {
+		t.Fatalf("%d cart rows, want 1", n)
+	}
+}
+
+// TestCartOtherStorePartialClampReplaces: a line for store B that B holds
+// some of, but fewer than asked, still moves the cart to B with what it holds.
+func TestCartOtherStorePartialClampReplaces(t *testing.T) {
+	storeA := insertStore(t, true)
+	storeB := insertStore(t, true)
+	p := cartProduct(t, storeA, stockName(t), 4500)
+	r := insertProduct(t, stockName(t), true)
+	setStock(t, storeB, r, 3)
+	c := newCustomer(t)
+	setLine(t, c.Token, storeA, p, 2)
+	u := setLine(t, c.Token, storeB, r, 5)
+	if !u.Replaced || !u.Clamped {
+		t.Fatalf("set 5 of 3 at store B: replaced %v clamped %v, want both true", u.Replaced, u.Clamped)
+	}
+	if u.StoreID != storeB || len(u.Items) != 1 || u.Items[0].Product.ID != r || u.Items[0].Quantity != 3 {
+		t.Fatalf("set 5 of 3 at store B: cart %+v, want store B holding R 3 only", u.cartView)
+	}
+	got := readCart(t, c.Token)
+	if got.StoreID != storeB || len(got.Items) != 1 || got.Items[0].Product.ID != r || got.Items[0].Quantity != 3 {
+		t.Fatalf("GET after the partial clamp: cart %+v, want store B holding R 3 only", got)
+	}
+}
+
+// TestCartOutOfStockSameStoreRemovesLine: a line clamped to 0 at the cart's own
+// store is removed from that cart, and the other lines stay.
+func TestCartOutOfStockSameStoreRemovesLine(t *testing.T) {
+	storeA := insertStore(t, true)
+	p := cartProduct(t, storeA, stockName(t), 4500)
+	q := cartProduct(t, storeA, stockName(t), 4500)
+	c := newCustomer(t)
+	setLine(t, c.Token, storeA, p, 2)
+	setLine(t, c.Token, storeA, q, 1)
+	if _, err := testPool.Exec(context.Background(), "update store_stock set quantity = 0 where store_id = $1 and product_id = $2", storeA, p); err != nil {
+		t.Fatal(err)
+	}
+	u := setLine(t, c.Token, storeA, p, 1)
+	if !u.Clamped || u.Replaced {
+		t.Fatalf("set 1 of 0 at store A: clamped %v replaced %v, want clamped true and replaced false", u.Clamped, u.Replaced)
+	}
+	if u.StoreID != storeA || len(u.Items) != 1 || u.Items[0].Product.ID != q || u.Items[0].Quantity != 1 {
+		t.Fatalf("set 1 of 0 at store A: cart %+v, want store A holding Q 1 only", u.cartView)
+	}
+}
+
 // TestCartSetSurvivesConcurrentRemoval: a line set while another request removes
 // the cart's last line is kept. Whichever request runs first, the cart holds R.
 func TestCartSetSurvivesConcurrentRemoval(t *testing.T) {
