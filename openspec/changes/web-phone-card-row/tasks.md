@@ -20,7 +20,7 @@ Easy to get wrong:
 - The fix is two class lists (design.md, Decisions 1 and 2), exactly as written; no wrapper element, no new component, no arbitrary value, no change to `Price` or `Stepper`.
 
 - [x] 1.1 `e2e/phone-layout.spec.ts` committed (`test: card controls stay inside the card on a phone`); lint and typecheck green; manager's e2e run shows the three red
-- [ ] 1.2 The two class lists (`fix: card controls stay inside the card on a phone`); all gates green
+- [x] 1.2 The two class lists (`fix: card controls stay inside the card on a phone`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-phone-card-row` after 1.2 lands and the manager's e2e is green.

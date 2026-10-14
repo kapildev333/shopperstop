@@ -28,7 +28,7 @@ export function ProductCard({ product }: { product: StoreProduct }) {
         <p className="line-clamp-2 text-body font-semibold text-ink">{product.name}</p>{' '}
         <p className="text-small text-ink-muted">{product.unitLabel}</p>
       </Link>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col items-start gap-2">
         <Price cents={product.priceCents} mrpCents={product.mrpCents} />
         <Stepper
           value={quantity}
