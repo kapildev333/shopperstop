@@ -1,10 +1,13 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -192,5 +195,106 @@ func TestCancelNoBody(t *testing.T) {
 	expectError(t, "no body", status, body, http.StatusBadRequest, "validation", "", "invalid JSON")
 	if got := orderStatus(t, placed.ID); got != "placed" {
 		t.Fatalf("status %s after the refused cancel, want placed", got)
+	}
+}
+
+// cancelAsync sends POST /orders/{id}/cancel with {} for the token and returns the answer. It runs in
+// goroutines, so it never fails the test itself: the caller checks err.
+func cancelAsync(token, orderID string) answer {
+	req, err := http.NewRequest(http.MethodPost, srv.URL+ordersPath+"/"+orderID+"/cancel", bytes.NewReader([]byte("{}")))
+	if err != nil {
+		return answer{err: err}
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return answer{err: err}
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	return answer{status: resp.StatusCode, body: body, err: err}
+}
+
+// TestCancelConcurrent: five cancels of one placed order at once; one cancels, four get 409,
+// and the stock comes back once.
+func TestCancelConcurrent(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	q := cartProduct(t, s.ID, stockName(t), 3000)
+	b := newBuyer(t, s.Pincode)
+	for range 10 {
+		stockTo(t, s.ID, p, 5)
+		stockTo(t, s.ID, q, 7)
+		setLine(t, b.Token, s.ID, p, 1)
+		setLine(t, b.Token, s.ID, q, 2)
+		placed := mustPlace(t, b)
+
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		answers := make([]answer, 5)
+		for i := range answers {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				answers[i] = cancelAsync(b.Token, placed.ID)
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		ok := 0
+		for _, r := range answers {
+			if r.err != nil {
+				t.Fatalf("cancel request: %v", r.err)
+			}
+			switch r.status {
+			case http.StatusOK:
+				ok++
+			case http.StatusConflict:
+				expectError(t, "losing cancel", r.status, r.body, http.StatusConflict, "conflict", "", "")
+			default:
+				t.Fatalf("cancel got %d %s, want 200 or 409", r.status, r.body)
+			}
+		}
+		if ok != 1 {
+			t.Fatalf("%d cancels succeeded, want 1", ok)
+		}
+		o := readOrder(t, ordersPath+"/"+placed.ID, b.Token)
+		if o.Status != "cancelled" || len(o.Events) != 2 {
+			t.Fatalf("order %s with %d events, want cancelled with 2", o.Status, len(o.Events))
+		}
+		if first, last := o.Events[0], o.Events[1]; first.ToStatus != "placed" || last.FromStatus != "placed" || last.ToStatus != "cancelled" {
+			t.Fatalf("events %+v, want placed then placed to cancelled", o.Events)
+		}
+		if got := quantityAt(t, s.ID, p); got != 5 {
+			t.Fatalf("P stock %d after the cancels, want 5 back", got)
+		}
+		if got := quantityAt(t, s.ID, q); got != 7 {
+			t.Fatalf("Q stock %d after the cancels, want 7 back", got)
+		}
+	}
+}
+
+// TestCancelTrimsReason: the reason is trimmed, and the trimmed text is the event note too.
+func TestCancelTrimsReason(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+	placed := mustPlace(t, b)
+
+	status, body := cancel(t, b.Token, placed.ID, map[string]string{"reason": "  changed my mind  "})
+	var o orderView
+	if status != http.StatusOK || json.Unmarshal(body, &o) != nil {
+		t.Fatalf("cancel: got %d %s, want 200", status, body)
+	}
+	if o.CancelReason != "changed my mind" {
+		t.Fatalf("cancelReason %q, want the trimmed reason", o.CancelReason)
+	}
+	if last := o.Events[len(o.Events)-1]; last.Note != "changed my mind" {
+		t.Fatalf("last event note %q, want the trimmed reason", last.Note)
 	}
 }
