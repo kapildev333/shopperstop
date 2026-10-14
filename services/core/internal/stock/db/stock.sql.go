@@ -171,7 +171,9 @@ func (q *Queries) Quantity(ctx context.Context, arg QuantityParams) (int32, erro
 
 const upsertStock = `-- name: UpsertStock :exec
 insert into store_stock (store_id, product_id, quantity)
-select $1::uuid, unnest($2::uuid[]), unnest($3::integer[])
+select $1::uuid, t.product_id, t.quantity
+from (select unnest($2::uuid[]) as product_id, unnest($3::integer[]) as quantity) t
+order by t.product_id
 on conflict (store_id, product_id) do update set quantity = excluded.quantity
 `
 
@@ -181,6 +183,7 @@ type UpsertStockParams struct {
 	Quantities []int32
 }
 
+// Upserts in product id order, the order LockStock uses, so it cannot deadlock with a reservation.
 func (q *Queries) UpsertStock(ctx context.Context, arg UpsertStockParams) error {
 	_, err := q.db.Exec(ctx, upsertStock, arg.StoreID, arg.ProductIds, arg.Quantities)
 	return err
