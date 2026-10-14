@@ -100,15 +100,21 @@ test('the stock table lists a page of the first store and badges quantities belo
   expect(lastListQuery(calls)).toEqual({ page: '1', pageSize: '24' })
 })
 
-test('store staff see their own store and no store selector', async () => {
+test('store staff see their own store by name and no store selector', async () => {
   setToken('tok')
-  const calls = fakeCore({ 'GET /admin/me': () => json(200, storeStaff), ...stockCore(storeStaff.storeId!, [milk]).routes })
+  const own = { ...koramangala, id: storeStaff.storeId!, name: 'Whitefield' }
+  const calls = fakeCore({
+    'GET /admin/me': () => json(200, storeStaff),
+    [`GET /stores/${own.id}`]: () => json(200, { id: own.id, name: own.name, isOpen: true, deliveryFeeCents: 2500, freeDeliveryAboveCents: 19900, minOrderCents: 9900, promisedMinutes: 10 }),
+    ...stockCore(own.id, [milk]).routes,
+  })
 
   renderApp(`/stock?store=${koramangala.id}`)
 
   expect(await findQuantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  expect(await screen.findByText('Whitefield')).toBeInTheDocument()
   expect(screen.queryByLabelText('Store')).not.toBeInTheDocument()
-  expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', ''))).toEqual(['/admin/me', `/admin/stores/${storeStaff.storeId}/stock`])
+  expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', '')).sort()).toEqual(['/admin/me', `/admin/stores/${own.id}/stock`, `/stores/${own.id}`])
 })
 
 test('choosing a store puts it in the URL and loads its stock, never under the other store\'s rows', async () => {
@@ -627,4 +633,152 @@ test('a save that answers after the store changed leaves the other store\'s edit
   expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
   expect(quantity('Banana Robusta')).toHaveValue('30')
   expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+})
+
+test('switching store with unsaved edits asks first', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...stockCore(koramangala.id, [milk]).routes })
+  const toKoramangala = () => calls.filter((call) => call.url.includes(koramangala.id))
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+
+  const dialog = screen.getByRole('dialog', { name: 'Discard unsaved changes?' })
+  expect(dialog).toHaveTextContent("Switching store discards the unsaved change to this store's stock.")
+  expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Discard and switch'])
+  expect(screen.getByLabelText('Store')).toHaveValue(indiranagar.id)
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(toKoramangala()).toEqual([])
+
+  await userEvent.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+  await userEvent.click(screen.getByRole('button', { name: 'Discard and switch' }))
+  expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Store')).toHaveValue(koramangala.id)
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+
+  await userEvent.selectOptions(screen.getByLabelText('Store'), indiranagar.id)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(await findQuantity('Banana Robusta')).toHaveValue('0')
+})
+
+test('a save refused for a deleted product says so and keeps the edits', async () => {
+  setToken('tok')
+  fakeCore({
+    ...asAdmin,
+    ...stockCore(indiranagar.id, [banana, milk]).routes,
+    [`PUT /admin/stores/${indiranagar.id}/stock`]: () => apiError(400, 'validation', 'unknown product', 'rows'),
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('These changes were refused: a changed product may have been deleted. Discard the changes and try again.')
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+
+  await type('Sunny Fields Toned Milk', '20')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('any other save failure shows a banner, keeps the edits and can be retried', async () => {
+  setToken('tok')
+  let fail = true
+  const core = stockCore(indiranagar.id, [banana])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  fakeCore({ ...asAdmin, ...core.routes, [put]: (request) => (fail ? apiError(500, 'internal') : core.routes[put](request)) })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the stock. Try again.')
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+
+  fail = false
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(core.puts).toEqual([{ rows: [{ productId: banana.productId, quantity: 30 }] }])
+})
+
+test('a page in the URL beyond what core accepts is cut to one it does, then to the last page', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  const get = `GET /admin/stores/${indiranagar.id}/stock`
+  // Core answers 400 to a page whose offset passes its integer range: at 24 a page, any page above 89478486.
+  const calls = fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [get]: (request) =>
+      Number(new URL(request.url).searchParams.get('page')) > 89478486 ? apiError(400, 'validation', 'too large', 'page') : core.routes[get](request),
+  })
+
+  renderApp('/stock?page=2147483648')
+
+  expect(await screen.findByText('Page 2 of 2, 30 products')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(calls.map((call) => new URL(call.url).searchParams.get('page')).filter(Boolean)).toEqual(['100000', '2'])
+})
+
+test('a search in the URL loses NUL bytes and is cut to the 100 characters core takes', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [milk]).routes })
+  const cut = 'm'.repeat(60) + 'k'.repeat(40)
+
+  renderApp(`/stock?q=${'m'.repeat(60)}%00${'k'.repeat(60)}`)
+
+  expect(await screen.findByRole('heading', { level: 2, name: 'No products found' })).toBeInTheDocument()
+  expect(lastListQuery(calls).q).toBe(cut)
+  const field = within(screen.getByRole('search', { name: 'Search stock' })).getByRole('searchbox', { name: 'Search' })
+  expect(field).toHaveValue(cut)
+  expect(field).toHaveAttribute('maxlength', '100')
+})
+
+test.each(['page=banana', 'page=1.5', 'lowStock=banana'])('?%s in the URL is read as page 1 with the filter off', async (search) => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, thirty).routes })
+
+  renderApp(`/stock?${search}`)
+
+  expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(lastListQuery(calls)).toEqual({ page: '1', pageSize: '24' })
+  expect(screen.getByRole('button', { name: 'Low stock only' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('store staff get the stock without a store name when the name cannot be read', async () => {
+  setToken('tok')
+  const calls = fakeCore({
+    'GET /admin/me': () => json(200, storeStaff),
+    [`GET /stores/${storeStaff.storeId}`]: () => apiError(500, 'internal'),
+    ...stockCore(storeStaff.storeId!, [milk]).routes,
+  })
+
+  renderApp('/stock')
+
+  expect(await findQuantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  await waitFor(() => expect(calls.some((call) => new URL(call.url).pathname.endsWith(`/stores/${storeStaff.storeId}`))).toBe(true))
+  expect(screen.queryByText('Store:')).not.toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+})
+
+test('an admin is not asked for a store name: the selector names the store', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [milk]).routes })
+
+  renderApp('/stock')
+
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', ''))).toEqual(['/admin/me', '/admin/stores', `/admin/stores/${indiranagar.id}/stock`])
 })

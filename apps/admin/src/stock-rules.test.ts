@@ -20,3 +20,13 @@ test('a value that is not a quantity is never sent as a number', () => {
 
   expect(toRows(edits)).toEqual([{ productId: 'a', quantity: 12 }])
 })
+
+test('one save takes the first 500 edits, in the order they were made', () => {
+  const edits: Edits = Object.fromEntries(Array.from({ length: 501 }, (_, i) => [`product-${i}`, { name: `Product ${i}`, value: String(i) }]))
+
+  const rows = toRows(edits)
+
+  expect(rows).toHaveLength(500)
+  expect(rows[0]).toEqual({ productId: 'product-0', quantity: 0 })
+  expect(rows[499]).toEqual({ productId: 'product-499', quantity: 499 })
+})
