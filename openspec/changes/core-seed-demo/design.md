@@ -275,7 +275,7 @@ func TestStockListImageURL(t *testing.T) {
 
 `make gen postman` then rewrites `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json`; both are committed with the code (D19, D23) and never edited by hand.
 
-## Decision 4: three tests assert what their scenarios say
+## Decision 4: four tests assert what their scenarios say
 
 Test-only; the behaviour is on `main`, so each change passes on first run.
 
@@ -334,6 +334,7 @@ and, because `status` and `body` are now declared there, the later line `status,
 - "Local databases only" is a line of text. `seed-demo --reset` truncates whatever database the URL names. A host guard is deferred to the first deploy off a laptop (Spec 2 §14 has the same trigger for S3); it needs a decision on what "local" means under `make prod-local`.
 - `stock` now imports `catalog` for one function. No cycle (`catalog` imports `store`, `httpx`, `pg`, `blob`). A later split into services turns it into a field the catalog service returns, as D24 already says of the join.
 - The snapshot test still moves `image_key` by SQL: `PATCH /admin/products/{id}` has no image member, and the scenario names the price and the name only.
+- `TestSummaryMatchesSeed` compares the four Postman variables with the ids `Summary` marks and checks each marked id is a row of the table printed beside it; it does not repeat the four literal ids of the platform scenario, nor which table goes with which variable. Those are held by the text of `Summary` and by the seed tests that pin `...0401` in `stores`, `...0601` in `products`, `...0301` in `addresses` and `...0703` in `orders`. A change that moves a marker and the environment file together passes it. Upgrade (test only, found at acceptance): compare the marked ids with a literal map of the four.
 - `TestSummaryMatchesSeed` reads `docs/postman/local.postman_environment.json` by a relative path (four directories up from `internal/seed`). It breaks if the module or the file moves, which is the point.
 
 ## Files the change touches (all in `services/core/`, plus the two generated files of D19 and D23)
