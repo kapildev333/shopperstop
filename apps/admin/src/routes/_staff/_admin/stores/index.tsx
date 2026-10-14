@@ -30,10 +30,12 @@ function Stores() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Stores" actions={<Link to="/stores/new" className={buttonClass({})}>New store</Link>} />
-      {stores.isPending ? (
-        <Skeleton variant="table" count={4} />
-      ) : stores.isError ? (
-        <ErrorBanner message="Could not load the stores." onRetry={() => void stores.refetch()} />
+      {stores.data === undefined ? (
+        stores.isError ? (
+          <ErrorBanner message="Could not load the stores." onRetry={() => void stores.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={4} />
+        )
       ) : stores.data.items.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No stores yet" description="Create a store, then add the pincodes it delivers to." />

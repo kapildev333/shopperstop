@@ -73,9 +73,12 @@ function ProductPage() {
   const { productId } = Route.useParams()
   const product = useQuery(productQuery(productId))
   const categories = useQuery(categoriesQuery)
-  if (product.isPending || categories.isPending) return <Skeleton variant="list" count={3} />
-  if (product.isError && (product.error as Partial<ApiError>).code === 'not_found') return <NotFound />
-  if (product.isError || categories.isError) {
+  // A product deleted elsewhere is gone even while the page shows it; any other failed read leaves what is shown.
+  if ((product.error as Partial<ApiError> | null)?.code === 'not_found') return <NotFound />
+  if (product.data === undefined || categories.data === undefined) {
+    // The alert only for a read that failed with nothing held: a failed refresh of held categories must not end the wait for the product.
+    const failed = (product.data === undefined && product.isError) || (categories.data === undefined && categories.isError)
+    if (!failed) return <Skeleton variant="list" count={3} />
     const retry = () => void Promise.all([product.refetch(), categories.refetch()])
     return <ErrorBanner message="Could not load the product." onRetry={retry} />
   }

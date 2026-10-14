@@ -46,10 +46,10 @@ function DeleteStore({ store }: { store: AdminStore }) {
 function StorePage() {
   const { storeId } = Route.useParams()
   const store = useQuery(storeQuery(storeId))
-  if (store.isPending) return <Skeleton variant="list" count={3} />
-  if (store.isError) {
-    if ((store.error as Partial<ApiError>).code === 'not_found') return <NotFound />
-    return <ErrorBanner message="Could not load the store." onRetry={() => void store.refetch()} />
+  // A store deleted elsewhere is gone even while the page shows it; any other failed read leaves what is shown.
+  if ((store.error as Partial<ApiError> | null)?.code === 'not_found') return <NotFound />
+  if (store.data === undefined) {
+    return store.isError ? <ErrorBanner message="Could not load the store." onRetry={() => void store.refetch()} /> : <Skeleton variant="list" count={3} />
   }
   return (
     <div className="flex max-w-2xl flex-col gap-6">

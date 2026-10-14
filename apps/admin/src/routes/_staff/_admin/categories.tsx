@@ -40,10 +40,12 @@ function Categories() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Categories" actions={<Button onClick={() => setEditing('new')}>New category</Button>} />
-      {tree.isPending ? (
-        <Skeleton variant="table" count={6} />
-      ) : tree.isError ? (
-        <ErrorBanner message="Could not load the categories." onRetry={() => void tree.refetch()} />
+      {tree.data === undefined ? (
+        tree.isError ? (
+          <ErrorBanner message="Could not load the categories." onRetry={() => void tree.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={6} />
+        )
       ) : rows.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No categories yet" description="Create a top-level category, then its subcategories." />

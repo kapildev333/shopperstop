@@ -73,10 +73,12 @@ function Products() {
           </Select>
         </FormField>
       </Card>
-      {products.isPending ? (
-        <Skeleton variant="table" count={6} />
-      ) : products.isError ? (
-        <ErrorBanner message="Could not load the products." onRetry={() => void products.refetch()} />
+      {products.data === undefined ? (
+        products.isError ? (
+          <ErrorBanner message="Could not load the products." onRetry={() => void products.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={6} />
+        )
       ) : products.data.items.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No products found" description="Change the search or the filters, or create a product." />
