@@ -17,6 +17,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/order"
+	"github.com/kapildev333/shopperstop/services/core/internal/staff"
 	"github.com/kapildev333/shopperstop/services/core/internal/stock"
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
@@ -80,6 +81,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/stores/{id}/orders", order.StoreList(pool))
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/orders/{id}", order.AdminGet(pool))
 	r.With(a.RequireStaff).Post("/api/core/v1/admin/orders/{id}/status", order.SetStatus(pool))
+	r.With(a.RequireStaff).Get("/api/core/v1/admin/dashboard", staff.Dashboard(pool))
 	return r
 }
 

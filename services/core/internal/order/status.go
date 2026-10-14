@@ -74,3 +74,25 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		"to", string(to), "actorType", actor.Type, "actorId", actor.ID, "requestId", httpx.RequestID(ctx))
 	return nil
 }
+
+// Today answers the store's orders placed today by current status, with all seven
+// statuses as keys, and the total of the orders delivered today.
+func Today(ctx context.Context, d db.DBTX, storeID string) (map[string]int64, int64, error) {
+	q := db.New(d)
+	rows, err := q.CountsToday(ctx, storeID)
+	if err != nil {
+		return nil, 0, err
+	}
+	byStatus := make(map[string]int64, len(db.AllOrderStatusValues()))
+	for _, s := range db.AllOrderStatusValues() {
+		byStatus[string(s)] = 0
+	}
+	for _, r := range rows {
+		byStatus[string(r.Status)] = r.Orders
+	}
+	revenue, err := q.RevenueToday(ctx, storeID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return byStatus, revenue, nil
+}

@@ -324,6 +324,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Today's orders, low stock and revenue for each store
+         * @description Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/auth/sign-in": {
         parameters: {
             query?: never;
@@ -1420,6 +1440,32 @@ export interface components {
             pageSize: number;
             /** @description Every order that matches, not just this page. */
             total: number;
+        };
+        /** @description One store's line of the staff dashboard: today's orders, the low-stock count and today's delivered revenue. */
+        DashboardStore: {
+            /** Format: uuid */
+            storeId: string;
+            storeName: string;
+            /** @description Orders placed since midnight Asia/Kolkata, by current status. All seven statuses are always present. */
+            ordersToday: {
+                placed: number;
+                accepted: number;
+                packing: number;
+                ready: number;
+                out_for_delivery: number;
+                delivered: number;
+                cancelled: number;
+            };
+            /** @description Active products below 5 at the store; a product with no stock row counts as 0. */
+            lowStockCount: number;
+            /**
+             * Format: int64
+             * @description Total of the orders delivered since midnight Asia/Kolkata, in paise.
+             */
+            revenueTodayCents: number;
+        };
+        Dashboard: {
+            items: components["schemas"]["DashboardStore"][];
         };
     };
     responses: never;
@@ -3114,6 +3160,64 @@ export interface operations {
                      *       "error": {
                      *         "code": "conflict",
                      *         "message": "cannot move an order from placed to packing"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One line per store the caller may see. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "storeName": "Koramangala",
+                     *           "ordersToday": {
+                     *             "placed": 1,
+                     *             "accepted": 0,
+                     *             "packing": 0,
+                     *             "ready": 0,
+                     *             "out_for_delivery": 0,
+                     *             "delivered": 0,
+                     *             "cancelled": 0
+                     *           },
+                     *           "lowStockCount": 20,
+                     *           "revenueTodayCents": 0
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
                      *       }
                      *     }
                      */

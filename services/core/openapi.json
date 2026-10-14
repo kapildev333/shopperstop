@@ -1910,6 +1910,68 @@
         }
       }
     },
+    "/admin/dashboard": {
+      "get": {
+        "operationId": "getDashboard",
+        "summary": "Today's orders, low stock and revenue for each store",
+        "description": "Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.",
+        "tags": [
+          "admin-staff"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One line per store the caller may see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "storeName": "Koramangala",
+                      "ordersToday": {
+                        "placed": 1,
+                        "accepted": 0,
+                        "packing": 0,
+                        "ready": 0,
+                        "out_for_delivery": 0,
+                        "delivered": 0,
+                        "cancelled": 0
+                      },
+                      "lowStockCount": 20,
+                      "revenueTodayCents": 0
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/auth/sign-in": {
       "post": {
         "operationId": "postAdminAuthSignIn",
@@ -7172,6 +7234,94 @@
             "type": "integer",
             "minimum": 0,
             "description": "Every order that matches, not just this page."
+          }
+        }
+      },
+      "DashboardStore": {
+        "type": "object",
+        "description": "One store's line of the staff dashboard: today's orders, the low-stock count and today's delivered revenue.",
+        "required": [
+          "storeId",
+          "storeName",
+          "ordersToday",
+          "lowStockCount",
+          "revenueTodayCents"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "ordersToday": {
+            "type": "object",
+            "description": "Orders placed since midnight Asia/Kolkata, by current status. All seven statuses are always present.",
+            "required": [
+              "placed",
+              "accepted",
+              "packing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "cancelled"
+            ],
+            "properties": {
+              "placed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "accepted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "packing": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ready": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "out_for_delivery": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "delivered": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cancelled": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "lowStockCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Active products below 5 at the store; a product with no stock row counts as 0."
+          },
+          "revenueTodayCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Total of the orders delivered since midnight Asia/Kolkata, in paise."
+          }
+        }
+      },
+      "Dashboard": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardStore"
+            }
           }
         }
       }

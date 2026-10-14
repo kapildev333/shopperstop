@@ -2192,6 +2192,137 @@
       "description": "Staff sign-in, sign-out and the signed-in staff user for the admin panel.",
       "item": [
         {
+          "name": "Today's orders, low stock and revenue for each store",
+          "request": {
+            "name": "Today's orders, low stock and revenue for each store",
+            "description": {
+              "content": "Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "dashboard"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "One line per store the caller may see.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"storeName\": \"Koramangala\",\n      \"ordersToday\": {\n        \"placed\": 1,\n        \"accepted\": 0,\n        \"packing\": 0,\n        \"ready\": 0,\n        \"out_for_delivery\": 0,\n        \"delivered\": 0,\n        \"cancelled\": 0\n      },\n      \"lowStockCount\": 20,\n      \"revenueTodayCents\": 0\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Sign in a staff user",
           "request": {
             "name": "Sign in a staff user",
