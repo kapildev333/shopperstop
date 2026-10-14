@@ -286,3 +286,234 @@ test('stores load failure shows a retry that reloads', async () => {
   await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
   expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
 })
+
+// Replaces what a quantity field holds, as a user selecting it and typing would.
+async function type(name: string, value: string) {
+  await userEvent.clear(quantity(name))
+  if (value) await userEvent.type(quantity(name), value)
+}
+
+test('edits made on two pages and under a filter are saved with one PUT', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  const calls = fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Product 01')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  await type('Product 01', '40')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(within(quantity('Product 01').closest('tr')!).getByText('Unsaved')).toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+  await findQuantity('Product 25')
+  await type('Product 25', '7')
+  expect(screen.getByText('2 unsaved changes')).toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Low stock only' }))
+  expect(await screen.findByText('Page 1 of 1, 5 products')).toBeInTheDocument()
+  expect(quantity('Product 01')).toHaveValue('40')
+  expect(screen.getByText('2 unsaved changes')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toEqual([{ rows: [{ productId: thirty[0].productId, quantity: 40 }, { productId: thirty[24].productId, quantity: 7 }] }])
+  expect(calls.filter((call) => call.method === 'PUT').map((call) => new URL(call.url).pathname)).toEqual([`/api/core/v1/admin/stores/${indiranagar.id}/stock`])
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(screen.getByText('Page 1 of 1, 4 products')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Quantity of Product 01' })).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Low stock only' }))
+  expect(await findQuantity('Product 01')).toHaveValue('40')
+  expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
+})
+
+test('a page kept from before a save is read again, never shown with the old quantity', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Product 01')
+  await type('Product 01', '40')
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+  await findQuantity('Product 25')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+
+  core.hold()
+  await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
+  await waitFor(() => expect(router.state.location.search).toEqual({}))
+  expect(screen.queryByRole('textbox', { name: 'Quantity of Product 01' })).not.toBeInTheDocument()
+  core.release()
+  expect(await findQuantity('Product 01')).toHaveValue('40')
+})
+
+test('an edit typed back to the saved quantity is no change, and nothing is sent', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [milk])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Sunny Fields Toned Milk')
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  expect(save).toHaveAttribute('aria-disabled', 'true')
+  await type('Sunny Fields Toned Milk', '18')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(save).toHaveAttribute('aria-disabled', 'false')
+  await type('Sunny Fields Toned Milk', '17')
+
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
+  await userEvent.click(save)
+  expect(save).not.toBeDisabled()
+  expect(core.puts).toEqual([])
+})
+
+test('discard puts every quantity back to what core holds', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await type('Sunny Fields Toned Milk', '')
+  expect(screen.getByText('2 unsaved changes')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+
+  expect(quantity('Banana Robusta')).toHaveValue('0')
+  expect(quantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Discard changes' })).toHaveFocus()
+  expect(core.puts).toEqual([])
+})
+
+test('a quantity the page cannot send is marked, named on save and not sent', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Sunny Fields Toned Milk')
+  await type('Sunny Fields Toned Milk', '12.5')
+  await type('Banana Robusta', '9')
+  expect(quantity('Sunny Fields Toned Milk')).toHaveAttribute('aria-invalid', 'true')
+  expect(quantity('Banana Robusta')).not.toHaveAttribute('aria-invalid')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole number from 0 to 100000 for: Sunny Fields Toned Milk.')
+  expect(core.puts).toEqual([])
+
+  await type('Sunny Fields Toned Milk', '100001')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(quantity('Sunny Fields Toned Milk')).toHaveAttribute('aria-invalid', 'true')
+  await type('Sunny Fields Toned Milk', '12')
+  expect(quantity('Sunny Fields Toned Milk')).not.toHaveAttribute('aria-invalid')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toEqual([{ rows: [{ productId: milk.productId, quantity: 12 }, { productId: banana.productId, quantity: 9 }] }])
+})
+
+test('an edit typed while a save is in flight stays unsaved', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(core.puts).toHaveLength(1))
+  await type('Sunny Fields Toned Milk', '20')
+  answer()
+
+  expect(await screen.findByText('1 unsaved change')).toBeInTheDocument()
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(quantity('Sunny Fields Toned Milk')).toHaveValue('20')
+  expect(within(quantity('Sunny Fields Toned Milk').closest('tr')!).getByText('Unsaved')).toBeInTheDocument()
+})
+
+test('unsaved edits never follow a store changed in the URL', async () => {
+  setToken('tok')
+  const other = stockCore(koramangala.id, [banana])
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...other.routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await router.navigate({ to: '/stock', search: { store: koramangala.id } })
+
+  await waitFor(() => expect(screen.getByLabelText('Store')).toHaveValue(koramangala.id))
+  expect(await findQuantity('Banana Robusta')).toHaveValue('0')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(other.puts).toEqual([])
+})
+
+test('while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  fakeCore({ ...asAdmin, ...core.routes })
+  const busy = () => screen.getByRole('table', { name: 'Stock' }).closest('[aria-busy="true"]')
+
+  renderApp('/stock')
+  await findQuantity('Product 01')
+  expect(busy()).toBeNull()
+  expect(quantity('Product 01')).not.toHaveAttribute('readonly')
+  core.hold()
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+  await waitFor(() => expect(busy()).not.toBeNull())
+  expect(busy()).toHaveClass('opacity-50')
+  expect(screen.getByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(quantity('Product 01')).toHaveAttribute('readonly')
+  expect(quantity('Product 01')).not.toBeDisabled()
+  quantity('Product 01').focus()
+  await userEvent.keyboard('9')
+  expect(quantity('Product 01')).toHaveValue('0')
+  expect(quantity('Product 01')).toHaveFocus()
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+
+  core.release()
+  expect(await screen.findByText('Page 2 of 2, 30 products')).toBeInTheDocument()
+  expect(busy()).toBeNull()
+  expect(quantity('Product 25')).not.toHaveAttribute('readonly')
+})
+
+test('Back and Forward move the search field and the list with the URL, and unsaved edits stay', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [...thirty, milk]).routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Product 01')
+  await type('Product 01', '40')
+  await userEvent.type(screen.getByRole('searchbox', { name: 'Search' }), ' milk ')
+  await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+  expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('milk')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+
+  router.history.back()
+  expect(await screen.findByText('Page 1 of 2, 31 products')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('')
+  expect(router.state.location.search).toEqual({})
+  expect(quantity('Product 01')).toHaveValue('40')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+
+  router.history.forward()
+  expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('milk')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+})
