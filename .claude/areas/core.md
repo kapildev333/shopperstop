@@ -3,7 +3,7 @@ Scope: `services/core/`
 Depends on: platform (`deploy/initdb.sql` and `make db` from task 4, landed #4; `.github/workflows/ci.yml` core job from task 13, landed #15; CI blocked by account billing, see PLAN.md)
 Spec: Spec 1 §3, §4, §11; Spec 2 §9, §10, §12, §13; plan tasks 5, 6, 7, 8 (sequential, one module, one feature)
 ## Doing
-Phase 2 core is complete: core-P2-L1 to L6 are merged and archived. No lane is running. The core manager (session shopperstop-a0) answers requests from web and admin against the contract; a new core lane needs a work package from the orchestrator (Phase 3, or a fix found at the Phase 2 close). No `make e2e` from core; unmerged migrations are checked on `shopperstop_core_test` only (D26).
+Paused 2026-10-13 (owner stopped for the day), Phase 2 core complete: core-P2-L1 to L6 are merged and archived (#63, #76, #87, #106, #137, #154); no core worktree, branch or PR is open and nothing is unpushed. Resume: nothing to continue; a next session runs `/manage core` only when the orchestrator writes a new work package here (Phase 3) or hands back a gap from the Phase 2 close (`make test`, `make e2e`, fresh-clone `make dev`). Read `## Found` first: the Phase 2 deferred list, the `TestSignInFailuresLookTheSame` flake under load, D26 (unmerged migrations on `shopperstop_core_test` only), and the throwaway-schema method for manager verification. No `make e2e` from core.
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
