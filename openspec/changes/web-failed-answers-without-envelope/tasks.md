@@ -30,7 +30,7 @@ Easy to get wrong:
 - "expired session dropped" and "bearer attached" stay as they are and stay green.
 
 - [x] 1.1 The eight tests committed (`test: a failed answer without the error envelope is a failure`); lint and typecheck green; Vitest shows 1, 2, 3, 5 and 8 red and nothing else red
-- [ ] 1.2 `onResponse` as in design.md, Decision 1 (`fix: a failed answer without the error envelope is a failure`); all gates green
+- [x] 1.2 `onResponse` as in design.md, Decision 1 (`fix: a failed answer without the error envelope is a failure`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-failed-answers-without-envelope` after 1.2 lands.
