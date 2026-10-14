@@ -54,6 +54,7 @@ export function useCart() {
 
 // The last quantity asked for each line while its write is queued or in flight, keyed `${storeId}:${productId}`.
 const asked = new Map<string, { quantity: number; turn: number }>()
+// ponytail: asked survives sign-out until its write settles; clear it in signOut if that window ever shows.
 let turn = 0
 const askedListeners = new Set<() => void>()
 
@@ -141,6 +142,8 @@ export async function clearCart(): Promise<ApiError | undefined> {
     return undefined
   }
   return queued(async () => {
+    // The session changed while this waited: the DELETE would reach the new session's cart.
+    if (getToken() !== token) return undefined
     const error = await call(() => api.DELETE('/me/cart'))
     if (!error) {
       await queryClient.cancelQueries({ queryKey: cartKey(token) })
@@ -156,6 +159,8 @@ export async function mergeGuestCart(): Promise<void> {
   const bodies = mergeBodies(getGuestCart())
   if (!token || bodies.length === 0) return
   return queued(async () => {
+    // The session changed while this waited: the pushes would go out for the new session. The guest cart is left as it is (the design does not say; a question for the team lead).
+    if (getToken() !== token) return
     const before = await queryClient.fetchQuery(cartOptions(token)).catch(() => undefined)
     let failed = false
     let clamped = false
