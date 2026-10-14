@@ -1,4 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
+import { useSyncExternalStore } from 'react'
 import type { components } from '@shopperstop/ui/api'
 import { api, call, queryClient, type ApiError } from './api'
 import { useServiceability, type StoreProduct } from './catalog'
@@ -51,38 +52,86 @@ export function useCart() {
   }
 }
 
+// The last quantity asked for each line while its write is queued or in flight, keyed `${storeId}:${productId}`.
+const asked = new Map<string, { quantity: number; turn: number }>()
+let turn = 0
+const askedListeners = new Set<() => void>()
+
+function publishAsked() {
+  askedListeners.forEach((listener) => listener())
+}
+
+function subscribeAsked(listener: () => void) {
+  askedListeners.add(listener)
+  return () => {
+    askedListeners.delete(listener)
+  }
+}
+
+const lineKey = (storeId: string, productId: string) => `${storeId}:${productId}`
+
+export function useAsked(storeId: string | undefined, productId: string): number | undefined {
+  return useSyncExternalStore(subscribeAsked, () => (storeId ? asked.get(lineKey(storeId, productId))?.quantity : undefined))
+}
+
+// ponytail: one chain for all carts, per-token chains if two sessions ever coexist.
+let chain: Promise<unknown> = Promise.resolve()
+
+// Every server write runs after the one before it settled, so answers land in the order they were asked for.
+function queued<T>(work: () => Promise<T>): Promise<T> {
+  const run = chain.then(work)
+  chain = run.catch(() => {})
+  return run
+}
+
 // Product ids are the same at every store: a cart at another store counts for nothing here.
 export function useCartQuantity(product: StoreProduct) {
   const { view } = useCart()
   const storeId = useServiceability(usePincode().pincode).data?.id
+  const pending = useAsked(storeId, product.id)
   const here = !!storeId && view?.storeId === storeId
-  const quantity = here ? (view?.items.find((line) => line.product.id === product.id)?.quantity ?? 0) : 0
+  const cached = here ? (view?.items.find((line) => line.product.id === product.id)?.quantity ?? 0) : 0
   return [
-    quantity,
+    pending ?? cached,
     (next: number) => {
       if (storeId) void setLine(storeId, product, next)
     },
   ] as const
 }
 
-// Caches core's whole answer: its items and storeId are the truth, whatever was sent.
+// Shows the asked count at once; caches core's whole answer when it lands: its items and storeId are the truth, whatever was sent.
 export async function setLine(storeId: string, product: CartProduct, quantity: number): Promise<void> {
   const token = getToken()
   if (!token) return dispatchGuest({ type: 'set', storeId, product, quantity })
-  const previous = queryClient.getQueryData<CartView>(cartKey(token))?.storeId
-  const answered: { cart?: CartUpdate } = {}
-  await call(async () => {
-    const result = await api.PUT('/me/cart/items', { body: { storeId, productId: product.id, quantity } })
-    answered.cart = result.data
-    return result
+  const key = lineKey(storeId, product.id)
+  const mine = ++turn
+  asked.set(key, { quantity, turn: mine })
+  publishAsked()
+  return queued(async () => {
+    try {
+      // A later tap on this line overtook this write, or the session changed while it waited: skip it.
+      if (asked.get(key)?.turn !== mine || getToken() !== token) return
+      const previous = queryClient.getQueryData<CartView>(cartKey(token))?.storeId
+      const answered: { cart?: CartUpdate } = {}
+      await call(async () => {
+        const result = await api.PUT('/me/cart/items', { body: { storeId, productId: product.id, quantity } })
+        answered.cart = result.data
+        return result
+      })
+      if (!answered.cart) {
+        await queryClient.invalidateQueries({ queryKey: cartKey(token) })
+        return
+      }
+      await queryClient.cancelQueries({ queryKey: cartKey(token) })
+      const { cart } = answered
+      queryClient.setQueryData(cartKey(token), cart.replaced ? { ...cart, replacedStoreId: previous } : cart)
+    } finally {
+      if (asked.get(key)?.turn === mine) {
+        asked.delete(key)
+        publishAsked()
+      }
+    }
   })
-  if (!answered.cart) {
-    await queryClient.invalidateQueries({ queryKey: cartKey(token) })
-    return
-  }
-  await queryClient.cancelQueries({ queryKey: cartKey(token) })
-  const { cart } = answered
-  queryClient.setQueryData(cartKey(token), cart.replaced ? { ...cart, replacedStoreId: previous } : cart)
 }
 
 export async function clearCart(): Promise<ApiError | undefined> {
@@ -91,12 +140,14 @@ export async function clearCart(): Promise<ApiError | undefined> {
     clearGuestCart()
     return undefined
   }
-  const error = await call(() => api.DELETE('/me/cart'))
-  if (!error) {
-    await queryClient.cancelQueries({ queryKey: cartKey(token) })
-    queryClient.setQueryData(cartKey(token), cartView(emptyCart))
-  }
-  return error
+  return queued(async () => {
+    const error = await call(() => api.DELETE('/me/cart'))
+    if (!error) {
+      await queryClient.cancelQueries({ queryKey: cartKey(token) })
+      queryClient.setQueryData(cartKey(token), cartView(emptyCart))
+    }
+    return error
+  })
 }
 
 // Pushes each guest line in guest order, then empties the guest cart even when a push failed.
@@ -104,36 +155,38 @@ export async function mergeGuestCart(): Promise<void> {
   const token = getToken()
   const bodies = mergeBodies(getGuestCart())
   if (!token || bodies.length === 0) return
-  const before = await queryClient.fetchQuery(cartOptions(token)).catch(() => undefined)
-  let failed = false
-  let clamped = false
-  let replaced = false
-  let last: CartUpdate | undefined
-  for (const body of bodies) {
-    const answered: { cart?: CartUpdate } = {}
-    const error = await call(async () => {
-      const result = await api.PUT('/me/cart/items', { body })
-      answered.cart = result.data
-      return result
-    })
-    if (error || !answered.cart) {
-      failed = true
-      continue
+  return queued(async () => {
+    const before = await queryClient.fetchQuery(cartOptions(token)).catch(() => undefined)
+    let failed = false
+    let clamped = false
+    let replaced = false
+    let last: CartUpdate | undefined
+    for (const body of bodies) {
+      const answered: { cart?: CartUpdate } = {}
+      const error = await call(async () => {
+        const result = await api.PUT('/me/cart/items', { body })
+        answered.cart = result.data
+        return result
+      })
+      if (error || !answered.cart) {
+        failed = true
+        continue
+      }
+      last = answered.cart
+      clamped ||= last.clamped
+      replaced ||= last.replaced
     }
-    last = answered.cart
-    clamped ||= last.clamped
-    replaced ||= last.replaced
-  }
-  clearGuestCart()
-  await queryClient.cancelQueries({ queryKey: cartKey(token) })
-  if (last && !failed) {
-    queryClient.setQueryData(cartKey(token), {
-      ...last,
-      clamped,
-      replaced,
-      ...(replaced ? { replacedStoreId: before?.storeId } : {}),
-    })
-  } else {
-    await queryClient.invalidateQueries({ queryKey: cartKey(token) })
-  }
+    clearGuestCart()
+    await queryClient.cancelQueries({ queryKey: cartKey(token) })
+    if (last && !failed) {
+      queryClient.setQueryData(cartKey(token), {
+        ...last,
+        clamped,
+        replaced,
+        ...(replaced ? { replacedStoreId: before?.storeId } : {}),
+      })
+    } else {
+      await queryClient.invalidateQueries({ queryKey: cartKey(token) })
+    }
+  })
 }

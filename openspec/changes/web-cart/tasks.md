@@ -32,7 +32,7 @@ Failing tests: `src/cart.test.tsx` › "quick taps each count", "failed write re
 Vitest proves what the Stepper shows and that it returns to the cart's count; only the e2e proves the order of the writes, that the last quantity wins and that the cache ends on core's latest answer (design.md, Test strategy, "Quick taps").
 
 - [x] 2b.1 Tests committed red (`test: quick taps each count`)
-- [ ] 2b.2 The write queue in `cart.ts` (`fix: quick taps each count, cart writes one at a time`); all gates green, e2e green
+- [x] 2b.2 The write queue in `cart.ts` (`fix: quick taps each count, cart writes one at a time`); all gates green, e2e green
 
 ## 3. Drawer, bar, header button and store-change confirm
 
