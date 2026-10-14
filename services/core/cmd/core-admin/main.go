@@ -84,7 +84,7 @@ func migrateDB(stdout, stderr io.Writer) int {
 	return 0
 }
 
-// seedDemoCmd loads the demo accounts, clearing them first when reset is set.
+// seedDemoCmd loads the demo data, clearing it first when reset is set, and prints seed.Summary.
 func seedDemoCmd(reset bool, stdout, stderr io.Writer) int {
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
@@ -111,9 +111,7 @@ func seedDemoCmd(reset bool, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "core-admin: seed-demo images: %v\n", err)
 		return 1
 	}
-	fmt.Fprintln(stdout, "seed-demo: demo accounts loaded")
-	fmt.Fprintln(stdout, "  admin     admin@shopperstop.local (staff, admin)")
-	fmt.Fprintln(stdout, "  customer  demo@shopperstop.local (2 addresses)")
+	fmt.Fprint(stdout, seed.Summary)
 	return 0
 }
 
