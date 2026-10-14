@@ -42,7 +42,7 @@ Failing tests: `src/cart-drawer.test.tsx` › "drawer lines and totals", "free d
 Easy to get wrong: no cart state in component state and nothing mounted under `StoreGate` (Decision 10); no link to `/p/...` in the drawer, bar or header button; the bar's spacer, not padding on `main` (Decision 12); a line's Stepper value is `useAsked(view.storeId, product.id) ?? quantity` and it writes at `view.storeId`, never the resolved store's; `view` is checked before `isError`; the clamp notice also sits over the empty state; fee tests override `store()`'s `freeDeliveryAboveCents` and `minOrderCents` (both 0 by default); the replaced notice is 3b's.
 
 - [x] 3a.1 Tests committed red (`test: cart drawer, bar and header cart button`)
-- [ ] 3a.2 `cart-drawer.tsx`, root wiring, `test-setup.ts` (`feat: cart drawer, sticky bar and header cart button`); all gates green, e2e green (every spec), axe clean
+- [x] 3a.2 `cart-drawer.tsx`, root wiring, `test-setup.ts` (`feat: cart drawer, sticky bar and header cart button`); all gates green, e2e green (every spec), axe clean
 
 ## 3b. Store-change confirm and the replaced notice
 

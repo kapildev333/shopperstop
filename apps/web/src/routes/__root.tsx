@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { Link, Outlet, createLink, createRootRoute } from '@tanstack/react-router'
 import { ButtonLink, Card, EmptyState, PageHeader } from '@shopperstop/ui'
 import { queryClient } from '../api'
+import { CartBar, CartButton, CartSheet } from '../cart-drawer'
 import { AccountLink } from '../account-link'
 import { PincodeButton, PincodeSheet } from '../pincode-sheet'
 import { SearchForm } from '../search-form'
@@ -17,6 +18,7 @@ function RootLayout() {
         </Link>
         <SearchForm className="order-last basis-full sm:order-none sm:basis-auto sm:max-w-xl sm:flex-1" />
         <div className="ml-auto flex items-center gap-2">
+          <CartButton />
           <PincodeButton />
           <AccountLink />
         </div>
@@ -24,6 +26,8 @@ function RootLayout() {
       <main className="px-4 py-6 sm:px-6">
         <Outlet />
       </main>
+      <CartBar />
+      <CartSheet />
       <PincodeSheet />
     </QueryClientProvider>
   )
