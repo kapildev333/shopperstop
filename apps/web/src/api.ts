@@ -5,15 +5,29 @@ import { getToken, setToken, useToken } from './session'
 
 export type ApiError = components['schemas']['Error']['error']
 
+const unreachable: ApiError = { code: 'internal', message: 'Could not reach ShopperStop. Try again.' }
+
+function isEnvelope(body: unknown): boolean {
+  const error = (body as { error?: { code?: unknown; message?: unknown } } | null)?.error
+  return typeof error?.code === 'string' && typeof error?.message === 'string'
+}
+
 export const authMiddleware: Middleware = {
   onRequest({ request }) {
     const token = getToken()
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
     return request
   },
-  onResponse({ response }) {
+  async onResponse({ response }) {
     if (response.status === 401) setToken(undefined)
-    return response
+    if (response.ok) return response
+    const body: unknown = await response.clone().json().catch(() => undefined)
+    if (isEnvelope(body)) return response
+    // Only Content-Type is set: copying Content-Length: 0 would make openapi-fetch drop the error again.
+    return new Response(JSON.stringify({ error: unreachable }), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   },
 }
 
@@ -21,8 +35,6 @@ export const api = createClient<paths>({ baseUrl: '/api/core/v1' })
 api.use(authMiddleware)
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-const unreachable: ApiError = { code: 'internal', message: 'Could not reach ShopperStop. Try again.' }
 
 // Runs one request; resolves to the envelope's error, or undefined on success.
 export async function call(request: () => Promise<{ error?: { error: ApiError } }>): Promise<ApiError | undefined> {
