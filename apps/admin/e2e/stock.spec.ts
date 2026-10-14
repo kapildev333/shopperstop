@@ -77,6 +77,7 @@ test('store staff set stock at their own store only', async ({ page }) => {
   await signIn(page, 'koramangala@shopperstop.local', 'staff12345')
   await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Stock' }).click()
   await expect(page.getByRole('table', { name: 'Stock' })).toBeVisible()
+  await expect(page.getByText('Store: Koramangala')).toBeVisible()
   await expect(page.getByLabel('Store', { exact: true })).toHaveCount(0)
   await expectNoAxeViolations(page)
 
