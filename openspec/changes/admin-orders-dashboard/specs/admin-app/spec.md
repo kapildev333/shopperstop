@@ -8,6 +8,14 @@
 - **THEN** the columns read "Placed" 2, "Accepted" 1, "Packing" 0, "Ready" 0, "Out for delivery" 1, the placed column lists the older order first, a card reads "2 min ago", "1 item, pincode 560038" and "₹45.50", the oldest reads "2 h 5 min ago", the empty columns say "No orders", and neither finished order is shown
 - **THEN** core was asked five times, for `placed`, `accepted`, `packing`, `ready` and `out_for_delivery`, each with `pageSize=100`
 
+#### Scenario: Orders placed in the same second
+- **WHEN** three placed orders carry the times `09:20:00Z`, `09:20:00.5Z` and `09:20:00.501Z`
+- **THEN** their cards are in that order
+
+#### Scenario: Column name
+- **WHEN** the board holds two placed orders and one accepted
+- **THEN** the column headings are named "Placed, 2 orders", "Accepted, 1 order", "Packing, 0 orders", "Ready, 0 orders" and "Out for delivery, 0 orders", and each column is a region of that name
+
 ### Requirement: Orders store for admins
 An admin SHALL choose the store with a "Store" selector of every store by name. The chosen store SHALL be in the URL as `store`; without it, or with a value that is no store, the first store is shown. Choosing a store SHALL keep the selector focused and SHALL never show, or announce as new, another store's orders: everything the page kept for the store before is dropped.
 
@@ -41,13 +49,36 @@ The board SHALL ask core again every 10 seconds and show each order where it the
 - **WHEN** the tab is hidden for 30 seconds and then shown
 - **THEN** core was not asked while it was hidden and was asked once it showed
 
+#### Scenario: Board left
+- **WHEN** an admin leaves `/orders` for another page and 30 seconds pass
+- **THEN** core is not asked for the lists again
+
 ### Requirement: Orders board announcements
-The board SHALL carry one visually hidden `role="status"` region named "New orders". An answer from core that holds placed orders the answer before did not SHALL set it to "New order <number>", or "<n> new orders: <numbers>". The first answer for a store, an equal answer and an order first seen in another status SHALL announce nothing; an equal answer SHALL NOT write the region again; a changed answer with no new placed order SHALL empty it.
+The board SHALL carry one visually hidden `role="status"` region named "New orders". An answer from core that holds placed orders the answer before did not SHALL set it to "New order <number>", or "<n> new orders: <numbers>". The first answer since the board was opened, an equal answer and an order first seen in another status SHALL announce nothing; an equal answer SHALL NOT write the region again; a changed answer with no new placed order SHALL empty it.
 
 #### Scenario: New placed order announced once
 - **WHEN** the board has loaded with one placed order, and the next poll brings a second placed order and an accepted one
 - **THEN** the region was empty after the first load and reads exactly "New order SS-TEST0002" after the poll
 - **THEN** two more polls with the same answer do not write the region again, a poll in which only a status changed empties it, and a poll with two more placed orders sets it to "2 new orders: SS-TEST0004, SS-TEST0005"
+
+### Requirement: Orders announced only while the board is open
+Orders the page kept from an earlier visit SHALL NOT be a baseline: coming back to a store, or to `/orders` from another page, SHALL announce nothing for an order placed meanwhile, also when the first refresh after coming back fails. An order placed while the browser tab was hidden SHALL be announced when the tab shows again, because the board stayed open.
+
+#### Scenario: Back to a store
+- **WHEN** an admin looks at Indiranagar, chooses Koramangala, an order is placed at Indiranagar, and the admin chooses Indiranagar again
+- **THEN** the new order shows and the region is empty; an order placed after that is announced at the next poll
+
+#### Scenario: Back to the orders page
+- **WHEN** an admin leaves `/orders` for the dashboard, an order is placed, and the admin opens `/orders` again
+- **THEN** the new order shows and the region is empty
+
+#### Scenario: First refresh after coming back fails
+- **WHEN** the admin comes back to `/orders` after an order was placed, core fails the first refresh and answers the next poll
+- **THEN** the new order shows after the good poll and the region is empty
+
+#### Scenario: Placed while the tab was hidden
+- **WHEN** an order is placed while the tab is hidden for 30 seconds, and the tab is shown
+- **THEN** the region was empty while hidden and reads "New order SS-TEST0002" once the tab shows
 
 ### Requirement: Orders time since placed
 A card's time since placed SHALL move on by itself, without core being asked and without the rest of the board rendering again: "just now" under a minute, "<m> min ago" under an hour, "<h> h <m> min ago" from there.
@@ -71,6 +102,10 @@ The board SHALL show a skeleton while its first answer loads; the alert "Could n
 - **WHEN** core answers the first lists with 500 and the admin presses "Try again" after core recovers
 - **THEN** the alert "Could not load the orders." shows first, then the orders and no alert
 
+#### Scenario: One list fails on the first load
+- **WHEN** core answers four of the five lists and fails the fifth on the first load
+- **THEN** the alert "Could not load the orders." shows and no column
+
 #### Scenario: No active orders
 - **WHEN** the store has only a delivered order
 - **THEN** "No active orders" shows, with no column, and the announcement region is empty
@@ -89,6 +124,10 @@ When core fails to answer a refresh of something the orders pages already show, 
 #### Scenario: Failed poll keeps the board
 - **WHEN** the board shows an order, a second order is placed, the next poll fails and the one after succeeds
 - **THEN** after the failed poll the first order and its column are still shown with the notice, there is no alert, the second order is not shown and the announcement region is empty; after the good poll the second order shows, the notice is gone and the region reads "New order SS-TEST0002"
+
+#### Scenario: One list fails on a later poll
+- **WHEN** an order is accepted elsewhere and core fails only the list of ready orders at the next poll
+- **THEN** every column is as it was before the poll, with the notice and no alert
 
 #### Scenario: Failed refresh keeps the history
 - **WHEN** History shows one delivered order, a second is delivered, the tab is shown again and core fails, then shown again and core answers
@@ -215,6 +254,13 @@ While a cancel runs its button SHALL read "Cancelling…", keep focus and be `ar
 #### Scenario: Cancel refused once packing
 - **WHEN** packing started on an accepted order while its cancel dialog was open, and staff confirm
 - **THEN** the sheet shows "Someone else changed this order first: it is now Packing." as a status, no "Cancel order" button and no "Order cancelled."; after closing, the card has the button "Mark ready SS-TEST0001"
+
+### Requirement: Order cancel and a poll in the air
+A poll that core read before a cancel and answers after it SHALL NOT put the order back on the board.
+
+#### Scenario: Late poll answer after a cancel
+- **WHEN** a poll is in the air holding the order as placed, staff cancel it, core answers the cancel, and then the poll's answer arrives
+- **THEN** the sheet shows "Order cancelled." and, after closing it, the order is not on the board while the other order is
 
 ### Requirement: Order status badges
 A status badge SHALL carry the status as text, with the names Placed, Accepted, Packing, Ready, Out for delivery, Delivered and Cancelled, and SHALL be the `accent` badge while the order is under way, `success` when delivered and `neutral` when cancelled; never `danger` or `warning` (D28).

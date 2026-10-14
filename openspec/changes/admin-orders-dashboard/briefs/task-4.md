@@ -44,14 +44,14 @@
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `225 passed (225)` (base + 45).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `235 passed (235)` (base + 55).
 1. Create `src/orders-history.test.tsx` from design.md. Run the admin tests, see the sixteen fail, record the summary and the names. Commit: `test: orders history tab`. Tick 4.1.
 2. Create `src/order-history.tsx`; replace `src/orders.ts` and `src/routes/_staff/orders.tsx` whole with their task-4 blocks from design.md.
 3. Run the gates. Commit the three files and the 4.2 tick: `feat: orders history tab with status filter and pager`.
 
 ## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
-- After step 1: `Tests  16 failed | 225 passed (241)`, all sixteen in `orders-history.test.tsx` (twelve tests, one of them five runs).
-- After step 2: `Tests  241 passed (241)`, 22 files.
+- After step 1: `Tests  16 failed | 235 passed (251)`, all sixteen in `orders-history.test.tsx` (twelve tests, one of them five runs).
+- After step 2: `Tests  251 passed (251)`, 22 files.
 If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task

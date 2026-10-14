@@ -25,6 +25,7 @@
 - Orders kept on a failed refresh › Failed refresh keeps the sheet
 - Order cancel with a reason › Cancel offered, Order cancelled, Reason missing, Keep order
 - Order cancel in progress and refused › Second press during a cancel, Cancel fails, Cancel refused once packing
+- Order cancel and a poll in the air › Late poll answer after a cancel
 - Order status badges › Badge of an order under way and of a cancelled one
 
 ## Failing tests to start from
@@ -41,17 +42,18 @@
 - "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays"
 - "a cancel that fails says so in the dialog, keeps the reason and can be tried again"
 - "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board"
+- "a poll answer read before a cancel never puts the order back on the board"
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `213 passed (213)` (base + 33).
-1. Create `src/order-sheet.test.tsx` from design.md. Run the admin tests, see the twelve fail, record the summary and the names. Commit: `test: order detail sheet and cancel`. Tick 3.1.
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `222 passed (222)` (base + 42).
+1. Create `src/order-sheet.test.tsx` from design.md. Run the admin tests, see the thirteen fail, record the summary and the names. Commit: `test: order detail sheet and cancel`. Tick 3.1.
 2. Create `src/order-sheet.tsx`; replace `src/orders.ts` and `src/order-board.tsx` whole with their task-3 blocks from design.md.
 3. Run the gates. Commit the three files and the 3.2 tick: `feat: order detail sheet with cancel and its reason`.
 
 ## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
-- After step 1: `Tests  12 failed | 213 passed (225)`, all twelve in `order-sheet.test.tsx`.
-- After step 2: `Tests  225 passed (225)`, 21 files.
+- After step 1: `Tests  13 failed | 222 passed (235)`, all thirteen in `order-sheet.test.tsx`.
+- After step 2: `Tests  235 passed (235)`, 21 files.
 If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task

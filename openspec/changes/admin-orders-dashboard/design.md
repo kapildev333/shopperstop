@@ -32,7 +32,7 @@ Asked for by the brief (D13: recommendation, one-line reason, proceeded on):
 2. **Hidden tab: no polling; shown again: asked at once.** TanStack Query's defaults, left alone. Reason: nobody reads a hidden board, and the announcement is only useful when the answer is fresh on return.
 3. **While a status change runs the poll goes on; its answer is harmless.** An answer that arrives during the change shows the order where it was, which is still true on screen (the button reads "Saving…"). No pause logic.
 4. **A poll answer never beats the change's answer.** In the mutation's `onSuccess`: `cancelQueries` on the board (and the order) and then `setQueryData` with core's answer. A poll read before the change and still in the air is dropped; one already answered is overwritten. The interval keeps running. Reason: the smallest rule that makes "a card never jumps back" true; proven by a test with a held poll.
-5. **What is announced.** One always-present, visually hidden `<p role="status" aria-label="New orders">`. Its text is worked out during render when the board's `data` object changes: placed orders whose id the answer before did not hold, as "New order <number>" or "<n> new orders: <numbers>". The first answer for a store is the baseline; a failed poll brings no new `data`; an equal answer is the same object, so the region is not written again; a changed answer with nothing new empties it. The board is keyed by store, so another store starts from its own baseline. Hidden, not visible: the card appearing is the visible cue, and a visible line that says "New order" for ten seconds and then vanishes is noise. A board opened on a cached answer announces what was placed since that answer: intended.
+5. **What is announced.** One always-present, visually hidden `<p role="status" aria-label="New orders">`. Its text is worked out during render when the board's `data` object changes: placed orders whose id the answer before did not hold, as "New order <number>" or "<n> new orders: <numbers>". The first answer for a store is the baseline; a failed poll brings no new `data`; an equal answer is the same object, so the region is not written again; a changed answer with nothing new empties it. The board is keyed by store, so another store starts from its own baseline. Hidden, not visible: the card appearing is the visible cue, and a visible line that says "New order" for ten seconds and then vanishes is noise. (Superseded by Decision 27: orders kept from an earlier visit are no baseline and nothing placed while the board was away is announced.)
 6. **Time since placed.** `useSince(placedAt)` is a `useSyncExternalStore` whose snapshot is the text itself, ticked every 5 seconds: only the `<Since>` leaf renders again, and only when its text changes (once a minute). The board does not render on a tick.
 7. **The status dialog.** Forward moves are one press; only "Mark delivered" asks first, because delivered is final and counts as revenue, while a wrong "Accept" can still be cancelled. Cancel has its own dialog with the reason.
 8. **One status change at a time on a board.** While one runs every card's button is `aria-disabled`. Reason: one mutation observer, so "a second press sends nothing" is one guard and the result line always belongs to the last press. Ceiling: a store that wants to tap five cards in a second waits for each answer.
@@ -57,6 +57,17 @@ Other decisions:
 24. **Tabs are two `Link`s to `/orders`** in a `TabNav` on a `surface` strip (A9), `activeOptions={{exact: true}}` plus an explicit `aria-current` (A7).
 25. **Test fixtures live in `src/orders-fake.ts`** (test-only): `order(n, status, over)`, `ordersCore(storeId, orders)` with core's status table, `hold`/`release`/`fail` per part, `listRequests`, and `refreshFailed(router, key)`, which waits until the query has failed with its data kept and then one `notifyManager.schedule` turn, so the page has been told (L7's gotcha: without the second wait the assertions pass on a page that would drop its data). `src/fake-core.ts` is not edited. The whole fake arrives in task 1, although the status routes are first used in task 2 (as admin-stock did; one file, written once).
 26. **Fake timers** only inside the tests that need the poll or the clock: `vi.useFakeTimers({ shouldAdvanceTime: true })`, undone by `vi.useRealTimers()` in `afterEach`. `shouldAdvanceTime` lets the fake clock also run with the real one, so Testing Library's `findBy` and `waitFor`, which wait on timers, keep working; `act(() => vi.advanceTimersByTimeAsync(ms))` jumps an interval; `userEvent.setup({ advanceTimers: vi.advanceTimersByTime })` where a click happens under fake timers. A hidden tab is `vi.spyOn(document, 'visibilityState', 'get')` plus a `visibilitychange` event on `window`.
+
+After the review of task 1 (2026-10-13, manager's rulings):
+
+27. **Only an answer core gave since the board was opened can be a baseline or news** (R1-1): the announcement block also requires `board.isFetchedAfterMount && !board.isError`. Orders kept in the cache from an earlier visit show at once but are no baseline, so coming back to a store, or to `/orders` from another page, announces nothing for what was placed meanwhile; the first good answer after opening is the silent baseline. `!isError` because `isFetchedAfterMount` also turns true on a failed fetch (read in `queryObserver.ts`): without it a failed first refresh would make the kept orders the baseline. A tab hidden and shown again is different: the board stayed open, so an order placed meanwhile IS announced when the tab shows.
+28. **Cards are ordered by `Date.parse(placedAt)`** (R1-2): core trims zeros from the fraction, so the strings do not sort. Ceiling: two orders in the same millisecond keep core's order (newest first).
+29. **A column's heading has `aria-label` "<Status>, <n> orders"** ("1 order") (R1-7): the visible text stays the name and the count badge; the region is named by the heading, so it reads the same. The e2e's `/^Placed/` still matches.
+30. **Pins from R1-6**, green when written: one of the five requests failing fails the whole board (`Promise.all`): the alert on a first load, the kept board with the root notice on a later poll; the poll stops when the board unmounts. On sign-out and on a 401 the board unmounts too (`signOut` navigates to `/sign-in`; `onUnauthorized` clears the cache and re-runs the guard, which redirects), and the observer's interval goes with it; `queryClient.clear()` alone would not stop a mounted observer.
+31. **Task 3's cancel has the held-poll test too** ("a poll answer read before a cancel never puts the order back on the board"): same `cancelQueries` then `setQueryData` in `useSetStatus`.
+32. **The dashboard renders no level-2 heading but the store names** while it shows cards (the e2e expects exactly the two); its unit test asserts the list of h2s.
+
+Ceilings from the review, one line each: R1-3 the newest 100 per status and a count of what is shown (core's active filter is backlog, not Phase 2); R1-4 five reads are not one snapshot, so an order moved between two of them can show twice or not at all for one poll; R1-5 one 5-second interval per card (a shared ticker is more code than this line; revisit if a board holds hundreds); R1-8 "30 h 0 min ago" has no "yesterday", and an unparsable `placedAt` would read "NaN".
 
 ## Files (all under `apps/admin/`)
 | File | Task | What |
@@ -1054,9 +1065,284 @@ export const Route = createFileRoute('/_staff/orders')({
 })
 ```
 
-### Task 2: status actions: the next-status button, a change in progress, the delivered dialog, the 409, failures, the poll race
+### Task 2: review fixes (step A), then status actions (step B)
 
-#### `src/orders-status.test.tsx` (new)
+Step A, from the review of task 1 (`.claude/lanes/admin-P2-L5-R1.md`; Decisions 27 to 30).
+
+#### `src/orders-board.test.tsx` (step A: append this block at the end of the file; it starts with one empty line; change nothing above)
+
+```tsx
+
+// From the review of task 1.
+// Another list request fails for one status only, while `failing.status` names it.
+function oneStatusFails(storeId: string, routes: Record<string, (request: Request) => Promise<Response>>) {
+  const failing: { status?: string } = {}
+  const key = `GET /admin/stores/${storeId}/orders`
+  const lists = async (request: Request) => (new URL(request.url).searchParams.get('status') === failing.status ? apiError(500, 'internal') : routes[key](request))
+  return { failing, routes: { ...routes, [key]: lists } }
+}
+
+test('coming back to a store announces nothing for an order placed while its board was away', async () => {
+  useFakeClock()
+  setToken('tok')
+  const orders = [order(1, 'placed')]
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, orders).routes, ...ordersCore(koramangala.id, [order(9, 'placed', { storeId: koramangala.id })]).routes })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await user.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+  await screen.findByText('SS-TEST0009')
+  orders.push(order(2, 'placed'))
+  await user.selectOptions(screen.getByLabelText('Store'), indiranagar.id)
+
+  // The orders kept from the first visit show at once; the order placed since then arrives with the board's first answer.
+  expect(await screen.findByText('SS-TEST0002')).toBeInTheDocument()
+  expect(news()).toBeEmptyDOMElement()
+  // From here on the board is open, and a new order is news.
+  orders.push(order(3, 'placed'))
+  await poll()
+  await waitFor(() => expect(news()).toHaveTextContent(/^New order SS-TEST0003$/))
+})
+
+test('leaving the orders page and coming back announces nothing for an order placed meanwhile', async () => {
+  setToken('tok')
+  const orders = [order(1, 'placed')]
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, orders).routes })
+
+  const router = renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await act(() => router.navigate({ to: '/' }))
+  await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
+  orders.push(order(2, 'placed'))
+  await act(() => router.navigate({ to: '/orders' }))
+
+  expect(await screen.findByText('SS-TEST0002')).toBeInTheDocument()
+  expect(news()).toBeEmptyDOMElement()
+})
+
+test('orders kept from an earlier visit are no baseline when the first refresh after coming back fails', async () => {
+  useFakeClock()
+  setToken('tok')
+  const orders = [order(1, 'placed')]
+  const core = ordersCore(indiranagar.id, orders)
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  const router = renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await act(() => router.navigate({ to: '/' }))
+  await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
+  orders.push(order(2, 'placed'))
+  core.fail('lists')
+  await act(() => router.navigate({ to: '/orders' }))
+  await screen.findByText('SS-TEST0001')
+  await refreshFailed(router, ['admin', 'orders', indiranagar.id, 'board'])
+
+  core.fail('lists', false)
+  await poll()
+  expect(await screen.findByText('SS-TEST0002')).toBeInTheDocument()
+  expect(news()).toBeEmptyDOMElement()
+})
+
+test('an order placed while the tab was hidden is announced when the tab shows again', async () => {
+  useFakeClock()
+  setToken('tok')
+  const orders = [order(1, 'placed')]
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, orders).routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+  act(() => void window.dispatchEvent(new Event('visibilitychange')))
+  orders.push(order(2, 'placed'))
+  await poll(30_000)
+  expect(news()).toBeEmptyDOMElement()
+
+  // The board stayed open: what came in while nobody looked is news.
+  visibility.mockReturnValue('visible')
+  act(() => void window.dispatchEvent(new Event('visibilitychange')))
+  await waitFor(() => expect(news()).toHaveTextContent(/^New order SS-TEST0002$/))
+})
+
+test('cards are in the order the orders were placed, also within one second and whatever the digits core trimmed', async () => {
+  setToken('tok')
+  // As core writes them: no fraction, ".5" and ".501" of the same second. As strings they sort 3, 2, 1.
+  fakeCore({
+    ...asAdmin,
+    ...ordersCore(indiranagar.id, [
+      order(1, 'placed', { placedAt: '2026-10-13T09:20:00Z' }),
+      order(2, 'placed', { placedAt: '2026-10-13T09:20:00.5Z' }),
+      order(3, 'placed', { placedAt: '2026-10-13T09:20:00.501Z' }),
+    ]).routes,
+  })
+
+  renderApp('/orders')
+
+  await screen.findByText('SS-TEST0001')
+  expect(within(column('Placed')).getAllByRole('listitem').map((card) => within(card).getByText(/^SS-/).textContent)).toEqual(['SS-TEST0001', 'SS-TEST0002', 'SS-TEST0003'])
+})
+
+test('a column is named by its status and how many orders it holds', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'placed'), order(2, 'placed'), order(3, 'accepted')]).routes })
+
+  renderApp('/orders')
+
+  await screen.findByText('SS-TEST0001')
+  expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.getAttribute('aria-label'))).toEqual(['Placed, 2 orders', 'Accepted, 1 order', 'Packing, 0 orders', 'Ready, 0 orders', 'Out for delivery, 0 orders'])
+  expect(within(screen.getByRole('region', { name: 'Accepted, 1 order' })).getByText('SS-TEST0003')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: 'Placed, 2 orders' })).toHaveTextContent(/^Placed2$/)
+})
+
+test('one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh', async () => {
+  useFakeClock()
+  setToken('tok')
+  const orders = [order(1, 'placed'), order(2, 'ready')]
+  const core = oneStatusFails(indiranagar.id, ordersCore(indiranagar.id, orders).routes)
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  const router = renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  // The placed order is accepted elsewhere, and core cannot list the ready orders.
+  orders[0] = { ...orders[0], status: 'accepted' }
+  core.failing.status = 'ready'
+  await poll()
+  await refreshFailed(router, ['admin', 'orders', indiranagar.id, 'board'])
+
+  // No column of the new answer next to columns of the old one: the board is as it was.
+  expect(within(column('Placed')).getByText('SS-TEST0001')).toBeInTheDocument()
+  expect(within(column('Ready')).getByText('SS-TEST0002')).toBeInTheDocument()
+  expect(within(column('Accepted')).getByText('No orders')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
+})
+
+test('one of the five requests failing on the first load is a board that could not be loaded', async () => {
+  setToken('tok')
+  const core = oneStatusFails(indiranagar.id, ordersCore(indiranagar.id, [order(1, 'placed')]).routes)
+  core.failing.status = 'packing'
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/orders')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the orders.')
+  expect(screen.queryByText('SS-TEST0001')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region')).not.toBeInTheDocument()
+})
+
+test('the poll stops when the board is left', async () => {
+  useFakeClock()
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'placed')]).routes })
+
+  const router = renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await poll()
+  expect(listRequests(calls)).toHaveLength(10)
+  await act(() => router.navigate({ to: '/' }))
+  await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
+  await poll(30_000)
+
+  expect(listRequests(calls)).toHaveLength(10)
+})
+```
+
+#### `src/order-board.tsx` (step A: replace the whole file)
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { Badge, Card, EmptyState, ErrorBanner, Price, Skeleton } from '@shopperstop/ui'
+import { activeStatuses, boardQuery, itemCount, statusLabel, useSince, type Order } from './orders'
+
+// Its own component, so a minute passing renders this text and nothing else on the board.
+function Since({ at }: { at: string }) {
+  return (
+    <time dateTime={at} className="text-small text-ink-muted">
+      {useSince(at)}
+    </time>
+  )
+}
+
+function OrderCard({ order }: { order: Order }) {
+  return (
+    <Card className="flex flex-col gap-2 p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-semibold text-ink tabular-nums">{order.number}</span>
+        <Since at={order.placedAt} />
+      </div>
+      <p className="text-small text-ink">
+        {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
+      </p>
+      <Price cents={order.totalCents} />
+    </Card>
+  )
+}
+
+// One store's board. The route gives it `key={storeId}`, so nothing kept here outlives a change of store.
+export function OrderBoard({ storeId }: { storeId: string }) {
+  const board = useQuery(boardQuery(storeId))
+  // What the last answer announced, and that answer. A failed poll brings no new answer, and an equal answer is the
+  // same object (structural sharing), so neither announces anything; a changed answer with nothing new empties the region.
+  // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
+  // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
+  const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
+  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
+    const known = new Set(heard?.from.map((order) => order.id))
+    // The first answer is what the store already had: nothing in it is new.
+    const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
+    const numbers = fresh.map((order) => order.number).join(', ')
+    setHeard({ from: board.data, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
+  }
+
+  // A poll that fails keeps the board: the alert is only for a board with nothing to show. (The app's root says that a
+  // refresh failed, once for the whole page.)
+  if (board.data === undefined) {
+    return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
+  }
+  const orders = board.data
+  return (
+    <>
+      <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
+      {orders.length === 0 ? (
+        <Card className="p-6">
+          <EmptyState title="No active orders" description="New orders show here within 10 seconds." />
+        </Card>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-5 lg:gap-4">
+          {activeStatuses.map((status) => {
+            // The longest waiting first, by the time itself: core trims zeros, so the strings do not sort ("…00.5Z", "…00.25Z").
+            const column = orders.filter((order) => order.status === status).sort((a, b) => Date.parse(a.placedAt) - Date.parse(b.placedAt))
+            return (
+              <section key={status} aria-labelledby={`orders-${status}`} className="flex flex-col gap-3">
+                <h2 id={`orders-${status}`} aria-label={`${statusLabel[status]}, ${column.length === 1 ? '1 order' : `${column.length} orders`}`} className="flex items-center gap-2 text-h3 text-ink">
+                  {statusLabel[status]}
+                  <Badge className="tabular-nums">{column.length}</Badge>
+                </h2>
+                {column.length === 0 ? (
+                  <p className="text-small text-ink">No orders</p>
+                ) : (
+                  <ul className="flex flex-col gap-3">
+                    {column.map((order) => (
+                      <li key={order.id}>
+                        <OrderCard order={order} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+```
+
+Step B, the status actions.
+
+#### `src/orders-status.test.tsx` (step B: new)
 
 ```tsx
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -1255,7 +1541,7 @@ test('a poll answer read before a status change never moves the card back', asyn
 })
 ```
 
-#### `src/idle.ts` (new)
+#### `src/idle.ts` (step B: new)
 
 ```ts
 // For a button that cannot act now but must stay focusable: `disabled` would drop keyboard focus from the button just
@@ -1264,7 +1550,7 @@ test('a poll answer read before a status change never moves the card back', asyn
 export const idle = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 ```
 
-#### `src/orders.ts` (replace the whole file)
+#### `src/orders.ts` (step B: replace the whole file)
 
 ```ts
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -1360,7 +1646,7 @@ export function itemCount(order: Order) {
 }
 ```
 
-#### `src/order-board.tsx` (replace the whole file)
+#### `src/order-board.tsx` (step B: replace the whole file; it keeps step A's three fixes)
 
 ```tsx
 import { useQuery } from '@tanstack/react-query'
@@ -1405,8 +1691,10 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   const board = useQuery(boardQuery(storeId))
   // What the last answer announced, and that answer. A failed poll brings no new answer, and an equal answer is the
   // same object (structural sharing), so neither announces anything; a changed answer with nothing new empties the region.
+  // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
+  // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
   const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
-  if (board.data && heard?.from !== board.data) {
+  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
     const known = new Set(heard?.from.map((order) => order.id))
     // The first answer is what the store already had: nothing in it is new.
     const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
@@ -1461,11 +1749,11 @@ export function OrderBoard({ storeId }: { storeId: string }) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-5 lg:gap-4">
           {activeStatuses.map((status) => {
-            // The longest waiting first.
-            const column = orders.filter((order) => order.status === status).sort((a, b) => a.placedAt.localeCompare(b.placedAt))
+            // The longest waiting first, by the time itself: core trims zeros, so the strings do not sort ("…00.5Z", "…00.25Z").
+            const column = orders.filter((order) => order.status === status).sort((a, b) => Date.parse(a.placedAt) - Date.parse(b.placedAt))
             return (
               <section key={status} aria-labelledby={`orders-${status}`} className="flex flex-col gap-3">
-                <h2 id={`orders-${status}`} className="flex items-center gap-2 text-h3 text-ink">
+                <h2 id={`orders-${status}`} aria-label={`${statusLabel[status]}, ${column.length === 1 ? '1 order' : `${column.length} orders`}`} className="flex items-center gap-2 text-h3 text-ink">
                   {statusLabel[status]}
                   <Badge className="tabular-nums">{column.length}</Badge>
                 </h2>
@@ -1513,7 +1801,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, fakeCore, indiranagar, json, storeList } from './fake-core'
-import { order, ordersCore } from './orders-fake'
+import { listRequests, order, ordersCore } from './orders-fake'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -1776,6 +2064,32 @@ test('a cancel refused with 409 shows where the order stands instead, on the she
   expect(within(sheet).queryByText('Order cancelled.')).not.toBeInTheDocument()
   await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('button', { name: 'Mark ready SS-TEST0001' })).toBeInTheDocument()
+})
+
+test('a poll answer read before a cancel never puts the order back on the board', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  setToken('tok')
+  const core = ordersCore(indiranagar.id, [first, order(2, 'placed')])
+  const calls = fakeCore({ ...asAdmin, ...core.routes })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+  renderApp('/orders')
+  await user.click(await screen.findByRole('button', { name: 'SS-TEST0001' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Order SS-TEST0001' })).getByRole('button', { name: 'Cancel order' }))
+  await user.type(screen.getByLabelText('Reason'), 'Out of stock')
+  // The poll leaves, and core reads the order as placed; its answer is still in the air when the cancel is answered.
+  core.hold('lists')
+  await act(() => vi.advanceTimersByTimeAsync(10_000))
+  expect(listRequests(calls)).toHaveLength(10)
+  await user.click(screen.getByRole('button', { name: 'Cancel order' }))
+  const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
+  expect(within(sheet).getByText('Order cancelled.')).toBeInTheDocument()
+
+  core.release('lists')
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByText('SS-TEST0001')).not.toBeInTheDocument()
+  expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
 })
 ```
 
@@ -2043,7 +2357,7 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
 }
 ```
 
-#### `src/order-board.tsx` (replace the whole file)
+#### `src/order-board.tsx` (replace the whole file; it keeps step A's three fixes)
 
 ```tsx
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -2089,8 +2403,10 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   const board = useQuery(boardQuery(storeId))
   // What the last answer announced, and that answer. A failed poll brings no new answer, and an equal answer is the
   // same object (structural sharing), so neither announces anything; a changed answer with nothing new empties the region.
+  // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
+  // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
   const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
-  if (board.data && heard?.from !== board.data) {
+  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
     const known = new Set(heard?.from.map((order) => order.id))
     // The first answer is what the store already had: nothing in it is new.
     const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
@@ -2153,11 +2469,11 @@ export function OrderBoard({ storeId }: { storeId: string }) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-5 lg:gap-4">
           {activeStatuses.map((status) => {
-            // The longest waiting first.
-            const column = orders.filter((order) => order.status === status).sort((a, b) => a.placedAt.localeCompare(b.placedAt))
+            // The longest waiting first, by the time itself: core trims zeros, so the strings do not sort ("…00.5Z", "…00.25Z").
+            const column = orders.filter((order) => order.status === status).sort((a, b) => Date.parse(a.placedAt) - Date.parse(b.placedAt))
             return (
               <section key={status} aria-labelledby={`orders-${status}`} className="flex flex-col gap-3">
-                <h2 id={`orders-${status}`} className="flex items-center gap-2 text-h3 text-ink">
+                <h2 id={`orders-${status}`} aria-label={`${statusLabel[status]}, ${column.length === 1 ? '1 order' : `${column.length} orders`}`} className="flex items-center gap-2 text-h3 text-ink">
                   {statusLabel[status]}
                   <Badge className="tabular-nums">{column.length}</Badge>
                 </h2>

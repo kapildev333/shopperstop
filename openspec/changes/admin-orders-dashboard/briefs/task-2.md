@@ -1,4 +1,4 @@
-# Worker brief: admin-P2-L5 task 2, status actions
+# Worker brief: admin-P2-L5 task 2, review fixes (step A) then status actions (step B)
 
 - LANE-ID: admin-P2-L5 (worker log: `.claude/lanes/admin-P2-L5-T2.md`, format in `.claude/lanes/README.md`)
 - Area: `admin`
@@ -8,56 +8,60 @@
 - Starts after: task 1 landed and reviewed
 
 ## Read first
-1. `openspec/changes/admin-orders-dashboard/tasks.md`, the header and section 2.
-2. `openspec/changes/admin-orders-dashboard/design.md`, section "Task 2" under "Code and tests per task". Every file you write is there in full; copy it byte for byte. Do not redesign, rename, reformat or "improve" it.
-3. `openspec/changes/admin-orders-dashboard/specs/admin-app/spec.md`, the scenarios listed below.
+1. `openspec/changes/admin-orders-dashboard/tasks.md`, the header and section 2 (revised after the review of task 1): it lists the scenarios and every test name of both steps.
+2. `openspec/changes/admin-orders-dashboard/design.md`, section "Task 2" under "Code and tests per task": step A, then step B. Every file you write is there in full; copy it byte for byte. Do not redesign, rename, reformat or "improve" it.
+3. `openspec/changes/admin-orders-dashboard/specs/admin-app/spec.md`, the scenarios tasks.md section 2 names.
 
 ## Scope paths (touch nothing else)
-- `apps/admin/src/orders-status.test.tsx` (new)
-- `apps/admin/src/idle.ts` (new)
-- `apps/admin/src/orders.ts` and `apps/admin/src/order-board.tsx` (both replaced whole by their task-2 block)
+- `apps/admin/src/orders-board.test.tsx` (step A: one block appended at the end; nothing above it changes)
+- `apps/admin/src/order-board.tsx` (replaced whole in step A, and again in step B)
+- `apps/admin/src/orders-status.test.tsx` (step B, new)
+- `apps/admin/src/idle.ts` (step B, new)
+- `apps/admin/src/orders.ts` (step B, replaced whole)
 - `openspec/changes/admin-orders-dashboard/tasks.md` (tick only this task's boxes)
 - `.claude/lanes/admin-P2-L5-T2.md` (your log)
 
-## Scenarios covered
-- Order next status › One button per card, Accept
-- Order status change in progress › Second press during a change, Focus after a move
-- Order delivered asks first › Mark delivered
-- Order status conflict › Accepted by someone else, Cancelled by the customer
-- Order status failure › Status change fails, Conflict that cannot be read
-- Order status change and a poll in the air › Late poll answer
-
 ## Failing tests to start from
-`apps/admin/src/orders-status.test.tsx`:
-- "each card has one button, for the next status of its order, named with the order number"
-- "a press sends the next status once, moves the card with core's answer and says so, without listing the orders again"
-- "while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card's button send nothing"
-- "after a move the keyboard is on the card's new button"
-- "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result"
-- "a 409 reads the order again, shows it where it stands and says someone else changed it"
-- "a status change that fails says so, leaves the card where it is and can be tried again"
-- "a 409 whose order cannot be read again is a failed status change"
-- "a poll answer read before a status change never moves the card back"
+Step A, `apps/admin/src/orders-board.test.tsx`, red:
+- "coming back to a store announces nothing for an order placed while its board was away"
+- "leaving the orders page and coming back announces nothing for an order placed meanwhile"
+- "orders kept from an earlier visit are no baseline when the first refresh after coming back fails"
+- "cards are in the order the orders were placed, also within one second and whatever the digits core trimmed"
+- "a column is named by its status and how many orders it holds"
+
+Step A, green when written (they pin what task 1 built; no code follows for them):
+- "an order placed while the tab was hidden is announced when the tab shows again"
+- "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh"
+- "one of the five requests failing on the first load is a board that could not be loaded"
+- "the poll stops when the board is left"
+
+Step B, `apps/admin/src/orders-status.test.tsx`, red: the nine tests named in tasks.md section 2, step B.
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `204 passed (204)` (base + 24).
-1. Create `src/orders-status.test.tsx` from design.md. Run the admin tests, see the nine fail, record the summary and the names. Commit: `test: order status actions`. Tick 2.1.
-2. Create `src/idle.ts`; replace `src/orders.ts` and `src/order-board.tsx` whole with their task-2 blocks from design.md.
-3. Run the gates. Commit the three files and the 2.2 tick: `feat: next-status buttons with the 409 re-read and the delivered confirmation`.
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `204 passed (204)`.
+1. Step A tests: append the step-A block for `src/orders-board.test.tsx` from design.md at the end of the file. The block starts with one empty line and then the comment `// From the review of task 1.`; keep both. Run the admin tests: five fail, the other four new ones pass. Record the summary and the names. Commit: `test: orders board after coming back, card order, column names, one failing list, poll on leaving`. Tick 2.1.
+2. Step A code: replace `src/order-board.tsx` whole with its step-A block. Run the gates. Commit the file and the 2.2 tick: `fix: no announcement from orders kept before the board opened; cards by time; columns named with their count`.
+3. Step B tests: create `src/orders-status.test.tsx` from design.md. Run the admin tests, see the nine fail. Commit: `test: order status actions`. Tick 2.3.
+4. Step B code: create `src/idle.ts`; replace `src/orders.ts` and `src/order-board.tsx` whole with their step-B blocks. Run the gates. Commit the three files and the 2.4 tick: `feat: next-status buttons with the 409 re-read and the delivered confirmation`.
 
-## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
-- After step 1: `Tests  9 failed | 204 passed (213)`, all nine in `orders-status.test.tsx`.
-- After step 2: `Tests  213 passed (213)`, 20 files.
-If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
+## Expected counts (measured by the team lead on this branch with task 1 landed, 204)
+- After step 1: `Tests  5 failed | 208 passed (213)`, all five in `orders-board.test.tsx`.
+- After step 2: `Tests  213 passed (213)`, 19 files.
+- After step 3: `Tests  9 failed | 213 passed (222)`, all nine in `orders-status.test.tsx`.
+- After step 4: `Tests  222 passed (222)`, 20 files.
+Anything else is a stop.
 
 ## Notes for this task
-- The next-status button is never `disabled` and never gets `loading`: it is `aria-disabled` with the `idle` class, and `advance` returns early while a change runs. Do not change this.
-- The button's name comes from `aria-labelledby` (its own id and the number's id). Do not add an `aria-label` or a hidden copy of the number: a second "SS-…" text breaks task 1's tests.
-- In `useSetStatus`, `await queryClient.cancelQueries(...)` comes before `setQueryData`: the order matters (the test "a poll answer read before a status change never moves the card back").
-- A 409 resolves the mutation (it reads the order again); it does not throw. Only a failed re-read or another error throws.
-- The card's number is still plain text in this task; it becomes a button in task 3. There is no sheet yet.
-- `removeQueries` is not in this task's `src/orders.ts`; task 4 adds it with its test.
+- Step A changes three things in `src/order-board.tsx` and nothing else: the announcement block's condition gains `board.isFetchedAfterMount && !board.isError`; the cards are sorted with `Date.parse`; the column's `h2` gets an `aria-label`. Step B's block already contains all three: do not lose them when you replace the file again.
+- Both parts of the condition are needed (`isFetchedAfterMount` is also true after a failed fetch); each has its own test.
+- The heading keeps its visible text and its count badge; only the `aria-label` is new. Task 1's tests and the e2e find the columns by `/^Placed/` and still pass.
+- The next-status button is never `disabled` and never gets `loading`: it is `aria-disabled` with the `idle` class, and `advance` returns early while a change runs.
+- The button's name comes from `aria-labelledby` (its own id and the number's id). Do not add an `aria-label` or a hidden copy of the number.
+- In `useSetStatus`, `await queryClient.cancelQueries(...)` comes before `setQueryData`: the order matters.
+- A 409 resolves the mutation (it reads the order again); it does not throw.
+- The card's number is still plain text in this task; there is no sheet yet. `removeQueries` is task 4.
+- Do not edit `src/orders-fake.ts`: the one-status failure is a small wrapper inside the appended test block.
 
 ## Gates before the `feat:` commit
 1. `make test-web` exits 0 (ui, admin and web: lint, typecheck, test, build).
@@ -66,7 +70,7 @@ If the base differs from 180, every number above moves by the same difference; a
 Never run `make e2e`, `npx playwright`, `npm run e2e`, `make db`, `make dev` or any docker command. The manager holds the e2e slot.
 
 ## Rules
-- Commit order is fixed: the `test:` commit(s) first with the tests failing, then one `feat:` commit with the code and the ticks in tasks.md. Commit identity is the repo git config; no attribution or co-author lines.
+- Commit order is fixed: the `test:` commit(s) first with the tests failing, then the `fix:` or `feat:` commit with the code and the ticks in tasks.md, per step. Commit identity is the repo git config; no attribution or co-author lines.
 - Tick the boxes in `openspec/changes/admin-orders-dashboard/tasks.md` with the Edit tool (`- [ ]` to `- [x]`), only the boxes of this task.
 - Colours only from the semantic tokens; components only from `@shopperstop/ui`; no new dependency; no `package.json` change. Do not import `lucide-react` (it is not an `apps/admin` dependency).
 - Do not edit `apps/admin/src/fake-core.ts`, `apps/admin/src/orders-fake.ts` (after task 1) or any existing test.
