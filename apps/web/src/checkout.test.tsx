@@ -323,3 +323,12 @@ test('choosing another address clears the refusal alert', async () => {
   expect(within(workItem).getByText('Not delivered here')).toBeInTheDocument()
   expect(within(homeItem).queryByText('Not delivered here')).toBeNull()
 })
+
+test('the address chip is named by its visible text', async () => {
+  seed({ lines: [[taaza, 4]], addresses: [work, home], storeOverrides: { minOrderCents: 9900 } })
+  renderInRouter(<CheckoutPage />)
+  const addresses = await screen.findByRole('region', { name: 'Delivery address' })
+  const chip = within(addresses).getByRole('button', { name: 'Deliver to Home' })
+  expect(chip.textContent).toBe('Deliver to Home')
+  expect(within(addresses).getByRole('button', { name: 'Deliver to Work' }).textContent).toBe('Deliver to Work')
+})
