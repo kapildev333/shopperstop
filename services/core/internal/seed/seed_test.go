@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -640,5 +641,87 @@ func TestDemoOrdersThroughTheRouter(t *testing.T) {
 	}
 	if err := seed.Reset(ctx, testPool); err != nil {
 		t.Fatalf("reset after the cancel: %v", err)
+	}
+}
+
+var (
+	summaryID      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	summaryPostman = regexp.MustCompile(`\(Postman (\w+)\)$`)
+)
+
+// TestSummaryMatchesSeed: every sign-in seed.Summary prints works, every id it
+// prints is one row of the table printed beside it, and the four ids marked
+// Postman are the values of docs/postman/local.postman_environment.json.
+func TestSummaryMatchesSeed(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	base := server(t)
+	tables := map[string]bool{"staff_users": true, "customers": true, "addresses": true, "stores": true, "products": true, "orders": true}
+	postman := map[string]string{}
+	signIns, ids := 0, 0
+	for _, line := range strings.Split(seed.Summary, "\n") {
+		f := strings.Fields(line)
+		switch {
+		case len(f) == 3 && strings.Contains(f[0], "@"):
+			signIns++
+			path := "/api/core/v1/admin/auth/sign-in"
+			if f[2] == "customer" {
+				path = "/api/core/v1/auth/sign-in"
+			}
+			status, body := postJSON(t, base+path, map[string]string{"email": f[0], "password": f[1]})
+			var s struct {
+				Staff struct {
+					Role string `json:"role"`
+				} `json:"staff"`
+			}
+			if status != http.StatusOK || json.Unmarshal(body, &s) != nil || (f[2] != "customer" && s.Staff.Role != f[2]) {
+				t.Errorf("sign-in %q: got %d %s, want 200 as %s", line, status, body, f[2])
+			}
+		case len(f) >= 2 && summaryID.MatchString(f[0]):
+			ids++
+			if !tables[f[1]] {
+				t.Errorf("line %q names table %q, want one of %v", line, f[1], tables)
+				continue
+			}
+			var n int
+			if err := testPool.QueryRow(ctx, "select count(*) from "+f[1]+" where id = $1", f[0]).Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			if n != 1 {
+				t.Errorf("line %q: %d rows in %s with that id, want 1", line, n, f[1])
+			}
+			if m := summaryPostman.FindStringSubmatch(line); m != nil {
+				postman[m[1]] = f[0]
+			}
+		}
+	}
+	if signIns != 4 || ids != 12 {
+		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 12", signIns, ids)
+	}
+
+	raw, err := os.ReadFile("../../../../docs/postman/local.postman_environment.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env struct {
+		Values []struct{ Key, Value string } `json:"values"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, v := range env.Values {
+		switch v.Key {
+		case "storeId", "productId", "addressId", "orderId":
+			seen++
+			if postman[v.Key] != v.Value {
+				t.Errorf("Postman %s is %q, the summary marks %q", v.Key, v.Value, postman[v.Key])
+			}
+		}
+	}
+	if seen != 4 || len(postman) != 4 {
+		t.Fatalf("Postman environment holds %d of the four id variables and the summary marks %d, want 4 and 4", seen, len(postman))
 	}
 }

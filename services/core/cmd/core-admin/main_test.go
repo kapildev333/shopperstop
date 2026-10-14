@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/kapildev333/shopperstop/services/core/internal/seed"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
 
@@ -136,14 +137,17 @@ func TestSeedDemoExitCodes(t *testing.T) {
 	if code := run([]string{"seed-demo", "--reset"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("seed-demo --reset: exit %d stderr %q, want 0", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "seed-demo: demo accounts loaded") {
-		t.Fatalf("seed-demo --reset stdout %q, want the loaded line", stdout.String())
+	if stdout.String() != seed.Summary {
+		t.Fatalf("seed-demo --reset stdout %q, want seed.Summary", stdout.String())
 	}
 
 	stdout.Reset()
 	stderr.Reset()
 	if code := run([]string{"seed-demo"}, &stdout, &stderr); code != 1 {
 		t.Fatalf("second seed-demo: exit %d, want 1", code)
+	}
+	if stdout.String() != "" {
+		t.Fatalf("second seed-demo stdout %q, want nothing", stdout.String())
 	}
 	if !strings.Contains(stderr.String(), "seed-demo: insert demo admin") || !strings.Contains(stderr.String(), "duplicate key") {
 		t.Fatalf("second seed-demo stderr %q, want the duplicate key reason", stderr.String())
