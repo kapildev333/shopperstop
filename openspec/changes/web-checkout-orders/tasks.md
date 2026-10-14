@@ -22,8 +22,8 @@ Failing tests: `src/checkout.test.tsx` › "signed-out checkout redirect", "chec
 Not in this task: "Place order (COD)" does nothing yet when pressed (task 3 wires it); it is rendered, and disabled with no address or below the minimum. No `orders.ts`.
 Easy to get wrong: the store shown is `useStore(view.storeId)`, never the pincode's (`summary names the cart's store` seeds `560038` → Indiranagar and a Koramangala cart); `store()` in `test-data.ts` has `minOrderCents` and `freeDeliveryAboveCents` 0, so fee and minimum tests override them; the cart cache is seeded with `cartView(...)` as `cart-drawer.test.tsx`'s `seedServerCart` does; each card is `role="region"` named by its `h2`; the chip's name is `Deliver to <label>` (`aria-label`), its text "Deliver here"; the chosen address is `chosen ?? default ?? first`, never stored outside the page; a saved new address is chosen from `addAddress`'s answer, not by guessing from the refetched list; "Add address" is both a button and the dialog's title; the loading state is asserted the way `cart-drawer.test.tsx` › "empty, loading and failed cart" does (straight after the token is set); `CartBar` calls `useLocation` before its early return; the existing account, drawer and pincode tests and `e2e/account.spec.ts` stay green untouched.
 
-- [ ] 1.1 Tests committed red (`test: checkout page, address choice and summary`)
-- [ ] 1.2 The page and its parts (`feat: checkout page with address choice and order summary`); all gates green; e2e green in the manager's slot
+- [x] 1.1 Tests committed red (`test: checkout page, address choice and summary`)
+- [x] 1.2 The page and its parts (`feat: checkout page with address choice and order summary`); all gates green; e2e green in the manager's slot
 
 ## 2. Order history and the tracking page
 

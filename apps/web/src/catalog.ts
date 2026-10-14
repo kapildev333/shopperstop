@@ -14,6 +14,7 @@ export const keys = {
   picked: (storeId: string) => ['picked', storeId] as const,
   feed: (storeId: string, filter: { categoryId?: string; q?: string }) => ['feed', storeId, filter] as const,
   product: (storeId: string, slug: string) => ['product', storeId, slug] as const,
+  store: (id: string) => ['store', id] as const,
 }
 // ponytail: a resolved store, category tree or first page is trusted for a minute, so moving between pages does not ask core again.
 const staleTime = 60_000
@@ -121,4 +122,21 @@ export function useProduct(storeId: string, slug: string) {
       return data
     },
   })
+}
+
+// Core's public read of one store: the name and promise of the store a cart is at.
+export function storeOptions(id: string) {
+  return queryOptions({
+    queryKey: keys.store(id),
+    staleTime,
+    queryFn: async (): Promise<Store> => {
+      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id } } })
+      if (error || !data) throw error ?? new Error('no answer')
+      return data
+    },
+  })
+}
+
+export function useStore(id: string | undefined) {
+  return useQuery({ ...storeOptions(id ?? ''), enabled: !!id })
 }

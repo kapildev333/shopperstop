@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { createFileRoute, Navigate, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, Input, PageHeader, Skeleton, StatusMessage } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { AddressDialog, type AddressValues } from '../address-dialog'
+import { addAddress, useAddresses } from '../addresses'
 import { api, call, queryClient, splitError, useMe, type ApiError } from '../api'
 import { signOutAndGoHome } from '../auth'
 import { useToken } from '../session'
@@ -12,20 +12,6 @@ type Address = components['schemas']['Address']
 type Errors = { fields: Record<string, string>; banner?: string }
 
 const none: Errors = { fields: {} }
-
-// ponytail: first page only (the API default of 24); paginate when a customer has more.
-export function useAddresses() {
-  const token = useToken()
-  return useQuery({
-    queryKey: ['addresses', token],
-    enabled: !!token,
-    queryFn: async () => {
-      const { data, error } = await api.GET('/me/addresses')
-      if (error) throw error
-      return data.items
-    },
-  })
-}
 
 function Account() {
   const token = useToken()
@@ -114,9 +100,8 @@ function AddressesCard() {
 
   // Adds or edits; the dialog stays open on error and closes on success.
   async function saveAddress(values: AddressValues, id?: string): Promise<ApiError | undefined> {
-    const error = id
-      ? await call(() => api.PATCH('/me/addresses/{id}', { params: { path: { id } }, body: values }))
-      : await call(() => api.POST('/me/addresses', { body: { ...values, line2: values.line2 || undefined, isDefault: false } }))
+    if (!id) return (await addAddress(values)).error
+    const error = await call(() => api.PATCH('/me/addresses/{id}', { params: { path: { id } }, body: values }))
     if (!error) await queryClient.invalidateQueries({ queryKey: ['addresses'] })
     return error
   }
