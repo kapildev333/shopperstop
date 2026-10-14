@@ -1,0 +1,20 @@
+# admin-P2-L7 - admin-keep-data-on-refetch-error: a failed background refetch keeps the page that is showing (team lead)
+Status: started
+## Doing
+Change proposed and committed on the branch; one worker task ready (`briefs/task-1.md`). Waiting for the worker, then `/opsx:verify`.
+## Found
+- Change: `openspec/changes/admin-keep-data-on-refetch-error/`: proposal.md; delta `specs/admin-app/spec.md` (4 ADDED requirements, 17 scenarios, nothing MODIFIED); design.md (audit of every site, decisions, mutation flows, scenario-to-test table, 17 mutation guards, both new files and 12 edits verbatim, ceilings); tasks.md (one task); `briefs/task-1.md`. No `docs/design/admin-P2-L7.md`.
+- Defect reproduced before designing: 11 new Vitest tests red on 6d9f7b3, each because the page's content is replaced by its alert. Ten branches in nine files: stores table, store page, pincode editor, products table, product page (both reads), new product, categories table, stock table, and the admin's stores list around the stock editor (the worst: it unmounts the editor and every unsaved quantity).
+- No defect: the staff session read (`ensureQueryData(meQuery)` in the guard, no observer, `staleTime: Infinity`: never refetched while it holds the staff member, so "Could not reach the server." only arises with nothing held); the reads used through `.data` only (products filter options, store staff's store name); `fetchQuery` in the pincode conflict message; every mutation `.error`.
+- The rule in two parts. Pages: `data === undefined ? (isError ? alert : skeleton) : content` (web's pattern). Notice: one component, `RefetchNotice` in `src/refetch-notice.tsx`, mounted once in `src/routes/__root.tsx`, derived from the query cache (any query on screen holding data whose last read failed with a code other than `not_found`). Wording: "Could not refresh. Showing what was loaded last." (`StatusMessage tone="warning"`, `role="status"`).
+- Differs from web (#135): web shows no hint (its Decision 4 ceiling); admin shows the notice. A per-page wrapper was dropped: two reads fail together on the store page and on `/stock`, which would show the notice twice.
+- One guard beyond the reorder: the stock save writes the saved quantities into the page on screen before the reload, so a failed reload does not show old quantities under "Stock saved.".
+- Test recipe gotcha: after `queryClient.refetchQueries({ type: 'active' })` resolves, TanStack tells the pages one turn later. Without `await new Promise((told) => notifyManager.schedule(told))` inside the `act`, assertions run against the page as it was and pass on unfixed code.
+- Spike on this branch (Node 22.23.3, `npm ci` at the root), then removed; the tree holds only the documents. Measured: base admin Vitest 160; tests only `11 failed | 168 passed (179)`; fixed `179 passed (179)`; `make test-web` exit 0 (ui 54, admin 179, web 91); lint, typecheck, `vite build` clean; `routeTree.gen.ts` unchanged. design.md's blocks rebuilt into files by script on a clean tree: same diff as the spike, 179 green.
+- e2e: none added or changed; no existing e2e string changes (the specs filter statuses by text).
+- admin-P2-L5 clash, for the manager: its change folder appeared at 21:37 (proposal and design, no tasks yet). Same page rule, but its Decision 13 has no helper and a notice per view with four wordings ("Could not refresh. Showing the last orders." / "… the last list." / "… the last numbers." / "… the order as last read."). With both landed an L5 page shows two notices on a failed poll; by reading, not run together, no test of either lane breaks (both find a notice by its text). Recommended in design.md: L5 drops its three page-level notices, keeps the one in the order sheet (a modal over the root notice), uses the root `RefetchNotice`.
+## Requests
+- to admin manager: decide the admin-P2-L5 clash above before L5's workers start; both lanes may edit `src/routes/_staff/stock.tsx`, the second to land rebases.
+- to ui (information, through the manager): the notice has no frame on the Figma `Admin web` page.
+## Blockers
+None.
