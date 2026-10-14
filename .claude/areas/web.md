@@ -3,7 +3,7 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-2026-10-13, `/manage web` session (`/loop 5min`). No `make e2e` running; the slot is free (web's run on web-P2-L1 `ccbf6df` passed: admin 6, web 16). web-P2-L1: tasks 2 and 3 built, e2e green; task 2 reviewed (approve with nits), task 3 in review, task 4 (product page) next. web-P2-L3: `web-cart` reconciled with the merged cart contract and D27 (13 requirements, 32 scenarios); the branch is stacked on web-P2-L1 task 2 (`cde78cf`), task 2 (server cart, merge at sign-in) building; rebased onto main after web-P2-L1 merges. Branches local, unpushed. To fold into web-P2-L1 task 4: the flaky `e2e/account.spec.ts` "addresses and default" (admin #114: wait for the default badge before the reload) and the `q` cast in `src/search-form.tsx`.
+2026-10-13, `/manage web` session (`/loop 5min`). **Running `make e2e` now in `.worktrees/web-P2-L1`** (ports 18080, 15173, 15174; `shopperstop_core_e2e`, main's schema); this line changes when the slot is released. web-P2-L1: all four tasks built and reviewed (four approve-with-nits, nits applied), rebased on main; final e2e, acceptance, walk-through and PR next; it also fixes the flaky `e2e/account.spec.ts` "addresses and default" (admin #114). web-P2-L3: `web-cart` reconciled with the merged cart contract and D27; task 2 (server cart, merge at sign-in) built and reviewed; the team lead is specifying "quick taps each count" (the Stepper read a stale count between cart writes) before the fix; branch stacked on web-P2-L1, rebased onto main after it merges. Branches local, unpushed.
 
 ## Lanes
 | Lane | Task | Scope | Status |
