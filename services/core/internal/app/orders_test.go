@@ -570,6 +570,9 @@ func TestOrdersNewestFirst(t *testing.T) {
 	first := mustPlace(t, b)
 	setLine(t, b.Token, s.ID, p, 1)
 	second := mustPlace(t, b)
+	other := newBuyer(t, s.Pincode)
+	setLine(t, other.Token, s.ID, p, 1)
+	otherOrder := mustPlace(t, other)
 
 	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
 	var l orderListView
@@ -595,6 +598,43 @@ func TestOrdersNewestFirst(t *testing.T) {
 	}
 	if l.Total != 2 || len(l.Items) != 1 || l.Items[0].ID != first.ID || len(l.Items[0].Items) != 1 {
 		t.Fatalf("page 2 %+v, want total 2 and the first order with one item", l)
+	}
+
+	// Each customer's list holds only their own orders.
+	status, body = call(t, http.MethodGet, ordersPath, other.Token, nil)
+	l = orderListView{}
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil {
+		t.Fatalf("GET /orders for the other customer: got %d %s, want 200", status, body)
+	}
+	if l.Total != 1 || len(l.Items) != 1 || l.Items[0].ID != otherOrder.ID {
+		t.Fatalf("other customer's list %+v, want total 1 and only order %s", l, otherOrder.ID)
+	}
+	status, body = call(t, http.MethodGet, ordersPath, b.Token, nil)
+	l = orderListView{}
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil {
+		t.Fatalf("GET /orders: got %d %s, want 200", status, body)
+	}
+	if l.Total != 2 || len(l.Items) != 2 || l.Items[0].ID != second.ID || l.Items[1].ID != first.ID {
+		t.Fatalf("first customer's list %+v, want total 2 and exactly orders %s, %s", l, second.ID, first.ID)
+	}
+}
+
+// TestOrdersPageBeyondEnd: a page past the last one is 200 with an empty items array, and names the page and total.
+func TestOrdersPageBeyondEnd(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	mustPlace(t, b)
+
+	status, body := call(t, http.MethodGet, ordersPath+"?page=3", b.Token, nil)
+	if status != http.StatusOK || !strings.Contains(string(body), `"items":[]`) {
+		t.Fatalf("GET /orders?page=3: got %d %s, want 200 with \"items\":[]", status, body)
+	}
+	var l orderListView
+	if err := json.Unmarshal(body, &l); err != nil || l.Page != 3 || l.Total != 1 || len(l.Items) != 0 {
+		t.Fatalf("GET /orders?page=3: %+v (%v), want page 3, total 1, no items", l, err)
 	}
 }
 
@@ -644,11 +684,14 @@ func TestOrderSnapshotsSurviveProductChange(t *testing.T) {
 	name := stockName(t)
 	p := cartProduct(t, s.ID, name, 5000)
 	stockTo(t, s.ID, p, 5)
+	if _, err := testPool.Exec(context.Background(), "update products set image_key = 'products/old.png' where id = $1", p); err != nil {
+		t.Fatal(err)
+	}
 	b := newBuyer(t, s.Pincode)
 	setLine(t, b.Token, s.ID, p, 1)
 	placed := mustPlace(t, b)
 
-	if _, err := testPool.Exec(context.Background(), "update products set price_cents = 6000, mrp_cents = 6000, name = 'Renamed ' || name where id = $1", p); err != nil {
+	if _, err := testPool.Exec(context.Background(), "update products set price_cents = 6000, mrp_cents = 6000, name = 'Renamed ' || name, image_key = 'products/new.png', is_active = false where id = $1", p); err != nil {
 		t.Fatal(err)
 	}
 	if status, body := call(t, http.MethodPatch, "/api/core/v1/me", b.Token, map[string]string{"phone": "+919800000002"}); status != http.StatusOK {
@@ -658,13 +701,25 @@ func TestOrderSnapshotsSurviveProductChange(t *testing.T) {
 		t.Fatalf("delete address: got %d %s, want 204", status, body)
 	}
 
+	// checkItem fails unless the order's one item is the placement-time snapshot.
+	checkItem := func(where string, o orderView) {
+		t.Helper()
+		if len(o.Items) != 1 {
+			t.Fatalf("%s: items %+v, want one", where, o.Items)
+		}
+		if it := o.Items[0]; it.PriceCents != 5000 || it.MrpCents != 5000 || it.Name != name || it.ImageURL != "/api/core/v1/files/products/old.png" {
+			t.Fatalf("%s: item %+v, want 5000, 5000, the name %q and the image products/old.png", where, it, name)
+		}
+	}
+
 	got := readOrder(t, ordersPath+"/"+placed.ID, b.Token)
-	if len(got.Items) != 1 {
-		t.Fatalf("items %+v, want one", got.Items)
+	checkItem("GET /orders/{id}", got)
+	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
+	var l orderListView
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil || len(l.Items) != 1 {
+		t.Fatalf("GET /orders: got %d %s, want 200 with one order", status, body)
 	}
-	if it := got.Items[0]; it.PriceCents != 5000 || it.MrpCents != 5000 || it.Name != name {
-		t.Fatalf("item %+v, want 5000, 5000 and the name %q", it, name)
-	}
+	checkItem("GET /orders first item", l.Items[0])
 	if got.CustomerPhone != "+919800000001" {
 		t.Fatalf("customer phone %s, want +919800000001", got.CustomerPhone)
 	}
