@@ -63,7 +63,7 @@ While the next page, search or filter of the same store loads, the rows on scree
 - **THEN** the table's region is `aria-busy` and dimmed, "Page 1 of 2, 30 products" is still shown, the field is read-only, not disabled, keeps focus and its value, and "No unsaved changes" stays; when core answers, "Page 2 of 2, 30 products" is shown, the region is not busy and the 25th product's field is editable
 
 ### Requirement: Stock URL values
-`/stock` SHALL read a `page` in the URL that is not a whole number above 1 as page 1 and one above 100000 as 100000, and a `lowStock` other than `true` as off. A `q` in the URL SHALL lose its NUL characters and be cut to 100 characters before core is asked, and the "Search" field SHALL take at most 100 characters. No value of the URL SHALL leave the page on a failed load that "Try again" cannot fix.
+`/stock` SHALL read a `page` in the URL that is not a whole number above 1 as page 1 and one above 100000 as 100000, and a `lowStock` other than `true` as off. A `q` SHALL lose NUL characters and halves of surrogate pairs and be cut to 100 characters, counted by code point so no character is cut through; the "Search" field SHALL take at most 100 UTF-16 units. No value of the URL SHALL leave the page on a failed load that "Try again" cannot fix.
 
 #### Scenario: Unreadable page or filter
 - **WHEN** an admin opens `/stock?page=banana`, `/stock?page=1.5` or `/stock?lowStock=banana`
@@ -76,6 +76,14 @@ While the next page, search or filter of the same store loads, the rows on scree
 #### Scenario: Over-long search
 - **WHEN** an admin opens `/stock?q=` followed by 60 `m`, a NUL character and 60 `k`
 - **THEN** core is asked with a `q` of the 60 `m` and 40 `k`, the "Search" field inside the form named "Search stock" holds that text and takes at most 100 characters
+
+#### Scenario: Search ending in an emoji
+- **WHEN** an admin opens `/stock?q=` followed by 99 `a`, the emoji 😀 and `b`
+- **THEN** core is asked with a `q` of the 99 `a` and the whole emoji, the "Search" field holds that text, and there is no alert
+
+#### Scenario: Search cleaned
+- **WHEN** a search holds a NUL character, 101 characters, an emoji as its 100th character, or half of a surrogate pair
+- **THEN** it becomes the text without the NUL, its first 100 characters, the text up to and with the whole emoji, and the text without the half pair, and each can be written into a request URL
 
 ### Requirement: Stock table states
 While the stock loads for the first time, `/stock` SHALL show a loading status under its heading; with no matching product, "No products found" instead of the table; when the request fails, the alert "Could not load the stock." with "Try again". An admin with no stores SHALL see "No stores yet" and no selector; when the stores request fails, the alert "Could not load the stores." with "Try again".
@@ -167,12 +175,35 @@ When core answers the save with 400 `validation`, the page SHALL show the alert 
 - **WHEN** core answers the save with 500 and, on the next "Save changes", with 204
 - **THEN** "Could not save the stock. Try again." is shown with the edit kept, then "Stock saved." with no alert, and the one successful `PUT` carries the edit
 
+#### Scenario: Save answered without core's error body
+- **WHEN** an admin saves an edit and the answer is a 502 with no body
+- **THEN** "Could not save the stock. Try again." is shown, the edit is still in its field with "1 unsaved change", "Stock saved." is not shown, and "Save changes" can be pressed again
+
+### Requirement: Stock save result stays with its visit
+The alert of a failed save SHALL be shown only while edits are unsaved. Neither that alert nor "Stock saved." SHALL be shown again once the store on screen has changed: returning to the store shows neither.
+
+#### Scenario: Failed save, then another store and back
+- **WHEN** an admin's save at Indiranagar is refused with 400 `validation`, the admin chooses Koramangala, presses "Discard and switch", then chooses Indiranagar again
+- **THEN** no alert is shown at Koramangala, and back at Indiranagar the field holds what core holds, "No unsaved changes" is shown and there is no alert
+
+#### Scenario: Saved, then another store and back
+- **WHEN** an admin saves an edit at Indiranagar, chooses Koramangala, then Indiranagar again
+- **THEN** "Stock saved." is shown after the save, not at Koramangala, and not again at Indiranagar, where the field holds the saved quantity
+
+#### Scenario: Save fails after its edits were discarded
+- **WHEN** an admin presses "Save changes", presses "Discard changes" before core answers, and core then answers 500
+- **THEN** "No unsaved changes" is shown and there is no alert
+
 ### Requirement: Stock store switch with unsaved edits
 Choosing another store while edits are unsaved SHALL open the dialog "Discard unsaved changes?" with "Cancel" then "Discard and switch", leaving the store as it is. "Cancel" SHALL keep the store and the edits; "Discard and switch" SHALL show the chosen store. With no edits the store SHALL change at once. Any change of store, also through the URL, Back or Forward, SHALL drop the edits for good: they SHALL never be shown for or sent to another store, nor come back.
 
 #### Scenario: Switch asks first
 - **WHEN** an admin with one unsaved edit at Indiranagar chooses Koramangala, presses "Cancel", chooses Koramangala again, presses "Discard and switch", and later chooses Indiranagar
 - **THEN** the dialog's buttons are "Cancel" then "Discard and switch"; after "Cancel" the edit and "1 unsaved change" remain and core was not asked for Koramangala; after "Discard and switch" Koramangala's stock and "No unsaved changes" are shown; back at Indiranagar, with no dialog, the field holds what core holds
+
+#### Scenario: Escape on the dialog
+- **WHEN** an admin with one unsaved edit at Indiranagar chooses Koramangala and presses Escape
+- **THEN** the dialog closes, the selector shows Indiranagar, and the edit and "1 unsaved change" remain
 
 #### Scenario: Store changed in the URL
 - **WHEN** an admin with one unsaved edit at Indiranagar reaches `/stock?store=<Koramangala id>` through the URL and presses "Save changes"
@@ -185,6 +216,25 @@ Choosing another store while edits are unsaved SHALL open the dialog "Discard un
 #### Scenario: Save answered after a store change
 - **WHEN** an admin saves an edit of a product at Indiranagar, reaches Koramangala through the URL before core answers, types the same quantity for the same product there, and core then answers the first save
 - **THEN** Koramangala's edit is still there with "1 unsaved change", and "Stock saved." is not shown
+
+### Requirement: Failure answers without core's error body
+The app's client SHALL give every caller an error for any answer with a failure status, also when the body is empty or is not core's error envelope: the caller SHALL then get code `internal` with the answer's status. A failure carrying core's envelope and every success, with or without a body, SHALL reach the caller unchanged. A 401 to the current token SHALL end the session whatever its body.
+
+#### Scenario: Failure without core's error body
+- **WHEN** a request is answered 502 with no body, with an empty body and `Content-Length: 0`, with the plain text "Bad Gateway", or with JSON that is not core's envelope
+- **THEN** the caller gets no data, an error with code `internal`, and the status 502, and the session is kept
+
+#### Scenario: Core's error passes through
+- **WHEN** a request is answered 400 with core's envelope `validation` naming `lowStock`
+- **THEN** the caller gets exactly that error, code, message and field, with status 400
+
+#### Scenario: Success without a body
+- **WHEN** a request is answered 204
+- **THEN** the caller gets no error and the status 204
+
+#### Scenario: 401 without core's error body
+- **WHEN** a request carrying the current token is answered 401 with no body
+- **THEN** the session is cleared, its loss is reported once, and the caller gets an error with code `internal` and status 401
 
 ### Requirement: Stock against core
 The admin e2e suite SHALL run the stock page against the real core and the demo seed, with axe finding no violation in every state it visits: the list, the low-stock filter, an unsaved edit and the discard dialog.

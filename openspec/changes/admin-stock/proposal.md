@@ -12,6 +12,7 @@ Store staff keep their store's stock right and admins do it for any store (Spec 
 - What cannot be saved: a quantity that is not a whole number from 0 to 100000 is marked as it is typed, and "Save changes" then sends nothing and names the products. A 400 `validation` from core (a changed product was deleted) and any other failure show an alert and keep the edits; the alert goes when a quantity is edited.
 - Switching store with unsaved edits asks first in a `Dialog` (Cancel, then "Discard and switch"). Edits are tied to their store and dropped by any change of store, also through the URL, Back or Forward, so they are never shown for or sent to another store and do not come back.
 - Loading, empty ("No products found"), load-failure and no-stores states.
+- The app's client (`src/api.ts`) turns a failure answer that carries no core error body (a proxy's empty or plain-text 502 while core is down) into an error with code `internal` for every caller, so no page reads it as a success; found on the stock save, fixed where all callers route through.
 - e2e (`e2e/stock.spec.ts`) against the real core and the demo seed: the seeded admin picks Koramangala, filters to low stock, searches Sunny Fields Toned Milk, changes its quantity, meets the discard dialog, saves, reloads, sees the new quantity and puts the old one back; the seeded Koramangala store staff see their store, named, without a selector and are not moved by a `store` in the URL; axe on every state visited.
 
 Area: admin. Capability: `admin-app` (ADDED requirements only).
@@ -32,6 +33,6 @@ None. `stock` is core's capability (seeded by core-stock-cart); the page is beha
 - Any `packages/ui` or `services/core` change.
 
 ## Impact
-- Code: `apps/admin/` only: new `src/stock.ts`, `src/stock.test.tsx`, `src/stock-rules.test.ts`, `e2e/stock.spec.ts`; `src/routes/_staff/stock.tsx` replaces the placeholder. No new dependency, no config change, no `routeTree.gen.ts` change (the route exists), no edit to `src/fake-core.ts` (the stock fixtures live in the test file).
+- Code: `apps/admin/` only: `src/api.ts` and `src/api.test.ts` (the client's `onResponse`); new `src/stock.ts`, `src/stock.test.tsx`, `src/stock-rules.test.ts`, `e2e/stock.spec.ts`; `src/routes/_staff/stock.tsx` replaces the placeholder. No new dependency, no config change, no `routeTree.gen.ts` change (the route exists), no edit to `src/fake-core.ts` (the stock fixtures live in the test file).
 - Cross-area contracts relied on: `services/core/openapi.json` through `@shopperstop/ui/api` (`packages/ui/src/api/core.d.ts`: operations `getStock`, `putStock` and the public `getStore`, the path `/admin/stores`, schemas `StockRow`, `StockList`, `StockUpdate`, `AdminStore`, `Store`, `Staff.storeId`, `Error`); the `@shopperstop/ui` exports `Badge`, `Button`, `Card`, `Chip`, `Dialog`, `DialogFooter`, `EmptyState`, `ErrorBanner`, `FormField`, `Input`, `PageHeader`, `Price`, `Select`, `Skeleton`, `StatusMessage`, `Table`; `tokens.css` through the app's Tailwind theme; core's demo seed (D22) for the e2e.
 - Base: cut from main at 503e1ba, since rebased onto main with admin-catalog merged (admin suite 95 before task 1).

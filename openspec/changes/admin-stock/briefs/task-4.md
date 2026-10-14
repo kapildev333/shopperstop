@@ -5,7 +5,7 @@
 - Worktree: `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/admin-P2-L4`
 - Branch: `lane/admin-P2-L4-admin-stock`
 - OpenSpec change: `admin-stock`, task 4 in `openspec/changes/admin-stock/tasks.md`
-- Starts after: tasks 1 to 3 landed and reviewed; the manager holds the e2e slot (one `make e2e` at a time, announced in the area plan's `## Doing`).
+- Starts after: tasks 1 to 3b landed and reviewed (3b changes the client in `src/api.ts` that every request of the e2e goes through, so a run made before it is not evidence for the final tree); the manager holds the e2e slot (one `make e2e` at a time, announced in the area plan's `## Doing`).
 
 This task has no new test: `apps/admin/e2e/stock.spec.ts` was committed in task 1 before the page existed and got one more line in task 3, and runs here for the first time against the real core and the demo seed. It cannot pass before task 3 has landed. The team lead ran it only against a `page.route` fake (6 of 6 over three repeats, axe clean).
 
@@ -31,3 +31,4 @@ Scope paths: `apps/admin/e2e/stock.spec.ts` only, plus `openspec/changes/admin-s
 - The product count is matched as `14[78]` on purpose: Playwright runs the spec files in parallel workers and the catalog spec holds one more active product for a moment. Do not tighten it to 147.
 - "Store: Koramangala" comes from the public `GET /api/core/v1/stores/{id}`. If it is missing while the table is there, look at that request first (status, and whether the session survived it): design.md assumption A13.
 - While a save runs the button reads "Saving…", not "Save changes"; the spec presses it once and then waits for the status "Stock saved.", so it does not look the button up by name during a save. The unsaved-count line is a `role="status"` region too: the spec filters statuses by text ("Stock saved.").
+- Since task 3b an answer with a failure status and no core error body (a proxy's empty 502 while core starts) is an error with code `internal` on every page. If a page shows its generic failure text right after the servers start, look at the status of the request first: core may not have been ready.
