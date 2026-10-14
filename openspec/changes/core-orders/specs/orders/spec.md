@@ -81,7 +81,7 @@ Two placements that compete for the last units of a product SHALL never both suc
 - **THEN** the response is 404 with code `not_found`
 
 ### Requirement: Order status transitions
-An order's status SHALL change only along: `placed` to `accepted` or `cancelled`; `accepted` to `packing` or `cancelled`; `packing` to `ready`; `ready` to `out_for_delivery`; `out_for_delivery` to `delivered`. Staff MAY make every one of them, customers only the cancels. Any other change SHALL answer 409 `conflict` and leave the order unchanged.
+An order's status SHALL change only along: `placed` to `accepted` or `cancelled`; `accepted` to `packing` or `cancelled`; `packing` to `ready`; `ready` to `out_for_delivery`; `out_for_delivery` to `delivered`. Staff MAY make every one of them, customers only the cancels. Any other change SHALL answer 409 `conflict` and leave the order unchanged; in particular nobody, staff included, cancels an order that is `packing` or later.
 
 #### Scenario: Allowed transition
 - **WHEN** an admin sends `POST /api/core/v1/admin/orders/{id}/status` with `{"status":"accepted","note":"on it"}` for a `placed` order
@@ -90,6 +90,10 @@ An order's status SHALL change only along: `placed` to `accepted` or `cancelled`
 #### Scenario: Forbidden transition
 - **WHEN** staff move a `placed` order to `packing`, or any order out of `delivered` or `cancelled`
 - **THEN** the response is 409 with code `conflict` and the order's status and events are unchanged
+
+#### Scenario: Staff cannot cancel once packing
+- **WHEN** an admin sends `{"status":"cancelled"}` for an order that is `packing`
+- **THEN** the response is 409 with code `conflict`, the order stays `packing` with no new event and the store's stock is unchanged
 
 #### Scenario: Unknown status
 - **WHEN** staff send `{"status":"lost"}`
@@ -116,6 +120,21 @@ Every transition SHALL append one event with the previous status, the new status
 #### Scenario: Another customer's order
 - **WHEN** a customer cancels another customer's order
 - **THEN** the response is 404 with code `not_found`
+
+### Requirement: Reasons and notes are short text
+The cancel `reason` and the status change `note` SHALL be optional, SHALL be stored without leading or trailing whitespace, and SHALL answer 400 `validation` naming the field (`reason` or `note`) and change nothing when longer than 500 characters.
+
+#### Scenario: Reason too long
+- **WHEN** a customer cancels a `placed` order with a `reason` of 501 characters
+- **THEN** the response is 400 with code `validation` and field `reason`, and the order stays `placed`
+
+#### Scenario: Reason trimmed
+- **WHEN** a customer cancels a `placed` order with `{"reason":"  changed my mind  "}`
+- **THEN** the response is 200 with `cancelReason` `changed my mind` and a last event with `note` `changed my mind`
+
+#### Scenario: No reason
+- **WHEN** a customer cancels a `placed` order with `{}`
+- **THEN** the response is 200 and the order in it has no `cancelReason` member
 
 ### Requirement: Staff read their store's orders
 `GET /api/core/v1/admin/stores/{id}/orders?status=` SHALL return the store's orders newest first as a paged list, optionally only those in one `status`, each with items, events, the customer's name and phone and the delivery address; `GET /api/core/v1/admin/orders/{id}` SHALL return one order the same way. An unknown `status` value SHALL answer 400 `validation` with field `status`; an unknown store or order SHALL answer 404 `not_found`.
