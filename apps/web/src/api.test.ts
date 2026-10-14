@@ -102,3 +102,27 @@ test('failed write reports an error', async () => {
   const result = await call(() => client.PATCH('/me', { body: { name: 'A', phone: '' } }))
   expect(result).toEqual({ code: 'internal', message: 'Could not reach ShopperStop. Try again.' })
 })
+
+test('failed answer with a zero content length becomes internal', async () => {
+  // The fetch option is the network boundary: it returns a real Response; the client, middleware and call() run as shipped.
+  const client = createClient<paths>({
+    baseUrl: 'http://localhost/api/core/v1',
+    fetch: async () => new Response('', { status: 502, headers: { 'Content-Length': '0' } }),
+  })
+  client.use(authMiddleware)
+  const result = await call(() => client.PATCH('/me', { body: { name: 'A', phone: '' } }))
+  expect(result).toEqual({ code: 'internal', message: 'Could not reach ShopperStop. Try again.' })
+
+  const response = new Response('', { status: 502, headers: { 'Content-Length': '0' } })
+  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
+  expect(out.headers.get('content-length')).not.toBe('0')
+})
+
+test('JSON that is not the envelope becomes internal', async () => {
+  for (const body of ['null', '[]', '{"error":"x"}', '{"error":{"code":1}}']) {
+    const response = new Response(body, { status: 500, headers: { 'Content-Type': 'application/json' } })
+    const out = (await authMiddleware.onResponse!({ response } as never)) as Response
+    expect(out.status, body).toBe(500)
+    expect(await out.json(), body).toEqual(internal)
+  }
+})
