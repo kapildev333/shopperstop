@@ -6,6 +6,7 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -307,8 +308,15 @@ func TestStoreStaffIsolation(t *testing.T) {
 	if got := orderStatus(t, id); got != "placed" {
 		t.Fatalf("status %s after the refused change, want placed", got)
 	}
+	if n := eventCount(t, id); n != 1 {
+		t.Fatalf("%d events after the refused change, want 1", n)
+	}
 	status, body = call(t, http.MethodGet, storeOrdersPath(b.ID), staff, nil)
 	expectError(t, "other store's list", status, body, http.StatusNotFound, "not_found", "", "not found")
+	status, body = call(t, http.MethodGet, storeOrdersPath(b.ID)+"?status=lost&page=0", staff, nil)
+	expectError(t, "other store's list with a bad status", status, body, http.StatusNotFound, "not_found", "", "not found")
+	status, body = call(t, http.MethodGet, storeOrdersPath(missingStoreID), staff, nil)
+	expectError(t, "unknown store's list for store staff", status, body, http.StatusNotFound, "not_found", "", "not found")
 	status, body = call(t, http.MethodGet, storeOrdersPath(missingStoreID), adminToken(t), nil)
 	expectError(t, "unknown store's list", status, body, http.StatusNotFound, "not_found", "", "not found")
 }
@@ -362,6 +370,103 @@ func TestStaffOrderRoutesCustomerToken401(t *testing.T) {
 	}
 }
 
+// requireTransitionKeys fails unless the line's keys are exactly the slog keys the
+// handler always writes plus Decision 7's (orderId, number, to, actorType, actorId,
+// requestId), with from only when withFrom.
+func requireTransitionKeys(t *testing.T, what string, line map[string]any, withFrom bool) {
+	t.Helper()
+	want := map[string]bool{"time": true, "level": true, "msg": true, "orderId": true, "number": true,
+		"to": true, "actorType": true, "actorId": true, "requestId": true}
+	if withFrom {
+		want["from"] = true
+	}
+	for k := range line {
+		if !want[k] {
+			t.Fatalf("%s: extra key %q in %v", what, k, line)
+		}
+	}
+	for k := range want {
+		if _, ok := line[k]; !ok {
+			t.Fatalf("%s: missing key %q in %v", what, k, line)
+		}
+	}
+}
+
+// statusAsync posts raw as a status change for orderID with token and returns the
+// answer. It runs in goroutines, so it never fails the test itself: the caller checks err.
+func statusAsync(token, orderID, raw string) answer {
+	req, err := http.NewRequest(http.MethodPost, srv.URL+adminOrderPath(orderID)+"/status", strings.NewReader(raw))
+	if err != nil {
+		return answer{err: err}
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return answer{err: err}
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	return answer{status: resp.StatusCode, body: body, err: err}
+}
+
+// TestStatusConcurrentSameTransition: the admin and the store's staff move one
+// accepted order to packing at once. One answers 200, the other 409 conflict, and
+// the order ends packing with three events: placed, accepted, packing.
+func TestStatusConcurrentSameTransition(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 1000)
+	c := newCustomer(t)
+	admin := adminToken(t)
+	staff := shopStaffToken(t, s.ID)
+	for range 10 {
+		id := orderIn(t, s.ID, c.Customer.ID, p, "placed")
+		if status, body := setStatus(t, admin, id, map[string]string{"status": "accepted"}); status != http.StatusOK {
+			t.Fatalf("accept: got %d %s, want 200", status, body)
+		}
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		var got [2]answer
+		for i, token := range []string{admin, staff} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				got[i] = statusAsync(token, id, `{"status":"packing"}`)
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		var won, lost int
+		for _, a := range got {
+			if a.err != nil {
+				t.Fatal(a.err)
+			}
+			switch a.status {
+			case http.StatusOK:
+				won++
+			case http.StatusConflict:
+				if e := decodeError(t, a.body); e.Error.Code != "conflict" {
+					t.Fatalf("409 with code %q, want conflict: %s", e.Error.Code, a.body)
+				}
+				lost++
+			default:
+				t.Fatalf("racing status change: got %d %s, want 200 or 409", a.status, a.body)
+			}
+		}
+		if won != 1 || lost != 1 {
+			t.Fatalf("racing status change: %d answered 200 and %d 409, want one each", won, lost)
+		}
+		if now := orderStatus(t, id); now != "packing" {
+			t.Fatalf("status %s after the race, want packing", now)
+		}
+		if n := eventCount(t, id); n != 3 {
+			t.Fatalf("%d events after the race, want 3 (placed, accepted, packing)", n)
+		}
+	}
+}
+
 // TestTransitionLogLine: each transition logs one `order transition` line after it
 // commits; a refused move logs nothing. Placement has no `from`.
 func TestTransitionLogLine(t *testing.T) {
@@ -392,10 +497,12 @@ func TestTransitionLogLine(t *testing.T) {
 	if _, ok := first["from"]; ok {
 		t.Fatalf("placement line has a from: %v", first)
 	}
+	requireTransitionKeys(t, "placement line", first, false)
 	second := lines[1]
 	if second["from"] != "placed" || second["to"] != "accepted" || second["actorType"] != "staff" {
 		t.Fatalf("accept line %v", second)
 	}
+	requireTransitionKeys(t, "accept line", second, true)
 
 	if status, body := setStatus(t, token, placed.ID, map[string]string{"status": "packing"}); status != http.StatusOK {
 		t.Fatalf("packing: got %d %s, want 200", status, body)
