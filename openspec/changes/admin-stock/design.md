@@ -1,11 +1,11 @@
 # Design
 
 ## Context
-Lane admin-P2-L4, area `admin`, branch `lane/admin-P2-L4-admin-stock` in `.worktrees/admin-P2-L4`. The branch was cut from origin/main at 503e1ba and has since been rebased by the manager onto main with admin-catalog merged: the admin suite's base is 95 Vitest tests, not the 52 of the first spike. Task 1 landed on it (4b8b4e5, 6e66a13, 52e89c8; suite at 108) and was reviewed "approve with nits" (`.claude/lanes/admin-P2-L4-R1.md`).
+Lane admin-P2-L4, area `admin`, branch `lane/admin-P2-L4-admin-stock` in `.worktrees/admin-P2-L4`, rebased by the manager onto main with admin-catalog merged (admin suite 95 before this change). Task 1 landed (4b8b4e5, 6e66a13, 52e89c8; suite 108) and task 2 landed (8949c8c, bb7cb03; suite 127); both were reviewed "approve with nits" (`.claude/lanes/admin-P2-L4-R1.md`, `-R2.md`).
 
-Revision of 2026-10-13 after that review. The manager ruled (D13) which findings go into tasks 2 and 3: R1-1 and R1-2 into task 2, R1-3 and R1-5 into task 3, the store's name for store staff (the public `GET /stores/{id}`, relayed from core) into task 3. Tasks 2 and 3 were spiked again on the branch as it is, on top of the landed task 1, and removed again; the tree holds only documents and task 1. Measured on that spike: the red and green Vitest counts in tasks.md (base 108); lint, typecheck and `vite build` green after each task; `make test-web` exit 0 on the final tree (ui 54, admin 138, web 20); `src/routeTree.gen.ts` unchanged; the 32 mutation guards below, each run and restored. `e2e/stock.spec.ts` in its task-3 shape passed 6 of 6 (three repeats) with axe clean on a scratch preview (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay. It has not run against the real core: that is task 4, the manager's e2e slot.
+Revision of 2026-10-13 after the review of task 2. The manager ruled (D13) that its findings go into task 3 as a first step of its own, a `fix:` commit after its red tests: R2-1, R2-2, R2-3, R2-4, R2-5 and R2-8. Task 3 now has two steps, A (the review fixes) and B (what task 3 held before: the switch dialog, save failures, the 500-row limit, URL values, the store's name for store staff). Both were spiked on the branch as it is, on top of the landed tasks 1 and 2, and removed again; the tree holds only documents and the landed tasks. Measured on that spike: the red and green Vitest counts in tasks.md (base 127); lint, typecheck and `vite build` green after each step; `make test-web` exit 0 on the final tree (ui 54, admin 142, web 20); `src/routeTree.gen.ts` unchanged; the 40 mutation guards below, each run and restored. `e2e/stock.spec.ts` in its task-3 shape passed 6 of 6 (three repeats) with axe clean on a scratch preview (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay. It has not run against the real core: that is task 4, the manager's e2e slot.
 
-Task 1's blocks below are what landed, kept for reference. The blocks of tasks 2 and 3 are the second spike, byte for byte. Workers copy them; a worker who finds a block that does not compile, a count that differs, or a choice this file leaves open stops and reports.
+The blocks of tasks 1 and 2 below are what landed, kept for reference. The blocks of task 3 are the third spike, byte for byte. Workers copy them; a worker who finds a block that does not compile, a count that differs, or a choice this file leaves open stops and reports.
 
 ## Assumptions (verified on 503e1ba; A13 and A14 on the rebased branch)
 | # | Assumption | Result |
@@ -34,14 +34,14 @@ Decisions 2, 5, 6, 7 and 8 are the ones the manager asked to be decided and reco
 2. The selected store lives in the URL as `store`, and so do the search (`q`), the filter (`lowStock`) and the page (`page`): one `validateSearch` on the route, one `go(change)` that navigates and drops `page`. Reason: a reload and a shared link show the same list, and admin-P2-L5's dashboard can link a store's low-stock count to `/stock?store=<id>&lowStock=true` with a typed `Link`. Only the text being typed in the search field is component state, started from `q` and set again whenever `q` changes (Decision 21). Ceiling (review 1, R1-4): the router reads a hand-typed `?q=1e3` as the number 1000 and `?q={"a":1}` as an object (it quotes such strings itself when it writes the URL, so its own links are safe).
 3. A `store` in the URL that is not in the stores list falls back to the first store, without a message. So an admin never asks core for an unknown store and there is no 404 branch to build. Ceiling: a stale shared link silently shows another store; the selector says which.
 4. Store staff: the store is `staff.storeId` from `GET /admin/me`; the stores query is disabled for them (it would answer 403, which the app turns into the not-found page). Their store's name comes from the public store route (Decision 23).
-5. Unsaved edits are one map keyed by `productId` (`Edits`: the typed text and the product's name), kept across pages, search and filter of one store and sent in one `PUT`. The map is tagged with its store (`draft = {store, edits}`) and read as empty for any other store, so no path can send one store's edits to another: not the selector, not the browser's Back button, not a link. Not a `key={storeId}` remount: that would drop keyboard focus from the selector on every change.
-6. Switching store with unsaved edits asks first in a ui `Dialog` ("Discard unsaved changes?", "Cancel" then "Discard and switch"); with none it switches at once. Back and Forward are not guarded (manager's ruling on R1-2): within a store they only change the page, search or filter, across which edits are kept by design; a store changed through the URL (Back, a link) cannot be asked, so the edits are then hidden, not sent, and are back when the admin returns to their store; "Discard and switch" really drops them. Ceiling: no warning on leaving `/stock` or closing the tab; the edits are lost.
+5. Unsaved edits are one map keyed by `productId` (`Edits`: the typed text and the product's name), kept across pages, search and filter of one store and sent in one `PUT`. The map is tagged with its store (`draft = {store, edits}`) and emptied the moment the page shows another store (Decision 27), so no path can show or send one store's edits for another: not the selector, not the browser's Back button, not a link. Not a `key={storeId}` remount: that would drop keyboard focus from the selector on every change.
+6. Switching store with unsaved edits asks first in a ui `Dialog` ("Discard unsaved changes?", "Cancel" then "Discard and switch"); with none it switches at once. Back and Forward are not guarded (manager's ruling on R1-2): within a store they only change the page, search or filter, across which edits are kept by design; a store changed through the URL (Back, a link) cannot be asked, so the edits are then dropped without a question, exactly as "Discard and switch" drops them, and are not back when the admin returns to that store (review 2, R2-4; Decision 27). Ceiling: no warning on leaving `/stock` or closing the tab; the edits are lost.
 7. Low-stock badge: `quantity < 5` on the quantity core holds, zero included (`lowStockBelow`, core's threshold, checked by the e2e against core's own filter). It does not follow the typed value: it says what customers get now and changes with the save. One badge, no separate "Out of stock" (status colours: `warning` is caution; an empty shelf is not an error of the page). An edited row carries an `accent` "Unsaved" badge.
 8. The 500-row limit: `toRows` cuts a save to the first 500 edits in the order they were made; the rest stay unsaved and the count shows them, so pressing "Save changes" again sends them. One press is always one `PUT`. Not a refusal (a dead end with no partial save) and not several `PUT`s in one press (loses the one-transaction guarantee per press and the "one `PUT`" rule). Ceiling: 501 hand-typed edits need two presses; nobody types that many.
 9. A quantity is checked as it is typed (`parseQuantity`: whole, 0 to 100000, spaces ignored) and the mark on the field (`aria-invalid`, the ui `Input`'s `danger` border) is derived from the value, so it cannot go stale. The message is one alert on save, naming the products, because the row may be on another page; it is cleared by the next edit. A row field has no visible label or error line (dense table): `aria-label` names it. Ceiling: the reason is in the alert, not next to the field.
 10. After a save: `removeQueries` on the store's stock pages that are not on screen, then `await invalidateQueries` for the one that is, then the edits go. So a page visited before the save is never shown with the old quantity (it loads afresh), and the field never flashes the old value between "edit gone" and "new quantity here". Only rows that were sent, and whose field still holds the sent value, stop being edits: an edit typed while the `PUT` ran, or beyond row 500, stays.
 11. The page on screen stays while the next page, search or filter loads (`placeholderData`, same store only), so the pressed pager button or toggle is not unmounted and keeps focus. What those kept rows look like and allow is Decision 20.
-12. "Previous", "Next", "Discard changes" and "Save changes" are `aria-disabled` when they cannot act, never `disabled`, and their handlers do nothing then: `disabled` drops keyboard focus from the button just pressed (admin-catalog review 4). The look comes from two state utilities on the page (`idle`); asked of ui as a `Button` feature. "Save changes" still uses `Button`'s `loading`, which disables it for the length of the `PUT`: the design-system pattern every form here uses; the button is enabled again when the answer is in.
+12. "Previous", "Next", "Discard changes" and "Save changes" are `aria-disabled` when they cannot act, never `disabled`, and their handlers do nothing then: `disabled` drops keyboard focus from the button just pressed (admin-catalog review 4). The look comes from two state utilities on the page (`idle`); asked of ui as a `Button` feature. Since review 2 (R2-2, Decision 25) this holds for "Save changes" during a save as well: it no longer uses `Button`'s `loading`.
 13. Page size 24 (core's default, as the products table). A page beyond the last (a save emptied it under the filter, or a typed URL) is replaced by the last page with rows, in one effect.
 14. No product image in the table: `@shopperstop/ui` has no `ImageTile`, and admin-catalog's app-level copy is not on main. Ceiling: add the column when ui ships `ImageTile` (core's `StockRow` would also need `imageUrl`).
 15. Nothing shared is edited: the stock fixtures and the stateful fake of the two routes live in `src/stock.test.tsx`, not in `src/fake-core.ts`; the pure rules live in `src/stock.ts` with their own `src/stock-rules.test.ts`. So the rebase against admin-catalog has no textual conflict (see "Rebase against admin-catalog").
@@ -54,16 +54,21 @@ Decisions 2, 5, 6, 7 and 8 are the ones the manager asked to be decided and reco
 22. (review 1, R1-3; task 3) `validateSearch` never lets the URL ask core for what core refuses (A14): `page` above 100000 (`maxPage`) is cut to it, and the past-the-end effect then moves to the last page; `q` loses NUL characters and is cut to 100 (`maxSearch`); the field has `maxLength` 100. 100000 is far below core's limit and far above any list (2.4 million products at 24 a page). A `page` or `lowStock` that is not readable was already ignored by task 1; task 3 adds the tests for it, green when written (not a test-first violation: the behaviour is landed).
 23. (relayed from core, manager's ruling; task 3) Store staff see "Store: <name>" where admins have the selector, the name read from the public `GET /stores/{id}` with `staff.storeId` (A13). The query runs only when there is no stores list (store staff). While it loads or when it fails, the line is simply absent: no skeleton, no error, no retry. Plain text in the filter `Card` (`text-body text-ink`, the name `font-semibold`), no new component. This closes R1-8.
 24. (review 1, R1-5; task 3) The search form's accessible name is "Search stock", so the heading, the table and the search landmark have three different names.
+25. (review 2, R2-2; task 3 step A; supersedes the `loading` part of Decision 12) "Save changes" is never `disabled`: while a save runs it is `aria-disabled`, reads "Saving…" and keeps keyboard focus; `submitSave` already returns while a save is pending. No spinner (the spinner is `Button`'s `loading`, which disables). The result is announced by the `StatusMessage` "Stock saved.".
+26. (review 2, R2-1; task 3 step A) An edit or a discard clears the last save's result (`save.reset()`) only when no save is running. `reset()` detaches the observer from a running mutation: the button would be pressable again, a second `PUT` would repeat the first, and "Stock saved." would never show. One helper, `forget()`, holds the rule for `edit` and `discard`. So an edit typed during a save leaves the save attached: one `PUT`, then "Stock saved." next to "1 unsaved change".
+27. (review 2, R2-4; task 3 step A) Any change of the store on screen drops the draft: when `draft.store` is not the store shown, the draft is set empty during render (the same React pattern as Decision 21), so React renders again at once with no edits. One mechanism covers the selector, the dialog's "Discard and switch" (which therefore only navigates), links, Back and Forward. The save's `onSuccess` still checks `current.store === sent.store`, so an answer that arrives after a store change cannot remove the other store's edits (the stores share product ids).
+28. (review 2, R2-3 and R2-5; task 3 step A) The unsaved-count line is a `role="status"` region, present from the first paint. A value is an edit only when it does not read as the quantity core holds (`parseQuantity(value) === row.quantity`): `017` or ` 17 ` on a row holding 17 is no edit and the field shows `17` again. "Discard changes" returns at once when nothing is unsaved, so it cannot clear "Stock saved.".
 
 ## Files (all under `apps/admin/`)
 | Task | Test files (committed first) | Code files |
 |---|---|---|
 | 1 (landed) | `e2e/stock.spec.ts` (new, not run), `src/stock.test.tsx` (new, 13 tests) | `src/stock.ts` (new), `src/routes/_staff/stock.tsx` (replaces the placeholder; quantity fields read-only) |
-| 2 | `src/stock.test.tsx` (9 tests appended), `src/stock-rules.test.ts` (new, 2 tests, 10 runs) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their task-2 shape) |
-| 3 | `e2e/stock.spec.ts` (one line added, own `test:` commit), `src/stock.test.tsx` (the store-staff test replaced, 8 tests appended, 10 runs), `src/stock-rules.test.ts` (1 test appended) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their final shape) |
+| 2 (landed) | `src/stock.test.tsx` (9 tests appended), `src/stock-rules.test.ts` (new, 2 tests, 10 runs) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their task-2 shape) |
+| 3 step A | `src/stock.test.tsx` (the in-flight test replaced, 4 tests appended) | `src/routes/_staff/stock.tsx` (replaced by its step-A shape); `fix:` commit |
+| 3 step B | `e2e/stock.spec.ts` (one line added, own `test:` commit), `src/stock.test.tsx` (the store-staff test replaced, 8 tests appended, 10 runs), `src/stock-rules.test.ts` (1 test appended) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their final shape); `feat:` commit |
 | 4 | none new: runs `e2e/stock.spec.ts` | fixes only, after a recorded failure |
 
-Nothing else: no `src/fake-core.ts`, `src/routeTree.gen.ts`, `package.json`, `package-lock.json`, vite, Playwright or eslint config change; nothing in `packages/ui` or `services/core`. The fake `stockCore` in `src/stock.test.tsx` carried a `PUT` handler and its `puts` log since task 1 (review 1, R1-9): task 2's save tests are what use them; nothing is removed.
+Nothing else: no `src/fake-core.ts`, `src/routeTree.gen.ts`, `package.json`, `package-lock.json`, vite, Playwright or eslint config change; nothing in `packages/ui` or `services/core`.
 
 ## Rebase against admin-catalog
 Done by the manager before task 1: admin-catalog merged first and this branch was rebased onto it. The two changes touch disjoint files under `apps/admin/`, `src/routeTree.gen.ts` and `src/fake-core.ts` are admin-catalog's and untouched here, and the base moved from 52 to 95 Vitest tests and from 6 to 8 Playwright tests. What remains: `openspec/specs/admin-app/spec.md` gets this change's ADDED requirements at archive time (every name starts with "Stock"); `.claude/areas/admin.md` is the manager's.
@@ -71,20 +76,20 @@ Done by the manager before task 1: admin-catalog merged first and this branch wa
 ## Tests (scenario -> test)
 | Requirement › Scenario | File | Test name | Task |
 |---|---|---|---|
-| Stock table › Stock listed | `src/stock.test.tsx` | "the stock table lists a page of the first store and badges quantities below 5"; the request list: "an admin is not asked for a store name: the selector names the store" | 1; 3 |
+| Stock table › Stock listed | `src/stock.test.tsx` | "the stock table lists a page of the first store and badges quantities below 5"; the request list: "an admin is not asked for a store name: the selector names the store" | 1; 3B |
 | Stock store for admins › Choose a store | same | "choosing a store puts it in the URL and loads its stock, never under the other store's rows" | 1 |
 | Stock store for admins › Store in the URL | same | "a store in the URL is the one shown" | 1 |
 | Stock store for admins › Unknown store in the URL | same | "a store in the URL that is not a store shows the first store" | 1 |
-| Stock store for store staff › Store staff see their own store | same | "store staff see their own store by name and no store selector" (task 1's "store staff see their own store and no store selector", replaced in task 3) | 1, 3 |
-| Stock store for store staff › Store name unavailable | same | "store staff get the stock without a store name when the name cannot be read" | 3 |
+| Stock store for store staff › Store staff see their own store | same | "store staff see their own store by name and no store selector" (task 1's "store staff see their own store and no store selector", replaced in task 3) | 1, 3B |
+| Stock store for store staff › Store name unavailable | same | "store staff get the stock without a store name when the name cannot be read" | 3B |
 | Stock search and low-stock filter › Search and filter from the first page | same | "search and the low-stock filter ask core again from the first page" | 1 |
 | Stock search and low-stock filter › Back and Forward | same | "Back and Forward move the search field and the list with the URL, and unsaved edits stay" | 2 |
 | Stock pager › Pager | same | "the pager moves between pages and the pressed button keeps focus" | 1 |
 | Stock pager › Page past the end | same | "a page past the end shows the last page" | 1 |
 | Stock rows while the next list loads › Rows kept while the next page loads | same | "while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited" | 2 |
-| Stock URL values › Unreadable page or filter | same | "?%s in the URL is read as page 1 with the filter off" (one `test.each`, 3 runs; green when written) | 3 |
-| Stock URL values › Over-large page | same | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" | 3 |
-| Stock URL values › Over-long search | same | "a search in the URL loses NUL bytes and is cut to the 100 characters core takes" (also the form's name "Search stock") | 3 |
+| Stock URL values › Unreadable page or filter | same | "?%s in the URL is read as page 1 with the filter off" (one `test.each`, 3 runs; green when written) | 3B |
+| Stock URL values › Over-large page | same | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" | 3B |
+| Stock URL values › Over-long search | same | "a search in the URL loses NUL bytes and is cut to the 100 characters core takes" (also the form's name "Search stock") | 3B |
 | Stock table states › Search without a match | same | "a search that matches nothing shows the empty state" | 1 |
 | Stock table states › Stock loading | same | "the stock table shows a skeleton while loading" | 1 |
 | Stock table states › Stock load failure | same | "stock load failure shows a retry that reloads" | 1 |
@@ -92,41 +97,54 @@ Done by the manager before task 1: admin-catalog merged first and this branch wa
 | Stock table states › Stores load failure | same | "stores load failure shows a retry that reloads" | 1 |
 | Stock edits › Edit typed back | same | "an edit typed back to the saved quantity is no change, and nothing is sent" | 2 |
 | Stock edits › Discard | same | "discard puts every quantity back to what core holds" | 2 |
+| Stock edits › Value read as the stored quantity | same | "a value that reads as the stored quantity is no edit, and Discard with nothing unsaved changes nothing" | 3A |
 | Stock save › Edits on two pages saved with one PUT | same | "edits made on two pages and under a filter are saved with one PUT" | 2 |
 | Stock save › Kept page read again | same | "a page kept from before a save is read again, never shown with the old quantity" | 2 |
-| Stock save › Edit typed during a save | same | "an edit typed while a save is in flight stays unsaved" | 2 |
-| Stock save › More than 500 edits | `src/stock-rules.test.ts` | "one save takes the first 500 edits, in the order they were made" | 3 |
+| Stock save › Edit typed during a save | same | "an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed" (task 2's "an edit typed while a save is in flight stays unsaved", replaced in step A) | 2, 3A |
+| Stock save in progress › Focus through a save | same | "Save changes keeps keyboard focus through a save and is never disabled" | 3A |
+| Stock save in progress › Second press during a save | same | "an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed" | 3A |
+| Stock save › More than 500 edits | `src/stock-rules.test.ts` | "one save takes the first 500 edits, in the order they were made" | 3B |
 | Stock quantity the page cannot send › Unsendable quantity | `src/stock.test.tsx` | "a quantity the page cannot send is marked, named on save and not sent" | 2 |
 | Stock quantity the page cannot send › Quantity as typed | `src/stock-rules.test.ts` | "quantity %j is read as %j" (one `test.each`, 9 runs), "a value that is not a quantity is never sent as a number" | 2 |
-| Stock save failures › Save refused for a deleted product | `src/stock.test.tsx` | "a save refused for a deleted product says so and keeps the edits" | 3 |
-| Stock save failures › Other save failure | same | "any other save failure shows a banner, keeps the edits and can be retried" | 3 |
-| Stock store switch with unsaved edits › Switch asks first | same | "switching store with unsaved edits asks first" | 3 |
+| Stock save failures › Save refused for a deleted product | `src/stock.test.tsx` | "a save refused for a deleted product says so and keeps the edits" | 3B |
+| Stock save failures › Other save failure | same | "any other save failure shows a banner, keeps the edits and can be retried" | 3B |
+| Stock store switch with unsaved edits › Switch asks first | same | "switching store with unsaved edits asks first" | 3B |
 | Stock store switch with unsaved edits › Store changed in the URL | same | "unsaved edits never follow a store changed in the URL" | 2 |
+| Stock store switch with unsaved edits › Return after a store change in the URL | same | "a store changed through the URL drops the edits for good: they are not back on return" | 3A |
+| Stock store switch with unsaved edits › Save answered after a store change | same | "a save that answers after the store changed leaves the other store's edits alone" (green when written: task 2 built the check) | 3A |
 | Stock against core › Admin sets stock at a store | `e2e/stock.spec.ts` | "admin sets stock at a store" | 1 (written), 4 (run) |
-| Stock against core › Store staff set stock at their own store only | same | "store staff set stock at their own store only" | 1 (written), 3 (one line added), 4 (run) |
+| Stock against core › Store staff set stock at their own store only | same | "store staff set stock at their own store only" | 1 (written), 3B (one line added), 4 (run) |
 
-14 requirements, 33 scenarios: 31 on Vitest and 2 on Playwright. Vitest runs: `src/stock.test.tsx` 32 (13 from task 1, 9 from task 2, 10 from task 3), `src/stock-rules.test.ts` 11 (10 from task 2, 1 from task 3); 43 on top of the base 95 is 138 (measured). "Store changed in the URL" is built in task 2 because the store tag on the edits is part of how task 2 holds them; task 3 adds the dialog on top.
+15 requirements, 38 scenarios: 36 on Vitest and 2 on Playwright. Vitest runs: `src/stock.test.tsx` 36 (13 from task 1, 9 from task 2, 4 from step A, 10 from step B), `src/stock-rules.test.ts` 11 (10 from task 2, 1 from step B); 47 on top of the base 95 is 142 (measured). Step A replaces one of task 2's tests in place, so it adds 4, not 5.
 
-## Mutation guards (for the reviewer; each run on the final tree of the second spike on 2026-10-13, 138 tests, only the named tests red, then restored)
+## Mutation guards (for the reviewer; each run on the final tree of the third spike on 2026-10-13, 142 tests, only the named tests red, then restored)
 | Mutation | Test that turns red |
 |---|---|
 | drop `removeQueries` from the save's `onSuccess` | "a page kept from before a save is read again, never shown with the old quantity" |
-| drop the `await invalidateQueries` from the save's `onSuccess` | "edits made on two pages and under a filter are saved with one PUT", "an edit typed while a save is in flight stays unsaved" |
-| clear every edit on success instead of the rows sent | "an edit typed while a save is in flight stays unsaved" |
-| read `draft.edits` without the store check | "unsaved edits never follow a store changed in the URL" |
+| drop the `await invalidateQueries` from the save's `onSuccess` | "edits made on two pages and under a filter are saved with one PUT", "an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed" |
+| clear every edit on success instead of the rows sent | the in-flight test |
+| drop the draft reset on a store change | "unsaved edits never follow a store changed in the URL", "a store changed through the URL drops the edits for good: they are not back on return", "switching store with unsaved edits asks first" |
+| drop `current.store === sent.store` from the save's `onSuccess` | "a save that answers after the store changed leaves the other store's edits alone" |
 | drop `page: undefined` from `go` | "search and the low-stock filter ask core again from the first page" |
 | drop `placeholderData` from `stockQuery` | "the pager moves between pages and the pressed button keeps focus", "while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited" |
 | keep the previous page across stores (`keepPreviousData` alone) | "choosing a store puts it in the URL and loads its stock, never under the other store's rows" |
-| drop `discard()` from "Discard and switch" | "switching store with unsaved edits asks first" |
 | always switch store without the dialog | "switching store with unsaved edits asks first" |
-| drop `setRefused(false)` from `edit` | "a quantity the page cannot send is marked, named on save and not sent" |
-| drop the `invalid.length` check from `submitSave` | "a quantity the page cannot send is marked, named on save and not sent" |
-| drop `save.reset()` from `edit` | "a save refused for a deleted product says so and keeps the edits" |
+| drop `setRefused(false)` from `forget` | "a quantity the page cannot send is marked, named on save and not sent" |
+| drop the `invalid.length` check from `submitSave` | same |
+| drop the `save.reset()` line from `forget` | "a save refused for a deleted product says so and keeps the edits" |
+| call `save.reset()` in `forget` also while a save runs | the in-flight test |
+| pass `loading={save.isPending}` to "Save changes" again | the in-flight test, "Save changes keeps keyboard focus through a save and is never disabled" |
+| drop `|| save.isPending` from the button's `aria-disabled` | same two |
+| always label the button "Save changes" | same two |
+| `disabled` instead of `aria-disabled` on "Save changes" | same two, "an edit typed back to the saved quantity is no change, and nothing is sent" |
+| drop `save.isPending` from `submitSave`'s guard | the in-flight test |
+| drop `role="status"` from the count line | "a value that reads as the stored quantity is no edit, and Discard with nothing unsaved changes nothing" |
+| compare the typed text with `String(row.quantity)` again | same |
+| drop `if (count === 0) return` from `discard` | same |
+| keep an edit typed back to core's quantity | same, "an edit typed back to the saved quantity is no change, and nothing is sent" |
 | never run the past-the-end effect | "a page past the end shows the last page", "a page in the URL beyond what core accepts is cut to one it does, then to the last page" |
 | `disabled` instead of `aria-disabled` on "Next" | "the pager moves between pages and the pressed button keeps focus" |
-| `disabled` instead of `aria-disabled` on "Save changes" | "an edit typed back to the saved quantity is no change, and nothing is sent" |
 | ask for the stores as store staff (`enabled: true`) | "store staff see their own store by name and no store selector" |
-| keep an edit typed back to core's quantity | "an edit typed back to the saved quantity is no change, and nothing is sent" |
 | drop `.slice(0, maxRows)` from `toRows` | "one save takes the first 500 edits, in the order they were made" |
 | send a value that is not a quantity as 0 | "a value that is not a quantity is never sent as a number" |
 | `lowStockBelow = 6` | "the stock table lists a page of the first store and badges quantities below 5" |
@@ -144,7 +162,7 @@ Done by the manager before task 1: admin-catalog merged first and this branch wa
 | never show the store's name | "store staff see their own store by name and no store selector" |
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
-Task 1's blocks are what landed at 52e89c8. The blocks of tasks 2 and 3 were built in order on top of it on 2026-10-13, tests first, with the red and green counts in tasks.md. Paths are under `apps/admin/`. A block is the whole file unless its heading says "append" or "replace one test".
+The blocks of tasks 1 and 2 are what landed (52e89c8, bb7cb03). The blocks of task 3 were built in order on top of them on 2026-10-13, tests first, with the red and green counts in tasks.md. Paths are under `apps/admin/`. A block is the whole file unless its heading says "append", "replace one test" or "replace three lines".
 
 ### Task 1 (landed): the stock table, the store, search, filter and pager, and the e2e spec
 
@@ -721,7 +739,7 @@ export const Route = createFileRoute('/_staff/stock')({
 })
 ```
 
-### Task 2: edits, the batched save, rows kept while the next list loads, the search field following the URL
+### Task 2 (landed): edits, the batched save, rows kept while the next list loads, the search field following the URL
 
 #### `src/stock.test.tsx` (append at the end of the file; change nothing above)
 The block starts with one empty line, then the comment line. Keep both.
@@ -1278,7 +1296,412 @@ export const Route = createFileRoute('/_staff/stock')({
 })
 ```
 
-### Task 3: the store switch dialog, save failures, the 500-row limit, URL values, the store's name for store staff
+### Task 3 step A: fixes from the review of task 2 (a save in progress, focus on Save, the status region, values that read as stored, edits dropped on any store change)
+
+#### `src/stock.test.tsx` (replace one test: the whole test "an edit typed while a save is in flight stays unsaved", from its `test(` line to its closing `})`, becomes this test)
+```tsx
+test('an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  await userEvent.click(save)
+  await waitFor(() => expect(core.puts).toHaveLength(1))
+  await type('Sunny Fields Toned Milk', '20')
+
+  expect(save).toHaveTextContent('Saving…')
+  expect(save).toHaveAttribute('aria-disabled', 'true')
+  await userEvent.click(save)
+  answer()
+
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toEqual([{ rows: [{ productId: banana.productId, quantity: 30 }] }])
+  expect(save).toHaveTextContent('Save changes')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(quantity('Sunny Fields Toned Milk')).toHaveValue('20')
+  expect(within(quantity('Sunny Fields Toned Milk').closest('tr')!).getByText('Unsaved')).toBeInTheDocument()
+})
+```
+
+#### `src/stock.test.tsx` (append at the end of the file; change nothing else)
+The block starts with one empty line, which separates it from the test before. Keep it.
+```tsx
+
+test('Save changes keeps keyboard focus through a save and is never disabled', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  await userEvent.click(save)
+
+  await waitFor(() => expect(save).toHaveTextContent('Saving…'))
+  expect(save).toHaveAttribute('aria-disabled', 'true')
+  expect(save).not.toBeDisabled()
+  expect(save).toHaveFocus()
+  answer()
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(save).toHaveTextContent('Save changes')
+  expect(save).not.toBeDisabled()
+  expect(save).toHaveFocus()
+})
+
+test('a value that reads as the stored quantity is no edit, and Discard with nothing unsaved changes nothing', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(screen.getByText('No unsaved changes')).toHaveAttribute('role', 'status')
+  await type('Sunny Fields Toned Milk', '017')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(quantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
+
+  await type('Banana Robusta', '30')
+  expect(screen.getByText('1 unsaved change')).toHaveAttribute('role', 'status')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+  expect(screen.getByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toHaveLength(1)
+})
+
+test('a store changed through the URL drops the edits for good: they are not back on return', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...stockCore(koramangala.id, [milk]).routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await router.navigate({ to: '/stock', search: { store: koramangala.id } })
+  await findQuantity('Sunny Fields Toned Milk')
+  router.history.back()
+
+  expect(await findQuantity('Banana Robusta')).toHaveValue('0')
+  expect(screen.getByLabelText('Store')).toHaveValue(indiranagar.id)
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+})
+
+test('a save that answers after the store changed leaves the other store\'s edits alone', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    ...stockCore(koramangala.id, [banana]).routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  const router = renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(core.puts).toHaveLength(1))
+  await router.navigate({ to: '/stock', search: { store: koramangala.id } })
+  await waitFor(() => expect(screen.getByLabelText('Store')).toHaveValue(koramangala.id))
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  answer()
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'false'))
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+})
+```
+
+#### `src/routes/_staff/stock.tsx` (replace the whole file)
+```tsx
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Badge, Button, Card, Chip, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
+import { api } from '../../api'
+import { lowStockBelow, maxQuantity, pageSize, parseQuantity, stockQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
+import { storesQuery, type AdminStore } from '../../stores'
+
+// A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
+const idle = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
+
+function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[] }) {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const queryClient = useQueryClient()
+  const page = search.page ?? 1
+  const stock = useQuery(stockQuery(storeId, { q: search.q, lowStock: search.lowStock, page }))
+  const [text, setText] = useState(search.q ?? '')
+  // The field follows the URL: Back and Forward change `q` without a submit.
+  const [shownQ, setShownQ] = useState(search.q)
+  if (shownQ !== search.q) {
+    setShownQ(search.q)
+    setText(search.q ?? '')
+  }
+  // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
+  const stale = stock.isPlaceholderData
+  // Unsaved edits belong to one store, so they can never be shown for, or saved to, another.
+  const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
+  const [refused, setRefused] = useState(false)
+  // A store change, however it happens (selector, link, Back), drops them for good: React renders again at once with the empty draft.
+  if (draft.store !== storeId) setDraft({ store: storeId, edits: {} })
+  const edits = draft.edits
+  const count = Object.keys(edits).length
+  const invalid = Object.values(edits).filter((edit) => parseQuantity(edit.value) === undefined)
+
+  const save = useMutation({
+    mutationFn: async (sent: { store: string; edits: Edits }) => {
+      const rows = toRows(sent.edits)
+      const { error } = await api.PUT('/admin/stores/{id}/stock', { params: { path: { id: sent.store } }, body: { rows } })
+      if (error) throw error.error
+      return rows
+    },
+    onSuccess: async (rows, sent) => {
+      // Kept pages hold the old quantities: drop the ones not on screen and read this one again before the edits go.
+      queryClient.removeQueries({ queryKey: ['admin', 'stock', sent.store], type: 'inactive' })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'stock', sent.store] })
+      // Only what was sent is saved: an edit typed since stays unsaved.
+      const done = new Map(rows.map((row) => [row.productId, row.quantity]))
+      setDraft((current) =>
+        current.store === sent.store
+          ? { store: current.store, edits: Object.fromEntries(Object.entries(current.edits).filter(([id, edit]) => !done.has(id) || done.get(id) !== parseQuantity(edit.value))) }
+          : current,
+      )
+    },
+  })
+  const saved = save.variables?.store === storeId
+
+  // Filters and the store live in the URL; any change of them starts again at page 1.
+  const go = (change: StockSearch) => void navigate({ search: (current) => ({ ...current, page: undefined, ...change }) })
+
+  // A page past the end (a save emptied it, or a typed URL) moves to the last page that has rows.
+  const total = stock.data?.total ?? 0
+  const pastEnd = page > 1 && !stale && stock.data?.items.length === 0
+  useEffect(() => {
+    const last = Math.ceil(total / pageSize)
+    if (pastEnd) void navigate({ search: (current) => ({ ...current, page: last > 1 ? last : undefined }), replace: true })
+  }, [pastEnd, total, navigate])
+
+  // The result of the last save is cleared by the next edit, but never while a save runs: reset() would detach it.
+  function forget() {
+    if (!save.isPending) save.reset()
+    setRefused(false)
+  }
+
+  function edit(row: StockRow, value: string) {
+    forget()
+    const next = { ...edits, [row.productId]: { name: row.name, value } }
+    // A value that reads as what core holds (17, 017, " 17 ") is no edit.
+    if (parseQuantity(value) === row.quantity) delete next[row.productId]
+    setDraft({ store: storeId, edits: next })
+  }
+
+  function discard() {
+    if (count === 0) return
+    forget()
+    setDraft({ store: storeId, edits: {} })
+  }
+
+  function submitSave() {
+    if (count === 0 || save.isPending) return
+    if (invalid.length > 0) return setRefused(true)
+    save.mutate({ store: storeId, edits })
+  }
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault()
+    go({ q: text.trim() || undefined })
+  }
+
+  const columns: Column<StockRow>[] = [
+    {
+      key: 'product',
+      header: 'Product',
+      cell: (row) => (
+        <span className="flex flex-col">
+          <span className="font-semibold text-ink">{row.name}</span>
+          {row.brand && <span className="text-small text-ink-muted">{row.brand}</span>}
+        </span>
+      ),
+    },
+    { key: 'unit', header: 'Unit', cell: (row) => row.unitLabel },
+    { key: 'price', header: 'Price', cell: (row) => <Price cents={row.priceCents} /> },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      cell: (row) => {
+        const value = edits[row.productId]?.value
+        return (
+          <span className="block w-28">
+            <Input
+              aria-label={`Quantity of ${row.name}`}
+              aria-invalid={value !== undefined && parseQuantity(value) === undefined ? true : undefined}
+              inputMode="numeric"
+              className="tabular-nums"
+              readOnly={stale}
+              value={value ?? String(row.quantity)}
+              onChange={(event) => edit(row, event.target.value)}
+            />
+          </span>
+        )
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (row) => (
+        <span className="flex flex-wrap gap-2">
+          {row.quantity < lowStockBelow && <Badge variant="warning">Low stock</Badge>}
+          {edits[row.productId] && <Badge variant="accent">Unsaved</Badge>}
+        </span>
+      ),
+    },
+  ]
+
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  return (
+    <>
+      <Card className="flex flex-wrap items-end gap-4 p-4">
+        {stores && (
+          <FormField label="Store">
+            <Select value={storeId} onChange={(event) => go({ store: event.target.value })}>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>{store.name}</option>
+              ))}
+            </Select>
+          </FormField>
+        )}
+        <form role="search" aria-label="Stock" noValidate onSubmit={submitSearch} className="flex items-end gap-2">
+          <FormField label="Search">
+            <Input type="search" value={text} onChange={(event) => setText(event.target.value)} />
+          </FormField>
+          <Button type="submit" variant="secondary">Search</Button>
+        </form>
+        <Chip selected={search.lowStock === true} onClick={() => go({ lowStock: search.lowStock ? undefined : true })}>
+          Low stock only
+        </Chip>
+      </Card>
+      <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
+        <p role="status" className="text-body text-ink tabular-nums">
+          {count === 0 ? 'No unsaved changes' : count === 1 ? '1 unsaved change' : `${count} unsaved changes`}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="secondary" aria-disabled={count === 0} className={idle} onClick={discard}>Discard changes</Button>
+          <Button aria-disabled={count === 0 || save.isPending} className={idle} onClick={submitSave}>
+            {save.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+        </div>
+      </Card>
+      {refused && invalid.length > 0 && (
+        <ErrorBanner message={`Enter a whole number from 0 to ${maxQuantity} for: ${invalid.map((edit) => edit.name).join(', ')}.`} />
+      )}
+      {saved && save.isSuccess && <StatusMessage tone="success">Stock saved.</StatusMessage>}
+      {stock.isPending ? (
+        <Skeleton variant="table" count={6} />
+      ) : stock.isError ? (
+        <ErrorBanner message="Could not load the stock." onRetry={() => void stock.refetch()} />
+      ) : stock.data.items.length === 0 ? (
+        <Card className="p-6">
+          <EmptyState title="No products found" description="Change the search or the filter. Only active products are listed." />
+        </Card>
+      ) : (
+        <>
+          <Card aria-busy={stale} className={cn('overflow-hidden', stale && 'opacity-50')}>
+            <Table stack caption="Stock" columns={columns} rows={stock.data.items} rowKey={(row) => row.productId} />
+          </Card>
+          <nav aria-label="Pages" className="flex items-center justify-between gap-4">
+            <Button variant="secondary" aria-disabled={page <= 1} className={idle} onClick={() => page > 1 && go({ page: page - 1 })}>
+              Previous
+            </Button>
+            <p className="text-body text-ink tabular-nums">
+              Page {stock.data.page} of {pages}, {total} products
+            </p>
+            <Button variant="secondary" aria-disabled={page >= pages} className={idle} onClick={() => page < pages && go({ page: page + 1 })}>
+              Next
+            </Button>
+          </nav>
+        </>
+      )}
+    </>
+  )
+}
+
+function Stock() {
+  const { staff } = Route.useRouteContext()
+  const search = Route.useSearch()
+  // Store staff carry their store and may not list stores (403); an admin has none and picks one.
+  const stores = useQuery({ ...storesQuery, enabled: !staff.storeId })
+  const items = stores.data?.items ?? []
+  // ponytail: a `store` in the URL that is not in the list falls back to the first store, without a message.
+  const storeId = items.find((store) => store.id === search.store)?.id ?? items[0]?.id
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Stock" />
+      {staff.storeId ? (
+        <StoreStock storeId={staff.storeId} />
+      ) : stores.isPending ? (
+        <Skeleton variant="table" count={6} />
+      ) : stores.isError ? (
+        <ErrorBanner message="Could not load the stores." onRetry={() => void stores.refetch()} />
+      ) : storeId ? (
+        <StoreStock storeId={storeId} stores={items} />
+      ) : (
+        <Card className="p-6">
+          <EmptyState title="No stores yet" description="Create a store, then set its stock here." />
+        </Card>
+      )}
+    </div>
+  )
+}
+
+export const Route = createFileRoute('/_staff/stock')({
+  // The router reads search values as JSON: `page=2` is a number, `lowStock=true` a boolean, a search of digits a number.
+  validateSearch: (search: Record<string, unknown>): StockSearch => ({
+    store: typeof search.store === 'string' ? search.store : undefined,
+    q: search.q === undefined || search.q === '' ? undefined : String(search.q),
+    lowStock: search.lowStock === true ? true : undefined,
+    page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? search.page : undefined,
+  }),
+  component: Stock,
+})
+```
+
+### Task 3 step B: the store switch dialog, save failures, the 500-row limit, URL values, the store's name for store staff
 
 #### `e2e/stock.spec.ts` (replace three lines by four, in the test "store staff set stock at their own store only"; own `test:` commit, not run)
 These three lines, which appear once in the file:
@@ -1578,11 +2001,13 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   }
   // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
   const stale = stock.isPlaceholderData
-  // Unsaved edits belong to one store: read for any other store they are empty, so they can never be saved to it.
+  // Unsaved edits belong to one store, so they can never be shown for, or saved to, another.
   const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
   const [refused, setRefused] = useState(false)
   const [switchTo, setSwitchTo] = useState<string>()
-  const edits = draft.store === storeId ? draft.edits : {}
+  // A store change, however it happens (selector, link, Back), drops them for good: React renders again at once with the empty draft.
+  if (draft.store !== storeId) setDraft({ store: storeId, edits: {} })
+  const edits = draft.edits
   const count = Object.keys(edits).length
   const invalid = Object.values(edits).filter((edit) => parseQuantity(edit.value) === undefined)
 
@@ -1620,18 +2045,23 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
     if (pastEnd) void navigate({ search: (current) => ({ ...current, page: last > 1 ? last : undefined }), replace: true })
   }, [pastEnd, total, navigate])
 
-  function edit(row: StockRow, value: string) {
-    save.reset()
+  // The result of the last save is cleared by the next edit, but never while a save runs: reset() would detach it.
+  function forget() {
+    if (!save.isPending) save.reset()
     setRefused(false)
+  }
+
+  function edit(row: StockRow, value: string) {
+    forget()
     const next = { ...edits, [row.productId]: { name: row.name, value } }
-    // Typed back to what core holds is no edit.
-    if (value.trim() === String(row.quantity)) delete next[row.productId]
+    // A value that reads as what core holds (17, 017, " 17 ") is no edit.
+    if (parseQuantity(value) === row.quantity) delete next[row.productId]
     setDraft({ store: storeId, edits: next })
   }
 
   function discard() {
-    save.reset()
-    setRefused(false)
+    if (count === 0) return
+    forget()
     setDraft({ store: storeId, edits: {} })
   }
 
@@ -1720,12 +2150,14 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         </Chip>
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
-        <p className="text-body text-ink tabular-nums">
+        <p role="status" className="text-body text-ink tabular-nums">
           {count === 0 ? 'No unsaved changes' : count === 1 ? '1 unsaved change' : `${count} unsaved changes`}
         </p>
         <div className="flex gap-2">
           <Button variant="secondary" aria-disabled={count === 0} className={idle} onClick={discard}>Discard changes</Button>
-          <Button aria-disabled={count === 0} className={idle} loading={save.isPending} onClick={submitSave}>Save changes</Button>
+          <Button aria-disabled={count === 0 || save.isPending} className={idle} onClick={submitSave}>
+            {save.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
         </div>
       </Card>
       {refused && invalid.length > 0 && (
@@ -1774,7 +2206,6 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         <DialogFooter onCancel={() => setSwitchTo(undefined)}>
           <Button
             onClick={() => {
-              discard()
               setSwitchTo(undefined)
               go({ store: switchTo })
             }}
@@ -1836,22 +2267,23 @@ export const Route = createFileRoute('/_staff/stock')({
 - The router's JSON reading of search values (Decision 2) is the router's default; a later global change of the search serializer would change `/stock`'s URLs, and the URL tests would say so.
 - `aria-disabled` styling lives on the page until ui's `Button` carries it (request to ui). axe leaves `aria-disabled` controls out of its contrast rule, as it does `disabled` ones; the faked e2e run was clean.
 - Tasks 2 and 3 replace `src/stock.ts` and `src/routes/_staff/stock.tsx` whole, so they run in order on the one worktree.
-- Task 3 replaces one landed test in `src/stock.test.tsx` (the store-staff test: its exact request list gains the public store route). It is the only edit above the appended tests; the worker replaces the whole test, from its `test(` line to its closing `})`.
+- Task 3 replaces two landed tests in `src/stock.test.tsx`, each whole, from its `test(` line to its closing `})`: step A the in-flight test (it gains the second press, "Saving…" and "Stock saved."), step B the store-staff test (its exact request list gains the public store route). Everything else is appended.
 
 ## Accepted ceilings
 - No product image, category filter or sorting in the table (Decision 14); `StockRow.imageUrl` comes with core-P2-L6.
-- No warning on leaving the page with unsaved edits; edits hidden, not dropped, when the store changes through the URL (Decision 6).
+- No warning on leaving the page with unsaved edits; a store changed through the URL, Back or Forward drops them without a question (Decisions 6 and 27).
 - A save sends at most 500 edits; the rest need a second press (Decision 8).
 - A field's error reason is in the alert on save, not next to the field (Decision 9).
 - An unknown `store` in the URL shows the first store without a message (Decision 3). Store staff see their store's name only when the public route answers; no retry for it (Decision 23).
 - First 100 stores in the selector (`storesQuery`'s ceiling from admin-stores).
-- While the next list loads nothing is announced beyond `aria-busy`, and the pressed toggle shows the new filter before its rows (Decision 20). "Save changes" is `disabled` while its `PUT` runs (Decision 12).
+- While the next list loads nothing is announced beyond `aria-busy`, and the pressed toggle shows the new filter before its rows (Decision 20). A running save shows "Saving…" on the button and no spinner (Decision 25).
 - The save bar is not sticky and Enter does not save (Decision 17).
 - Review 1, R1-4: a hand-typed `?q=` that reads as JSON (`1e3`, `true`, an object) is searched as its JSON reading (Decision 2).
 - Review 1, R1-6: an `aria-disabled` button keeps `secondary`'s hover background, and no test presses Enter on one (Enter and Space fire the same guarded click). The look belongs to ui's `Button` (request recorded; no ui session is running, so the page keeps its two utilities).
 - Review 1, R1-7: on a phone the stacked table shows the "Status" label with nothing after it on a row that is neither low nor edited.
 - The pager text reads "1 products" for a single match (landed in task 1; the wording is the products table's).
-- Two admins editing one store: the last save wins per product, and a quantity changed by an order between load and save is overwritten by the typed number (core's `PUT` sets, it does not add). The page reloads the list after every save, not while it is open.
+- Review 2, R2-6: an edit typed during a save back to the row's quantity from before the save is dropped as "typed back" (the row still shows the old quantity until the refetch), so that revert is lost and the field then shows the saved value.
+- Review 2, R2-7: last write wins. Only edited rows are sent, so another admin's change to a row not touched here survives; a row edited here overwrites theirs. Two admins editing one store: the last save wins per product, and a quantity changed by an order between load and save is overwritten by the typed number (core's `PUT` sets, it does not add). The page reloads the list after every save, not while it is open.
 
 ## Migration Plan
 None: no data, config or dependency change. Rollback is reverting the PR; `/stock` falls back to L1's placeholder.

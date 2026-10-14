@@ -30,3 +30,4 @@ Scope paths: `apps/admin/e2e/stock.spec.ts` only, plus `openspec/changes/admin-s
 - The store-staff step waits for the stock request after `goto`; it matches only `/admin/stores/<id>/stock`, not the page's own URL.
 - The product count is matched as `14[78]` on purpose: Playwright runs the spec files in parallel workers and the catalog spec holds one more active product for a moment. Do not tighten it to 147.
 - "Store: Koramangala" comes from the public `GET /api/core/v1/stores/{id}`. If it is missing while the table is there, look at that request first (status, and whether the session survived it): design.md assumption A13.
+- While a save runs the button reads "Saving…", not "Save changes"; the spec presses it once and then waits for the status "Stock saved.", so it does not look the button up by name during a save. The unsaved-count line is a `role="status"` region too: the spec filters statuses by text ("Stock saved.").

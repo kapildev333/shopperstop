@@ -101,7 +101,7 @@ While the stock loads for the first time, `/stock` SHALL show a loading status u
 - **THEN** the alert "Could not load the stores." is shown first, then that store's stock
 
 ### Requirement: Stock edits
-A quantity typed into a row SHALL be kept as an unsaved edit of that product for the store shown, across pages, searches, the filter and Back or Forward. The page SHALL show "No unsaved changes", "1 unsaved change" or "<n> unsaved changes" and an "Unsaved" badge on each edited row. A quantity typed back to what core holds SHALL no longer be an edit. "Discard changes" SHALL drop every edit and keep keyboard focus.
+A quantity typed into a row SHALL be kept as an unsaved edit of that product for the store shown, across pages, searches, the filter and Back or Forward. A status region SHALL show "No unsaved changes", "1 unsaved change" or "<n> unsaved changes", and each edited row an "Unsaved" badge. A value that reads as the quantity core holds SHALL NOT be an edit. "Discard changes" SHALL drop every edit and keep keyboard focus; with no edit it SHALL do nothing.
 
 #### Scenario: Edit typed back
 - **WHEN** an admin changes a quantity from `17` to `18`, then back to `17`, and presses "Save changes"
@@ -110,6 +110,10 @@ A quantity typed into a row SHALL be kept as an unsaved edit of that product for
 #### Scenario: Discard
 - **WHEN** an admin changes two quantities, one to `30` and one to nothing, and presses "Discard changes"
 - **THEN** "2 unsaved changes" showed before; afterwards both fields hold what core holds, "No unsaved changes" is shown, "Discard changes" has focus, and no `PUT` was sent
+
+#### Scenario: Value read as the stored quantity
+- **WHEN** an admin types `017` for a product core holds 17 of, then saves an edit of another product and presses "Discard changes"
+- **THEN** after `017` the count, a `status` region, reads "No unsaved changes", the field shows `17` and no row is marked "Unsaved"; after the save "Stock saved." is shown, and it is still shown after "Discard changes"
 
 ### Requirement: Stock save
 "Save changes" SHALL send every unsaved edit of the store in one `PUT /admin/stores/{id}/stock` with `{"rows":[{"productId","quantity"}]}`, at most 500 rows in the order the edits were made. On 204 the page SHALL show the status "Stock saved.", SHALL no longer count the rows it sent as edits, and SHALL show the stock as core now holds it, also on pages loaded before the save. An edit not sent, or typed while the save ran, SHALL stay unsaved.
@@ -129,6 +133,17 @@ A quantity typed into a row SHALL be kept as an unsaved edit of that product for
 #### Scenario: More than 500 edits
 - **WHEN** 501 edits are turned into the rows of a save
 - **THEN** there are 500 rows, the first 500 edits in the order they were made
+
+### Requirement: Stock save in progress
+While a save runs, "Save changes" SHALL read "Saving…" and be `aria-disabled`, never `disabled`, so it keeps keyboard focus, and a press SHALL send nothing. An edit typed meanwhile SHALL NOT hide the save's result: when core answers, "Stock saved." SHALL be shown for the rows that were saved.
+
+#### Scenario: Focus through a save
+- **WHEN** an admin presses "Save changes" and core has not answered the `PUT` yet, then core answers
+- **THEN** while the save runs the button reads "Saving…", is `aria-disabled`, not `disabled`, and has focus; after the answer it reads "Save changes", is not `disabled` and still has focus, and "Stock saved." is shown
+
+#### Scenario: Second press during a save
+- **WHEN** an admin saves one edit and, before core answers, changes another product's quantity and presses the button again
+- **THEN** the button reads "Saving…" and is `aria-disabled`, exactly one `PUT` was sent, with the first edit only, and after the answer "Stock saved." is shown and the button reads "Save changes"
 
 ### Requirement: Stock quantity the page cannot send
 A typed quantity that is not a whole number from 0 to 100000 (spaces around it ignored) SHALL be marked invalid on its field as it is typed. While one is unsaved, "Save changes" SHALL send nothing and show the alert "Enter a whole number from 0 to 100000 for: <product names>.". The alert SHALL go when any quantity is edited; the mark SHALL go when the value is a quantity.
@@ -153,7 +168,7 @@ When core answers the save with 400 `validation`, the page SHALL show the alert 
 - **THEN** "Could not save the stock. Try again." is shown with the edit kept, then "Stock saved." with no alert, and the one successful `PUT` carries the edit
 
 ### Requirement: Stock store switch with unsaved edits
-Choosing another store while edits are unsaved SHALL open the dialog "Discard unsaved changes?" with "Cancel" then "Discard and switch", leaving the store as it is. "Cancel" SHALL keep the store and the edits; "Discard and switch" SHALL drop the edits and show the chosen store. With no edits the store SHALL change at once. Edits SHALL never be shown for, or sent to, a store other than the one they were typed for, however the store changes.
+Choosing another store while edits are unsaved SHALL open the dialog "Discard unsaved changes?" with "Cancel" then "Discard and switch", leaving the store as it is. "Cancel" SHALL keep the store and the edits; "Discard and switch" SHALL show the chosen store. With no edits the store SHALL change at once. Any change of store, also through the URL, Back or Forward, SHALL drop the edits for good: they SHALL never be shown for or sent to another store, nor come back.
 
 #### Scenario: Switch asks first
 - **WHEN** an admin with one unsaved edit at Indiranagar chooses Koramangala, presses "Cancel", chooses Koramangala again, presses "Discard and switch", and later chooses Indiranagar
@@ -162,6 +177,14 @@ Choosing another store while edits are unsaved SHALL open the dialog "Discard un
 #### Scenario: Store changed in the URL
 - **WHEN** an admin with one unsaved edit at Indiranagar reaches `/stock?store=<Koramangala id>` through the URL and presses "Save changes"
 - **THEN** Koramangala's stock shows what core holds, "No unsaved changes" is shown, and no `PUT` goes to Koramangala
+
+#### Scenario: Return after a store change in the URL
+- **WHEN** an admin with one unsaved edit at Indiranagar reaches Koramangala through the URL and goes Back
+- **THEN** Indiranagar's field holds what core holds and "No unsaved changes" is shown
+
+#### Scenario: Save answered after a store change
+- **WHEN** an admin saves an edit of a product at Indiranagar, reaches Koramangala through the URL before core answers, types the same quantity for the same product there, and core then answers the first save
+- **THEN** Koramangala's edit is still there with "1 unsaved change", and "Stock saved." is not shown
 
 ### Requirement: Stock against core
 The admin e2e suite SHALL run the stock page against the real core and the demo seed, with axe finding no violation in every state it visits: the list, the low-stock filter, an unsaved edit and the discard dialog.
