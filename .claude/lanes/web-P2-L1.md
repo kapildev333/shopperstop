@@ -48,3 +48,4 @@ Task 4 done: 4.1 red (`d97165b`), 4.2 feat (`470a8f6`), account e2e wait (`92cc0
 ## Blockers
 - None for task 2. The e2e "home against core" needs the manager's run before 2.2 is green end to end.
 - Workers wait on core: task 1 on core-P2-L2 on main with regenerated `packages/ui/src/api/core.d.ts`; tasks 2 to 4 on core-P2-L3 and core-P2-L4 (both now on main).
+- Review follow-up (coordinator): `test: no savings badge when the MRP is not higher` (`57d1766`) pins the `saving > 0` guard; passes on arrival, and a local `>= 0` mutant fails it (1 failed, 4 passed), then reverted. Gates on `57d1766`: lint 0, typecheck 0, Vitest 17 files / 46 tests passed; no e2e.
