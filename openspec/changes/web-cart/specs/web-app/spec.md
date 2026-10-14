@@ -87,7 +87,7 @@ While a customer token is held, the site SHALL read the cart from `GET /me/cart`
 - **THEN** it shows "Some quantities were lowered to what the store has." and "Your cart is empty"
 
 ### Requirement: Customer cart merge at sign-in
-When sign-in or register succeeds and the guest cart has lines, the site SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with the guest cart's `storeId` and the line's quantity, and then SHALL empty the guest cart, also when a line's request fails, and show core's cart as answered. Lines the server already holds at that store and the guest cart does not name SHALL stay.
+When sign-in or register succeeds and the guest cart has lines, the site SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with the guest cart's `storeId` and the line's quantity, and then SHALL empty the guest cart, also when a line's request fails, and show core's cart as answered. Lines the server already holds at that store and the guest cart does not name SHALL stay. A merge still waiting when the session changes SHALL send nothing and keep the guest cart.
 
 #### Scenario: Merge bodies in guest order
 - **WHEN** the guest cart at store A holds P with 2 and then Q with 1
@@ -96,6 +96,10 @@ When sign-in or register succeeds and the guest cart has lines, the site SHALL s
 #### Scenario: Guest cart discarded after merge
 - **WHEN** the guest cart holds a line and the merge runs while core cannot be reached
 - **THEN** afterwards `localStorage` has no `shopperstop:cart` and the guest cart is empty
+
+#### Scenario: Merge dropped when the session changed
+- **WHEN** the guest cart holds a line, the merge waits behind another cart write, and the customer token is gone before its turn
+- **THEN** the guest cart still holds its line
 
 #### Scenario: Guest cart merges against core
 - **WHEN** a guest with `560034` chosen adds two products on Home, sets the first to 2, and signs in on `/sign-in` as a customer with an empty cart
@@ -149,7 +153,7 @@ While the cart has lines, every page SHALL show on phone a bar fixed to the bott
 Saving a pincode in the pincode sheet SHALL first resolve it; when it resolves to a store other than the cart's and the cart has lines, the sheet SHALL close and a `Dialog` "Change store?" naming the new store SHALL open with "Cancel" first and "Empty cart and change". Any other save SHALL store the pincode at once.
 
 #### Scenario: Same store or empty cart
-- **WHEN** a pincode resolving to the cart's store is saved, and separately any pincode is saved with an empty cart
+- **WHEN** the cart is at Koramangala with `560034` stored and `560095`, which Koramangala also serves, is saved; and separately `560038` is saved with an empty cart
 - **THEN** no dialog opens and the pincode is stored
 
 #### Scenario: Store change against core
