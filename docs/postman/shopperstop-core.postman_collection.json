@@ -12554,6 +12554,252 @@
       "description": "Placing, reading, cancelling and moving orders: the customer's own orders and each store's orders for its staff.",
       "item": [
         {
+          "name": "List the signed-in customer's orders",
+          "request": {
+            "name": "List the signed-in customer's orders",
+            "description": {
+              "content": "The customer's own orders, newest first, one page at a time: page from 1 (default 1), pageSize from 1 to 100 (default 24). Each order carries its items as they were at placement and its status history, oldest event first. Another customer's orders are never listed; a customer with no orders gets an empty items array and total 0. Errors: 400 validation naming pageSize (must be from 1 to 100) or page (must be at least 1, or must be a whole number); 401 with no token, an unknown token or a staff token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "orders"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Page number, from 1. Default 1.",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Items per page, from 1 to 100. Default 24.",
+                    "type": "text/plain"
+                  },
+                  "key": "pageSize",
+                  "value": "24"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "One page of the customer's orders, newest first. An empty items array when the customer has none.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000703\",\n      \"number\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"placed\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"label\": \"Home\",\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"subtotalCents\": 103000,\n      \"deliveryFeeCents\": 0,\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"placedAt\": \"2026-10-13T09:20:00Z\",\n      \"items\": [\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000601\",\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 7000,\n          \"mrpCents\": 7000,\n          \"quantity\": 1\n        },\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000604\",\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 32000,\n          \"mrpCents\": 32000,\n          \"quantity\": 3\n        }\n      ],\n      \"events\": [\n        {\n          \"toStatus\": \"placed\",\n          \"actorType\": \"customer\",\n          \"createdAt\": \"2026-10-13T09:20:00Z\"\n        }\n      ]\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "page is not a whole number or below 1 (field page), or pageSize is not a whole number or outside 1 to 100 (field pageSize).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be from 1 to 100\",\n    \"field\": \"pageSize\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Place an order from the cart",
           "request": {
             "name": "Place an order from the cart",
@@ -12821,6 +13067,224 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"not_serviceable\",\n    \"message\": \"the store does not deliver to this address\",\n    \"field\": \"addressId\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Read one of the signed-in customer's orders",
+          "request": {
+            "name": "Read one of the signed-in customer's orders",
+            "description": {
+              "content": "The customer's own order with this id: its items and snapshots as they were at placement, and its status history, oldest event first. Another customer's order, and an id that names no order or is not a uuid, answer 404 not_found: the same answer, so existence does not leak. 401 with no token, an unknown token or a staff token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "orders",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{orderId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The order id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The order.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000703",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The token is missing, unknown, expired, deactivated or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000703",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No order of the signed-in customer has this id: unknown, another customer's, or not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "orders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000703",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }

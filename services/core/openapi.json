@@ -1036,6 +1036,143 @@
       }
     },
     "/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "summary": "List the signed-in customer's orders",
+        "description": "The customer's own orders, newest first, one page at a time: page from 1 (default 1), pageSize from 1 to 100 (default 24). Each order carries its items as they were at placement and its status history, oldest event first. Another customer's orders are never listed; a customer with no orders gets an empty items array and total 0. Errors: 400 validation naming pageSize (must be from 1 to 100) or page (must be at least 1, or must be a whole number); 401 with no token, an unknown token or a staff token.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the customer's orders, newest first. An empty items array when the customer has none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000703",
+                      "number": "SS-DEMOAAAD",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "status": "placed",
+                      "customerName": "Demo Customer",
+                      "customerPhone": "+919800000000",
+                      "address": {
+                        "label": "Home",
+                        "line1": "12 80 Feet Rd, Koramangala",
+                        "pincode": "560034"
+                      },
+                      "subtotalCents": 103000,
+                      "deliveryFeeCents": 0,
+                      "totalCents": 103000,
+                      "paymentMethod": "cod",
+                      "placedAt": "2026-10-13T09:20:00Z",
+                      "items": [
+                        {
+                          "productId": "00000000-0000-4000-8000-000000000601",
+                          "name": "Banana Robusta",
+                          "unitLabel": "1 kg",
+                          "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                          "priceCents": 7000,
+                          "mrpCents": 7000,
+                          "quantity": 1
+                        },
+                        {
+                          "productId": "00000000-0000-4000-8000-000000000604",
+                          "name": "Pomegranate Bhagwa",
+                          "unitLabel": "1 kg",
+                          "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                          "priceCents": 32000,
+                          "mrpCents": 32000,
+                          "quantity": 3
+                        }
+                      ],
+                      "events": [
+                        {
+                          "toStatus": "placed",
+                          "actorType": "customer",
+                          "createdAt": "2026-10-13T09:20:00Z"
+                        }
+                      ]
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page is not a whole number or below 1 (field page), or pageSize is not a whole number or outside 1 to 100 (field pageSize).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be from 1 to 100",
+                    "field": "pageSize"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "placeOrder",
         "summary": "Place an order from the cart",
@@ -1188,6 +1325,123 @@
                         "message": "already exists"
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Read one of the signed-in customer's orders",
+        "description": "The customer's own order with this id: its items and snapshots as they were at placement, and its status history, oldest event first. Another customer's order, and an id that names no order or is not a uuid, answer 404 not_found: the same answer, so existence does not leak. 401 with no token, an unknown token or a staff token.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The order id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000703"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000703",
+                  "number": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "placed",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "label": "Home",
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "subtotalCents": 103000,
+                  "deliveryFeeCents": 0,
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "placedAt": "2026-10-13T09:20:00Z",
+                  "items": [
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 7000,
+                      "mrpCents": 7000,
+                      "quantity": 1
+                    },
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000604",
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 32000,
+                      "mrpCents": 32000,
+                      "quantity": 3
+                    }
+                  ],
+                  "events": [
+                    {
+                      "toStatus": "placed",
+                      "actorType": "customer",
+                      "createdAt": "2026-10-13T09:20:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order of the signed-in customer has this id: unknown, another customer's, or not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
                   }
                 }
               }
@@ -6204,6 +6458,37 @@
             "type": "string",
             "format": "uuid",
             "description": "One of the customer's own addresses."
+          }
+        }
+      },
+      "OrderList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every order that matches, not just this page."
           }
         }
       }

@@ -58,6 +58,50 @@ func Create(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
+// List answers 200 with one page of the signed-in customer's orders, newest first.
+func List(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page, pageSize, err := httpx.Page(r)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		id := auth.CustomerID(ctx)
+		q := db.New(pool)
+		rows, err := q.CustomerOrders(ctx, db.CustomerOrdersParams{
+			CustomerID: id, Off: int32((page - 1) * pageSize), Lim: int32(pageSize),
+		})
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		total, err := q.CountCustomerOrders(ctx, id)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		out, err := views(ctx, q, rows)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.NewList(out, page, pageSize, total))
+	}
+}
+
+// Get answers 200 with the signed-in customer's order; another customer's or an unknown id is 404.
+func Get(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		respond(w, r, pool, id, customerScope(r.Context()), http.StatusOK)
+	}
+}
+
 // respond reads the order back in the caller's scope and writes it with status.
 // Another scope's order is 404, like a missing one.
 func respond(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id string, sc scope, status int) {

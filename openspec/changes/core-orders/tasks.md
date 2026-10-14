@@ -46,7 +46,7 @@ Scope: `services/core/internal/order/` (`order.go`, `place.go`, `handlers.go`), 
 
 Scope: `services/core/internal/order/handlers.go`, `services/core/internal/app/` (`app.go`, `orders_test.go`, `accounts_test.go`), `services/core/openapi.json`, generated `core.d.ts` and Postman collection, this file (ticks). Scenarios: orders "Newest first", "Another customer's order" (of "Customers read their own orders"), "Price changes after placement", "Staff token on a customer route". Start from `internal/app/orders_test.go` `TestOrdersNewestFirst`. Commits: `test: customers read their own orders`, then `feat: GET /orders and GET /orders/{id}`. Depends on: task 2.
 
-- [ ] 3.1 Tests, in `orders_test.go`, with the task 3 helpers of design Test strategy (`orderListView`, `readOrder`):
+- [x] 3.1 Tests, in `orders_test.go`, with the task 3 helpers of design Test strategy (`orderListView`, `readOrder`):
   1. `TestOrdersNewestFirst`: one buyer places twice (the cart is filled again in between): `GET /orders` has `total` 2, `page` 1, `pageSize` 24, the second order first, each with one item and one event; `GET /orders?pageSize=1&page=2` has one item, the first order, and `total` 2.
   2. `TestOrdersEmptyList`: a new buyer: 200, the raw body contains `"items":[]`, `total` 0.
   3. `TestOrdersBadPage`: `GET /orders?pageSize=0`: 400 `validation` field `pageSize`.
@@ -56,7 +56,7 @@ Scope: `services/core/internal/order/handlers.go`, `services/core/internal/app/`
   7. `TestAuthGates`: append to `cartGates` `{http.MethodGet, ordersPath, nil, http.StatusOK}` and `{http.MethodGet, ordersPath + "/" + missingOrderID, nil, http.StatusNotFound}`.
 
   Run the suite, see them fail, commit.
-- [ ] 3.2 Code. `List` (Decision 9: `httpx.Page`, `CountCustomerOrders`, `CustomerOrders`, `views`, `httpx.NewList`) and `Get` (`httpx.PathID(r, "id")`, then `respond` with `customerScope` and 200). Two routes with `a.RequireCustomer` after `POST /orders`. `openapi.json`: schema `OrderList`; operations `listOrders` (`page`, `pageSize`; 200, 400 with field `pageSize` message `must be from 1 to 100`, 401) and `getOrder` (path `id` example `...0703`; 200, 401, 404). `make gen postman`. Run the three gates, tick 3.1 and 3.2, commit.
+- [x] 3.2 Code. `List` (Decision 9: `httpx.Page`, `CountCustomerOrders`, `CustomerOrders`, `views`, `httpx.NewList`) and `Get` (`httpx.PathID(r, "id")`, then `respond` with `customerScope` and 200). Two routes with `a.RequireCustomer` after `POST /orders`. `openapi.json`: schema `OrderList`; operations `listOrders` (`page`, `pageSize`; 200, 400 with field `pageSize` message `must be from 1 to 100`, 401) and `getOrder` (path `id` example `...0703`; 200, 401, 404). `make gen postman`. Run the three gates, tick 3.1 and 3.2, commit.
 
 ## 4. Transitions table and customer cancel
 
