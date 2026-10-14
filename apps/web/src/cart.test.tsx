@@ -117,3 +117,13 @@ test('guest taps each count', async () => {
   const stored = JSON.parse(localStorage.getItem('shopperstop:cart') ?? 'null')
   expect(stored.items[0].quantity).toBe(3)
 })
+
+test('merge queued behind a session change leaves the guest cart', async () => {
+  setToken('a')
+  dispatchGuest({ type: 'set', storeId: koramangala, product: product(), quantity: 2 })
+  // The merge waits in the queue; the session changes before it runs, so its pushes must not go out for the new session.
+  const merging = mergeGuestCart()
+  setToken('b')
+  await merging
+  expect(getGuestCart().items).toHaveLength(1)
+})
