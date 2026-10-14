@@ -106,3 +106,26 @@ func TestWriteErrorEnvelope(t *testing.T) {
 		}
 	})
 }
+
+func TestWriteErrorProductIDs(t *testing.T) {
+	t.Run("out_of_stock carries productIds", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/", nil)
+		w := httptest.NewRecorder()
+		WriteError(w, r, &Error{Status: http.StatusConflict, Code: "out_of_stock", Message: "some products are out of stock", ProductIDs: []string{"a", "b"}})
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status %d, want 409", w.Code)
+		}
+		want := `{"error":{"code":"out_of_stock","message":"some products are out of stock","productIds":["a","b"]}}` + "\n"
+		if got := w.Body.String(); got != want {
+			t.Fatalf("body %q, want %q", got, want)
+		}
+	})
+	t.Run("validation with a field omits productIds", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/", nil)
+		w := httptest.NewRecorder()
+		WriteError(w, r, &Error{Status: http.StatusBadRequest, Code: "validation", Message: "unknown address", Field: "addressId"})
+		if got := w.Body.String(); strings.Contains(got, "productIds") {
+			t.Fatalf("body %q contains productIds", got)
+		}
+	})
+}
