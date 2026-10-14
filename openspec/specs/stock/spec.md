@@ -76,7 +76,7 @@ The stock package SHALL offer order placement a reservation that, inside the cal
 - **THEN** it reports out of stock with the ids of Q and R in ascending order, and P, Q and R keep 5, 1 and 9
 
 ### Requirement: Concurrent reservations never oversell
-Two transactions reserving the same stock at once SHALL never take more than the stored quantity, and reservations that name the same products in different orders SHALL not deadlock.
+Two transactions reserving the same stock at once SHALL never take more than the stored quantity, and reservations that name the same products in different orders SHALL not deadlock. A reservation, a release and a staff bulk stock update that name the same products in different orders SHALL not deadlock with one another either: each SHALL complete without being aborted.
 
 #### Scenario: Racing for the last unit
 - **WHEN** two transactions each reserve 1 of a product with quantity 1 at the same time and both try to commit
@@ -85,6 +85,14 @@ Two transactions reserving the same stock at once SHALL never take more than the
 #### Scenario: Opposite order
 - **WHEN** two transactions reserve P and Q at the same time, one listing P first and the other Q first, with enough of both
 - **THEN** both succeed and each quantity dropped by the sum of the two reservations
+
+#### Scenario: Release against a reservation
+- **WHEN** one transaction releases 1 of Q and 1 of P, listing Q first, while another reserves 1 of P and 1 of Q, listing P first, with enough of both
+- **THEN** both commit and P and Q hold the quantities they started with
+
+#### Scenario: Bulk update against a reservation
+- **WHEN** one transaction writes the bulk stock update for Q and P, listing Q first, while another reserves 1 of P and 1 of Q, listing P first, with enough of both
+- **THEN** both commit
 
 ### Requirement: Released stock returns
 The stock package SHALL offer a release that, inside the caller's transaction, adds the given quantities back to the store's stock rows.

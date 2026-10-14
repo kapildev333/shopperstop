@@ -110,3 +110,10 @@ A pincode SHALL be served by at most one store. A `PUT /admin/stores/{id}/servic
 #### Scenario: Reset twice
 - **WHEN** `seed-demo --reset` runs twice on a database that also holds another store
 - **THEN** the other store is gone, `GET /serviceability?pincode=560095` answers store `00000000-0000-4000-8000-000000000401` and `GET /serviceability?pincode=560008` answers store `00000000-0000-4000-8000-000000000402`, both with `isOpen` true
+
+### Requirement: Stores with orders are kept
+`DELETE /api/core/v1/admin/stores/{id}` SHALL answer 409 `conflict` and keep the store when any order belongs to it.
+
+#### Scenario: Store with an order
+- **WHEN** an admin deletes a store that has one order and no staff users
+- **THEN** the response is 409 with code `conflict` and `GET /api/core/v1/admin/stores/{id}` still answers 200
