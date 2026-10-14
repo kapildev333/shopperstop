@@ -4,16 +4,16 @@ ShopperStop is a quick-commerce product in the shape of Blinkit. A customer orde
 
 ## Status
 
-Phase 1 (foundation) is in progress. On `main` today:
+Phase 1 (foundation) is tagged `v0.1.0`; Phase 2 (core service and apps) is landing. From Phase 1 on `main`:
 
-- `services/core`: config, HTTP helpers, migrations, `cmd/core` serving `GET /api/core/v1/healthz` and `/readyz`, `cmd/core-admin` with `migrate` and a `seed-demo` stub, and `openapi.json`.
+- `services/core`: config, HTTP helpers, migrations, `cmd/core` serving `GET /api/core/v1/healthz` and `/readyz`, `cmd/core-admin` with `migrate` and `seed-demo`, and `openapi.json`.
 - `packages/ui`: design tokens and the shared components.
 - `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`.
 - `Makefile`, the CI workflow, and the living specs under `openspec/specs/`.
 - `docs/postman/`: the Postman collection and environment generated from `openapi.json`; `make postman` regenerates them and runs the generator tests.
 - `apps/web` (customer site shell at `/`) and `apps/admin` (admin panel shell under `/admin/`), each with a Playwright smoke suite with axe.
 
-Pending: demo data (`seed-demo` is a stub until Phase 2) and the product pages themselves (Phase 2). Behaviour is specified in [openspec/specs/](openspec/specs/).
+Phase 2 adds accounts, stores and serviceability, catalog, stock, cart and orders to core, with the customer and admin pages on top; the pages still in progress are tracked in `PLAN.md`. `core-admin seed-demo --reset` loads the demo data. Behaviour is specified in [openspec/specs/](openspec/specs/).
 
 ## Quick start
 
@@ -45,7 +45,7 @@ make dev
    export SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174'
    ```
 
-3. Migrate and seed: `cd services/core && go run ./cmd/core-admin migrate && go run ./cmd/core-admin seed-demo --reset`. The seed is a Phase 1 stub; the demo accounts below load with the Phase 2 seed.
+3. Migrate and seed: `cd services/core && go run ./cmd/core-admin migrate && go run ./cmd/core-admin seed-demo --reset`. The seed prints the four demo sign-ins and the twelve fixed ids it loads.
 4. Run core: `go run ./cmd/core`, then check `curl http://localhost:8080/api/core/v1/healthz` from another terminal.
 5. From the repository root, build the shared UI and start the apps in two more terminals: `npm run build --workspace packages/ui`, then `npm run dev --workspace apps/web` and `npm run dev --workspace apps/admin`.
 6. Sign in with an account from [Demo sign-ins](#demo-sign-ins).
@@ -55,7 +55,7 @@ make dev
 
 ## Demo sign-ins
 
-Local databases only. These accounts are loaded by `seed-demo --reset` from Phase 2; until then the seed is a stub and they do not exist.
+Local databases only. `core-admin seed-demo --reset` loads these accounts and prints them with the twelve fixed ids of the demo data (stores, addresses, products, orders); the list is defined in `services/core/internal/seed/summary.go`.
 
 | App | Role | Email | Password |
 |---|---|---|---|
