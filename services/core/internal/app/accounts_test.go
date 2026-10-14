@@ -498,8 +498,8 @@ func TestAuthGates(t *testing.T) {
 
 	// Cart and order routes: no token and a staff token get 401; a customer token
 	// gets past the gate. The PUT with an empty body answers 400 storeId, the POST
-	// with an empty body answers 400 validation, and the GET of an order nobody
-	// owns answers 404. None of the rows writes anything.
+	// with an empty body answers 400 validation, and the GET or the cancel of an
+	// order nobody owns answers 404. None of the rows writes anything.
 	cartGates := []struct {
 		method, path string
 		body         any
@@ -511,6 +511,7 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodPost, ordersPath, map[string]any{}, http.StatusBadRequest},
 		{http.MethodGet, ordersPath, nil, http.StatusOK},
 		{http.MethodGet, ordersPath + "/" + missingOrderID, nil, http.StatusNotFound},
+		{http.MethodPost, ordersPath + "/" + missingOrderID + "/cancel", map[string]any{}, http.StatusNotFound},
 	}
 	for _, g := range cartGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
