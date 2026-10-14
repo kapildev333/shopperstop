@@ -18,7 +18,7 @@ Failing tests: `src/staff.test.tsx` › "the staff table lists every staff user 
 Green when written (admin-P2-L1's route folder already does it; no code follows for it): "store staff who open /staff see not found, and core is not asked for the staff users".
 - [x] 1.1 e2e written before the page (`test: staff users and product stock against core`): `e2e/staff.spec.ts` and the two insertions in `e2e/catalog.spec.ts` per design.md; `npm run lint --workspace apps/admin` and `npm run typecheck --workspace apps/admin` pass; not run (task 4); Vitest still at the base
 - [x] 1.2 Tests committed red (`test: staff users table`): `src/staff-fake.ts` and `src/staff.test.tsx` per design.md; Vitest `7 failed | base + 1 passed (base + 8)` (`7 failed | 181 passed (188)`)
-- [ ] 1.3 `src/staff.ts` and `src/routes/_staff/_admin/staff.tsx` per design.md task 1 (`feat: staff users table`); Vitest `base + 8 passed` (`188 passed (188)`); every gate green; `routeTree.gen.ts` unchanged
+- [x] 1.3 `src/staff.ts` and `src/routes/_staff/_admin/staff.tsx` per design.md task 1 (`feat: staff users table`); Vitest `base + 8 passed` (`188 passed (188)`); every gate green; `routeTree.gen.ts` unchanged
 
 ## 2. The create and edit dialog
 Scope: `apps/admin/src/staff-dialog.test.tsx` (new), `apps/admin/src/staff-dialog.tsx` (new), `apps/admin/src/routes/_staff/_admin/staff.tsx` (replaced whole by its task-2 block), this file's checkboxes, the worker's lane log.
