@@ -1,8 +1,11 @@
 # admin-P2-L7-T1 - admin-keep-data-on-refetch-error task 1: a failed refetch keeps the showing admin page (worker)
-Status: blocked
+Status: done
 
 ## Doing
-Stopped at step 7 of the brief, before the `fix:` commit. The `test:` commit `87381e8` is in. The fix (`refetch-notice.tsx` and EDIT 1 to 12) is applied in the worktree and uncommitted: admin is green, but `make test-web` reports web 101, not the brief's 91. Tick 1.2 is not made. Waiting for the team lead's call.
+Task 1 landed on `lane/admin-P2-L7-keep-data-on-refetch-error`: `test:` `87381e8`, `fix:` `b31884f` (code and tick 1.2 together), this `docs:` log. Nothing pushed. Gates green: ui 54, admin 179, web 101 (see Found). Nothing running.
+
+## Ruling
+Manager's ruling (option a): web's suite grew on main after the brief was measured (web-P2-L8 #152 and later merges). This lane touches nothing under `apps/web`, so web `101 passed` is the rebased base's own count and is the expected figure. The brief's `web 91` is stale. Fix committed as applied, 1.2 ticked with ui 54, admin 179, web 101.
 
 ## Found
 - Base before any change: admin Vitest `Test Files 16 passed (16)`, `Tests 160 passed (160)`, on the rebased HEAD `2868aa3`. Matches the brief.
