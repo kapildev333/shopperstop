@@ -37,7 +37,7 @@ Scope: `apps/web/src/catalog.ts` (`useProduct`), `src/routes/p.$slug.tsx`, `src/
 Scenarios: Customer product page › all five.
 Failing tests: `src/product.test.tsx` › "product with savings", "plenty in stock", "out of stock product", "unknown product"; `e2e/browse.spec.ts` › "product pages against core".
 
-- [ ] 4.1 Tests committed red (`test: product page states`)
+- [x] 4.1 Tests committed red (`test: product page states`)
 - [ ] 4.2 `useProduct`, `/p/$slug` (`feat: product page`); all gates green, e2e green; remove the `/p/$slug` Link cast in `product-card.tsx`
 
 ## Workflow follow-up

@@ -85,10 +85,10 @@ test('home against core', async ({ page }) => {
 test('browse a category against core', async ({ page }) => {
   await page.goto('/')
   await savePincode(page, '560034')
-  await expectNoViolations(page)
   await page.getByRole('region', { name: 'Shop by category' }).getByRole('link', { name: 'Dairy, Bread & Eggs' }).click()
   await expect(page).toHaveURL(/\/c\/dairy-bread-eggs$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Dairy, Bread & Eggs' })).toBeVisible()
+  await expectNoViolations(page)
   await page.getByRole('group', { name: 'Subcategories' }).getByRole('button', { name: 'Milk' }).click()
   await expect(page).toHaveURL(/\/c\/milk$/)
   await expect(page.getByRole('button', { name: 'Milk' })).toHaveAttribute('aria-pressed', 'true')
@@ -112,5 +112,27 @@ test('search and load more against core', async ({ page }) => {
   await expect(cards.first()).toBeVisible()
   await page.getByRole('button', { name: 'Load more' }).click()
   await expect.poll(() => cards.count()).toBeGreaterThan(24)
+  await expectNoViolations(page)
+})
+
+test('product pages against core', async ({ page, request }) => {
+  const served = await request.get('/api/core/v1/serviceability?pincode=560034')
+  expect(served.status()).toBe(200)
+  const storeId = (await served.json()).store.id
+  const list = await request.get(`/api/core/v1/stores/${storeId}/products?pageSize=100`)
+  expect(list.status()).toBe(200)
+  const outOfStock = (await list.json()).items.find((item: { inStock: boolean }) => !item.inStock)
+  expect(outOfStock).toBeDefined()
+
+  await page.goto('/')
+  await savePincode(page, '560034')
+  await page.goto('/p/banana-robusta')
+  await expect(page.getByRole('heading', { level: 1, name: 'Banana Robusta' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add Banana Robusta' })).toBeEnabled()
+  await expectNoViolations(page)
+
+  await page.goto(`/p/${outOfStock.slug}`)
+  await expect(page.getByRole('heading', { level: 1, name: outOfStock.name })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Out of stock' })).toBeDisabled()
   await expectNoViolations(page)
 })
