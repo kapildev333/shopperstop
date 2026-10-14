@@ -303,3 +303,23 @@ test('placement fails', async () => {
   expect(placeButton()).toBeEnabled()
   expect(placeButton()).not.toHaveAttribute('aria-busy')
 })
+
+test('choosing another address clears the refusal alert', async () => {
+  seed({ lines: [[taaza, 4]], addresses: [home, work], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({
+    error: { code: 'not_serviceable', message: 'pincode not served', field: 'addressId' },
+  })
+  renderInRouter(<CheckoutPage send={send} />)
+  const addresses = await screen.findByRole('region', { name: 'Delivery address' })
+  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Work' }))
+  await userEvent.click(placeButton())
+  expect(await screen.findByRole('alert')).toHaveTextContent('does not deliver to this address')
+
+  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Home' }))
+  expect(screen.queryByRole('alert')).toBeNull()
+  // The refused address keeps its badge until the next press or a fresh read of the list; the chosen one has none.
+  const workItem = within(addresses).getByText('Work', { selector: 'h3' }).closest('li') as HTMLElement
+  const homeItem = within(addresses).getByText('Home', { selector: 'h3' }).closest('li') as HTMLElement
+  expect(within(workItem).getByText('Not delivered here')).toBeInTheDocument()
+  expect(within(homeItem).queryByText('Not delivered here')).toBeNull()
+})
