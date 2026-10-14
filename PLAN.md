@@ -49,10 +49,10 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
 | platform | root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md` | none | Phase 1 done; backlog chores #97; orchestrator session (D9) |
-| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | manager session running since 2026-10-13; Phase 2 L1 #63, L2 #76, L3 #87, L4 #106 merged; core-P2-L5 `core-orders` next, then L6 |
+| core | `services/core/` | platform (`deploy/initdb.sql`, `make db`) | manager session running since 2026-10-13; Phase 2 L1 #63, L2 #76, L3 #87, L4 #106 merged; core-P2-L5 `core-orders` at task 2 of 7; then L6 |
 | ui | `packages/ui/` | platform (`package.json` workspaces) | no session; ui-P2-L1 #82 merged; ui-P2-L2 `ImageTile` requested by admin (in `.claude/areas/ui.md`) |
-| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13 (D21 ended); web-P2-L2 #68 merged; web-P2-L1 and web-P2-L3 at task 1, unblocked by #106 |
-| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13; admin-P2-L1 #71, L2 #91, L3 `admin-catalog` #112 (archived #113) merged; L4 `admin-stock` proposing; L5 waits on core-P2-L5 |
+| web | `apps/web/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13 (D21 ended); web-P2-L2 #68, web-P2-L1 browsing #119 (archived #120) merged; web-P2-L3 `web-cart` at task 3; web-P2-L4 `web-checkout-orders` waits on core-P2-L5 |
+| admin | `apps/admin/` | ui (`@shopperstop/ui`), core (`openapi.json`) | manager session running since 2026-10-13; admin-P2-L1 #71, L2 #91, L3 `admin-catalog` #112 (archived #113) merged; L4 `admin-stock` building; L5 waits on core-P2-L5 |
 
 ## Phase 1 - Foundation and design system (closed 2026-10-12, tag v0.1.0)
 | Area | Plan tasks | Status |
@@ -110,3 +110,4 @@ Work packages are written into `.claude/areas/<area>.md`; order: core (auth, ser
 - 2026-10-13: core-P2-L4 merged (#106): stock, cart, the three customer browsing routes, staff stock routes, migration 0005, demo stock for both stores. Orchestrator confirmed the routes in `openapi.json` and `core.d.ts` on main and messaged web (browsing and cart tasks unblocked, cart rules) and admin (`admin-stock` unblocked). Core verifies unmerged migrations on the test database (D26) and moves to core-P2-L5.
 - 2026-10-13: `core-stock-cart` archived (#108), core-P2-L5 team lead refreshing `core-orders`; admin-catalog at its review follow-ups, admin-P2-L4 worktree cut; web-P2-L1 task 2 worker running, `web-cart` reconciled with the merged cart contract; D27 for the replaced-cart notice.
 - 2026-10-13: admin-P2-L3 `admin-catalog` merged (#112, archived #113): categories, products, image upload, delete with "Deactivate instead"; admin reports Vitest 95, e2e admin 8 and web 11. Relayed to web: `apps/web/e2e/account.spec.ts` "addresses and default" failed once in 3 runs (reload right after "Set Work as default" can cut the request). The admin manager ran one `make e2e` in the root checkout by mistake; the tree is clean.
+- 2026-10-13: web-P2-L1 browsing merged (#119, archived #120): pincode, store gate, Home, category, search and product pages; web reports `make e2e` admin 8, web 17 and a desktop Chrome walk (phone width not walked, in web's Found with five follow-ups); the flaky account e2e is fixed there. core-P2-L5 at task 2 of 7 (order placement); admin-stock building; web-cart at task 3.
