@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import type { components } from '@shopperstop/ui/api'
@@ -72,4 +72,48 @@ test('guest cart discarded after merge', async () => {
   await mergeGuestCart()
   expect(localStorage.getItem('shopperstop:cart')).toBeNull()
   expect(getGuestCart()).toEqual({ items: [] })
+})
+
+// The Stepper's count for Amul Taaza, read as the card shows it.
+function shownCount() {
+  return Number(screen.getByRole('group', { name: 'Quantity of Amul Taaza' }).querySelector('span')?.textContent)
+}
+
+test('quick taps each count', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  await screen.findByRole('button', { name: 'Add one Amul Taaza' })
+  // Synchronous taps, no answer awaited in between: each one counts from the last.
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(shownCount()).toBe(2)
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(shownCount()).toBe(3)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove one Amul Taaza' }))
+  expect(shownCount()).toBe(2)
+  // Under jsdom every write fails; the Stepper returns to the cart's count once the writes have settled.
+  await waitFor(() => expect(shownCount()).toBe(1))
+})
+
+test('failed write returns to the cart\'s count', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  await screen.findByRole('button', { name: 'Add one Amul Taaza' })
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(shownCount()).toBe(2)
+  await waitFor(() => expect(shownCount()).toBe(1))
+})
+
+test('guest taps each count', async () => {
+  resolveStore()
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add Amul Taaza' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(shownCount()).toBe(3)
+  const stored = JSON.parse(localStorage.getItem('shopperstop:cart') ?? 'null')
+  expect(stored.items[0].quantity).toBe(3)
 })
