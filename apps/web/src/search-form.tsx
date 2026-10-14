@@ -1,13 +1,12 @@
 import type { FormEvent } from 'react'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Input } from '@shopperstop/ui'
 
 // Enter submits: a search box needs no button, and IconButton forces type="button".
 export function SearchForm({ className }: { className?: string }) {
   const navigate = useNavigate()
-  const { pathname, search } = useLocation()
-  // Shows the current search on /search only; keyed so the box follows navigation.
-  const q = pathname === '/search' ? String((search as { q?: unknown }).q ?? '') : ''
+  // Shows the current search on /search only (undefined elsewhere); keyed so the box follows navigation.
+  const q = useSearch({ from: '/search', shouldThrow: false })?.q ?? ''
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

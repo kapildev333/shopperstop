@@ -13,6 +13,7 @@ export const keys = {
   categories: (storeId: string) => ['categories', storeId] as const,
   picked: (storeId: string) => ['picked', storeId] as const,
   feed: (storeId: string, filter: { categoryId?: string; q?: string }) => ['feed', storeId, filter] as const,
+  product: (storeId: string, slug: string) => ['product', storeId, slug] as const,
 }
 // ponytail: a resolved store, category tree or first page is trusted for a minute, so moving between pages does not ask core again.
 const staleTime = 60_000
@@ -100,4 +101,20 @@ export function findCategory(tree: CategoryNode[], slug: string): { parent: Cate
     if (child) return { parent, selected: child }
   }
   return undefined
+}
+
+// Core answers 404 for a slug no active product has: null, the "Product not found" state, not an error.
+export function useProduct(storeId: string, slug: string) {
+  return useQuery({
+    queryKey: keys.product(storeId, slug),
+    staleTime,
+    queryFn: async (): Promise<StoreProduct | null> => {
+      const { data, error, response } = await api.GET('/stores/{id}/products/{slug}', {
+        params: { path: { id: storeId, slug } },
+      })
+      if (response.status === 404) return null
+      if (error) throw error
+      return data
+    },
+  })
 }

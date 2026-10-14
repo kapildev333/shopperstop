@@ -23,8 +23,7 @@ export function ProductCard({ product }: { product: StoreProduct }) {
   const [quantity, setQuantity] = useCartQuantity(product)
   return (
     <Card className="flex flex-col gap-2 p-3">
-      {/* ponytail: cast until task 4 adds /p/$slug */}
-      <Link to={`/p/${product.slug}` as '/'} className="flex flex-col gap-2">
+      <Link to="/p/$slug" params={{ slug: product.slug }} className="flex flex-col gap-2">
         <ImageTile src={product.imageUrl} />
         <p className="line-clamp-2 text-body font-semibold text-ink">{product.name}</p>{' '}
         <p className="text-small text-ink-muted">{product.unitLabel}</p>
