@@ -24,14 +24,20 @@ api.use({
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
     return request
   },
-  onResponse({ request, response }) {
+  async onResponse({ request, response }) {
     // Only a 401 to the current token ends the session: not one to a signed-out request or to a token since replaced.
     const token = getToken()
     if (response.status === 401 && token && request.headers.get('Authorization') === `Bearer ${token}`) {
       clearToken()
       unauthorized()
     }
-    return response
+    if (response.ok) return response
+    // A failure core did not write (a proxy's empty or plain-text 502 while core is down) carries no error envelope, and
+    // openapi-fetch then hands callers a falsy `error`: every `if (error) throw error.error` would read it as success.
+    // Such an answer is given the envelope here, with its status kept, so no caller needs to know.
+    const body = (await response.clone().json().catch(() => undefined)) as { error?: { code?: unknown } } | undefined
+    if (typeof body?.error?.code === 'string') return response
+    return Response.json({ error: { code: 'internal', message: 'The server did not answer as expected.' } }, { status: response.status })
   },
 })
 
