@@ -24,10 +24,12 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   }
   // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
   const stale = stock.isPlaceholderData
-  // Unsaved edits belong to one store: read for any other store they are empty, so they can never be saved to it.
+  // Unsaved edits belong to one store, so they can never be shown for, or saved to, another.
   const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
   const [refused, setRefused] = useState(false)
-  const edits = draft.store === storeId ? draft.edits : {}
+  // A store change, however it happens (selector, link, Back), drops them for good: React renders again at once with the empty draft.
+  if (draft.store !== storeId) setDraft({ store: storeId, edits: {} })
+  const edits = draft.edits
   const count = Object.keys(edits).length
   const invalid = Object.values(edits).filter((edit) => parseQuantity(edit.value) === undefined)
 
@@ -64,18 +66,23 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
     if (pastEnd) void navigate({ search: (current) => ({ ...current, page: last > 1 ? last : undefined }), replace: true })
   }, [pastEnd, total, navigate])
 
-  function edit(row: StockRow, value: string) {
-    save.reset()
+  // The result of the last save is cleared by the next edit, but never while a save runs: reset() would detach it.
+  function forget() {
+    if (!save.isPending) save.reset()
     setRefused(false)
+  }
+
+  function edit(row: StockRow, value: string) {
+    forget()
     const next = { ...edits, [row.productId]: { name: row.name, value } }
-    // Typed back to what core holds is no edit.
-    if (value.trim() === String(row.quantity)) delete next[row.productId]
+    // A value that reads as what core holds (17, 017, " 17 ") is no edit.
+    if (parseQuantity(value) === row.quantity) delete next[row.productId]
     setDraft({ store: storeId, edits: next })
   }
 
   function discard() {
-    save.reset()
-    setRefused(false)
+    if (count === 0) return
+    forget()
     setDraft({ store: storeId, edits: {} })
   }
 
@@ -159,12 +166,14 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         </Chip>
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
-        <p className="text-body text-ink tabular-nums">
+        <p role="status" className="text-body text-ink tabular-nums">
           {count === 0 ? 'No unsaved changes' : count === 1 ? '1 unsaved change' : `${count} unsaved changes`}
         </p>
         <div className="flex gap-2">
           <Button variant="secondary" aria-disabled={count === 0} className={idle} onClick={discard}>Discard changes</Button>
-          <Button aria-disabled={count === 0} className={idle} loading={save.isPending} onClick={submitSave}>Save changes</Button>
+          <Button aria-disabled={count === 0 || save.isPending} className={idle} onClick={submitSave}>
+            {save.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
         </div>
       </Card>
       {refused && invalid.length > 0 && (
