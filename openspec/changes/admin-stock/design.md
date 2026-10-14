@@ -1,13 +1,13 @@
 # Design
 
 ## Context
-Lane admin-P2-L4, area `admin`, branch `lane/admin-P2-L4-admin-stock` in `.worktrees/admin-P2-L4`, cut from origin/main at 503e1ba: admin-stores (#91) and core-P2-L4 (#106: the staff stock routes and the regenerated `packages/ui/src/api/core.d.ts`) are on main; admin-catalog (admin-P2-L3) is not. `/stock` is a `PageHeader` placeholder from admin-P2-L1.
+Lane admin-P2-L4, area `admin`, branch `lane/admin-P2-L4-admin-stock` in `.worktrees/admin-P2-L4`. The branch was cut from origin/main at 503e1ba and has since been rebased by the manager onto main with admin-catalog merged: the admin suite's base is 95 Vitest tests, not the 52 of the first spike. Task 1 landed on it (4b8b4e5, 6e66a13, 52e89c8; suite at 108) and was reviewed "approve with nits" (`.claude/lanes/admin-P2-L4-R1.md`).
 
-The whole change was spiked on this branch on 2026-10-13 (Node 22.23.3, `npm ci` at the root) and removed again; the tree holds only these documents. Measured on the spike: the three task shapes built in order, tests first, with the red and green Vitest counts in tasks.md; lint, typecheck and `vite build` green after every task; `make test-web` exit 0 on the final tree (ui 54, admin 86, web 20); `src/routeTree.gen.ts` unchanged by the build; the twenty mutation guards below, each run and restored. `e2e/stock.spec.ts` passed 2 of 2 with axe clean on a scratch preview (port 25174) against a stateful `page.route` fake of core. It has not run against the real core: that is task 4, the manager's e2e slot.
+Revision of 2026-10-13 after that review. The manager ruled (D13) which findings go into tasks 2 and 3: R1-1 and R1-2 into task 2, R1-3 and R1-5 into task 3, the store's name for store staff (the public `GET /stores/{id}`, relayed from core) into task 3. Tasks 2 and 3 were spiked again on the branch as it is, on top of the landed task 1, and removed again; the tree holds only documents and task 1. Measured on that spike: the red and green Vitest counts in tasks.md (base 108); lint, typecheck and `vite build` green after each task; `make test-web` exit 0 on the final tree (ui 54, admin 138, web 20); `src/routeTree.gen.ts` unchanged; the 32 mutation guards below, each run and restored. `e2e/stock.spec.ts` in its task-3 shape passed 6 of 6 (three repeats) with axe clean on a scratch preview (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay. It has not run against the real core: that is task 4, the manager's e2e slot.
 
-The code below is that spike, byte for byte. Workers copy it; a worker who finds a block that does not compile, a count that differs, or a choice this file leaves open stops and reports.
+Task 1's blocks below are what landed, kept for reference. The blocks of tasks 2 and 3 are the second spike, byte for byte. Workers copy them; a worker who finds a block that does not compile, a count that differs, or a choice this file leaves open stops and reports.
 
-## Assumptions (verified on 503e1ba)
+## Assumptions (verified on 503e1ba; A13 and A14 on the rebased branch)
 | # | Assumption | Result |
 |---|---|---|
 | A1 | `GET /admin/stores/{id}/stock` takes `q`, `lowStock` (boolean), `page`, `pageSize` (default 24, max 100) and answers `StockList {items, page, pageSize, total}` of `StockRow {productId, name, brand?, unitLabel, priceCents, quantity}`, sorted by name | holds: `core.d.ts`, `services/core/internal/stock/handlers.go` `List`; the spike typechecks against it |
@@ -15,13 +15,15 @@ The code below is that spike, byte for byte. Workers copy it; a worker who finds
 | A3 | `PUT /admin/stores/{id}/stock` takes `StockUpdate {rows:[{productId, quantity}]}` and answers 204 with no body | holds; openapi-fetch gives `error: undefined` on the 204 (the save tests are green) |
 | A4 | PUT validation, first problem wins, all 400 `validation`: `rows` "1 to 500 rows"; `productId` "must be a uuid"; `quantity` "quantity is required" or "0 to 100000"; `rows` "product listed twice"; `rows` "unknown product" (foreign key) | holds: `handlers.go` `checkRows`, `Put`. The page can only meet the last one: it sends 1 to 500 rows, ids core gave it, each once, quantities it checked |
 | A5 | another store's staff and an unknown store answer 404 `not_found` on both routes | holds: `storeFor`. The page never asks for another store as store staff, and an admin's store comes from the stores list |
-| A6 | `GET /admin/stores` and `GET /admin/stores/{id}` are admin only (store staff get 403), so store staff cannot read their store's name | holds: `core.d.ts` descriptions. The page shows no store name to store staff |
+| A6 | `GET /admin/stores` and `GET /admin/stores/{id}` are admin only (store staff get 403) | holds: `core.d.ts` descriptions. Store staff read their store's name from the public route instead (A13) |
 | A7 | `Staff.storeId` is present for store staff and absent for admins | holds: `core.d.ts`, the fixtures `admin` and `storeStaff` in `src/fake-core.ts` |
 | A8 | The router keeps the route component mounted across search changes and reads search values as JSON (`page=2` a number, `lowStock=true` a boolean, a uuid a string) | holds: the URL tests are green |
 | A9 | `keepPreviousData` passed through a `placeholderData` function keeps the page on screen within one store and nothing across stores | holds: mutation guards "drop placeholderData", "placeholder across stores" |
 | A10 | Tailwind 4 builds `aria-disabled:opacity-50` and `aria-disabled:cursor-not-allowed` for `[aria-disabled=true]` | holds: both rules are in the built CSS |
-| A11 | seed: stores Indiranagar (`…0402`) and Koramangala (`…0401`), listed in that order (by name); 148 products with one inactive; per store a zero and a 1 to 4 every 15 products, the rest 10 to 49; "Sunny Fields Toned Milk" exists; staff `koramangala@shopperstop.local` | read in `services/core/internal/seed/seed.go`; not run against the database. The e2e therefore accepts 147 or 148 products, reads the milk's quantity instead of assuming it, and counts the low rows instead of naming a number |
+| A11 | seed: stores Indiranagar (`…0402`) and Koramangala (`…0401`), listed in that order (by name); 148 products with one inactive (147 listed); per store a zero and a 1 to 4 every 15 products, the rest 10 to 49; "Sunny Fields Toned Milk" exists; staff `koramangala@shopperstop.local` | read in `services/core/internal/seed/seed.go`; confirmed by review 1 against the seed; not run against the database. The e2e reads the milk's quantity instead of assuming it and counts the low rows instead of naming a number. Its product count accepts 147 or 148: Playwright runs the spec files in parallel workers, and the catalog spec holds one more active product for a moment |
 | A12 | `src/fake-core.ts` exports `admin`, `storeStaff` (with `storeId`), `apiError`, `fakeCore`, `json`, `indiranagar`, `koramangala`, `storeList`; `src/stores.ts` exports `storesQuery` (first 100 by name) and `AdminStore`; `renderApp` returns the router | holds on main |
+| A13 | `GET /stores/{id}` is public (mounted without an auth middleware in `services/core/internal/app/app.go`, so the staff bearer token the client attaches is ignored and cannot draw a 401) and answers `Store {id, name, isOpen, …}`; 404 `not_found` for an unknown id | holds: `core.d.ts` `getStore`, `app.go` line 31 |
+| A14 | core refuses `q` over 100 characters or with a NUL byte, and a page whose offset passes MaxInt32 (above 89478486 at 24 a page), each with 400 | holds: `stock/handlers.go` `List`, `httpx/page.go` `Page` |
 
 ## Goals / Non-Goals
 Goals: the page in the proposal, composed only from `@shopperstop/ui` components, every delta scenario mapped to a named test, and nothing that makes the rebase against admin-catalog a merge by hand. Non-goals: everything under the proposal's "Out of scope"; any change outside `apps/admin/`; any new dependency.
@@ -29,16 +31,16 @@ Goals: the page in the proposal, composed only from `@shopperstop/ui` components
 ## Decisions
 Decisions 2, 5, 6, 7 and 8 are the ones the manager asked to be decided and recorded (D13: recommended and proceeded on).
 1. Capability `admin-app`, ADDED requirements, every name starting with "Stock" (as admin-auth-nav, admin-stores and admin-catalog did for their pages).
-2. The selected store lives in the URL as `store`, and so do the search (`q`), the filter (`lowStock`) and the page (`page`): one `validateSearch` on the route, one `go(change)` that navigates and drops `page`. Reason: a reload and a shared link show the same list, and admin-P2-L5's dashboard can link a store's low-stock count to `/stock?store=<id>&lowStock=true` with a typed `Link`. Only the text being typed in the search field is component state, started from `q`. Ceiling: the router reads a hand-typed `?q=1e3` as the number 1000 (it quotes such strings itself when it writes the URL, so its own links are safe).
+2. The selected store lives in the URL as `store`, and so do the search (`q`), the filter (`lowStock`) and the page (`page`): one `validateSearch` on the route, one `go(change)` that navigates and drops `page`. Reason: a reload and a shared link show the same list, and admin-P2-L5's dashboard can link a store's low-stock count to `/stock?store=<id>&lowStock=true` with a typed `Link`. Only the text being typed in the search field is component state, started from `q` and set again whenever `q` changes (Decision 21). Ceiling (review 1, R1-4): the router reads a hand-typed `?q=1e3` as the number 1000 and `?q={"a":1}` as an object (it quotes such strings itself when it writes the URL, so its own links are safe).
 3. A `store` in the URL that is not in the stores list falls back to the first store, without a message. So an admin never asks core for an unknown store and there is no 404 branch to build. Ceiling: a stale shared link silently shows another store; the selector says which.
-4. Store staff: the store is `staff.storeId` from `GET /admin/me`; the stores query is disabled for them (it would answer 403, which the app turns into the not-found page). The page shows them no store name (A6). Ceiling: a store name for store staff needs a core route they may read; noted as a request.
+4. Store staff: the store is `staff.storeId` from `GET /admin/me`; the stores query is disabled for them (it would answer 403, which the app turns into the not-found page). Their store's name comes from the public store route (Decision 23).
 5. Unsaved edits are one map keyed by `productId` (`Edits`: the typed text and the product's name), kept across pages, search and filter of one store and sent in one `PUT`. The map is tagged with its store (`draft = {store, edits}`) and read as empty for any other store, so no path can send one store's edits to another: not the selector, not the browser's Back button, not a link. Not a `key={storeId}` remount: that would drop keyboard focus from the selector on every change.
-6. Switching store with unsaved edits asks first in a ui `Dialog` ("Discard unsaved changes?", "Cancel" then "Discard and switch"); with none it switches at once. A store changed through the URL (Back, a link) cannot be asked: the edits are then hidden, not sent, and are back when the admin returns to their store; "Discard and switch" really drops them. Ceiling: no warning on leaving `/stock` or closing the tab; the edits are lost.
+6. Switching store with unsaved edits asks first in a ui `Dialog` ("Discard unsaved changes?", "Cancel" then "Discard and switch"); with none it switches at once. Back and Forward are not guarded (manager's ruling on R1-2): within a store they only change the page, search or filter, across which edits are kept by design; a store changed through the URL (Back, a link) cannot be asked, so the edits are then hidden, not sent, and are back when the admin returns to their store; "Discard and switch" really drops them. Ceiling: no warning on leaving `/stock` or closing the tab; the edits are lost.
 7. Low-stock badge: `quantity < 5` on the quantity core holds, zero included (`lowStockBelow`, core's threshold, checked by the e2e against core's own filter). It does not follow the typed value: it says what customers get now and changes with the save. One badge, no separate "Out of stock" (status colours: `warning` is caution; an empty shelf is not an error of the page). An edited row carries an `accent` "Unsaved" badge.
 8. The 500-row limit: `toRows` cuts a save to the first 500 edits in the order they were made; the rest stay unsaved and the count shows them, so pressing "Save changes" again sends them. One press is always one `PUT`. Not a refusal (a dead end with no partial save) and not several `PUT`s in one press (loses the one-transaction guarantee per press and the "one `PUT`" rule). Ceiling: 501 hand-typed edits need two presses; nobody types that many.
 9. A quantity is checked as it is typed (`parseQuantity`: whole, 0 to 100000, spaces ignored) and the mark on the field (`aria-invalid`, the ui `Input`'s `danger` border) is derived from the value, so it cannot go stale. The message is one alert on save, naming the products, because the row may be on another page; it is cleared by the next edit. A row field has no visible label or error line (dense table): `aria-label` names it. Ceiling: the reason is in the alert, not next to the field.
 10. After a save: `removeQueries` on the store's stock pages that are not on screen, then `await invalidateQueries` for the one that is, then the edits go. So a page visited before the save is never shown with the old quantity (it loads afresh), and the field never flashes the old value between "edit gone" and "new quantity here". Only rows that were sent, and whose field still holds the sent value, stop being edits: an edit typed while the `PUT` ran, or beyond row 500, stays.
-11. The page on screen stays while the next page, search or filter loads (`placeholderData`, same store only), so the pressed pager button or toggle is not unmounted and keeps focus. Ceiling: for that moment the pager text already names the new page above the old rows.
+11. The page on screen stays while the next page, search or filter loads (`placeholderData`, same store only), so the pressed pager button or toggle is not unmounted and keeps focus. What those kept rows look like and allow is Decision 20.
 12. "Previous", "Next", "Discard changes" and "Save changes" are `aria-disabled` when they cannot act, never `disabled`, and their handlers do nothing then: `disabled` drops keyboard focus from the button just pressed (admin-catalog review 4). The look comes from two state utilities on the page (`idle`); asked of ui as a `Button` feature. "Save changes" still uses `Button`'s `loading`, which disables it for the length of the `PUT`: the design-system pattern every form here uses; the button is enabled again when the answer is in.
 13. Page size 24 (core's default, as the products table). A page beyond the last (a save emptied it under the filter, or a typed URL) is replaced by the last page with rows, in one effect.
 14. No product image in the table: `@shopperstop/ui` has no `ImageTile`, and admin-catalog's app-level copy is not on main. Ceiling: add the column when ui ships `ImageTile` (core's `StockRow` would also need `imageUrl`).
@@ -47,39 +49,42 @@ Decisions 2, 5, 6, 7 and 8 are the ones the manager asked to be decided and reco
 17. The save bar is a `Card` above the table, not sticky. Ceiling: on a long page the admin scrolls up to save; a sticky bar is a ui pattern to ask for if staff want it. Enter in a quantity field does not save.
 18. e2e: one admin and one store-staff sign-in (core's sign-in rate limit); the quantity is read, raised by one, checked after a reload and saved back; every count the seed decides is read from the page, not written in the spec (A11).
 19. Test notes: quantity fields are found by `role="textbox"` and their `aria-label`; `type()` clears and types as a user would; the fake `stockCore` filters and pages like core and can hold its `GET`s (`hold`/`release`) so a test can look at the moment before an answer.
+20. (review 1, R1-1; task 2) Rows kept from the list before (`stock.isPlaceholderData`) are told apart three ways: the table's `Card` is `aria-busy` and dimmed (`opacity-50`, a utility, no colour); the pager text prints `stock.data.page`, the page core answered for those rows, not the URL's page; the quantity fields are `readOnly`. Read-only, not `disabled`: a read-only field keeps keyboard focus and is still read out. So an edit can never be typed against a row of the previous page or filter. The refetch of the page on screen after a save is not placeholder data (same key, real data, `isFetching` only), so fields stay editable through it and "an edit typed while a save is in flight" still holds. The pager buttons still move from the URL's page, so two quick presses of "Next" ask for page 3. Ceiling: nothing is announced beyond `aria-busy`; the pressed toggle shows the new filter a moment before its rows.
+21. (review 1, R1-2; task 2) The search field follows the URL: the component remembers the `q` it last showed and, when the URL's `q` differs, sets the field to it during render (React's "adjust state when a prop changes" pattern). Not an effect (`set-state-in-effect` is a lint error here) and not a `key` on the form (a remount would drop focus from the "Search" button on every submit). A submitted " milk " therefore shows as `milk`. Text typed and not submitted is kept while `q` stays the same.
+22. (review 1, R1-3; task 3) `validateSearch` never lets the URL ask core for what core refuses (A14): `page` above 100000 (`maxPage`) is cut to it, and the past-the-end effect then moves to the last page; `q` loses NUL characters and is cut to 100 (`maxSearch`); the field has `maxLength` 100. 100000 is far below core's limit and far above any list (2.4 million products at 24 a page). A `page` or `lowStock` that is not readable was already ignored by task 1; task 3 adds the tests for it, green when written (not a test-first violation: the behaviour is landed).
+23. (relayed from core, manager's ruling; task 3) Store staff see "Store: <name>" where admins have the selector, the name read from the public `GET /stores/{id}` with `staff.storeId` (A13). The query runs only when there is no stores list (store staff). While it loads or when it fails, the line is simply absent: no skeleton, no error, no retry. Plain text in the filter `Card` (`text-body text-ink`, the name `font-semibold`), no new component. This closes R1-8.
+24. (review 1, R1-5; task 3) The search form's accessible name is "Search stock", so the heading, the table and the search landmark have three different names.
 
 ## Files (all under `apps/admin/`)
 | Task | Test files (committed first) | Code files |
 |---|---|---|
-| 1 | `e2e/stock.spec.ts` (new, not run), `src/stock.test.tsx` (new, 13 tests) | `src/stock.ts` (new), `src/routes/_staff/stock.tsx` (replaces the placeholder; quantity fields read-only) |
-| 2 | `src/stock.test.tsx` (7 tests appended), `src/stock-rules.test.ts` (new, 2 tests, 10 runs) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their task-2 shape) |
-| 3 | `src/stock.test.tsx` (3 tests appended), `src/stock-rules.test.ts` (1 test appended) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their final shape) |
+| 1 (landed) | `e2e/stock.spec.ts` (new, not run), `src/stock.test.tsx` (new, 13 tests) | `src/stock.ts` (new), `src/routes/_staff/stock.tsx` (replaces the placeholder; quantity fields read-only) |
+| 2 | `src/stock.test.tsx` (9 tests appended), `src/stock-rules.test.ts` (new, 2 tests, 10 runs) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their task-2 shape) |
+| 3 | `e2e/stock.spec.ts` (one line added, own `test:` commit), `src/stock.test.tsx` (the store-staff test replaced, 8 tests appended, 10 runs), `src/stock-rules.test.ts` (1 test appended) | `src/stock.ts` and `src/routes/_staff/stock.tsx` (both replaced by their final shape) |
 | 4 | none new: runs `e2e/stock.spec.ts` | fixes only, after a recorded failure |
 
-Nothing else: no `src/fake-core.ts`, `src/routeTree.gen.ts`, `package.json`, `package-lock.json`, vite, Playwright or eslint config change; nothing in `packages/ui` or `services/core`.
+Nothing else: no `src/fake-core.ts`, `src/routeTree.gen.ts`, `package.json`, `package-lock.json`, vite, Playwright or eslint config change; nothing in `packages/ui` or `services/core`. The fake `stockCore` in `src/stock.test.tsx` carried a `PUT` handler and its `puts` log since task 1 (review 1, R1-9): task 2's save tests are what use them; nothing is removed.
 
-## Rebase against admin-catalog (whichever lane merges second rebases)
-admin-catalog (branch `lane/admin-P2-L3-admin-catalog`) touches, under `apps/admin/`: `e2e/catalog.spec.ts`, `src/catalog.ts`, `src/categories.tsx`, `src/image.tsx`, `src/product-form.tsx`, their five test files, `src/fake-core.ts` (two type aliases at the top, fixtures appended), `src/routeTree.gen.ts` (two product routes), `src/routes/_staff/_admin/categories.tsx` and `src/routes/_staff/_admin/products/*`. This change touches `e2e/stock.spec.ts`, `src/stock.ts`, `src/stock.test.tsx`, `src/stock-rules.test.ts` and `src/routes/_staff/stock.tsx`. The two sets are disjoint, so `git rebase` is expected to report no conflict in `apps/`. What to check after it, in this order:
-| File | Expected | If not |
-|---|---|---|
-| `apps/admin/src/routeTree.gen.ts` | no conflict: this change does not alter it (the `/stock` route exists; `validateSearch` is not in the generated file). After the rebase run `npm run build --workspace apps/admin`; `git status` must show it unchanged | take the generated file as the build writes it; never merge it by hand |
-| `apps/admin/src/fake-core.ts` | no conflict: this change does not edit it. `src/stock.test.tsx` imports only `admin`, `apiError`, `fakeCore`, `indiranagar`, `json`, `koramangala`, `storeList`, `storeStaff`, which admin-catalog leaves as they are; its own `banana` and `milk` are local constants and do not meet admin-catalog's exported `banana` and `tonedMilk` | keep admin-catalog's file whole |
-| `openspec/specs/admin-app/spec.md` | not touched by either feature PR; each archive PR appends its ADDED requirements. Names are disjoint (all of this change's start with "Stock") | archive one change after the other, never both in one PR |
-| `.claude/areas/admin.md` | the manager's file, edited by both chore PRs | the manager merges it |
-| counts | Vitest: this change adds 34 to whatever the base has (52 on main: 86; on admin-catalog with its task 5b: 95 + 34 = 129). Playwright admin: base + 2 (6 on main: 8; with admin-catalog: 10) | a different sum means a test was lost in the rebase |
-tasks.md gives every count as measured on 503e1ba (base 52); on a rebased branch a worker first runs the suite and adds the difference.
+## Rebase against admin-catalog
+Done by the manager before task 1: admin-catalog merged first and this branch was rebased onto it. The two changes touch disjoint files under `apps/admin/`, `src/routeTree.gen.ts` and `src/fake-core.ts` are admin-catalog's and untouched here, and the base moved from 52 to 95 Vitest tests and from 6 to 8 Playwright tests. What remains: `openspec/specs/admin-app/spec.md` gets this change's ADDED requirements at archive time (every name starts with "Stock"); `.claude/areas/admin.md` is the manager's.
 
 ## Tests (scenario -> test)
 | Requirement › Scenario | File | Test name | Task |
 |---|---|---|---|
-| Stock table › Stock listed | `src/stock.test.tsx` | "the stock table lists a page of the first store and badges quantities below 5" | 1 |
+| Stock table › Stock listed | `src/stock.test.tsx` | "the stock table lists a page of the first store and badges quantities below 5"; the request list: "an admin is not asked for a store name: the selector names the store" | 1; 3 |
 | Stock store for admins › Choose a store | same | "choosing a store puts it in the URL and loads its stock, never under the other store's rows" | 1 |
 | Stock store for admins › Store in the URL | same | "a store in the URL is the one shown" | 1 |
 | Stock store for admins › Unknown store in the URL | same | "a store in the URL that is not a store shows the first store" | 1 |
-| Stock store for store staff › Store staff see their own store | same | "store staff see their own store and no store selector" | 1 |
+| Stock store for store staff › Store staff see their own store | same | "store staff see their own store by name and no store selector" (task 1's "store staff see their own store and no store selector", replaced in task 3) | 1, 3 |
+| Stock store for store staff › Store name unavailable | same | "store staff get the stock without a store name when the name cannot be read" | 3 |
 | Stock search and low-stock filter › Search and filter from the first page | same | "search and the low-stock filter ask core again from the first page" | 1 |
+| Stock search and low-stock filter › Back and Forward | same | "Back and Forward move the search field and the list with the URL, and unsaved edits stay" | 2 |
 | Stock pager › Pager | same | "the pager moves between pages and the pressed button keeps focus" | 1 |
 | Stock pager › Page past the end | same | "a page past the end shows the last page" | 1 |
+| Stock rows while the next list loads › Rows kept while the next page loads | same | "while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited" | 2 |
+| Stock URL values › Unreadable page or filter | same | "?%s in the URL is read as page 1 with the filter off" (one `test.each`, 3 runs; green when written) | 3 |
+| Stock URL values › Over-large page | same | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" | 3 |
+| Stock URL values › Over-long search | same | "a search in the URL loses NUL bytes and is cut to the 100 characters core takes" (also the form's name "Search stock") | 3 |
 | Stock table states › Search without a match | same | "a search that matches nothing shows the empty state" | 1 |
 | Stock table states › Stock loading | same | "the stock table shows a skeleton while loading" | 1 |
 | Stock table states › Stock load failure | same | "stock load failure shows a retry that reloads" | 1 |
@@ -98,11 +103,11 @@ tasks.md gives every count as measured on 503e1ba (base 52); on a rebased branch
 | Stock store switch with unsaved edits › Switch asks first | same | "switching store with unsaved edits asks first" | 3 |
 | Stock store switch with unsaved edits › Store changed in the URL | same | "unsaved edits never follow a store changed in the URL" | 2 |
 | Stock against core › Admin sets stock at a store | `e2e/stock.spec.ts` | "admin sets stock at a store" | 1 (written), 4 (run) |
-| Stock against core › Store staff set stock at their own store only | same | "store staff set stock at their own store only" | 1 (written), 4 (run) |
+| Stock against core › Store staff set stock at their own store only | same | "store staff set stock at their own store only" | 1 (written), 3 (one line added), 4 (run) |
 
-12 requirements, 27 scenarios: 25 on Vitest (26 tests, 34 runs: `src/stock.test.tsx` 23, `src/stock-rules.test.ts` 3 tests / 11 runs) and 2 on Playwright. With main's 52 the admin suite ends at 86 (measured). "Store changed in the URL" is built in task 2 because the store tag on the edits is part of how task 2 holds them; task 3 adds the dialog on top.
+14 requirements, 33 scenarios: 31 on Vitest and 2 on Playwright. Vitest runs: `src/stock.test.tsx` 32 (13 from task 1, 9 from task 2, 10 from task 3), `src/stock-rules.test.ts` 11 (10 from task 2, 1 from task 3); 43 on top of the base 95 is 138 (measured). "Store changed in the URL" is built in task 2 because the store tag on the edits is part of how task 2 holds them; task 3 adds the dialog on top.
 
-## Mutation guards (for the reviewer; each run on the final spike tree on 2026-10-13, 86 tests, only the named tests red, then restored)
+## Mutation guards (for the reviewer; each run on the final tree of the second spike on 2026-10-13, 138 tests, only the named tests red, then restored)
 | Mutation | Test that turns red |
 |---|---|
 | drop `removeQueries` from the save's `onSuccess` | "a page kept from before a save is read again, never shown with the old quantity" |
@@ -110,26 +115,38 @@ tasks.md gives every count as measured on 503e1ba (base 52); on a rebased branch
 | clear every edit on success instead of the rows sent | "an edit typed while a save is in flight stays unsaved" |
 | read `draft.edits` without the store check | "unsaved edits never follow a store changed in the URL" |
 | drop `page: undefined` from `go` | "search and the low-stock filter ask core again from the first page" |
-| drop `placeholderData` from `stockQuery` | "the pager moves between pages and the pressed button keeps focus", "a page kept from before a save is read again, never shown with the old quantity" |
+| drop `placeholderData` from `stockQuery` | "the pager moves between pages and the pressed button keeps focus", "while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited" |
 | keep the previous page across stores (`keepPreviousData` alone) | "choosing a store puts it in the URL and loads its stock, never under the other store's rows" |
 | drop `discard()` from "Discard and switch" | "switching store with unsaved edits asks first" |
 | always switch store without the dialog | "switching store with unsaved edits asks first" |
 | drop `setRefused(false)` from `edit` | "a quantity the page cannot send is marked, named on save and not sent" |
 | drop the `invalid.length` check from `submitSave` | "a quantity the page cannot send is marked, named on save and not sent" |
 | drop `save.reset()` from `edit` | "a save refused for a deleted product says so and keeps the edits" |
-| never run the past-the-end effect | "a page past the end shows the last page" |
+| never run the past-the-end effect | "a page past the end shows the last page", "a page in the URL beyond what core accepts is cut to one it does, then to the last page" |
 | `disabled` instead of `aria-disabled` on "Next" | "the pager moves between pages and the pressed button keeps focus" |
 | `disabled` instead of `aria-disabled` on "Save changes" | "an edit typed back to the saved quantity is no change, and nothing is sent" |
-| ask for the stores as store staff (`enabled: true`) | "store staff see their own store and no store selector" |
+| ask for the stores as store staff (`enabled: true`) | "store staff see their own store by name and no store selector" |
 | keep an edit typed back to core's quantity | "an edit typed back to the saved quantity is no change, and nothing is sent" |
 | drop `.slice(0, maxRows)` from `toRows` | "one save takes the first 500 edits, in the order they were made" |
 | send a value that is not a quantity as 0 | "a value that is not a quantity is never sent as a number" |
 | `lowStockBelow = 6` | "the stock table lists a page of the first store and badges quantities below 5" |
+| drop `readOnly={stale}` from the quantity field | "while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited" |
+| print the URL's `page` in the pager text | same |
+| drop `aria-busy` from the table's `Card` | same |
+| drop `opacity-50` from the table's `Card` | same |
+| drop `setText` from the URL sync of the search field | "Back and Forward move the search field and the list with the URL, and unsaved edits stay" |
+| drop `Math.min(…, maxPage)` from `validateSearch` | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" |
+| drop `.replaceAll('\0', '')` from `validateSearch` | "a search in the URL loses NUL bytes and is cut to the 100 characters core takes" |
+| drop `.slice(0, maxSearch)` from `validateSearch` | same |
+| drop `maxLength` from the search field | same |
+| name the search form "Stock" again | same |
+| ask for the store's name as an admin (`enabled: true`) | "the stock table lists a page of the first store and badges quantities below 5", "an admin is not asked for a store name: the selector names the store" |
+| never show the store's name | "store staff see their own store by name and no store selector" |
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
-Every block below was built in this order on 503e1ba on 2026-10-13, tests first, with the red and green counts in tasks.md. Paths are under `apps/admin/`. A block is the whole file unless its heading says "append".
+Task 1's blocks are what landed at 52e89c8. The blocks of tasks 2 and 3 were built in order on top of it on 2026-10-13, tests first, with the red and green counts in tasks.md. Paths are under `apps/admin/`. A block is the whole file unless its heading says "append" or "replace one test".
 
-### Task 1: the stock table, the store, search, filter and pager, and the e2e spec
+### Task 1 (landed): the stock table, the store, search, filter and pager, and the e2e spec
 
 #### `e2e/stock.spec.ts` (new; written and committed first, run in task 4)
 ```ts
@@ -704,7 +721,7 @@ export const Route = createFileRoute('/_staff/stock')({
 })
 ```
 
-### Task 2: edits and the batched save
+### Task 2: edits, the batched save, rows kept while the next list loads, the search field following the URL
 
 #### `src/stock.test.tsx` (append at the end of the file; change nothing above)
 The block starts with one empty line, then the comment line. Keep both.
@@ -756,7 +773,7 @@ test('a page kept from before a save is read again, never shown with the old qua
   const core = stockCore(indiranagar.id, thirty)
   fakeCore({ ...asAdmin, ...core.routes })
 
-  renderApp('/stock')
+  const router = renderApp('/stock')
   await findQuantity('Product 01')
   await type('Product 01', '40')
   await userEvent.click(screen.getByRole('button', { name: 'Next' }))
@@ -766,7 +783,7 @@ test('a page kept from before a save is read again, never shown with the old qua
 
   core.hold()
   await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
-  expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  await waitFor(() => expect(router.state.location.search).toEqual({}))
   expect(screen.queryByRole('textbox', { name: 'Quantity of Product 01' })).not.toBeInTheDocument()
   core.release()
   expect(await findQuantity('Product 01')).toHaveValue('40')
@@ -884,6 +901,62 @@ test('unsaved edits never follow a store changed in the URL', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
   expect(other.puts).toEqual([])
 })
+
+test('while the next page loads, the rows on screen are marked busy, keep their own page number and cannot be edited', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  fakeCore({ ...asAdmin, ...core.routes })
+  const busy = () => screen.getByRole('table', { name: 'Stock' }).closest('[aria-busy="true"]')
+
+  renderApp('/stock')
+  await findQuantity('Product 01')
+  expect(busy()).toBeNull()
+  expect(quantity('Product 01')).not.toHaveAttribute('readonly')
+  core.hold()
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+  await waitFor(() => expect(busy()).not.toBeNull())
+  expect(busy()).toHaveClass('opacity-50')
+  expect(screen.getByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(quantity('Product 01')).toHaveAttribute('readonly')
+  expect(quantity('Product 01')).not.toBeDisabled()
+  quantity('Product 01').focus()
+  await userEvent.keyboard('9')
+  expect(quantity('Product 01')).toHaveValue('0')
+  expect(quantity('Product 01')).toHaveFocus()
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+
+  core.release()
+  expect(await screen.findByText('Page 2 of 2, 30 products')).toBeInTheDocument()
+  expect(busy()).toBeNull()
+  expect(quantity('Product 25')).not.toHaveAttribute('readonly')
+})
+
+test('Back and Forward move the search field and the list with the URL, and unsaved edits stay', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [...thirty, milk]).routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Product 01')
+  await type('Product 01', '40')
+  await userEvent.type(screen.getByRole('searchbox', { name: 'Search' }), ' milk ')
+  await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+  expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('milk')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+
+  router.history.back()
+  expect(await screen.findByText('Page 1 of 2, 31 products')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('')
+  expect(router.state.location.search).toEqual({})
+  expect(quantity('Product 01')).toHaveValue('40')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+
+  router.history.forward()
+  expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('milk')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+})
 ```
 
 #### `src/stock-rules.test.ts` (new)
@@ -964,7 +1037,7 @@ export function toRows(edits: Edits) {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Badge, Button, Card, Chip, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, type Column } from '@shopperstop/ui'
+import { Badge, Button, Card, Chip, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
 import { api } from '../../api'
 import { lowStockBelow, maxQuantity, pageSize, parseQuantity, stockQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
@@ -979,6 +1052,14 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   const page = search.page ?? 1
   const stock = useQuery(stockQuery(storeId, { q: search.q, lowStock: search.lowStock, page }))
   const [text, setText] = useState(search.q ?? '')
+  // The field follows the URL: Back and Forward change `q` without a submit.
+  const [shownQ, setShownQ] = useState(search.q)
+  if (shownQ !== search.q) {
+    setShownQ(search.q)
+    setText(search.q ?? '')
+  }
+  // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
+  const stale = stock.isPlaceholderData
   // Unsaved edits belong to one store: read for any other store they are empty, so they can never be saved to it.
   const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
   const [refused, setRefused] = useState(false)
@@ -1013,7 +1094,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
 
   // A page past the end (a save emptied it, or a typed URL) moves to the last page that has rows.
   const total = stock.data?.total ?? 0
-  const pastEnd = page > 1 && !stock.isPlaceholderData && stock.data?.items.length === 0
+  const pastEnd = page > 1 && !stale && stock.data?.items.length === 0
   useEffect(() => {
     const last = Math.ceil(total / pageSize)
     if (pastEnd) void navigate({ search: (current) => ({ ...current, page: last > 1 ? last : undefined }), replace: true })
@@ -1070,6 +1151,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
               aria-invalid={value !== undefined && parseQuantity(value) === undefined ? true : undefined}
               inputMode="numeric"
               className="tabular-nums"
+              readOnly={stale}
               value={value ?? String(row.quantity)}
               onChange={(event) => edit(row, event.target.value)}
             />
@@ -1135,7 +1217,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         </Card>
       ) : (
         <>
-          <Card className="overflow-hidden">
+          <Card aria-busy={stale} className={cn('overflow-hidden', stale && 'opacity-50')}>
             <Table stack caption="Stock" columns={columns} rows={stock.data.items} rowKey={(row) => row.productId} />
           </Card>
           <nav aria-label="Pages" className="flex items-center justify-between gap-4">
@@ -1143,7 +1225,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
               Previous
             </Button>
             <p className="text-body text-ink tabular-nums">
-              Page {page} of {pages}, {total} products
+              Page {stock.data.page} of {pages}, {total} products
             </p>
             <Button variant="secondary" aria-disabled={page >= pages} className={idle} onClick={() => page < pages && go({ page: page + 1 })}>
               Next
@@ -1196,9 +1278,44 @@ export const Route = createFileRoute('/_staff/stock')({
 })
 ```
 
-### Task 3: the store switch dialog, save failures and the 500-row limit
+### Task 3: the store switch dialog, save failures, the 500-row limit, URL values, the store's name for store staff
 
-#### `src/stock.test.tsx` (append at the end of the file; change nothing above)
+#### `e2e/stock.spec.ts` (replace three lines by four, in the test "store staff set stock at their own store only"; own `test:` commit, not run)
+These three lines, which appear once in the file:
+```ts
+  await expect(page.getByRole('table', { name: 'Stock' })).toBeVisible()
+  await expect(page.getByLabel('Store', { exact: true })).toHaveCount(0)
+  await expectNoAxeViolations(page)
+```
+become these four (one line added, the second):
+```ts
+  await expect(page.getByRole('table', { name: 'Stock' })).toBeVisible()
+  await expect(page.getByText('Store: Koramangala')).toBeVisible()
+  await expect(page.getByLabel('Store', { exact: true })).toHaveCount(0)
+  await expectNoAxeViolations(page)
+```
+
+#### `src/stock.test.tsx` (replace one test: the whole test "store staff see their own store and no store selector", from its `test(` line to its closing `})`, becomes this test)
+```tsx
+test('store staff see their own store by name and no store selector', async () => {
+  setToken('tok')
+  const own = { ...koramangala, id: storeStaff.storeId!, name: 'Whitefield' }
+  const calls = fakeCore({
+    'GET /admin/me': () => json(200, storeStaff),
+    [`GET /stores/${own.id}`]: () => json(200, { id: own.id, name: own.name, isOpen: true, deliveryFeeCents: 2500, freeDeliveryAboveCents: 19900, minOrderCents: 9900, promisedMinutes: 10 }),
+    ...stockCore(own.id, [milk]).routes,
+  })
+
+  renderApp(`/stock?store=${koramangala.id}`)
+
+  expect(await findQuantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  expect(await screen.findByText('Whitefield')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Store')).not.toBeInTheDocument()
+  expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', '')).sort()).toEqual(['/admin/me', `/admin/stores/${own.id}/stock`, `/stores/${own.id}`])
+})
+```
+
+#### `src/stock.test.tsx` (append at the end of the file; change nothing else)
 The block starts with one empty line, which separates it from the test before. Keep it.
 ```tsx
 
@@ -1278,6 +1395,77 @@ test('any other save failure shows a banner, keeps the edits and can be retried'
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(core.puts).toEqual([{ rows: [{ productId: banana.productId, quantity: 30 }] }])
 })
+
+test('a page in the URL beyond what core accepts is cut to one it does, then to the last page', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, thirty)
+  const get = `GET /admin/stores/${indiranagar.id}/stock`
+  // Core answers 400 to a page whose offset passes its integer range: at 24 a page, any page above 89478486.
+  const calls = fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [get]: (request) =>
+      Number(new URL(request.url).searchParams.get('page')) > 89478486 ? apiError(400, 'validation', 'too large', 'page') : core.routes[get](request),
+  })
+
+  renderApp('/stock?page=2147483648')
+
+  expect(await screen.findByText('Page 2 of 2, 30 products')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(calls.map((call) => new URL(call.url).searchParams.get('page')).filter(Boolean)).toEqual(['100000', '2'])
+})
+
+test('a search in the URL loses NUL bytes and is cut to the 100 characters core takes', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [milk]).routes })
+  const cut = 'm'.repeat(60) + 'k'.repeat(40)
+
+  renderApp(`/stock?q=${'m'.repeat(60)}%00${'k'.repeat(60)}`)
+
+  expect(await screen.findByRole('heading', { level: 2, name: 'No products found' })).toBeInTheDocument()
+  expect(lastListQuery(calls).q).toBe(cut)
+  const field = within(screen.getByRole('search', { name: 'Search stock' })).getByRole('searchbox', { name: 'Search' })
+  expect(field).toHaveValue(cut)
+  expect(field).toHaveAttribute('maxlength', '100')
+})
+
+test.each(['page=banana', 'page=1.5', 'lowStock=banana'])('?%s in the URL is read as page 1 with the filter off', async (search) => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, thirty).routes })
+
+  renderApp(`/stock?${search}`)
+
+  expect(await screen.findByText('Page 1 of 2, 30 products')).toBeInTheDocument()
+  expect(lastListQuery(calls)).toEqual({ page: '1', pageSize: '24' })
+  expect(screen.getByRole('button', { name: 'Low stock only' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('store staff get the stock without a store name when the name cannot be read', async () => {
+  setToken('tok')
+  const calls = fakeCore({
+    'GET /admin/me': () => json(200, storeStaff),
+    [`GET /stores/${storeStaff.storeId}`]: () => apiError(500, 'internal'),
+    ...stockCore(storeStaff.storeId!, [milk]).routes,
+  })
+
+  renderApp('/stock')
+
+  expect(await findQuantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  await waitFor(() => expect(calls.some((call) => new URL(call.url).pathname.endsWith(`/stores/${storeStaff.storeId}`))).toBe(true))
+  expect(screen.queryByText('Store:')).not.toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+})
+
+test('an admin is not asked for a store name: the selector names the store', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [milk]).routes })
+
+  renderApp('/stock')
+
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', ''))).toEqual(['/admin/me', '/admin/stores', `/admin/stores/${indiranagar.id}/stock`])
+})
 ```
 
 #### `src/stock-rules.test.ts` (append at the end of the file; change nothing above)
@@ -1312,6 +1500,9 @@ export const pageSize = 24
 export const lowStockBelow = 5
 export const maxQuantity = 100000
 export const maxRows = 500
+// What the URL may ask core for: q of at most 100 characters; a page core does not refuse as too large (its limit at 24 a page is 89478486).
+export const maxSearch = 100
+export const maxPage = 100000
 
 // Keys: one page of a store's stock is ['admin', 'stock', storeId, filters].
 export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: true; page: number }) =>
@@ -1325,6 +1516,17 @@ export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: tr
     },
     // The page on screen stays while the next one loads, so the pager keeps keyboard focus; never another store's rows.
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[2] === storeId ? keepPreviousData(previous) : undefined),
+  })
+
+// A store's name from the public route: store staff may not list the stores, anyone may read this.
+export const storeNameQuery = (storeId: string) =>
+  queryOptions({
+    queryKey: ['stores', storeId, 'name'],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id: storeId } } })
+      if (error) throw error.error
+      return data.name
+    },
   })
 
 // A quantity as typed to the number core takes; anything else is not sendable.
@@ -1351,9 +1553,9 @@ export function toRows(edits: Edits) {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, type Column } from '@shopperstop/ui'
+import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
 import { api, type ApiError } from '../../api'
-import { lowStockBelow, maxQuantity, pageSize, parseQuantity, stockQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
+import { lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
 // A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
@@ -1365,7 +1567,17 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   const queryClient = useQueryClient()
   const page = search.page ?? 1
   const stock = useQuery(stockQuery(storeId, { q: search.q, lowStock: search.lowStock, page }))
+  // Store staff get no selector; their store's name is shown when it can be read, and left out when it cannot.
+  const ownStore = useQuery({ ...storeNameQuery(storeId), enabled: !stores })
   const [text, setText] = useState(search.q ?? '')
+  // The field follows the URL: Back and Forward change `q` without a submit.
+  const [shownQ, setShownQ] = useState(search.q)
+  if (shownQ !== search.q) {
+    setShownQ(search.q)
+    setText(search.q ?? '')
+  }
+  // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
+  const stale = stock.isPlaceholderData
   // Unsaved edits belong to one store: read for any other store they are empty, so they can never be saved to it.
   const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
   const [refused, setRefused] = useState(false)
@@ -1402,7 +1614,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
 
   // A page past the end (a save emptied it, or a typed URL) moves to the last page that has rows.
   const total = stock.data?.total ?? 0
-  const pastEnd = page > 1 && !stock.isPlaceholderData && stock.data?.items.length === 0
+  const pastEnd = page > 1 && !stale && stock.data?.items.length === 0
   useEffect(() => {
     const last = Math.ceil(total / pageSize)
     if (pastEnd) void navigate({ search: (current) => ({ ...current, page: last > 1 ? last : undefined }), replace: true })
@@ -1459,6 +1671,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
               aria-invalid={value !== undefined && parseQuantity(value) === undefined ? true : undefined}
               inputMode="numeric"
               className="tabular-nums"
+              readOnly={stale}
               value={value ?? String(row.quantity)}
               onChange={(event) => edit(row, event.target.value)}
             />
@@ -1482,6 +1695,11 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   return (
     <>
       <Card className="flex flex-wrap items-end gap-4 p-4">
+        {ownStore.data && (
+          <p className="flex h-11 items-center gap-1 text-body text-ink sm:h-10">
+            Store: <span className="font-semibold">{ownStore.data}</span>
+          </p>
+        )}
         {stores && (
           <FormField label="Store">
             <Select value={storeId} onChange={(event) => (count > 0 ? setSwitchTo(event.target.value) : go({ store: event.target.value }))}>
@@ -1491,9 +1709,9 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
             </Select>
           </FormField>
         )}
-        <form role="search" aria-label="Stock" noValidate onSubmit={submitSearch} className="flex items-end gap-2">
+        <form role="search" aria-label="Search stock" noValidate onSubmit={submitSearch} className="flex items-end gap-2">
           <FormField label="Search">
-            <Input type="search" value={text} onChange={(event) => setText(event.target.value)} />
+            <Input type="search" maxLength={maxSearch} value={text} onChange={(event) => setText(event.target.value)} />
           </FormField>
           <Button type="submit" variant="secondary">Search</Button>
         </form>
@@ -1533,7 +1751,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         </Card>
       ) : (
         <>
-          <Card className="overflow-hidden">
+          <Card aria-busy={stale} className={cn('overflow-hidden', stale && 'opacity-50')}>
             <Table stack caption="Stock" columns={columns} rows={stock.data.items} rowKey={(row) => row.productId} />
           </Card>
           <nav aria-label="Pages" className="flex items-center justify-between gap-4">
@@ -1541,7 +1759,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
               Previous
             </Button>
             <p className="text-body text-ink tabular-nums">
-              Page {page} of {pages}, {total} products
+              Page {stock.data.page} of {pages}, {total} products
             </p>
             <Button variant="secondary" aria-disabled={page >= pages} className={idle} onClick={() => page < pages && go({ page: page + 1 })}>
               Next
@@ -1600,34 +1818,39 @@ function Stock() {
 
 export const Route = createFileRoute('/_staff/stock')({
   // The router reads search values as JSON: `page=2` is a number, `lowStock=true` a boolean, a search of digits a number.
+  // Core answers 400 to a NUL byte or more than 100 characters in q, and to a page far beyond any list: neither is sent.
   validateSearch: (search: Record<string, unknown>): StockSearch => ({
     store: typeof search.store === 'string' ? search.store : undefined,
-    q: search.q === undefined || search.q === '' ? undefined : String(search.q),
+    q: search.q === undefined ? undefined : String(search.q).replaceAll('\0', '').slice(0, maxSearch) || undefined,
     lowStock: search.lowStock === true ? true : undefined,
-    page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? search.page : undefined,
+    page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? Math.min(search.page, maxPage) : undefined,
   }),
   component: Stock,
 })
 ```
 
 ## Risks / Trade-offs
-- The e2e has run only against a `page.route` fake. Risks in task 4: the seed facts of A11 (the store order, the product count, the milk's name), the real 204, and core's rate limit. A failure is recorded first, then fixed with `fix:`; an assertion is never weakened.
+- The e2e has run only against a `page.route` fake. Risks in task 4: the seed facts of A11 (the store order, the product count, the milk's name), the real 204, the public store route answering a request that carries a staff token (A13), and core's rate limit. A failure is recorded first, then fixed with `fix:`; an assertion is never weakened.
 - Core's sign-in rate limit (10 per email per hour per process): the stock spec adds one admin and one store-staff sign-in per run. A reused local core reaches the limit after a few full admin runs; restarting core is the manager's call.
 - The e2e changes Koramangala's Sunny Fields Toned Milk by one and saves it back. A run that dies in between leaves it one higher; the next `make e2e` reseeds. web's e2e must not depend on that product's exact quantity at Koramangala while admin's runs (they run one after the other in `make e2e`).
 - The router's JSON reading of search values (Decision 2) is the router's default; a later global change of the search serializer would change `/stock`'s URLs, and the URL tests would say so.
 - `aria-disabled` styling lives on the page until ui's `Button` carries it (request to ui). axe leaves `aria-disabled` controls out of its contrast rule, as it does `disabled` ones; the faked e2e run was clean.
 - Tasks 2 and 3 replace `src/stock.ts` and `src/routes/_staff/stock.tsx` whole, so they run in order on the one worktree.
+- Task 3 replaces one landed test in `src/stock.test.tsx` (the store-staff test: its exact request list gains the public store route). It is the only edit above the appended tests; the worker replaces the whole test, from its `test(` line to its closing `})`.
 
 ## Accepted ceilings
-- No product image, category filter or sorting in the table (Decision 14).
+- No product image, category filter or sorting in the table (Decision 14); `StockRow.imageUrl` comes with core-P2-L6.
 - No warning on leaving the page with unsaved edits; edits hidden, not dropped, when the store changes through the URL (Decision 6).
 - A save sends at most 500 edits; the rest need a second press (Decision 8).
 - A field's error reason is in the alert on save, not next to the field (Decision 9).
-- An unknown `store` in the URL shows the first store without a message (Decision 3); store staff see no store name (Decision 4).
+- An unknown `store` in the URL shows the first store without a message (Decision 3). Store staff see their store's name only when the public route answers; no retry for it (Decision 23).
 - First 100 stores in the selector (`storesQuery`'s ceiling from admin-stores).
-- The pager text names the new page a moment before its rows arrive (Decision 11); "Save changes" is `disabled` while its `PUT` runs (Decision 12).
+- While the next list loads nothing is announced beyond `aria-busy`, and the pressed toggle shows the new filter before its rows (Decision 20). "Save changes" is `disabled` while its `PUT` runs (Decision 12).
 - The save bar is not sticky and Enter does not save (Decision 17).
-- A hand-typed `?q=` that reads as JSON (a number, `true`) is searched as its JSON reading (Decision 2).
+- Review 1, R1-4: a hand-typed `?q=` that reads as JSON (`1e3`, `true`, an object) is searched as its JSON reading (Decision 2).
+- Review 1, R1-6: an `aria-disabled` button keeps `secondary`'s hover background, and no test presses Enter on one (Enter and Space fire the same guarded click). The look belongs to ui's `Button` (request recorded; no ui session is running, so the page keeps its two utilities).
+- Review 1, R1-7: on a phone the stacked table shows the "Status" label with nothing after it on a row that is neither low nor edited.
+- The pager text reads "1 products" for a single match (landed in task 1; the wording is the products table's).
 - Two admins editing one store: the last save wins per product, and a quantity changed by an order between load and save is overwritten by the typed number (core's `PUT` sets, it does not add). The page reloads the list after every save, not while it is open.
 
 ## Migration Plan
