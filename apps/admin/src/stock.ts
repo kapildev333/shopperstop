@@ -9,9 +9,13 @@ export type StockSearch = { store?: string; q?: string; lowStock?: true; page?: 
 export type Edits = Record<string, { name: string; value: string }>
 
 export const pageSize = 24
-// Core's rules (services/core/internal/stock): low stock is below 5, a quantity is 0 to 100000.
+// Core's rules (services/core/internal/stock): low stock is below 5, a quantity is 0 to 100000, one PUT takes 1 to 500 rows.
 export const lowStockBelow = 5
 export const maxQuantity = 100000
+export const maxRows = 500
+// What the URL may ask core for: q of at most 100 characters; a page core does not refuse as too large (its limit at 24 a page is 89478486).
+export const maxSearch = 100
+export const maxPage = 100000
 
 // Keys: one page of a store's stock is ['admin', 'stock', storeId, filters].
 export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: true; page: number }) =>
@@ -27,6 +31,17 @@ export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: tr
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[2] === storeId ? keepPreviousData(previous) : undefined),
   })
 
+// A store's name from the public route: store staff may not list the stores, anyone may read this.
+export const storeNameQuery = (storeId: string) =>
+  queryOptions({
+    queryKey: ['stores', storeId, 'name'],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id: storeId } } })
+      if (error) throw error.error
+      return data.name
+    },
+  })
+
 // A quantity as typed to the number core takes; anything else is not sendable.
 export function parseQuantity(value: string) {
   const text = value.trim()
@@ -35,9 +50,12 @@ export function parseQuantity(value: string) {
 
 // The rows of one PUT, in the order the edits were made. A value that is not a quantity is left out, never sent as a made-up
 // number; the page refuses to save before that.
+// ponytail: one save sends the first 500 rows (core's limit) and the rest stay unsaved for the next press; send several PUTs if anyone ever types that many.
 export function toRows(edits: Edits) {
-  return Object.entries(edits).flatMap(([productId, edit]) => {
-    const quantity = parseQuantity(edit.value)
-    return quantity === undefined ? [] : [{ productId, quantity }]
-  })
+  return Object.entries(edits)
+    .flatMap(([productId, edit]) => {
+      const quantity = parseQuantity(edit.value)
+      return quantity === undefined ? [] : [{ productId, quantity }]
+    })
+    .slice(0, maxRows)
 }

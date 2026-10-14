@@ -37,7 +37,7 @@ Failing tests: `src/stock.test.tsx` › "store staff see their own store by name
 Green when written (task 1 built the behaviour; no code follows for them): `src/stock.test.tsx` › "?%s in the URL is read as page 1 with the filter off" (3 runs), "an admin is not asked for a store name: the selector names the store".
 - [x] 3.3 e2e line committed before step B's code (`test: stock page against core names the store for store staff`): the one line in `e2e/stock.spec.ts` per design.md "Task 3 step B"; `npm run lint --workspace apps/admin` and `npm run typecheck --workspace apps/admin` pass; not run (task 4); Vitest still `131 passed (131)`
 - [x] 3.4 Step B tests committed red (`test: stock store switch, save failures, URL values and store name`); Vitest `8 failed | 134 passed (142)` (7 in `stock.test.tsx`, 1 in `stock-rules.test.ts`)
-- [ ] 3.5 `src/stock.ts` and `src/routes/_staff/stock.tsx` per design.md "Task 3 step B" (`feat: stock store switch dialog, save failures, URL values and store name`); Vitest `142 passed (142)`; every gate green (`make test-web`: ui 54, admin 142, web 20); `routeTree.gen.ts` unchanged
+- [x] 3.5 `src/stock.ts` and `src/routes/_staff/stock.tsx` per design.md "Task 3 step B" (`feat: stock store switch dialog, save failures, URL values and store name`); Vitest `142 passed (142)`; every gate green (`make test-web`: ui 54, admin 142, web 20); `routeTree.gen.ts` unchanged
 
 ## 4. Stock against core (the manager's e2e slot)
 Scope: `apps/admin/e2e/stock.spec.ts` (fixes only, after a recorded failure), this file's checkboxes, the lane log. Waits on: tasks 1 to 3 landed and reviewed, and the e2e slot the manager holds. The spec cannot pass before task 3: it uses the save, the dialog and the store's name.

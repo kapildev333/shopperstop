@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Badge, Button, Card, Chip, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
-import { api } from '../../api'
-import { lowStockBelow, maxQuantity, pageSize, parseQuantity, stockQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
+import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
+import { api, type ApiError } from '../../api'
+import { lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
 // A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
@@ -15,6 +15,8 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   const queryClient = useQueryClient()
   const page = search.page ?? 1
   const stock = useQuery(stockQuery(storeId, { q: search.q, lowStock: search.lowStock, page }))
+  // Store staff get no selector; their store's name is shown when it can be read, and left out when it cannot.
+  const ownStore = useQuery({ ...storeNameQuery(storeId), enabled: !stores })
   const [text, setText] = useState(search.q ?? '')
   // The field follows the URL: Back and Forward change `q` without a submit.
   const [shownQ, setShownQ] = useState(search.q)
@@ -27,6 +29,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   // Unsaved edits belong to one store, so they can never be shown for, or saved to, another.
   const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
   const [refused, setRefused] = useState(false)
+  const [switchTo, setSwitchTo] = useState<string>()
   // A store change, however it happens (selector, link, Back), drops them for good: React renders again at once with the empty draft.
   if (draft.store !== storeId) setDraft({ store: storeId, edits: {} })
   const edits = draft.edits
@@ -44,7 +47,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
       // Kept pages hold the old quantities: drop the ones not on screen and read this one again before the edits go.
       queryClient.removeQueries({ queryKey: ['admin', 'stock', sent.store], type: 'inactive' })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'stock', sent.store] })
-      // Only what was sent is saved: an edit typed since stays unsaved.
+      // Only what was sent is saved: an edit typed since, or beyond the 500 rows of one PUT, stays unsaved.
       const done = new Map(rows.map((row) => [row.productId, row.quantity]))
       setDraft((current) =>
         current.store === sent.store
@@ -54,6 +57,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
     },
   })
   const saved = save.variables?.store === storeId
+  const saveError = saved && save.error ? (save.error as Partial<ApiError>) : undefined
 
   // Filters and the store live in the URL; any change of them starts again at page 1.
   const go = (change: StockSearch) => void navigate({ search: (current) => ({ ...current, page: undefined, ...change }) })
@@ -146,18 +150,23 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   return (
     <>
       <Card className="flex flex-wrap items-end gap-4 p-4">
+        {ownStore.data && (
+          <p className="flex h-11 items-center gap-1 text-body text-ink sm:h-10">
+            Store: <span className="font-semibold">{ownStore.data}</span>
+          </p>
+        )}
         {stores && (
           <FormField label="Store">
-            <Select value={storeId} onChange={(event) => go({ store: event.target.value })}>
+            <Select value={storeId} onChange={(event) => (count > 0 ? setSwitchTo(event.target.value) : go({ store: event.target.value }))}>
               {stores.map((store) => (
                 <option key={store.id} value={store.id}>{store.name}</option>
               ))}
             </Select>
           </FormField>
         )}
-        <form role="search" aria-label="Stock" noValidate onSubmit={submitSearch} className="flex items-end gap-2">
+        <form role="search" aria-label="Search stock" noValidate onSubmit={submitSearch} className="flex items-end gap-2">
           <FormField label="Search">
-            <Input type="search" value={text} onChange={(event) => setText(event.target.value)} />
+            <Input type="search" maxLength={maxSearch} value={text} onChange={(event) => setText(event.target.value)} />
           </FormField>
           <Button type="submit" variant="secondary">Search</Button>
         </form>
@@ -178,6 +187,15 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
       </Card>
       {refused && invalid.length > 0 && (
         <ErrorBanner message={`Enter a whole number from 0 to ${maxQuantity} for: ${invalid.map((edit) => edit.name).join(', ')}.`} />
+      )}
+      {saveError && (
+        <ErrorBanner
+          message={
+            saveError.code === 'validation'
+              ? 'These changes were refused: a changed product may have been deleted. Discard the changes and try again.'
+              : 'Could not save the stock. Try again.'
+          }
+        />
       )}
       {saved && save.isSuccess && <StatusMessage tone="success">Stock saved.</StatusMessage>}
       {stock.isPending ? (
@@ -206,6 +224,21 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
           </nav>
         </>
       )}
+      <Dialog open={switchTo !== undefined} onClose={() => setSwitchTo(undefined)} title="Discard unsaved changes?">
+        <p className="mt-2 text-body text-ink">
+          Switching store discards {count === 1 ? 'the unsaved change' : `the ${count} unsaved changes`} to this store's stock.
+        </p>
+        <DialogFooter onCancel={() => setSwitchTo(undefined)}>
+          <Button
+            onClick={() => {
+              setSwitchTo(undefined)
+              go({ store: switchTo })
+            }}
+          >
+            Discard and switch
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </>
   )
 }
@@ -241,11 +274,12 @@ function Stock() {
 
 export const Route = createFileRoute('/_staff/stock')({
   // The router reads search values as JSON: `page=2` is a number, `lowStock=true` a boolean, a search of digits a number.
+  // Core answers 400 to a NUL byte or more than 100 characters in q, and to a page far beyond any list: neither is sent.
   validateSearch: (search: Record<string, unknown>): StockSearch => ({
     store: typeof search.store === 'string' ? search.store : undefined,
-    q: search.q === undefined || search.q === '' ? undefined : String(search.q),
+    q: search.q === undefined ? undefined : String(search.q).replaceAll('\0', '').slice(0, maxSearch) || undefined,
     lowStock: search.lowStock === true ? true : undefined,
-    page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? search.page : undefined,
+    page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? Math.min(search.page, maxPage) : undefined,
   }),
   component: Stock,
 })
