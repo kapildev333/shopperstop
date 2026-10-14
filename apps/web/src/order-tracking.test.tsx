@@ -1,11 +1,21 @@
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, expect, test, vi } from 'vitest'
 import { queryClient } from './api'
-import { orderKey, type Order } from './orders'
+import { keys } from './catalog'
+import { Countdown } from './order-parts'
+import { OrderPage } from './order-tracking'
+import { orderKey, type Order, type OrderResult } from './orders'
 import { setToken } from './session'
-import { order, refetchFailed, renderAt } from './test-data'
+import { order, refetchFailed, renderAt, renderInRouter, store } from './test-data'
 
 const id = '00000000-0000-4000-8000-000000000703'
+const koramangala = '00000000-0000-4000-8000-000000000401'
+
+// Only the clock is faked here, and only in the countdown tests (Testing Library's findBy and the router need setTimeout).
+afterEach(() => {
+  vi.useRealTimers()
+})
 const placed = { toStatus: 'placed' as const, actorType: 'customer' as const, createdAt: '2026-10-13T10:00:00.000Z' }
 const accepted = { toStatus: 'accepted' as const, actorType: 'staff' as const, createdAt: '2026-10-13T10:20:00.000Z' }
 
@@ -99,4 +109,120 @@ test('failed poll keeps the order', async () => {
   expect(screen.getByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
   expect(screen.getByRole('status')).toHaveTextContent('Order placed. Waiting for the store to accept it.')
   expect(screen.queryByRole('alert')).toBeNull()
+})
+
+// The clock is faked at the process boundary for these two: Date, setInterval and clearInterval only.
+function fakeClock(now: string) {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+  vi.setSystemTime(new Date(now))
+}
+
+test('countdown counts down', () => {
+  fakeClock('2026-10-13T10:03:00.000Z')
+  render(<Countdown placedAt="2026-10-13T10:00:00.000Z" promisedMinutes={10} />)
+  expect(screen.getByText('Arriving in 7 minutes')).toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(60_000)
+  })
+  expect(screen.getByText('Arriving in 6 minutes')).toBeInTheDocument()
+
+  cleanup()
+  vi.setSystemTime(new Date('2026-10-13T10:09:30.000Z'))
+  render(<Countdown placedAt="2026-10-13T10:00:00.000Z" promisedMinutes={10} />)
+  expect(screen.getByText('Arriving in 1 minute')).toBeInTheDocument()
+})
+
+test('countdown after the promise', () => {
+  fakeClock('2026-10-13T10:10:00.000Z')
+  render(<Countdown placedAt="2026-10-13T10:00:00.000Z" promisedMinutes={10} />)
+  expect(screen.getByText('Running late. We are getting your order to you.')).toBeInTheDocument()
+  expect(screen.queryByText(/Arriving in/)).toBeNull()
+
+  cleanup()
+  render(<Countdown placedAt="2026-10-13T07:10:00.000Z" promisedMinutes={10} />)
+  expect(screen.getByText('Running late. We are getting your order to you.')).toBeInTheDocument()
+  expect(screen.queryByText(/Arriving in/)).toBeNull()
+})
+
+// The control (a placed order with its store known shows the countdown) makes the absence below mean something.
+test('no countdown once finished', async () => {
+  const placedAt = new Date(Date.now() - 3 * 60_000).toISOString()
+  seed({ status: 'placed', placedAt })
+  queryClient.setQueryData(keys.store(koramangala), store())
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByText('Arriving in 7 minutes')).toBeInTheDocument()
+
+  cleanup()
+  seed({ status: 'delivered', placedAt })
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+  expect(screen.queryByText(/Arriving in|Running late/)).toBeNull()
+
+  cleanup()
+  queryClient.removeQueries({ queryKey: keys.store(koramangala) })
+  seed({ status: 'placed', placedAt })
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+  expect(screen.queryByText(/Arriving in|Running late/)).toBeNull()
+})
+
+test('cancel offered while placed or accepted', async () => {
+  for (const status of ['placed', 'accepted'] as const) {
+    seed({ status })
+    renderAt(`/orders/${id}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel order' })).toBeInTheDocument()
+    cleanup()
+  }
+
+  seed({ status: 'packing' })
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull()
+})
+
+// A send prop answers one cancel per call, in order; it records each order id asked for.
+function canceller(...answers: OrderResult[]) {
+  const asked: string[] = []
+  const send = async (orderId: string) => {
+    asked.push(orderId)
+    return answers[asked.length - 1]
+  }
+  return { send, asked }
+}
+
+test('order cancelled', async () => {
+  seed({ status: 'placed' })
+  const cancelled = order({ status: 'cancelled' })
+  const { send, asked } = canceller({ order: cancelled })
+  renderInRouter(<OrderPage id={id} send={send} />)
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+  const dialog = screen.getByRole('dialog', { name: 'Cancel this order?' })
+  expect(within(dialog).getAllByRole('button')[0]).toHaveTextContent('Keep order')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel order' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(asked).toEqual([id])
+  expect(await screen.findByText('This order was cancelled.')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Cancel order' })).toBeNull()
+})
+
+test('cancel refused', async () => {
+  seed({ status: 'placed' })
+  const { send, asked } = canceller(
+    { error: { code: 'conflict', message: 'order is packing' } },
+    { error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } },
+  )
+  renderInRouter(<OrderPage id={id} send={send} />)
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+  const dialog = screen.getByRole('dialog', { name: 'Cancel this order?' })
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel order' }))
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('This order can no longer be cancelled.')
+
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel order' }))
+  await waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent('Could not cancel the order. Try again.'))
+  expect(screen.getByRole('dialog', { name: 'Cancel this order?' })).toBe(dialog)
+  expect(asked).toEqual([id, id])
 })

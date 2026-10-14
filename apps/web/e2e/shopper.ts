@@ -84,7 +84,15 @@ export async function addAddress(request: APIRequestContext, shopper: Shopper, p
   return ((await answer.json()) as { id: string }).id
 }
 
-// The seeded demo admin's headers, for the tests that change stock. Only those tests use them.
+// Places the shopper's cart as an order, as core answers it: 201, and the order's id and number.
+export async function placeByApi(request: APIRequestContext, shopper: Shopper, addressId: string): Promise<{ id: string; number: string }> {
+  const answer = await request.post('/api/core/v1/orders', { headers: shopper.headers, data: { addressId } })
+  expect(answer.status()).toBe(201)
+  const { id, number } = (await answer.json()) as { id: string; number: string }
+  return { id, number }
+}
+
+// The seeded demo admin's headers, for the tests that change stock or move an order's status. Only those tests use them.
 export async function staffHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
   const answer = await request.post('/api/core/v1/admin/auth/sign-in', {
     data: { email: 'admin@shopperstop.local', password: 'admin12345' },
