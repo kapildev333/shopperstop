@@ -52,6 +52,29 @@ Every product `Stepper` SHALL show the product's quantity in the cart while the 
 - **WHEN** a token is held, Koramangala is the resolved store, and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza at Indiranagar
 - **THEN** its card shows the "Add Amul Taaza" button and no group "Quantity of Amul Taaza"
 
+#### Scenario: Guest taps each count
+- **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza", "Add one Amul Taaza" and "Add one Amul Taaza" are chosen one straight after the other
+- **THEN** the group "Quantity of Amul Taaza" shows 3 and `localStorage` `shopperstop:cart` holds it with quantity 3
+
+### Requirement: Customer cart quick taps
+While a customer token is held and a change to a line is still being written, that line's `Stepper` SHALL show the last quantity asked for, so every tap counts from the one before. The site SHALL send cart changes to core one at a time in the order they were made, MAY skip a change that a later one for the same line has overtaken, and SHALL end showing core's latest answer. When a write fails, the `Stepper` SHALL return to the cart's count.
+
+#### Scenario: Quick taps each count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, and "Add one Amul Taaza", "Add one Amul Taaza" and "Remove one Amul Taaza" are chosen before any answer arrives
+- **THEN** the group "Quantity of Amul Taaza" shows 2, then 3, then 2
+
+#### Scenario: Failed write returns to the cart's count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, core cannot be reached, and "Add one Amul Taaza" is chosen
+- **THEN** the group shows 2 at once and 1 again once the write has failed
+
+#### Scenario: Quick taps against core
+- **WHEN** a signed-in customer with an empty cart chooses "Add" on a product card on Home and then "Add one", "Add one" and "Remove one" on it while core's first answer is held back longer than the later ones
+- **THEN** the card shows 2, `GET /me/cart` answers that product with quantity 2, and after a reload the card still shows 2
+
+#### Scenario: Quick taps in the drawer
+- **WHEN** a token is held, the drawer is open on a cart holding 1 of Amul Taaza, and "Add one Amul Taaza" is chosen twice in the drawer before any answer arrives
+- **THEN** the drawer's group "Quantity of Amul Taaza" shows 3
+
 ### Requirement: Customer server cart
 While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and `storeId` that response answers, never the ones it sent. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the next change or reload, also when the cart is then empty.
 

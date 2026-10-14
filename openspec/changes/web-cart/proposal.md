@@ -14,7 +14,7 @@ Spec 2 §7: a customer fills a cart at the store that delivers to their pincode,
 - Store-change confirm: saving a pincode that resolves to a different store while the cart has lines opens a `Dialog` (Cancel first); confirming empties the guest cart or `DELETE /me/cart` and then stores the pincode; Cancel keeps the old pincode.
 - Playwright `e2e/cart.spec.ts` against real core and the demo seed: guest merge at sign-in, drawer on phone, server clamp, store change; axe on every page, sheet and dialog visited.
 
-Area: web. Capabilities touched: `web-app` (ADDED requirements only). Out of scope: the `/checkout` page and orders (web-P2-L4; this change only links to `/checkout`), cross-tab cart sync, optimistic server updates, holding stock, a cart route or page, Figma changes (the Customer web frames for the cart drawer on phone and desktop with empty, loading and error exist).
+Area: web. Capabilities touched: `web-app` (ADDED requirements only). Out of scope: the `/checkout` page and orders (web-P2-L4; this change only links to `/checkout`), cross-tab cart sync, optimistic totals (a Stepper shows what was asked at once; lines and totals move when core answers), holding stock, a cart route or page, Figma changes (the Customer web frames for the cart drawer on phone and desktop with empty, loading and error exist).
 
 ## Capabilities
 
@@ -22,7 +22,7 @@ Area: web. Capabilities touched: `web-app` (ADDED requirements only). Out of sco
 None.
 
 ### Modified Capabilities
-- `web-app`: ADDED "Customer guest cart lines", "Customer guest cart storage", "Customer cart totals", "Customer cart behind every Stepper", "Customer server cart", "Customer cart merge at sign-in", "Customer cart drawer", "Customer cart drawer states", "Customer cart minimum order", "Customer cart bar and header button", "Customer store change confirm", "Customer store change outcome", "Customer cart replaced notice" (13 requirements, 32 scenarios; names distinct from the 13 on main and web-P2-L1's 10). Reconciled 2026-10-13 with the merged cart contract (core-P2-L4, #106): three scenarios added, four requirement texts tightened, none removed; then the replaced notice (D27): one requirement, four scenarios.
+- `web-app`: ADDED "Customer guest cart lines", "Customer guest cart storage", "Customer cart totals", "Customer cart behind every Stepper", "Customer server cart", "Customer cart merge at sign-in", "Customer cart drawer", "Customer cart drawer states", "Customer cart minimum order", "Customer cart bar and header button", "Customer store change confirm", "Customer store change outcome", "Customer cart replaced notice", "Customer cart quick taps" (14 requirements, 37 scenarios; names distinct from the 13 on main and web-P2-L1's 10). Reconciled 2026-10-13 with the merged cart contract (core-P2-L4, #106): three scenarios added, four requirement texts tightened, none removed; then the replaced notice (D27): one requirement, four scenarios; then quick taps (task 2 review): one requirement, five scenarios.
 
 ## Impact
 - Files: `apps/web/**` (listed in design.md), this change folder. No new dependency.
