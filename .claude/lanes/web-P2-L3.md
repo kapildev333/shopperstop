@@ -22,3 +22,8 @@ Task 1 landed and reviewed. Artifacts reconciled 2026-10-13 with the merged cart
 - to web-P2-L1 (task 2): write `src/product-card.test.tsx` › "add shows the count" with a resolved store (`setPincode('560034')` and `queryClient.setQueryData(keys.serviceability('560034'), store())`); the real `useCartQuantity` does nothing without one. If it lands without, this lane's task 2 adds the two lines (in its scope).
 ## Blockers
 - Task 2 waits on web-P2-L1 task 2 on main; task 3 on web-P2-L1 task 4 on main.
+- 2026-10-13, task 2 (worker) stopped before its feat commit. Red committed as `1b23860` (tick 2.1; pin test green on arrival). Implementation written but uncommitted in the worktree: `cart.ts` body, `guest-cart.ts` type fields, `auth.ts` merge after `startSession`. Typecheck and lint green. Verified by reading only: the `replacedStoreId` lines (task 3's e2e proves them); e2e not run.
+## Requests
+- to web-P2-L1 (or the orchestrator, whoever owns `src/test-data.ts`): `renderInRouter` must wrap its root component in `QueryClientProvider client={queryClient}` (from `./api`). The real `useCart` runs `useQuery`, and every card test that renders through `renderInRouter` fails with "No QueryClient set" without it. Checked by a temporary experiment (reverted): with that one wrap the full suite is 50/50 green; `card links and prices` needs nothing else.
+## Blockers
+- web-P2-L3 task 2 is blocked on the request above (a file outside this lane's scope: `src/test-data.ts`). The worker did not edit it. The feat commit waits on it.
