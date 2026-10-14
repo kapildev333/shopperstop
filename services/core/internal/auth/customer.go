@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -265,4 +266,14 @@ func (a *Auth) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone})
+}
+
+// CustomerByID answers the customer with this id, for placing an order; an
+// unknown id is 404 not_found.
+func CustomerByID(ctx context.Context, d db.DBTX, id string) (Customer, error) {
+	row, err := db.New(d).CustomerByID(ctx, id)
+	if err != nil {
+		return Customer{}, pg.Map(err)
+	}
+	return Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone}, nil
 }
