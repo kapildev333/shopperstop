@@ -1,5 +1,6 @@
-import { useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
 import { createLink } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { ShoppingCart } from 'lucide-react'
 import {
   Button,
@@ -14,6 +15,7 @@ import {
   cn,
   formatInr,
 } from '@shopperstop/ui'
+import { api } from './api'
 import { setLine, useAsked, useCart } from './cart'
 import { itemCount, maxQuantity, type CartLine, type CartView } from './guest-cart'
 import { ImageTile } from './product-card'
@@ -49,6 +51,12 @@ const countLabel = (count: number) => (count === 1 ? '1 item' : `${count} items`
 
 export function CartSheet() {
   const isOpen = useCartOpen()
+  const { view } = useCart()
+  // The cached answer object, not the flag: a new replaced answer opens the drawer once; the same answer does not reopen it after Close.
+  const replacedAnswer = view?.replaced ? view : undefined
+  useEffect(() => {
+    if (replacedAnswer) openCart()
+  }, [replacedAnswer])
   return (
     <Sheet open={isOpen} onClose={closeCart} title="Your cart">
       <div className="flex flex-col gap-4">
@@ -65,6 +73,27 @@ function CartBody() {
   if (!view && isError) return <ErrorBanner message="Could not load your cart." onRetry={refetch} />
   if (!view) return <Skeleton variant="list" count={3} />
   return <CartContent view={view} signedIn={signedIn} />
+}
+
+export const storeKey = (id: string) => ['store', id] as const
+
+// Names the store the cart was at, from core's public store read; "another store" while that is unknown, pending or failed.
+export function ReplacedNotice({ storeId }: { storeId?: string }) {
+  const { data: store } = useQuery({
+    queryKey: storeKey(storeId ?? ''),
+    enabled: !!storeId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id: storeId ?? '' } } })
+      if (error) throw error
+      return data
+    },
+  })
+  return (
+    <StatusMessage tone="warning">
+      Your cart from {store?.name ?? 'another store'} was replaced. A cart holds products from one store.
+    </StatusMessage>
+  )
 }
 
 function CartContent({ view, signedIn }: { view: CartView; signedIn: boolean }) {
@@ -92,6 +121,7 @@ function CartContent({ view, signedIn }: { view: CartView; signedIn: boolean }) 
   const belowMinimum = subtotalCents < minOrderCents
   return (
     <>
+      {view.replaced && <ReplacedNotice storeId={view.replacedStoreId} />}
       {notice}
       <ul className="flex flex-col divide-y divide-line">
         {view.items.map((line) => (
@@ -184,11 +214,12 @@ export function CartBar() {
   if (!view || itemCount(view) === 0) return null
   return (
     <>
-      <div aria-hidden className="h-24 sm:hidden" />
+      <div aria-hidden className={view.replaced ? 'h-40 sm:hidden' : 'h-24 sm:hidden'} />
       <aside
         aria-label="Cart summary"
         className="fixed inset-x-0 bottom-0 z-40 flex flex-col gap-2 bg-surface px-4 py-3 shadow-sheet sm:hidden"
       >
+        {view.replaced && <ReplacedNotice storeId={view.replacedStoreId} />}
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-body font-semibold text-ink">{countLabel(itemCount(view))}</span>

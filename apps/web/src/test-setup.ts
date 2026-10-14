@@ -4,6 +4,7 @@ import { afterEach } from 'vitest'
 import { queryClient } from './api'
 import { closeCart } from './cart-drawer'
 import { setPincode } from './pincode'
+import { cancelStoreChange } from './store-change'
 import { clearGuestCart } from './guest-cart'
 import { setToken } from './session'
 
@@ -12,6 +13,7 @@ afterEach(() => {
   setToken(undefined)
   setPincode(undefined)
   closeCart()
+  cancelStoreChange()
   clearGuestCart()
   queryClient.clear()
 })

@@ -4,6 +4,7 @@ import { ButtonLink, Card, EmptyState, PageHeader } from '@shopperstop/ui'
 import { queryClient } from '../api'
 import { CartBar, CartButton, CartSheet } from '../cart-drawer'
 import { AccountLink } from '../account-link'
+import { StoreChangeDialog } from '../store-change'
 import { PincodeButton, PincodeSheet } from '../pincode-sheet'
 import { SearchForm } from '../search-form'
 
@@ -29,6 +30,7 @@ function RootLayout() {
       <CartBar />
       <CartSheet />
       <PincodeSheet />
+      <StoreChangeDialog />
     </QueryClientProvider>
   )
 }
