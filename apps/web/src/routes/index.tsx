@@ -26,8 +26,13 @@ function HomeContent({ storeId }: { storeId: string }) {
 
 function Categories({ storeId }: { storeId: string }) {
   const { data, error, refetch } = useCategories(storeId)
-  if (error) return <ErrorBanner message="Could not load categories." onRetry={() => refetch()} />
-  if (!data) return <Skeleton variant="grid" count={6} />
+  if (data === undefined) {
+    return error ? (
+      <ErrorBanner message="Could not load categories." onRetry={() => refetch()} />
+    ) : (
+      <Skeleton variant="grid" count={6} />
+    )
+  }
   return (
     <>
       <nav aria-label="Categories" className="overflow-x-auto">
@@ -67,10 +72,10 @@ function Picked({ storeId }: { storeId: string }) {
       <h2 id="picked-for-you" className="text-h2 text-ink">
         Picked for you
       </h2>
-      {error ? (
-        <ErrorBanner message="Could not load products." onRetry={() => refetch()} />
-      ) : data ? (
+      {data ? (
         <ProductGrid products={data} />
+      ) : error ? (
+        <ErrorBanner message="Could not load products." onRetry={() => refetch()} />
       ) : (
         <Skeleton variant="grid" count={12} />
       )}

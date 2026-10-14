@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { keys } from './catalog'
 import { setPincode } from './pincode'
-import { product, renderAt, store } from './test-data'
+import { product, refetchFailed, renderAt, seedStale, store } from './test-data'
 
 function seedStore() {
   setPincode('560034')
@@ -83,4 +83,29 @@ test('unknown product', async () => {
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Product not found' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
+})
+
+test('failed refetch keeps the product page', async () => {
+  seedStore()
+  seedStale(keys.product(store().id, 'amul-taaza'), product({ name: 'Amul Taaza' }))
+  renderAt('/p/amul-taaza')
+  await refetchFailed(keys.product(store().id, 'amul-taaza'))
+  expect(screen.getByRole('heading', { level: 1, name: 'Amul Taaza' })).toBeInTheDocument()
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('failed refetch keeps product not found', async () => {
+  seedStore()
+  seedStale(keys.product(store().id, 'no-such-thing'), null)
+  renderAt('/p/no-such-thing')
+  await refetchFailed(keys.product(store().id, 'no-such-thing'))
+  expect(screen.getByRole('heading', { level: 1, name: 'Product not found' })).toBeInTheDocument()
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('product alerts with nothing held', async () => {
+  seedStore()
+  renderAt('/p/amul-taaza')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this product.')
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
 })

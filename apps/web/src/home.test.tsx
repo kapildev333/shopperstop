@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { keys } from './catalog'
 import { setPincode } from './pincode'
-import { category, product, renderAt, store } from './test-data'
+import { category, product, refetchFailed, renderAt, seedStale, store } from './test-data'
 
 test('home lists categories and picks', async () => {
   setPincode('560034')
@@ -52,4 +52,28 @@ test('home lists categories and picks', async () => {
     'Product 13 500 ml',
     'Product 14 500 ml',
   ])
+})
+
+test('failed refetch keeps home', async () => {
+  setPincode('560034')
+  queryClient.setQueryData(keys.serviceability('560034'), store())
+  seedStale(keys.categories(store().id), [
+    category({ name: 'Snacks', slug: 'snacks' }),
+  ])
+  seedStale(keys.picked(store().id), [product({ name: 'Amul Taaza' })])
+  renderAt('/')
+  await refetchFailed(keys.categories(store().id))
+  await refetchFailed(keys.picked(store().id))
+  expect(screen.getByRole('navigation', { name: 'Categories' })).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Picked for you' })).toHaveTextContent('Amul Taaza')
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('home alerts with nothing held', async () => {
+  setPincode('560034')
+  queryClient.setQueryData(keys.serviceability('560034'), store())
+  renderAt('/')
+  await screen.findByText('Could not load categories.')
+  await screen.findByText('Could not load products.')
+  expect(screen.getAllByRole('alert')).toHaveLength(2)
 })
