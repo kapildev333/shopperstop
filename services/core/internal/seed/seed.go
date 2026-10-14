@@ -154,5 +154,71 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		cross join (select id, row_number() over (order by id) as n from products) p`); err != nil {
 		return fmt.Errorf("insert demo stock: %w", err)
 	}
+	// orders (core-P2-L5, design Decision 15): three demo orders of the demo
+	// customer at Koramangala, their items, totals and events.
+	if _, err := tx.Exec(ctx, `
+-- 1. orders ($1 customer ...0201, $2 store ...0401); totals filled by statement 3
+insert into orders (id, number, customer_id, store_id, status, customer_name, customer_phone,
+                    address_label, address_line1, address_pincode,
+                    subtotal_cents, delivery_fee_cents, total_cents, placed_at, delivered_at, cancelled_at, cancel_reason)
+values
+  ('00000000-0000-4000-8000-000000000701', 'SS-DEMOAAAB', $1, $2, 'delivered', 'Demo Customer', '+919800000000',
+   'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '2 days', now() - interval '2 days' + interval '11 minutes', null, ''),
+  ('00000000-0000-4000-8000-000000000702', 'SS-DEMOAAAC', $1, $2, 'cancelled', 'Demo Customer', '+919800000000',
+   'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '1 day', null, now() - interval '1 day' + interval '2 minutes', 'Ordered by mistake'),
+  ('00000000-0000-4000-8000-000000000703', 'SS-DEMOAAAD', $1, $2, 'placed', 'Demo Customer', '+919800000000',
+   'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '10 minutes', null, null, '');
+`, customerID, storeKoramangala); err != nil {
+		return fmt.Errorf("insert demo orders: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+-- 2. items, snapshots from the demo products
+insert into order_items (order_id, product_id, name, unit_label, image_url, price_cents, mrp_cents, quantity)
+select l.order_id::uuid, p.id, p.name, p.unit_label,
+       case when p.image_key = '' then '' else '/api/core/v1/files/' || p.image_key end,
+       p.price_cents, p.mrp_cents, l.quantity
+from (values
+  ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000601', 2),
+  ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000602', 1),
+  ('00000000-0000-4000-8000-000000000702', '00000000-0000-4000-8000-000000000603', 1),
+  ('00000000-0000-4000-8000-000000000703', '00000000-0000-4000-8000-000000000601', 1),
+  ('00000000-0000-4000-8000-000000000703', '00000000-0000-4000-8000-000000000604', 3)
+) as l (order_id, product_id, quantity)
+join products p on p.id = l.product_id::uuid;
+`); err != nil {
+		return fmt.Errorf("insert demo order items: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+-- 3. totals from the items and the store's fee rule
+update orders o
+set subtotal_cents = t.subtotal,
+    delivery_fee_cents = case when t.subtotal >= s.free_delivery_above_cents then 0 else s.delivery_fee_cents end,
+    total_cents = t.subtotal + case when t.subtotal >= s.free_delivery_above_cents then 0 else s.delivery_fee_cents end
+from (select order_id, sum(price_cents * quantity)::bigint as subtotal from order_items group by order_id) t, stores s
+where t.order_id = o.id and s.id = o.store_id and o.number like 'SS-DEMO%';
+`); err != nil {
+		return fmt.Errorf("set demo order totals: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+-- 4. events ($1 the Koramangala store staff ...0102 as the staff actor)
+insert into order_events (order_id, from_status, to_status, actor_type, actor_id, note, created_at)
+select o.id, e.from_status::order_status, e.to_status::order_status, e.actor_type,
+       case e.actor_type when 'customer' then o.customer_id when 'staff' then $1::uuid end,
+       e.note, o.placed_at + e.after
+from (values
+  ('00000000-0000-4000-8000-000000000701', null, 'placed', 'customer', '', interval '0'),
+  ('00000000-0000-4000-8000-000000000701', 'placed', 'accepted', 'staff', '', interval '1 minute'),
+  ('00000000-0000-4000-8000-000000000701', 'accepted', 'packing', 'staff', '', interval '2 minutes'),
+  ('00000000-0000-4000-8000-000000000701', 'packing', 'ready', 'staff', '', interval '5 minutes'),
+  ('00000000-0000-4000-8000-000000000701', 'ready', 'out_for_delivery', 'staff', '', interval '6 minutes'),
+  ('00000000-0000-4000-8000-000000000701', 'out_for_delivery', 'delivered', 'staff', '', interval '11 minutes'),
+  ('00000000-0000-4000-8000-000000000702', null, 'placed', 'customer', '', interval '0'),
+  ('00000000-0000-4000-8000-000000000702', 'placed', 'cancelled', 'customer', 'Ordered by mistake', interval '2 minutes'),
+  ('00000000-0000-4000-8000-000000000703', null, 'placed', 'customer', '', interval '0')
+) as e (order_id, from_status, to_status, actor_type, note, after)
+join orders o on o.id = e.order_id::uuid;
+`, staffKoramangala); err != nil {
+		return fmt.Errorf("insert demo order events: %w", err)
+	}
 	return nil
 }
