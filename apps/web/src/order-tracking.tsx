@@ -1,7 +1,10 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
+  Button,
   Card,
+  Dialog,
+  DialogFooter,
   EmptyState,
   ErrorBanner,
   PageHeader,
@@ -9,12 +12,15 @@ import {
   StatusMessage,
   buttonClass,
 } from '@shopperstop/ui'
+import { useStore, type Store } from './catalog'
 import { Totals } from './cart-drawer'
-import { formatWhen, statusMessage, statusName, useOrder, type Order } from './orders'
-import { LineRow } from './order-parts'
+import { cancelOrder, canCancel, formatWhen, postCancel, statusMessage, statusName, underWay, useOrder, type Order } from './orders'
+import { Countdown, LineRow } from './order-parts'
 
-export function OrderPage({ id }: { id: string }) {
+export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof postCancel }) {
   const { data: order, isError, refetch } = useOrder(id)
+  // The store's promised minutes drive the countdown; read before the early returns.
+  const store = useStore(order?.storeId)
 
   // A view checks its data before its error: a failed repeat keeps the order on screen.
   if (order === undefined) {
@@ -41,7 +47,7 @@ export function OrderPage({ id }: { id: string }) {
       </Frame>
     )
   }
-  return <OrderContent order={order} />
+  return <OrderContent id={id} order={order} store={store.data} send={send} />
 }
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
@@ -53,7 +59,26 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function OrderContent({ order }: { order: Order }) {
+function OrderContent({ id, order, store, send }: { id: string; order: Order; store?: Store; send: typeof postCancel }) {
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [cancelError, setCancelError] = useState<string>()
+
+  const open = () => {
+    setCancelError(undefined)
+    setConfirming(true)
+  }
+  const close = () => setConfirming(false)
+
+  // An answered cancel closes the dialog; a refusal keeps it open with the reason.
+  async function confirm() {
+    setBusy(true)
+    const result = await cancelOrder(id, send)
+    setBusy(false)
+    if (result.order) setConfirming(false)
+    else setCancelError(result.error?.code === 'conflict' ? 'This order can no longer be cancelled.' : 'Could not cancel the order. Try again.')
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -65,9 +90,17 @@ function OrderContent({ order }: { order: Order }) {
           </Link>
         }
       />
-      {/* The one status message: it stays at this place, so a change is announced in place. */}
-      <Card className="p-4 sm:p-6">
+      {/* The one status message: it stays at this place, so a change is announced in place. The countdown is beside it, not in it. */}
+      <Card className="flex flex-col gap-4 p-4 sm:p-6">
         <StatusMessage tone={order.status === 'delivered' ? 'success' : 'neutral'}>{statusMessage(order)}</StatusMessage>
+        {underWay(order.status) && store && <Countdown placedAt={order.placedAt} promisedMinutes={store.promisedMinutes} />}
+        {canCancel(order.status) && (
+          <div>
+            <Button variant="ghost-danger" onClick={open}>
+              Cancel order
+            </Button>
+          </div>
+        )}
       </Card>
       <History order={order} />
       <Section title="Items">
@@ -97,6 +130,18 @@ function OrderContent({ order }: { order: Order }) {
           <p className="text-body text-ink-muted tabular-nums">{order.address.pincode}</p>
         </div>
       </Section>
+      {/* Outside the cancel condition, so it stays open when a refusal re-reads the order. */}
+      <Dialog open={confirming} onClose={close} title="Cancel this order?">
+        <p className="text-body text-ink">Order {order.number} will be cancelled and nothing will be delivered.</p>
+        {cancelError && <ErrorBanner className="mt-4" message={cancelError} />}
+        <DialogFooter onCancel={close} cancelLabel="Keep order">
+          {canCancel(order.status) && (
+            <Button loading={busy} onClick={() => void confirm()}>
+              Cancel order
+            </Button>
+          )}
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }

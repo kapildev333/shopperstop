@@ -51,10 +51,17 @@ export function formatWhen(iso: string): string {
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
 }
 
+// Every 10 seconds while under way; off for a finished, an unknown or an unanswered order.
+export function pollInterval(order: Order | null | undefined): number | false {
+  return order && underWay(order.status) ? 10_000 : false
+}
+
 // Core answers 404 for an order that is not the customer's, or not one: null, the "Order not found" state, not an error.
+// The poll is off in the background (TanStack's default): one read when the tab comes back.
 export function orderOptions(token: string, id: string) {
   return queryOptions({
     queryKey: orderKey(token, id),
+    refetchInterval: (query) => pollInterval(query.state.data),
     queryFn: async (): Promise<Order | null> => {
       const { data, error, response } = await api.GET('/orders/{id}', { params: { path: { id } } })
       if (response.status === 404) return null
@@ -62,6 +69,14 @@ export function orderOptions(token: string, id: string) {
       return data
     },
   })
+}
+
+// The promise is placedAt plus the store's promised minutes; `now` is passed in, so the sentence is a function of its inputs.
+export function arrival(placedAt: string, promisedMinutes: number, now: number): string {
+  const left = Date.parse(placedAt) + promisedMinutes * 60_000 - now
+  if (left <= 0) return 'Running late. We are getting your order to you.'
+  const minutes = Math.ceil(left / 60_000)
+  return minutes === 1 ? 'Arriving in 1 minute' : `Arriving in ${minutes} minutes`
 }
 
 // No staleTime: every visit reads the order from core.
@@ -124,4 +139,31 @@ export function placeOrder(addressId: string, send = postOrder): Promise<OrderRe
     }
     return result
   })
+}
+
+// One cancel. A cancel is done only when its answer holds the order (an ok answer with no body is internal).
+export async function postCancel(id: string): Promise<OrderResult> {
+  const answered: { order?: Order } = {}
+  const error = await call(async () => {
+    // The body is {}: no reason. An empty body is refused by core.
+    const result = await api.POST('/orders/{id}/cancel', { params: { path: { id } }, body: {} })
+    answered.order = result.data
+    return result
+  })
+  if (error) return { error }
+  if (!answered.order) return { error: { code: 'internal', message: 'Core answered without an order.' } }
+  return { order: answered.order }
+}
+
+// The answered order is cached at once; a refusal reads the order again, so a 409 shows what core now holds.
+export async function cancelOrder(id: string, send = postCancel): Promise<OrderResult> {
+  const token = getToken() ?? ''
+  const result = await send(id)
+  if (result.order) {
+    queryClient.setQueryData(orderKey(token, id), result.order)
+    void queryClient.invalidateQueries({ queryKey: ordersKey(token) })
+  } else if (result.error?.code === 'conflict') {
+    await queryClient.invalidateQueries({ queryKey: orderKey(token, id) })
+  }
+  return result
 }

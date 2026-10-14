@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Badge, Price } from '@shopperstop/ui'
-import { statusName, statusVariant, type OrderStatus } from './orders'
+import { arrival, statusName, statusVariant, type OrderStatus } from './orders'
 import { ImageTile } from './product-card'
 
 // One read-only line: picture, name, unit, quantity and its total. Cart lines and order items both fit it;
@@ -39,4 +39,14 @@ export function LineRow({
 // The status as text in a badge: the colour never carries it alone.
 export function StatusBadge({ status }: { status: OrderStatus }) {
   return <Badge variant={statusVariant(status)}>{statusName(status)}</Badge>
+}
+
+// The minutes left, counted from Date.now() once a second. Outside the status message, so a minute changing is not announced.
+export function Countdown({ placedAt, promisedMinutes }: { placedAt: string; promisedMinutes: number }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <p className="text-h3 text-ink">{arrival(placedAt, promisedMinutes, now)}</p>
 }

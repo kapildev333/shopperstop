@@ -73,8 +73,8 @@ e2e (`e2e/orders.spec.ts`; ask the manager for the slot, never start it unasked)
 - "cancel against core": open the own `placed` order, "Cancel order" in `main`, axe with the dialog open, "Cancel order" in the dialog, then the status "This order was cancelled.", `GET /orders/{id}` by API answers `cancelled`, no "Cancel order" button, axe.
 - "checkout and orders on a phone" (`test.use({ viewport: { width: 390, height: 844 } })` in a `describe`): a fresh shopper with an address and a cart opens `/checkout`; the order is then placed with `placeByApi`; then `/orders`; then the order's page. On each page `document.documentElement.scrollWidth <= window.innerWidth`. Boxes with `boundingBox()` and a 0.5 px tolerance, as `e2e/phone-layout.spec.ts` does: a control lies inside its card's content area, which is the card's box inset by the card's own computed left and right padding (`card.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft))`), and inside the card vertically. Cards: `getByRole('region', { name, exact: true })` on `/checkout` and the order page, the `listitem` holding the link on `/orders`. Controls: "Deliver to <label>", "Add address", "Edit cart", "Place order (COD)"; "View order <number>"; "Cancel order"; each at least 44 px tall. `toHaveCSS('font-variant-numeric', 'tabular-nums')` on the order heading and on the "Total" amount. axe on each page.
 
-- [ ] 4.1 Tests committed red (`test: order poll, countdown and cancel`)
-- [ ] 4.2 Poll, countdown, cancel (`feat: live order tracking with countdown and cancel`); all gates green; e2e green in the manager's slot (every spec), axe clean
+- [x] 4.1 Tests committed red (`test: order poll, countdown and cancel`)
+- [x] 4.2 Poll, countdown, cancel (`feat: live order tracking with countdown and cancel`); all gates green; e2e green in the manager's slot (every spec), axe clean
 
 ## Workflow follow-up
 
