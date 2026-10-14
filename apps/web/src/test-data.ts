@@ -15,8 +15,21 @@ import { routeTree } from './routeTree.gen'
 export type Store = components['schemas']['Store']
 export type StoreProduct = components['schemas']['StoreProduct']
 export type CategoryNode = components['schemas']['CategoryNode']
+export type Address = components['schemas']['Address']
 
 // Test-only: never imported by app code.
+export function address(overrides: Partial<Address> = {}): Address {
+  return {
+    id: '00000000-0000-4000-8000-000000000301',
+    label: 'Home',
+    line1: '12 80 Feet Rd, Koramangala',
+    pincode: '560034',
+    isDefault: true,
+    ...overrides,
+  }
+}
+
+
 export function store(overrides: Partial<Store> = {}): Store {
   return {
     id: '00000000-0000-4000-8000-000000000401',
