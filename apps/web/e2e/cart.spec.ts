@@ -22,7 +22,7 @@ async function twoPicks(request: APIRequestContext): Promise<[string, string]> {
 }
 
 function quantityOf(page: Page, name: string) {
-  return page.getByRole('group', { name: `Quantity of ${name}` })
+  return page.getByRole('group', { name: `Quantity of ${name}`, exact: true })
 }
 
 test('guest cart merges against core', async ({ page, request }) => {
@@ -35,10 +35,10 @@ test('guest cart merges against core', async ({ page, request }) => {
   expect(registered.ok()).toBeTruthy()
 
   await page.goto('/')
-  await page.getByRole('button', { name: `Add ${first}` }).click()
-  await page.getByRole('button', { name: `Add one ${first}` }).click()
+  await page.getByRole('button', { name: `Add ${first}`, exact: true }).click()
+  await page.getByRole('button', { name: `Add one ${first}`, exact: true }).click()
   await expect(quantityOf(page, first)).toHaveText('2')
-  await page.getByRole('button', { name: `Add ${second}` }).click()
+  await page.getByRole('button', { name: `Add ${second}`, exact: true }).click()
   await expect(quantityOf(page, second)).toHaveText('1')
 
   await page.goto('/sign-in')
