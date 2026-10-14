@@ -5,7 +5,7 @@
 - Worktree: `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/admin-P2-L5` (work only here, never the root checkout)
 - Branch: `lane/admin-P2-L5-admin-orders-dashboard` (commit here; never push)
 - OpenSpec change: `admin-orders-dashboard`, task 1 in `openspec/changes/admin-orders-dashboard/tasks.md`
-- Starts after: the rebase onto main with admin-stock merged (the manager does it)
+- Starts after: the rebase onto main with admin-stock and admin-keep-data-on-refetch-error (admin-P2-L7) merged (the manager does it)
 
 ## Read first
 1. `openspec/changes/admin-orders-dashboard/tasks.md`, the header and section 1.
@@ -45,7 +45,7 @@
 - "the board asks core again every 10 seconds and shows an order where it now stands"
 - "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"
 - "a hidden tab is not polled, and showing it again asks core at once"
-- "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice"
+- "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"
 - "the time since placed moves on without core being asked"
 - "the board shows a skeleton while loading"
 - "a board that cannot be loaded offers a retry that reloads"
@@ -59,17 +59,17 @@
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Check the base: `ls apps/admin/src/stock.ts` exists and `grep -c storeNameQuery apps/admin/src/stock.ts` prints at least 1. If not, the branch is not rebased onto admin-stock: stop and report. Run `npm run test --workspace apps/admin -- --run` and write the summary in your log as the base: expected `160 passed (160)`. If it is another number, go on, and read every count below as moved by the difference.
+0. Check the base: `ls apps/admin/src/stock.ts` exists and `grep -c storeNameQuery apps/admin/src/stock.ts` prints at least 1. Also `ls apps/admin/src/refetch-notice.tsx` exists (admin-P2-L7). If either is missing, the branch is not rebased onto both: stop and report. Run `npm run test --workspace apps/admin -- --run` and write the summary in your log as the base: expected `180 passed (180)`. If it is another number, go on, and read every count below as moved by the difference.
 1. Create `e2e/orders.spec.ts` from design.md. Append the block for `e2e/catalog.spec.ts` at the end of that file, after one empty line; change nothing above it. Run `npm run lint --workspace apps/admin` and `npm run typecheck --workspace apps/admin`: both pass. Do not run the specs. Commit: `test: orders, dashboard and the ordered product against core`. Tick 1.1.
 2. Create `src/orders-fake.ts`, `src/orders-board.test.tsx` and `src/orders-rules.test.ts` from design.md. Run the admin tests, see the fifteen fail and `orders-rules.test.ts` fail to load, record the summary and the names. `npm run typecheck --workspace apps/admin` fails at this point (two files import `./orders`, which does not exist yet): expected for the red commit. Commit: `test: orders board`. Tick 1.2.
 3. Create `src/orders.ts` and `src/order-board.tsx` and replace `src/routes/_staff/orders.tsx` whole, from design.md task 1.
 4. Run the gates. Commit the three files and the 1.3 tick: `feat: orders board with store, polling and new-order announcements`.
 
-## Expected counts (measured by the team lead in the spike; base 160 = the admin suite with admin-stock at d106b53)
-- Base: `Tests  160 passed (160)`, 16 files.
-- After step 2: `Test Files  2 failed | 16 passed (18)`, `Tests  15 failed | 160 passed (175)`: the fifteen of `orders-board.test.tsx`; `orders-rules.test.ts` is the second failed file, with `Error: Failed to resolve import "./orders"` and no test counted.
-- After step 3: `Tests  184 passed (184)`, 18 files.
-If the base differs from 160, every number above moves by the same difference; anything else that differs is a stop.
+## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
+- Base: `Tests  180 passed (180)`, 17 files.
+- After step 2: `Test Files  2 failed | 17 passed (19)`, `Tests  15 failed | 180 passed (195)`: the fifteen of `orders-board.test.tsx`; `orders-rules.test.ts` is the second failed file, with `Error: Failed to resolve import "./orders"` and no test counted.
+- After step 3: `Tests  204 passed (204)`, 19 files.
+If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task
 - In this task a card has no button at all: the next-status button is task 2 and the number becomes a button in task 3. Do not add them.
@@ -77,6 +77,8 @@ If the base differs from 160, every number above moves by the same difference; a
 - The route has no tabs in this task and reads only `store` from the URL; task 4 replaces it.
 - Five tests start with `useFakeClock()` (fake timers with `shouldAdvanceTime: true`); the `afterEach` at the top of the file restores real timers. Do not move fake timers into `beforeEach` or into other tests, and do not add `vi.runAllTimers`.
 - The announcement is worked out during render under the `heard?.from !== board.data` check, not in a `useEffect`: keep it so (lint forbids state set in an effect).
+- The page shows no "Could not refresh" notice of its own: `RefetchNotice` at the root of the app (admin-P2-L7, already on the branch) shows it, and the failed-poll test asserts that one. Do not add a notice to the board.
+- `refreshFailed` in `src/orders-fake.ts` waits twice on purpose (the query's state, then `notifyManager.schedule`): keep both waits.
 - `src/shell.test.tsx` and `src/sign-in.test.tsx` are untouched and stay green.
 - The e2e files are written, never run: no `npx playwright`, no `make e2e`.
 

@@ -5,7 +5,7 @@
 - Starts after: tasks 1 to 5 landed and reviewed.
 
 ## What
-Run `make e2e` from the worktree root. Expected: admin **base + 3 passed** (13 with admin-stock's 10: `auth` 2, `smoke` 2, `stores` 2, `catalog` 3, `stock` 2, `orders` 2); web unchanged. The three new tests were committed in task 1, before the pages:
+Run `make e2e` from the worktree root. Expected: admin **base + 3 passed** (13 if nothing else landed since admin-stock: `auth` 2, `smoke` 2, `stores` 2, `catalog` 3, `stock` 2, `orders` 2); web unchanged. The three new tests were committed in task 1, before the pages:
 - `e2e/orders.spec.ts` › "store staff take the placed order to delivered and find it in History"
 - `e2e/orders.spec.ts` › "an admin sees the dashboard cards and opens a store's orders from one"
 - `e2e/catalog.spec.ts` › "an ordered product cannot be deleted and offers to be deactivated instead"

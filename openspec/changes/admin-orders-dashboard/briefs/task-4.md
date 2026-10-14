@@ -36,7 +36,7 @@
 - "?%s in the URL is read as %s" (5 runs)
 - "a page in the URL beyond what core accepts is cut to one it does, then to the last page"
 - "a history row opens the order without a cancel, read once and not polled"
-- "a failed refresh keeps the history list and says it could not refresh; the next good answer clears the notice"
+- "a failed refresh keeps the history list; the next good answer shows what core then holds"
 - "the history shows a skeleton while loading, and a list that cannot be loaded offers a retry that reloads"
 - "a store with no cancelled orders shows the empty state"
 - "choosing a store on the History tab keeps the tab, starts at page 1 and never shows the other store's rows"
@@ -44,15 +44,15 @@
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `205 passed (205)` (base + 45).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `225 passed (225)` (base + 45).
 1. Create `src/orders-history.test.tsx` from design.md. Run the admin tests, see the sixteen fail, record the summary and the names. Commit: `test: orders history tab`. Tick 4.1.
 2. Create `src/order-history.tsx`; replace `src/orders.ts` and `src/routes/_staff/orders.tsx` whole with their task-4 blocks from design.md.
 3. Run the gates. Commit the three files and the 4.2 tick: `feat: orders history tab with status filter and pager`.
 
-## Expected counts (measured by the team lead in the spike; base 160 = the admin suite with admin-stock at d106b53)
-- After step 1: `Tests  16 failed | 205 passed (221)`, all sixteen in `orders-history.test.tsx` (twelve tests, one of them five runs).
-- After step 2: `Tests  221 passed (221)`, 21 files.
-If the base differs from 160, every number above moves by the same difference; anything else that differs is a stop.
+## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
+- After step 1: `Tests  16 failed | 225 passed (241)`, all sixteen in `orders-history.test.tsx` (twelve tests, one of them five runs).
+- After step 2: `Tests  241 passed (241)`, 22 files.
+If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task
 - The two tab links keep `activeOptions={{ exact: true }}` and their explicit `aria-current`; the `TabNav` keeps `className="bg-surface px-4"` (without it axe fails on contrast in task 6).
@@ -61,6 +61,8 @@ If the base differs from 160, every number above moves by the same difference; a
 - The store selector navigates with `{ store, tab }` only: `status` and `page` are dropped on purpose.
 - `go` is wrapped in `useCallback`: the history's effect depends on it.
 - `src/orders.ts` of this task is its last version.
+
+- No "Could not refresh" notice in the history: the root's `RefetchNotice` shows it, and this task's failed-refresh test asserts that one.
 
 ## Gates before the `feat:` commit
 1. `make test-web` exits 0 (ui, admin and web: lint, typecheck, test, build).

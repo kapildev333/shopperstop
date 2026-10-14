@@ -44,19 +44,20 @@
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `193 passed (193)` (base + 33).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `213 passed (213)` (base + 33).
 1. Create `src/order-sheet.test.tsx` from design.md. Run the admin tests, see the twelve fail, record the summary and the names. Commit: `test: order detail sheet and cancel`. Tick 3.1.
 2. Create `src/order-sheet.tsx`; replace `src/orders.ts` and `src/order-board.tsx` whole with their task-3 blocks from design.md.
 3. Run the gates. Commit the three files and the 3.2 tick: `feat: order detail sheet with cancel and its reason`.
 
-## Expected counts (measured by the team lead in the spike; base 160 = the admin suite with admin-stock at d106b53)
-- After step 1: `Tests  12 failed | 193 passed (205)`, all twelve in `order-sheet.test.tsx`.
-- After step 2: `Tests  205 passed (205)`, 20 files.
-If the base differs from 160, every number above moves by the same difference; anything else that differs is a stop.
+## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
+- After step 1: `Tests  12 failed | 213 passed (225)`, all twelve in `order-sheet.test.tsx`.
+- After step 2: `Tests  225 passed (225)`, 21 files.
+If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task
 - The sheet and its dialog are never open together: `<Sheet open={!asking}>`. Do not render the `Dialog` inside the `Sheet`.
 - The dialog's first button is "Keep order" (`cancelLabel`), then "Cancel order". Its button is `aria-disabled` with `idle` while the cancel runs, never `disabled` or `loading`; `closeDialog` returns early while it runs.
+- The sheet carries the one notice this lane renders itself, worded like the root's ("Could not refresh. Showing what was loaded last."): the sheet is a modal over the root's notice. Keep it; add none elsewhere.
 - The status badge takes its variant from `statusBadge` (D28: `accent`, `success`, `neutral`). Never `danger` or `warning` for a status.
 - `orderQuery` in this task has `refetchInterval: pollMs`; task 4 changes that line with its test. `historyQuery`, `maxPage` and `removeQueries` are task 4 too.
 - `show(order)` in the board writes the card's order into the order's query before opening the sheet; keep both lines.

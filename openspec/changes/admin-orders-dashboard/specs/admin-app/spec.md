@@ -84,19 +84,19 @@ The board SHALL show a skeleton while its first answer loads; the alert "Could n
 - **THEN** the alert "Could not load the stores." shows first, then the board
 
 ### Requirement: Orders kept on a failed refresh
-When core fails to answer a refresh of something the orders pages already show, the page SHALL keep showing what it has and add a `role="status"` notice, never an alert in its place: "Could not refresh. Showing the last orders." on the board, "Could not refresh. Showing the last list." on History, "Could not refresh. Showing the order as last read." on the sheet. The next good answer SHALL remove the notice. A failed refresh SHALL announce no new order.
+When core fails to answer a refresh of something the orders pages already show, the page SHALL keep showing it, never an alert in its place; the alert is for a view with nothing to show. The app's one notice "Could not refresh. Showing what was loaded last." (`role="status"`, at the root of the app) SHALL show meanwhile and go with the next good answer. The order sheet, a modal over that notice, SHALL show the same words itself. A failed refresh SHALL announce no new order.
 
 #### Scenario: Failed poll keeps the board
 - **WHEN** the board shows an order, a second order is placed, the next poll fails and the one after succeeds
-- **THEN** after the failed poll the first order is still shown with the notice, there is no alert and the announcement region is empty; after the good poll the second order shows, the notice is gone and the region reads "New order SS-TEST0002"
+- **THEN** after the failed poll the first order and its column are still shown with the notice, there is no alert, the second order is not shown and the announcement region is empty; after the good poll the second order shows, the notice is gone and the region reads "New order SS-TEST0002"
 
 #### Scenario: Failed refresh keeps the history
-- **WHEN** History shows a list, the tab is shown again and core fails, then shown again and core answers
-- **THEN** the list stays with the notice and no alert, and the notice goes with the good answer
+- **WHEN** History shows one delivered order, a second is delivered, the tab is shown again and core fails, then shown again and core answers
+- **THEN** the one row and "Page 1 of 1, 1 orders" stay with the notice and no alert; then both orders are listed and the notice is gone
 
 #### Scenario: Failed refresh keeps the sheet
 - **WHEN** an order is opened from its card and core fails to answer the read of the order
-- **THEN** the sheet shows the order as the card held it, with the notice, the "Cancel order" button and no alert
+- **THEN** the sheet shows the order as the card held it, with "Could not refresh. Showing what was loaded last." as a status inside the sheet, the "Cancel order" button and no alert
 
 ### Requirement: Order next status
 Each card SHALL carry exactly one button for its order's next status, named with the order's number: "Accept", "Start packing", "Mark ready", "Send out", "Mark delivered". A press SHALL send one `POST /admin/orders/{id}/status` with `{"status":"<next>"}`, show the card where core's answer puts it without listing the orders again, and say "<number> is now <Status>." in a `role="status"` region.
@@ -291,7 +291,7 @@ Choosing a store on History SHALL keep the tab, start at page 1 with one request
 - **THEN** one card shows, and its "Low stock" link holds their store
 
 ### Requirement: Dashboard states
-The dashboard SHALL show a skeleton while its first answer loads; the alert "Could not load the dashboard." with "Try again" when it fails with nothing to show; "No stores yet" when core answers no store. A refresh that fails SHALL keep the cards and add the `role="status"` notice "Could not refresh. Showing the last numbers.", removed by the next good answer.
+The dashboard SHALL show a skeleton while its first answer loads; the alert "Could not load the dashboard." with "Try again" when it fails with nothing to show; "No stores yet" when core answers no store. A refresh that fails SHALL keep the cards, with the app's notice "Could not refresh. Showing what was loaded last." and no alert, until the next good answer.
 
 #### Scenario: Dashboard loading
 - **WHEN** core has not answered yet
@@ -303,7 +303,7 @@ The dashboard SHALL show a skeleton while its first answer loads; the alert "Cou
 
 #### Scenario: Failed refresh keeps the dashboard
 - **WHEN** the dashboard shows a card, the tab is shown again and core fails, then shown again and core answers one more placed order
-- **THEN** the card stays with "Orders today" 28, the notice and no alert; then the notice is gone and the card reads 29
+- **THEN** the card stays with "Orders today" 28, the notice and no alert; then the card reads 29 and the notice is gone
 
 #### Scenario: No stores on the dashboard
 - **WHEN** core answers an empty list

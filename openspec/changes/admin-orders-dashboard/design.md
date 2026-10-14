@@ -1,11 +1,11 @@
 # Design
 
 ## Context
-`apps/admin` on main at e6d8e4b (core-orders #137 and admin-catalog #112 merged), plus admin-stock (admin-P2-L4), which merges first: this lane is rebased onto it before task 1. `/orders` and `/` are `PageHeader` placeholders. Pages read core through `openapi-fetch` and TanStack Query 5 (`retry: false`, a 403 thrown to the route's error boundary), inside the guard `routes/_staff.tsx`, which puts `staff` in the route context. Tests render the real router with `renderApp` and fake core at `fetch` with `fakeCore`.
+`apps/admin` on main with core-orders (#137), admin-catalog (#112) and admin-stock (admin-P2-L4) merged, plus admin-keep-data-on-refetch-error (admin-P2-L7), which merges first: this lane is rebased onto both before task 1. `/orders` and `/` are `PageHeader` placeholders. Pages read core through `openapi-fetch` and TanStack Query 5 (`retry: false`, a 403 thrown to the route's error boundary), inside the guard `routes/_staff.tsx`, which puts `staff` in the route context. Tests render the real router with `renderApp` and fake core at `fetch` with `fakeCore`.
 
 No `docs/design/admin-P2-L5.md`: this file is enough. Every file of every task is below, verbatim, as built and measured in a spike on 2026-10-13.
 
-## Assumptions (read in the code on e6d8e4b, and in the admin-stock branch at d106b53)
+## Assumptions (read in the code on e6d8e4b, in admin-stock at d106b53 and in admin-P2-L7 at 0aa0ab1)
 - A1. `GET /admin/stores/{id}/orders` takes one `status` or none, `page`, `pageSize` 1 to 100; newest first (`placed_at desc`); each order whole (items, events, customer, address). Store staff of another store and an unknown store: 404 (`services/core/internal/order/handlers.go`).
 - A2. `POST /admin/orders/{id}/status {status, note?}` answers 200 with the order after the move; 409 `conflict` for a move the table refuses; the table is `placed → accepted | cancelled`, `accepted → packing | cancelled`, `packing → ready`, `ready → out_for_delivery`, `out_for_delivery → delivered` (`status.go`). `note` at most 500 characters; on a cancel it becomes `cancelReason`.
 - A3. `GET /admin/orders/{id}` answers the same `Order`; 404 for another store's staff.
@@ -16,6 +16,7 @@ No `docs/design/admin-P2-L5.md`: this file is enough. Every file of every task i
 - A8. The ui `Dialog` and `Sheet` share `useModal`: each listens for Escape on `document` and restores focus to what had it when it opened. Two open at once would both close on one Escape.
 - A9. `ink-muted` on `canvas` is 4.47:1 (area plan): `TabNav` links and muted text sit on `surface`.
 - A10. With admin-stock: `src/stock.ts` exports `storeNameQuery(storeId)`; `/stock` validates `store` and `lowStock` in its search; `src/api.ts` gives a not-ok answer without core's error body an `internal` envelope, so `error.error.code` is always there.
+- A13. With admin-P2-L7: `RefetchNotice` (`src/refetch-notice.tsx`) is mounted once in `routes/__root.tsx` above the `Outlet` and shows "Could not refresh. Showing what was loaded last." (`StatusMessage tone="warning"`) while any query with an observer holds data and failed last with a code other than `not_found`. No page imports it. TanStack Query tells observers one turn after an answer (`notifyManager`).
 - A11. Seed (`services/core/internal/seed/seed.go`): Koramangala `…0401` holds SS-DEMOAAAB (`…0701`, delivered two days ago), SS-DEMOAAAC (`…0702`, cancelled a day ago) and SS-DEMOAAAD (`…0703`, placed ten minutes before the reset: one Banana Robusta `…0601` and three Pomegranate Bhagwa, ₹1,030, no fee); the customer has the phone +919800000000. Every `make e2e` suite reseeds first (`apps/admin/e2e/global-setup.ts`, `apps/web/e2e/global-setup.ts`).
 - A12. `e2e/catalog.spec.ts` deletes only the product it creates ("E2E Curd Cup") and `e2e/stores.spec.ts` deletes nothing, so neither is broken by orders existing. No fix needed.
 
@@ -42,19 +43,19 @@ Other decisions:
 
 11. **Store, tab, status filter and page live in the URL; the open sheet does not.** `validateSearch` keeps `store` (a string), `tab` only when `history`, `status` only when `cancelled`, `page` only as a whole number above 1, cut to 100000. Ceiling: no link to one order.
 12. **State that belongs to a store is dropped by `key={storeId}`** on `OrderBoard` and `OrderHistory`: announcements, the result of the last change, the open sheet, the placeholder rows. The selector sits outside them and keeps focus. Choosing a store keeps the tab and drops `status` and `page`.
-13. **Keep data on a failed refetch** (web's fix #135, binding here): every query-driven view reads `data === undefined ? (isError ? alert : skeleton) : content`, and shows a `StatusMessage tone="warning"` notice while `isError` with data. No shared helper: four views, each with its own copy, alert and skeleton; the pattern is one line. The fix lane for the older admin pages can copy it from `src/order-board.tsx`.
+13. **Keep data on a failed refetch; one notice, at the root** (web's fix #135 and the ruling of 2026-10-13 with admin-P2-L7): every query-driven view reads `data === undefined ? (isError ? alert : skeleton) : content`. The board, the history and the dashboard render no notice: L7's `RefetchNotice` at the root shows "Could not refresh. Showing what was loaded last." for any query on screen, these included (and the stores list, which therefore is no ceiling any more). The order sheet is the one exception: a modal sits over the root's notice, so it shows the same words itself while its own read is failed. No `not_found` branch is needed: the sheet always holds the card's order, and a list or the dashboard has no 404 of its own. No shared helper in this lane.
 14. **The sheet has its own query**, `['admin', 'order', id]`, outside the store's list prefix. Opening writes the card's order into it (`setQueryData`), so the sheet shows at once, then reads the order (stale at once) and polls it while it is active (`refetchInterval` is `false` for a finished order). A status change writes core's answer into it. It is never refetched into a 404: store staff cannot open another store's order, and a failed read keeps the data.
 15. **One modal at a time.** The cancel `Dialog` replaces the sheet (`<Sheet open={!asking}>`) and the sheet returns when it closes (A8). The dialog cannot be closed while the cancel runs.
 16. **After a status change:** core's answer into the board and the order's query; `removeQueries({type: 'inactive'})` under `['admin', 'orders', storeId]`, so a history page kept from before is read again instead of shown as it was (task 4, with its test).
 17. **Focus after a move.** The pressed button's card is unmounted from its column. An effect on the moved order puts a keyboard left on `body` onto `#next-<id>` (the card's new button) or onto the result line (`tabIndex={-1}`) when the order left the board. It never takes focus from somewhere else.
 18. **Button names.** The next-status button is `aria-labelledby` its own text and the card's number ("Accept SS-…"), so the number is in the DOM once and "Saving…" is in the name while it runs. The number is a ghost `Button` that opens the sheet.
-19. **`idle`** (`aria-disabled:cursor-not-allowed aria-disabled:opacity-50`) lives in `src/idle.ts`, one export, for this lane's three files and for the fix lane; `/stock` keeps its own copy until that lane or ui's `Button` change removes both.
+19. **`idle`** (`aria-disabled:cursor-not-allowed aria-disabled:opacity-50`) lives in `src/idle.ts`, one export, for this lane's three files; `/stock` keeps its own copy until a later lane or ui's `Button` change removes both.
 20. **History is one status at a time** ("Delivered" / "Cancelled" chips, `aria-pressed`): core cannot page a merged list. Rows are kept while the next page of the same status loads (`aria-busy`, dimmed, own page number); a change of status shows the skeleton, never the other status's rows.
 21. **Status badges (D28):** `statusBadge` in `src/orders.ts`: `accent` under way, `success` delivered, `neutral` cancelled; names from `statusLabel`, the same seven as web's vocabulary. The column count is a plain `neutral` Badge: a count, not a status.
 22. **Dates** are `Intl.DateTimeFormat('en-IN', {dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata'})`: the stores' time, the same in every browser and in tests.
 23. **The dashboard is not polled**; it refetches on mount and when the tab is shown again. "Orders today" also shows the sum of the seven.
 24. **Tabs are two `Link`s to `/orders`** in a `TabNav` on a `surface` strip (A9), `activeOptions={{exact: true}}` plus an explicit `aria-current` (A7).
-25. **Test fixtures live in `src/orders-fake.ts`** (test-only, no `vitest` import): `order(n, status, over)`, `ordersCore(storeId, orders)` with core's status table, `hold`/`release`/`fail` per part, and `listRequests`. `src/fake-core.ts` is not edited. The whole fake arrives in task 1, although the status routes are first used in task 2 (as admin-stock did; one file, written once).
+25. **Test fixtures live in `src/orders-fake.ts`** (test-only): `order(n, status, over)`, `ordersCore(storeId, orders)` with core's status table, `hold`/`release`/`fail` per part, `listRequests`, and `refreshFailed(router, key)`, which waits until the query has failed with its data kept and then one `notifyManager.schedule` turn, so the page has been told (L7's gotcha: without the second wait the assertions pass on a page that would drop its data). `src/fake-core.ts` is not edited. The whole fake arrives in task 1, although the status routes are first used in task 2 (as admin-stock did; one file, written once).
 26. **Fake timers** only inside the tests that need the poll or the clock: `vi.useFakeTimers({ shouldAdvanceTime: true })`, undone by `vi.useRealTimers()` in `afterEach`. `shouldAdvanceTime` lets the fake clock also run with the real one, so Testing Library's `findBy` and `waitFor`, which wait on timers, keep working; `act(() => vi.advanceTimersByTimeAsync(ms))` jumps an interval; `userEvent.setup({ advanceTimers: vi.advanceTimersByTime })` where a click happens under fake timers. A hidden tab is `vi.spyOn(document, 'visibilityState', 'get')` plus a `visibilitychange` event on `window`.
 
 ## Files (all under `apps/admin/`)
@@ -74,20 +75,22 @@ Other decisions:
 
 `src/routeTree.gen.ts`, `src/fake-core.ts`, `package.json` and every existing test are unchanged. `src/shell.test.tsx` and `src/sign-in.test.tsx` open `/` without a dashboard route in their fake: the page then shows its alert under the "Dashboard" heading they look for, and they pass unchanged (measured).
 
-## Rebase onto admin-stock
-The lane's documents were written on e6d8e4b; the spike ran on that base with admin-stock's seven `apps/admin` files laid over it from `lane/admin-P2-L4-admin-stock` at d106b53 (`src/api.ts`, `src/api.test.ts`, `src/stock.ts`, `src/stock.test.tsx`, `src/stock-rules.test.ts`, `src/routes/_staff/stock.tsx`, `e2e/stock.spec.ts`).
+## Rebase onto main with admin-stock and admin-P2-L7
+The lane's documents were written on e6d8e4b. admin-stock has merged since; admin-P2-L7 merges before this lane. The spike ran on this branch's tree with `apps/`, `packages/` and `services/core/openapi.json` of `lane/admin-P2-L7-keep-data-on-refetch-error` laid over it (that branch is main with admin-stock plus L7's fix): the stage replay at its commit b31884f (base 179), the final tree and `make test-web` at 0aa0ab1 (base 180, one test more in L7).
 
 | File | Conflict | Resolve |
 |---|---|---|
 | anything under `apps/` | none: this lane's commits so far touch only `openspec/changes/admin-orders-dashboard/` and `.claude/lanes/admin-P2-L5.md` | nothing |
-| `.claude/areas/admin.md`, `openspec/specs/admin-app/spec.md` | not edited here | nothing; after admin-stock is archived the delta still applies (ADDED only, no name shared: its requirements start with "Stock") |
-| `src/routes/_staff/stock.tsx`, `src/stock.ts` | not edited here; task 1 imports `storeNameQuery` from `./stock`, task 5 links to `/stock` with `store` and `lowStock` | if admin-stock lands with another name or search shape, stop: the team lead revises the two import sites |
-| `src/idle.ts` vs the `idle` constant in `stock.tsx` | duplicate, not a conflict | left for the fix lane |
-| `e2e/catalog.spec.ts` | admin-stock does not touch it | append as written |
+| `.claude/areas/admin.md`, `openspec/specs/admin-app/spec.md` | not edited here | nothing; the delta is ADDED only and shares no requirement name with admin-stock ("Stock …") or L7 |
+| `src/stock.ts`, `src/routes/_staff/stock.tsx` | not edited here; task 1 imports `storeNameQuery` from `./stock`, task 5 links to `/stock` with `store` and `lowStock` | if either has another name or shape on main, stop: the team lead revises the two sites |
+| `src/routes/__root.tsx`, `src/refetch-notice.tsx` (L7) | not edited here | three tests assert L7's notice text "Could not refresh. Showing what was loaded last."; if L7 lands with other words, the team lead changes the four strings (three tests and the sheet) |
+| `src/routes/_staff/index.tsx`, `src/routes/_staff/orders.tsx` | L7 does not touch the two placeholders (checked at 0aa0ab1) | replaced whole by tasks 5 and 1 |
+| `src/idle.ts` vs the `idle` constant in `stock.tsx` | duplicate, not a conflict | left for a later lane |
+| `e2e/catalog.spec.ts` | neither lane touches it | append as written |
 
-Counts: the admin suite on e6d8e4b alone is `95 passed`; with admin-stock at d106b53 it is `160 passed (160)` in 16 files. Every count in tasks.md is given as "base + n" with base 160 in brackets; if admin-stock merges with a different number, only the base moves. Playwright: base + 3 (two in `orders.spec.ts`, one in `catalog.spec.ts`); admin-stock expects 10, so 13.
+Counts: the admin suite on e6d8e4b alone is `95 passed`; with admin-stock at d106b53 `160`; on L7's branch at 0aa0ab1 `180 passed (180)` in 17 files. Every count in tasks.md is "base + n" with base 180 in brackets; if the rebased branch starts elsewhere, only the base moves. Playwright: base + 3 (two in `orders.spec.ts`, one in `catalog.spec.ts`).
 
-Not buildable before the rebase: task 1 needs `storeNameQuery` and task 5 the typed `/stock` search. Step 0 of each brief checks the base.
+Not buildable before the rebase: task 1 needs `storeNameQuery` and the root notice, task 5 the typed `/stock` search. Step 0 of brief 1 checks both.
 
 ## Tests (scenario -> test)
 Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/orders-status.test.tsx`, D `src/order-sheet.test.tsx`, H `src/orders-history.test.tsx`, X `src/dashboard.test.tsx`, E `e2e/orders.spec.ts`, C `e2e/catalog.spec.ts`.
@@ -109,9 +112,9 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Orders board states › No active orders | B "a store with no active orders shows the empty state" | 1 |
 | Orders board states › No stores | B "an admin with no stores is told to create one" | 1 |
 | Orders board states › Stores load failure | B "stores that cannot be loaded offer a retry that reloads" | 1 |
-| Orders kept on a failed refresh › Failed poll keeps the board | B "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice" | 1 |
+| Orders kept on a failed refresh › Failed poll keeps the board | B "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" | 1 |
 | Orders kept on a failed refresh › Failed refresh keeps the sheet | D "a failed refresh keeps the order on the sheet and says it could not refresh" | 3 |
-| Orders kept on a failed refresh › Failed refresh keeps the history | H "a failed refresh keeps the history list and says it could not refresh; the next good answer clears the notice" | 4 |
+| Orders kept on a failed refresh › Failed refresh keeps the history | H "a failed refresh keeps the history list; the next good answer shows what core then holds" | 4 |
 | Order next status › One button per card | S "each card has one button, for the next status of its order, named with the order number" | 2 |
 | Order next status › Accept | S "a press sends the next status once, moves the card with core's answer and says so, without listing the orders again" | 2 |
 | Order status change in progress › Second press during a change | S "while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card's button send nothing" | 2 |
@@ -149,7 +152,7 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Dashboard › Store staff dashboard | X "store staff see the one card core gives them, for their own store" | 5 |
 | Dashboard states › Dashboard loading | X "the dashboard shows a skeleton while loading" | 5 |
 | Dashboard states › Dashboard load failure | X "a dashboard that cannot be loaded offers a retry that reloads" | 5 |
-| Dashboard states › Failed refresh keeps the dashboard | X "a failed refresh keeps the cards and says it could not refresh; the next good answer clears the notice and shows the new numbers" | 5 |
+| Dashboard states › Failed refresh keeps the dashboard | X "a failed refresh keeps the cards; the next good answer shows the new numbers" | 5 |
 | Dashboard states › No stores on the dashboard | X "an admin with no stores is told to create one" | 5 |
 | Orders against core › Store staff take the placed order to delivered | E "store staff take the placed order to delivered and find it in History" | written 1, run 6 |
 | Orders against core › Admin sees the dashboard and a store's orders | E "an admin sees the dashboard cards and opens a store's orders from one" | written 1, run 6 |
@@ -163,6 +166,7 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 - A held answer is `core.hold(part)` then `core.release(part)`; a failing one `core.fail(part)` then `core.fail(part, false)`; parts are `lists`, `order` (the single read) and `status` (the change, logged in `core.posts` before the gate).
 - Fake timers: Decision 26. Only eight tests use them (B poll, announce, hidden tab, failed poll, time; S late poll; D sheet poll; H finished order), each by calling `vi.useFakeTimers({ shouldAdvanceTime: true })` on its first line; `afterEach` restores real timers in every file that uses them.
 - A refetch without timers (history, dashboard): a `visibilitychange` event on `window`, which makes TanStack Query refetch stale queries.
+- A failed refresh: the trigger (a poll or the event), then `await refreshFailed(router, key)` (Decision 25), then the assertions: the content is still there, there is no alert, and the root's notice shows. The three page tests go through `renderApp`, so the root route and L7's `RefetchNotice` are mounted; they are red without L7 on the branch. The sheet's test looks for the words inside the sheet only.
 - What only e2e proves: the five list requests, the status `POST` and the dashboard as the real core answers them; store staff's 404 isolation is core's test, not repeated; axe; the tab strip's contrast.
 
 ### e2e
@@ -170,19 +174,18 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 
 `e2e/catalog.spec.ts` gets a third test (Decision 10).
 
-Tried in the spike on a scratch `vite preview` (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay, each of the three tests twice: 6 of 6 passed, axe clean on the board, the sheet, the cancel dialog, the delivered dialog, the result line, History, the history sheet, the dashboard and the delete dialog. The first try failed axe `color-contrast` on the tab strip (A9), fixed by `bg-surface` on the `TabNav`. Not run against the real core or the database: task 6, the manager's slot.
+Tried in the first spike (before the root-notice ruling, which changed no string or element the specs use) on a scratch `vite preview` (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay, each of the three tests twice: 6 of 6 passed, axe clean on the board, the sheet, the cancel dialog, the delivered dialog, the result line, History, the history sheet, the dashboard and the delete dialog. The first try failed axe `color-contrast` on the tab strip (A9), fixed by `bg-surface` on the `TabNav`. Not run against the real core or the database: task 6, the manager's slot.
 
-## Mutation guards (for the reviewer; each run on the final tree of the spike on 2026-10-13, 68 lane tests, only the named tests red, then restored)
+## Mutation guards (for the reviewer; each run on the final tree of the spike on 2026-10-13 on the base with admin-P2-L7, 68 lane tests, only the named tests red, then restored)
 
 | # | Mutation | File | Tests that turn red |
 |---|---|---|---|
-| G1 | poll interval off | `src/orders.ts` | "a poll answer read before a status change never moves the card back"; "the board asks core again every 10 seconds and shows an order where it now stands"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice" |
+| G1 | poll interval off | `src/orders.ts` | "a poll answer read before a status change never moves the card back"; "the board asks core again every 10 seconds and shows an order where it now stands"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
 | G2 | poll in a hidden tab | `src/orders.ts` | "a hidden tab is not polled, and showing it again asks core at once" |
-| G3 | first answer announced | `src/order-board.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice" |
+| G3 | first answer announced | `src/order-board.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
 | G4 | any new order announced, whatever its status | `src/order-board.tsx` | "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing" |
 | G5 | old news kept under a changed answer | `src/order-board.tsx` | "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing" |
-| G6 | board error state before data | `src/order-board.tsx` | "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice" |
-| G7 | no refresh notice | `src/order-board.tsx` | "a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice" |
+| G6 | board error state before data | `src/order-board.tsx` | "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
 | G8 | board not keyed by store | `src/routes/_staff/orders.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders" |
 | G9 | store staff ask for the stores | `src/routes/_staff/orders.tsx` | "store staff see the board of their own store by name, with no store selector and no stores request" |
 | G10 | columns newest first | `src/order-board.tsx` | "the board shows a column per active status with each order's number, time since placed, item count, total and pincode" |
@@ -194,6 +197,7 @@ Tried in the spike on a scratch `vite preview` (port 25174) against a stateful `
 | G16 | delivered without asking | `src/order-board.tsx` | "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result"; "a history page kept from before a status change is read again, never shown as it was" |
 | G17 | no focus after a move | `src/order-board.tsx` | "after a move the keyboard is on the card's new button"; "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result" |
 | G18 | sheet does not start from the card | `src/order-board.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
+| G7 | no notice on the sheet | `src/order-sheet.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
 | G19 | sheet error state before data | `src/order-sheet.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
 | G20 | cancel offered in every status | `src/order-sheet.tsx` | "a history row opens the order without a cancel, read once and not polled"; "an open sheet follows the order every 10 seconds"; "only a placed or an accepted order can be cancelled from the sheet"; "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason"; "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board" |
 | G21 | empty reason sent | `src/order-sheet.tsx` | "a cancel needs a reason: without one nothing is sent, the field says so, and the message goes when a reason is typed" |
@@ -213,19 +217,19 @@ Tried in the spike on a scratch `vite preview` (port 25174) against a stateful `
 | G35 | page not cut | `src/routes/_staff/orders.tsx` | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" |
 | G36 | no move to the last page | `src/order-history.tsx` | "a page in the URL beyond what core accepts is cut to one it does, then to the last page" |
 | G37 | any status accepted from the URL | `src/routes/_staff/orders.tsx` | "?tab=history&status=placed in the URL is read as delivered orders" |
-| G38 | history error state before data | `src/order-history.tsx` | "a failed refresh keeps the history list and says it could not refresh; the next good answer clears the notice" |
+| G38 | history error state before data | `src/order-history.tsx` | "a failed refresh keeps the history list; the next good answer shows what core then holds" |
 | G39 | history not keyed by store | `src/routes/_staff/orders.tsx` | "choosing a store on the History tab keeps the tab, starts at page 1 and never shows the other store's rows" |
 | G40 | kept lists not dropped after a change | `src/orders.ts` | "a history page kept from before a status change is read again, never shown as it was" |
 | G41 | store switch loses the tab | `src/routes/_staff/orders.tsx` | "choosing a store on the History tab keeps the tab, starts at page 1 and never shows the other store's rows" |
 | G42 | store switch keeps the page | `src/routes/_staff/orders.tsx` | "choosing a store on the History tab keeps the tab, starts at page 1 and never shows the other store's rows" |
 | G43 | router marks both tabs | `src/routes/_staff/orders.tsx` | "the History tab lists delivered orders, newest first, with number, placed, customer, items, total and when delivered"; "the pager moves between pages and keeps focus; rows kept while the next page loads are marked busy under their own page number" |
-| G44 | dashboard error state before data | `src/routes/_staff/index.tsx` | "a failed refresh keeps the cards and says it could not refresh; the next good answer clears the notice and shows the new numbers" |
+| G44 | dashboard error state before data | `src/routes/_staff/index.tsx` | "a failed refresh keeps the cards; the next good answer shows the new numbers" |
 | G45 | low-stock link without the filter | `src/routes/_staff/index.tsx` | "a card links to its store's orders and to its stock filtered to low stock"; "store staff see the one card core gives them, for their own store" |
 | G46 | elapsed time read once | `src/orders.ts` | "the time since placed moves on without core being asked" |
 | G47 | status change conflict message same as success | `src/order-board.tsx` | "a 409 reads the order again, shows it where it stands and says someone else changed it" |
 | G48 | filter change keeps the page | `src/order-history.tsx` | "Cancelled lists the cancelled orders with when they were cancelled, from page 1, never under the delivered rows" |
 
-48 guards, none without a red test. Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again.
+48 guards, none without a red test. Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again. G6, G38 and G44 (the alert shown although data is held) are caught by `queryByRole('alert')` after `refreshFailed`.
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
 
@@ -365,6 +369,9 @@ test('an ordered product cannot be deleted and offers to be deactivated instead'
 #### `src/orders-fake.ts` (new; test-only helpers, used by every later task and never changed)
 
 ```ts
+import { notifyManager, type QueryClient, type QueryKey } from '@tanstack/react-query'
+import { act, waitFor } from '@testing-library/react'
+import { expect } from 'vitest'
 import type { Order, OrderStatus } from './orders'
 import { apiError, indiranagar, json } from './fake-core'
 
@@ -470,6 +477,16 @@ export function ordersCore(storeId: string, orders: Order[]) {
   }
 }
 
+// Resolves once a refresh of `key` has failed with its data kept AND the page has been told. TanStack Query tells its
+// observers one turn after the answer: without the second wait the assertions that follow would look at the page as it
+// was before the failure, and pass whatever the page does with it.
+export async function refreshFailed(router: { options: { context: { queryClient: QueryClient } } }, key: QueryKey) {
+  const client = router.options.context.queryClient
+  await waitFor(() => expect(client.getQueryState(key)).toMatchObject({ status: 'error', fetchStatus: 'idle' }))
+  expect(client.getQueryData(key)).toBeDefined()
+  await act(() => new Promise<void>((told) => notifyManager.schedule(told)))
+}
+
 // The status and page size of every order list request, in the order core got them.
 export function listRequests(calls: Request[]) {
   return calls.filter((call) => call.method === 'GET' && new URL(call.url).pathname.endsWith('/orders')).map((call) => Object.fromEntries(new URL(call.url).searchParams))
@@ -484,7 +501,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, apiError, fakeCore, indiranagar, json, koramangala, storeList, storeStaff } from './fake-core'
-import { listRequests, order, ordersCore } from './orders-fake'
+import { listRequests, order, ordersCore, refreshFailed } from './orders-fake'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -674,28 +691,32 @@ test('a hidden tab is not polled, and showing it again asks core at once', async
   await waitFor(() => expect(listRequests(calls)).toHaveLength(10))
 })
 
-test('a failed poll keeps the board, says it could not refresh and announces nothing; the next good answer clears the notice', async () => {
+test('a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new', async () => {
   useFakeClock()
   setToken('tok')
   const orders = [order(1, 'placed')]
   const core = ordersCore(indiranagar.id, orders)
   fakeCore({ ...asAdmin, ...core.routes })
 
-  renderApp('/orders')
+  const router = renderApp('/orders')
   await screen.findByText('SS-TEST0001')
   core.fail('lists')
   orders.push(order(2, 'placed'))
   await poll()
+  await refreshFailed(router, ['admin', 'orders', indiranagar.id, 'board'])
 
-  expect(await screen.findByText('Could not refresh. Showing the last orders.')).toHaveAttribute('role', 'status')
+  // The alert is for a board with nothing to show; this one keeps its order. (The root of the app says a refresh failed.)
   expect(screen.getByText('SS-TEST0001')).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: /^Placed/ })).toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
+  expect(screen.queryByText('SS-TEST0002')).not.toBeInTheDocument()
   expect(news()).toBeEmptyDOMElement()
 
   core.fail('lists', false)
   await poll()
   expect(await screen.findByText('SS-TEST0002')).toBeInTheDocument()
-  expect(screen.queryByText('Could not refresh. Showing the last orders.')).not.toBeInTheDocument()
+  expect(screen.queryByText('Could not refresh. Showing what was loaded last.')).not.toBeInTheDocument()
   expect(news()).toHaveTextContent(/^New order SS-TEST0002$/)
 })
 
@@ -878,7 +899,7 @@ export function itemCount(order: Order) {
 ```tsx
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Badge, Card, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage } from '@shopperstop/ui'
+import { Badge, Card, EmptyState, ErrorBanner, Price, Skeleton } from '@shopperstop/ui'
 import { activeStatuses, boardQuery, itemCount, statusLabel, useSince, type Order } from './orders'
 
 // Its own component, so a minute passing renders this text and nothing else on the board.
@@ -919,6 +940,8 @@ export function OrderBoard({ storeId }: { storeId: string }) {
     setHeard({ from: board.data, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
   }
 
+  // A poll that fails keeps the board: the alert is only for a board with nothing to show. (The app's root says that a
+  // refresh failed, once for the whole page.)
   if (board.data === undefined) {
     return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
   }
@@ -926,7 +949,6 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
-      {board.isError && <StatusMessage tone="warning">Could not refresh. Showing the last orders.</StatusMessage>}
       {orders.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No active orders" description="New orders show here within 10 seconds." />
@@ -1410,6 +1432,8 @@ export function OrderBoard({ storeId }: { storeId: string }) {
     move.mutate({ order, status: nextStatus[order.status] })
   }
 
+  // A poll that fails keeps the board: the alert is only for a board with nothing to show. (The app's root says that a
+  // refresh failed, once for the whole page.)
   if (board.data === undefined) {
     return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
   }
@@ -1417,7 +1441,6 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
-      {board.isError && <StatusMessage tone="warning">Could not refresh. Showing the last orders.</StatusMessage>}
       <div ref={result} tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
@@ -1586,7 +1609,8 @@ test('a failed refresh keeps the order on the sheet and says it could not refres
   core.fail('order')
   const sheet = await openSheet()
 
-  expect(await within(sheet).findByText('Could not refresh. Showing the order as last read.')).toHaveAttribute('role', 'status')
+  // The sheet says it itself: it is a modal over the notice at the root of the app.
+  expect(await within(sheet).findByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
   expect(orderRequests(calls, first.id)).toHaveLength(1)
   expect(sheet).toHaveTextContent('3 × Pomegranate Bhagwa')
   expect(within(sheet).getByRole('button', { name: 'Cancel order' })).toBeInTheDocument()
@@ -1979,7 +2003,8 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
     <>
       <Sheet open={!asking} onClose={onClose} title={`Order ${order.number}`}>
         <div className="flex flex-col gap-4">
-          {query.isError && <StatusMessage tone="warning">Could not refresh. Showing the order as last read.</StatusMessage>}
+          {/* The one notice a page of this lane shows itself: the sheet is a modal over the app's own notice. */}
+          {query.isError && <StatusMessage tone="warning">Could not refresh. Showing what was loaded last.</StatusMessage>}
           {cancel.data &&
             (cancel.data.changedElsewhere ? (
               <StatusMessage tone="warning">Someone else changed this order first: it is now {statusLabel[cancel.data.order.status]}.</StatusMessage>
@@ -2099,6 +2124,8 @@ export function OrderBoard({ storeId }: { storeId: string }) {
     move.mutate({ order, status: nextStatus[order.status] })
   }
 
+  // A poll that fails keeps the board: the alert is only for a board with nothing to show. (The app's root says that a
+  // refresh failed, once for the whole page.)
   if (board.data === undefined) {
     return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
   }
@@ -2106,7 +2133,6 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
-      {board.isError && <StatusMessage tone="warning">Could not refresh. Showing the last orders.</StatusMessage>}
       <div ref={result} tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
@@ -2180,7 +2206,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, fakeCore, indiranagar, json, koramangala, storeList } from './fake-core'
-import { listRequests, order, ordersCore } from './orders-fake'
+import { listRequests, order, ordersCore, refreshFailed } from './orders-fake'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -2362,25 +2388,31 @@ test('a history row opens the order without a cancel, read once and not polled',
   expect(listRequests(calls)).toHaveLength(1)
 })
 
-test('a failed refresh keeps the history list and says it could not refresh; the next good answer clears the notice', async () => {
+test('a failed refresh keeps the history list; the next good answer shows what core then holds', async () => {
   setToken('tok')
-  const core = ordersCore(indiranagar.id, [delivered(1)])
+  const orders = [delivered(1)]
+  const core = ordersCore(indiranagar.id, orders)
   const calls = fakeCore({ ...asAdmin, ...core.routes })
 
-  renderApp('/orders?tab=history')
+  const router = renderApp('/orders?tab=history')
   await screen.findByRole('table', { name: 'Order history' })
   core.fail('lists')
+  orders.push(delivered(2))
   // Coming back to the tab asks core again.
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
+  await refreshFailed(router, ['admin', 'orders', indiranagar.id, 'history', 'delivered', 1])
 
-  expect(await screen.findByText('Could not refresh. Showing the last list.')).toHaveAttribute('role', 'status')
+  // The alert is for a list with nothing to show; this one keeps its rows. (The root of the app says a refresh failed.)
   expect(numbers()).toEqual(['SS-TEST0001'])
+  expect(screen.getByText('Page 1 of 1, 1 orders')).toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
 
   core.fail('lists', false)
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
-  await waitFor(() => expect(screen.queryByText('Could not refresh. Showing the last list.')).not.toBeInTheDocument())
-  expect(numbers()).toEqual(['SS-TEST0001'])
+  await screen.findByText('Page 1 of 1, 2 orders')
+  expect(numbers()).toEqual(['SS-TEST0002', 'SS-TEST0001'])
+  expect(screen.queryByText('Could not refresh. Showing what was loaded last.')).not.toBeInTheDocument()
   expect(listRequests(calls)).toHaveLength(3)
 })
 
@@ -2596,7 +2628,7 @@ export function itemCount(order: Order) {
 ```tsx
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Button, Card, Chip, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
+import { Button, Card, Chip, EmptyState, ErrorBanner, Price, Skeleton, Table, cn, type Column } from '@shopperstop/ui'
 import { idle } from './idle'
 import { OrderSheet } from './order-sheet'
 import { historyQuery, itemCount, orderQuery, pageSize, statusLabel, when, type Finished, type Order, type OrdersSearch } from './orders'
@@ -2648,7 +2680,6 @@ export function OrderHistory({ storeId, status, page, go }: { storeId: string; s
         )
       ) : (
         <>
-          {history.isError && <StatusMessage tone="warning">Could not refresh. Showing the last list.</StatusMessage>}
           {history.data.items.length === 0 ? (
             <Card className="p-6">
               <EmptyState title={`No ${status} orders`} description="Orders show here once they are delivered or cancelled." />
@@ -2778,6 +2809,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import type { components } from '@shopperstop/ui/api'
 import { clearToken, setToken } from './session'
 import { admin, apiError, fakeCore, indiranagar, json, koramangala, storeStaff } from './fake-core'
+import { refreshFailed } from './orders-fake'
 import { renderApp } from './render-app'
 
 afterEach(() => {
@@ -2885,25 +2917,27 @@ test('a dashboard that cannot be loaded offers a retry that reloads', async () =
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
-test('a failed refresh keeps the cards and says it could not refresh; the next good answer clears the notice and shows the new numbers', async () => {
+test('a failed refresh keeps the cards; the next good answer shows the new numbers', async () => {
   setToken('tok')
   let answer = () => json(200, { items: [atKoramangala] })
   fakeCore({ ...asAdmin, 'GET /admin/dashboard': () => answer() })
 
-  renderApp('/')
+  const router = renderApp('/')
   await card('Koramangala')
   answer = () => apiError(500, 'internal')
   // Coming back to the tab asks core again.
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
+  await refreshFailed(router, ['admin', 'dashboard'])
 
-  expect(await screen.findByText('Could not refresh. Showing the last numbers.')).toHaveAttribute('role', 'status')
-  expect(figures(await card('Koramangala'))).toContain('Orders today: 28')
+  // The alert is for a dashboard with nothing to show; this one keeps its card. (The root of the app says a refresh failed.)
+  expect(figures(screen.getByRole('region', { name: 'Koramangala' }))).toContain('Orders today: 28')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
 
   answer = () => json(200, { items: [{ ...atKoramangala, ordersToday: { ...atKoramangala.ordersToday, placed: 2 } }] })
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
-  await waitFor(() => expect(screen.queryByText('Could not refresh. Showing the last numbers.')).not.toBeInTheDocument())
-  expect(figures(await card('Koramangala'))).toContain('Orders today: 29')
+  await waitFor(() => expect(figures(screen.getByRole('region', { name: 'Koramangala' }))).toContain('Orders today: 29'))
+  expect(screen.queryByText('Could not refresh. Showing what was loaded last.')).not.toBeInTheDocument()
 })
 
 test('an admin with no stores is told to create one', async () => {
@@ -2922,7 +2956,7 @@ test('an admin with no stores is told to create one', async () => {
 ```tsx
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Card, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, StatusMessage, buttonClass } from '@shopperstop/ui'
+import { Card, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, buttonClass } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { api } from '../../api'
 
@@ -2988,7 +3022,6 @@ function Dashboard() {
         )
       ) : (
         <>
-          {dashboard.isError && <StatusMessage tone="warning">Could not refresh. Showing the last numbers.</StatusMessage>}
           {dashboard.data.length === 0 ? (
             <Card className="p-6">
               <EmptyState title="No stores yet" description="Create a store, then its day shows here." />
@@ -3013,7 +3046,8 @@ export const Route = createFileRoute('/_staff/')({
 
 ## Risks / Trade-offs
 - Five requests every 10 seconds per open board (A5). Fine for a store's few screens; the request to core for one "active" list removes four of them.
-- Fake timers with `shouldAdvanceTime` run on the real clock too: a test that takes longer than its interval would see an extra poll. Each timer test counts requests right after its own `advanceTimersByTimeAsync`, and the suite ran green three times in a row (and twice more in the replay); a flake there is a finding, not something to retry around.
+- Fake timers with `shouldAdvanceTime` run on the real clock too: a test that takes longer than its interval would see an extra poll. Each timer test counts requests right after its own `advanceTimersByTimeAsync`, and the suite ran green three times in a row on each of the two spike bases; a flake there is a finding, not something to retry around.
+- Three tests depend on admin-P2-L7's notice text and mount point. If L7 changes either after this proposal, they fail loudly on the missing text.
 - The announcement is worked out during render (state set under a guard on the `data` object), the pattern admin-stock's review accepted for its search field. It settles in one extra render. An effect would trip `react-hooks/set-state-in-effect`.
 - `cancelQueries` on success also drops a poll that would have brought a new placed order: that order shows and is announced one interval later.
 - The typed `Link` to `/stock` ties the dashboard to admin-stock's search shape; a change there is a type error here, which is the point.
@@ -3032,9 +3066,10 @@ export const Route = createFileRoute('/_staff/')({
 - History shows one status at a time and has no search or date range; `Page 1 of 1, 1 orders` is not singular.
 - The dashboard is as old as its last load or tab focus.
 - A `store` in the URL that is no store falls back to the first store without a message (as `/stock`).
-- A failed refresh of the stores list shows no notice: the selector still works from the list it has.
 - The two store-name and stores-list reads fail silently into "no name" and the alert respectively; a 403 on any query goes to the route's not-found page, as everywhere in this app.
-- `idle` exists twice (`src/idle.ts`, `stock.tsx`) until the fix lane or ui's `Button` takes it.
+- `idle` exists twice (`src/idle.ts`, `stock.tsx`) until a later lane or ui's `Button` takes it.
+- With the sheet open over a failed refresh the words are on the page twice: the root's notice behind the modal and the sheet's own. Only the sheet's is reachable while it is open.
+- A 404 on the sheet's read (not reachable: store staff cannot open another store's order) would keep the order with the sheet's notice and none at the root (L7 leaves `not_found` out).
 - The ui modals do not stack (A8); the cancel dialog swaps with the sheet instead.
 - Times are shown in Asia/Kolkata whatever the staff member's time zone.
 

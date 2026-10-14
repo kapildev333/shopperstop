@@ -29,26 +29,28 @@
 - "store staff see the one card core gives them, for their own store"
 - "the dashboard shows a skeleton while loading"
 - "a dashboard that cannot be loaded offers a retry that reloads"
-- "a failed refresh keeps the cards and says it could not refresh; the next good answer clears the notice and shows the new numbers"
+- "a failed refresh keeps the cards; the next good answer shows the new numbers"
 - "an admin with no stores is told to create one"
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `221 passed (221)` (base + 61).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `241 passed (241)` (base + 61).
 1. Create `src/dashboard.test.tsx` from design.md. Run the admin tests, see the seven fail, record the summary and the names. Commit: `test: dashboard cards`. Tick 5.1.
 2. Replace `src/routes/_staff/index.tsx` whole with its block from design.md.
 3. Run the gates. Commit the file and the 5.2 tick: `feat: dashboard cards per store with links to orders and low stock`.
 
-## Expected counts (measured by the team lead in the spike; base 160 = the admin suite with admin-stock at d106b53)
-- After step 1: `Tests  7 failed | 221 passed (228)`, all seven in `dashboard.test.tsx`.
-- After step 2: `Tests  228 passed (228)`, 22 files. `make test-web` in the spike: ui 54, admin 228, web 91.
-If the base differs from 160, every number above moves by the same difference; anything else that differs is a stop.
+## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
+- After step 1: `Tests  7 failed | 241 passed (248)`, all seven in `dashboard.test.tsx`.
+- After step 2: `Tests  248 passed (248)`, 23 files. `make test-web` in the spike: ui 54, admin 248, web 101.
+If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task
 - The link to `/stock` is typed: `search={{ store: store.storeId, lowStock: true }}`. If typecheck refuses it, `/stock` on this branch does not have admin-stock's search params: stop and report, do not cast.
 - The `<dl>` holds `dt` and `dd` directly, no wrapping `div`s (axe's `definition-list` rule).
 - The page keeps its `PageHeader title="Dashboard"`: `e2e/auth.spec.ts`, `src/shell.test.tsx` and `src/sign-in.test.tsx` look for that heading and are not edited.
 - The dashboard has no `refetchInterval`.
+
+- No "Could not refresh" notice in the dashboard: the root's `RefetchNotice` shows it, and this task's failed-refresh test asserts that one.
 
 ## Gates before the `feat:` commit
 1. `make test-web` exits 0 (ui, admin and web: lint, typecheck, test, build).
