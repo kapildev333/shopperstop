@@ -6,7 +6,7 @@ The customer web app (`apps/web`): its shell, where it is served, how it reaches
 ## Requirements
 
 ### Requirement: Customer site shell
-Every customer page SHALL render inside a shell made of a banner that is the `brand` band holding the "ShopperStop" wordmark in `on-brand` text as a link to `/`, a product search form, the pincode control and the account control, and a main region holding the page, on the `canvas` background; the page title SHALL be the only level-1 heading. The pincode control SHALL read "Enter pincode" while no pincode is stored. The index route `/` SHALL be the Home page, which before a pincode is chosen shows a "Set your pincode" empty state on a `surface` card.
+Every customer page SHALL render inside a shell: a `brand` banner holding the "ShopperStop" wordmark in `on-brand` text as a link to `/`, a product search form, the pincode control and the account control, then a main region holding the page on the `canvas` background; the page title SHALL be the only level-1 heading. The pincode control SHALL read "Enter pincode" while no pincode is stored. `/` SHALL be Home, showing a "Set your pincode" empty state on a `surface` card until one is chosen.
 
 #### Scenario: Home renders in the shell
 - **WHEN** the app renders the path `/` with no pincode stored
