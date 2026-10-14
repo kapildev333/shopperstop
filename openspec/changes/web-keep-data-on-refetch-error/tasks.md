@@ -18,7 +18,7 @@ Easy to get wrong:
 - No HTTP mock, no `vi.mock`, no fake timers, no new helper or component in app code, no copy or class change. `isPending` goes from `store-gate.tsx` and `p.$slug.tsx` once nothing reads it (lint).
 - The existing tests stay untouched and green, "store lookup fails" among them.
 
-- [ ] 1.1 Tests and the two helpers committed, six red and four pins green (`test: a failed refetch keeps the showing page`)
+- [x] 1.1 Tests and the two helpers committed, six red and four pins green (`test: a failed refetch keeps the showing page`)
 - [ ] 1.2 The four views (`fix: a failed refetch keeps the showing page`); all gates green
 
 ## Workflow follow-up

@@ -4,7 +4,7 @@ import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { keys } from './catalog'
 import { setPincode } from './pincode'
-import { category, product, renderAt, store } from './test-data'
+import { category, product, refetchFailed, renderAt, seedStale, store } from './test-data'
 
 const dairy = category({
   id: '00000000-0000-4000-8000-000000000511',
@@ -24,7 +24,7 @@ function seedStoreAndTree() {
 }
 
 // A paged answer: the first page of a feed, as useInfiniteQuery holds it.
-function seedFeed(filter: { categoryId?: string; q?: string }, items: number, total: number) {
+function seedFeed(filter: { categoryId?: string; q?: string }, items: number, total: number, stale = false) {
   const list = {
     items: Array.from({ length: items }, (_, i) =>
       product({
@@ -37,7 +37,9 @@ function seedFeed(filter: { categoryId?: string; q?: string }, items: number, to
     pageSize: 24,
     total,
   }
-  queryClient.setQueryData(keys.feed(store().id, filter), { pages: [list], pageParams: [1] })
+  const answer = { pages: [list], pageParams: [1] }
+  if (stale) seedStale(keys.feed(store().id, filter), answer)
+  else queryClient.setQueryData(keys.feed(store().id, filter), answer)
 }
 
 test('category tabs', async () => {
@@ -81,4 +83,33 @@ test('load more while pages remain', async () => {
   renderAt('/c/dairy-bread-eggs')
   expect(await screen.findAllByRole('link', { name: /Item \d+ / })).toHaveLength(24)
   expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
+})
+
+test('failed refetch keeps the category page', async () => {
+  seedStoreAndTree()
+  seedStale(keys.categories(store().id), [dairy])
+  seedFeed({ categoryId: dairy.id }, 2, 2)
+  renderAt('/c/dairy-bread-eggs')
+  await refetchFailed(keys.categories(store().id))
+  expect(screen.getByRole('heading', { level: 1, name: 'Dairy, Bread & Eggs' })).toBeInTheDocument()
+  const tabs = within(screen.getByRole('group', { name: 'Subcategories' }))
+  expect(tabs.getByRole('button', { name: 'Milk' })).toBeInTheDocument()
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('failed refetch keeps the product list', async () => {
+  seedStoreAndTree()
+  seedFeed({ categoryId: dairy.id }, 2, 2, true)
+  renderAt('/c/dairy-bread-eggs')
+  await refetchFailed(keys.feed(store().id, { categoryId: dairy.id }))
+  expect(await screen.findAllByRole('link', { name: /Item \d+ / })).toHaveLength(2)
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('category alerts with nothing held', async () => {
+  setPincode('560034')
+  queryClient.setQueryData(keys.serviceability('560034'), store())
+  renderAt('/c/dairy-bread-eggs')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load categories.')
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
 })

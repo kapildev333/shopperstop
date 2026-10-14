@@ -4,7 +4,7 @@ import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { keys } from './catalog'
 import { setPincode } from './pincode'
-import { renderAt, store } from './test-data'
+import { category, product, refetchFailed, renderAt, seedStale, store } from './test-data'
 
 test('not serviceable notice', async () => {
   setPincode('110001')
@@ -32,4 +32,24 @@ test('store lookup fails', async () => {
   const alert = await screen.findByRole('alert')
   expect(alert).toHaveTextContent('Could not check your pincode.')
   expect(alert).toContainElement(screen.getByRole('button', { name: 'Try again' }))
+})
+
+test('failed refetch keeps the store', async () => {
+  setPincode('560034')
+  seedStale(keys.serviceability('560034'), store())
+  queryClient.setQueryData(keys.categories(store().id), [category()])
+  queryClient.setQueryData(keys.picked(store().id), [product()])
+  renderAt('/')
+  await refetchFailed(keys.serviceability('560034'))
+  expect(screen.getByRole('heading', { level: 2, name: 'Picked for you' })).toBeInTheDocument()
+  expect(screen.queryAllByRole('alert')).toEqual([])
+})
+
+test('failed refetch keeps the not serviceable notice', async () => {
+  setPincode('110001')
+  seedStale(keys.serviceability('110001'), null)
+  renderAt('/')
+  await refetchFailed(keys.serviceability('110001'))
+  expect(screen.getByRole('heading', { level: 2, name: 'We do not deliver to 110001 yet' })).toBeInTheDocument()
+  expect(screen.queryAllByRole('alert')).toEqual([])
 })

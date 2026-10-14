@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react'
-import { render } from '@testing-library/react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { render, waitFor } from '@testing-library/react'
+import { QueryClientProvider, type QueryKey } from '@tanstack/react-query'
+import { expect } from 'vitest'
 import {
   RouterProvider,
   createMemoryHistory,
@@ -54,6 +55,16 @@ export function category(overrides: Partial<CategoryNode> = {}): CategoryNode {
     children: [],
     ...overrides,
   }
+}
+
+// An answer older than the catalog staleTime: the view that mounts on it refetches, and under jsdom that refetch fails.
+export function seedStale(key: QueryKey, data: unknown): void {
+  queryClient.setQueryData(key, data, { updatedAt: Date.now() - 61_000 })
+}
+
+// Resolves once that refetch has failed with the seeded answer still held.
+export async function refetchFailed(key: QueryKey): Promise<void> {
+  await waitFor(() => expect(queryClient.getQueryState(key)).toMatchObject({ status: 'error', fetchStatus: 'idle' }))
 }
 
 export function renderAt(path: string) {
