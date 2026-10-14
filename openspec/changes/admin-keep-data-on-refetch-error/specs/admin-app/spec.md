@@ -31,6 +31,10 @@ Every page of the panel that shows data it loaded from core SHALL keep showing i
 - **WHEN** an admin saves a change to a category, core answers 200, and the read of the categories that follows fails
 - **THEN** the dialog closes, the "Categories" table is still shown and no alert is shown
 
+#### Scenario: Product opened while cached categories fail to refresh
+- **WHEN** an admin with `/products` shown opens a product from the table, the read of the categories made again fails, and core has not answered the product yet; then core answers the product
+- **THEN** a loading status and no alert are shown first; then "Name" holds the product's name, "Category" its category, one refetch failure notice is shown and no alert
+
 #### Scenario: First load failure still alerts
 - **WHEN** an admin opens a store's page, a product's page or `/products/new` and core answers every read with 502, then answers after the admin presses "Try again"
 - **THEN** the alert ("Could not load the store.", "Could not load the product.", "Could not load the categories.") is shown with "Try again" and no form, then the form and no alert

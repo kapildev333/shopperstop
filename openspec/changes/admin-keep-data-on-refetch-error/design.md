@@ -142,7 +142,7 @@ Vitest and Testing Library through `renderApp` (the real router, guard, shell an
 ## Spike (2026-10-13, on this branch at 6d9f7b3, Node 22.23.3, `npm ci` at the root; removed again)
 - Base: admin Vitest `160 passed (160)`.
 - Tests only: `11 failed | 168 passed (179)`, 17 files; lint and typecheck clean.
-- With the fix: `179 passed (179)`; `src/refetch.test.tsx` six more times, 19 of 19 each; lint, typecheck and `vite build` clean; `make test-web` exit 0 with ui `54`, admin `179`, web `91`; `src/routeTree.gen.ts` unchanged.
+- With the fix: `179 passed (179)`; `src/refetch.test.tsx` six more times, 19 of 19 each; lint, typecheck and `vite build` clean; `make test-web` exit 0 with ui `54`, admin `179`, web `91` (web is `101` on the base the branch was later rebased onto; the worker and the reviewer measured 101); `src/routeTree.gen.ts` unchanged.
 - 17 mutations (table above), each restored.
 - The blocks below were written back into files from this document by a script on a clean tree and compared with the spike: same diff, 179 green.
 
@@ -702,10 +702,67 @@ With:
       ) : storeId ? (
 ```
 
+## Task 1b (after review 1, `.claude/lanes/admin-P2-L7-R1.md`, 2026-10-13)
+**R1-1.** Task 1's gate on the product page chose the alert whenever either read was in error and either had no data. So with the categories already in the cache (the admin came from `/products`), their refetch on mount failing while the product's first read was still out showed "Could not load the product." with "Try again" instead of the skeleton; on main `isPending` won first. The alert now needs a read that failed **with nothing held**; a failed refresh of held categories is the root notice's business, not the gate's. This replaces the last sentence of Decision 6: with nothing held, the alert shows as soon as a read that holds nothing has failed, else the skeleton until both hold data.
+
+**Other sites with two reads, checked for the same shape: none has it.** The shape needs one gate over two reads. `stores/$storeId.tsx` gates on `storeQuery` alone and `ServiceAreas` gates on its own read inside it; `products/new.tsx` has one read; `stock.tsx` gates on the stores list in `Stock` and on the stock in `StoreStock`, nested, each on its own read. Each of those branches is `x.data === undefined ? (x.isError ? alert : skeleton)`, where `isError` with no data is by definition a failure with nothing held. So one test and one edit, the product page only.
+
+**Spike** (on the branch with task 1 landed and rebased, base admin Vitest `179 passed`; reverted): test only `1 failed | 179 passed (180)`, red on `Unable to find an accessible element with the role "status" and name "Loading"` (the alert is there instead); with the edit `180 passed (180)`, `src/refetch.test.tsx` three more times at 20 of 20; lint and typecheck clean at both steps; `make test-web` exit 0 with ui `54`, admin `180`, web `101`. Mutation: `categories.isError` in place of `(categories.data === undefined && categories.isError)` turns exactly the new test red.
+
+Scenario → test: Admin pages keep data when a refetch fails › Product opened while cached categories fail to refresh → `src/refetch.test.tsx` › "a product opened while its read is still out shows the skeleton, not the alert, when the cached categories fail to refresh".
+
+The test waits on the notice: it is rendered at the root whatever the page does, so it is there on the unfixed code too, and it appears exactly when the categories' failure has been delivered. No timer.
+
+### APPEND to `src/refetch.test.tsx` (step 1, the `test:` commit): one blank line after the file's last line, then
+```tsx
+test('a product opened while its read is still out shows the skeleton, not the alert, when the cached categories fail to refresh', async () => {
+  setToken('tok')
+  let categoriesDown = false
+  let answerProduct: (answer: Response) => void = () => {}
+  fakeCore({
+    ...routes,
+    'GET /admin/categories': () => (categoriesDown ? json(502) : categoryTree([fruits, dairy])),
+    [`GET ${productPath}`]: () => new Promise<Response>((resolve) => (answerProduct = resolve)),
+  })
+  renderApp('/products')
+  const link = await screen.findByRole('link', { name: tonedMilk.name })
+  // The Category column is filled from the categories: they are in the cache before the product page opens.
+  await waitFor(() => expect(screen.getByRole('table', { name: 'Products' })).toHaveTextContent('Dairy, Bread & Eggs › Milk'))
+
+  categoriesDown = true
+  await userEvent.click(link)
+
+  // The notice is the sign that the categories' refetch has failed and the page has been told.
+  expect(await screen.findByText(notice)).toBeInTheDocument()
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+  answerProduct(json(200, tonedMilk))
+  expect(await screen.findByLabelText('Name')).toHaveValue(tonedMilk.name)
+  expect(screen.getByLabelText('Category')).toHaveValue(tonedMilk.categoryId)
+  expect(screen.getAllByText(notice)).toHaveLength(1)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+```
+
+### EDIT 13 `src/routes/_staff/_admin/products/$productId.tsx`: the alert only for a read that failed with nothing held
+Replace:
+```tsx
+    if (!product.isError && !categories.isError) return <Skeleton variant="list" count={3} />
+```
+With:
+```tsx
+    // The alert only for a read that failed with nothing held: a failed refresh of held categories must not end the wait for the product.
+    const failed = (product.data === undefined && product.isError) || (categories.data === undefined && categories.isError)
+    if (!failed) return <Skeleton variant="list" count={3} />
+```
+
 ## Ceilings, in one place
 - A 404 on a refetch of a non-detail read keeps the rows without a notice (Decision 5).
 - The stock save guard patches quantities only (Decision 7).
 - No retry on the notice (Decision 8); not sticky (Decision 9).
+- (R1-2) The notice is in the page's flow (`mb-6`): when it appears or goes, the page moves by one line, possibly under a pointer about to click; a dialog's overlay covers it (still announced, nothing takes focus). Upgrade path as Decision 9.
+- (R1-3) This document is long for a 19-line component and ten branch swaps: the verbatim blocks are what a worker copies. Documents only.
 - While a dialog is open (a category being edited, a delete being confirmed) the notice is behind it at the top of the page: seen when the dialog closes. The dialog's own fields are form state and are not what the notice is about.
 - A category write whose reload fails leaves the old table under the notice (Mutation flows).
 - `/products` still shows the skeleton while a new filter or page loads, and the alert if that first load fails: a new filter is a new read with no data. `/stock` keeps its rows through that (admin-stock Decision 11); the same `placeholderData` for products is a separate change if wanted.

@@ -2,7 +2,7 @@
 
 One task, one worker, on branch `lane/admin-P2-L7-keep-data-on-refetch-error` in `.worktrees/admin-P2-L7`. Read design.md first: it fixes the rule, every file, every code block and every test name. The counts below were measured on this branch (base 6d9f7b3, admin Vitest `160 passed`) on 2026-10-13. A worker who finds a design choice still open, a "Replace" block that does not occur exactly once, or a count that differs, stops and reports. Brief: `briefs/task-1.md`.
 
-Gates, from the worktree root, Node 22.12+ (D11), every command prefixed with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"`. Quick loop: `npm run build --workspace packages/ui` once, then `npm run test --workspace apps/admin -- --run`. Before the `fix:` commit: `make test-web` (ui `54 passed`, admin `179 passed`, web `91 passed`; ui and web unchanged), `git status --short` shows only files of the task's scope and no `src/routeTree.gen.ts`, and `openspec validate admin-keep-data-on-refetch-error --type change --strict`. Workers never run `make e2e`, Playwright, `make db`, `make dev` or anything with docker.
+Gates, from the worktree root, Node 22.12+ (D11), every command prefixed with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"`. Quick loop: `npm run build --workspace packages/ui` once, then `npm run test --workspace apps/admin -- --run`. Before the `fix:` commit: `make test-web` (ui `54 passed`, admin `179 passed`, web `101 passed` on the rebased base (91 when first measured, before the rebase); ui and web unchanged by this change), `git status --short` shows only files of the task's scope and no `src/routeTree.gen.ts`, and `openspec validate admin-keep-data-on-refetch-error --type change --strict`. Workers never run `make e2e`, Playwright, `make db`, `make dev` or anything with docker.
 
 Commits: `test:` with the failing tests, then `fix:` with the code, each with its tick in this file. Boxes are ticked with the Edit tool. No amended commits, no attribution trailers, never push.
 
@@ -35,6 +35,17 @@ Easy to get wrong:
 
 - [x] 1.1 `src/refetch.test.tsx` per design.md, committed red (`test: a failed refetch keeps the showing admin page`); Vitest `11 failed | 168 passed (179)`; lint and typecheck pass
 - [x] 1.2 `src/refetch-notice.tsx` and EDIT 1 to 12 per design.md (`fix: a failed refetch keeps the showing admin page`); Vitest `179 passed (179)`; every gate green; `routeTree.gen.ts` unchanged
+
+## 1b. Product page: the alert only for a read that failed with nothing held (review 1, R1-1)
+
+Base: task 1 landed (87381e8, b31884f), admin Vitest `179 passed`. Measured on that base on 2026-10-13. Brief: `briefs/task-1b.md`. Gates as above with admin `180 passed`, ui `54`, web `101`.
+
+Scope: `apps/admin/src/refetch.test.tsx` (one test appended; nothing above it changes), `apps/admin/src/routes/_staff/_admin/products/$productId.tsx` (EDIT 13), this file's checkboxes, the worker's lane log `.claude/lanes/admin-P2-L7-T1b.md`. Nothing else: the other two-read sites do not have the shape (design.md, Task 1b).
+Scenario: Admin pages keep data when a refetch fails › Product opened while cached categories fail to refresh.
+Failing test: `src/refetch.test.tsx` › "a product opened while its read is still out shows the skeleton, not the alert, when the cached categories fail to refresh".
+
+- [ ] 1b.1 The test appended per design.md "Task 1b", committed red (`test: a product still loading shows the skeleton when cached categories fail to refresh`); Vitest `1 failed | 179 passed (180)`; lint and typecheck pass
+- [ ] 1b.2 EDIT 13 per design.md (`fix: the product page alerts only for a read that failed with nothing held`); Vitest `180 passed (180)`; every gate green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify admin-keep-data-on-refetch-error` after 1.2 lands.

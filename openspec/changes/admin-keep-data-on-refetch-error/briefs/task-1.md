@@ -61,7 +61,7 @@ Every command from the worktree root with `PATH="$HOME/.local/node-v22.23.3/bin:
 4. Create `apps/admin/src/refetch-notice.tsx` from the NEW FILE block.
 5. Apply EDIT 1 to EDIT 12 in order. For each: the "Replace" text occurs exactly once in the named file; replace it with the "With" text. If it occurs zero or several times, stop and report.
 6. `npm run test --workspace apps/admin -- --run` prints `Tests  179 passed (179)`.
-7. Gates: `make test-web` exits 0 with ui `54 passed`, admin `179 passed`, web `91 passed`; `git status --short` lists only scope files and no `src/routeTree.gen.ts`; `openspec validate admin-keep-data-on-refetch-error --type change --strict` is valid. Paste the three summaries into your lane log.
+7. Gates: `make test-web` exits 0 with ui `54 passed`, admin `179 passed`, web `101 passed` (corrected after the rebase; it was 91 on the first base); `git status --short` lists only scope files and no `src/routeTree.gen.ts`; `openspec validate admin-keep-data-on-refetch-error --type change --strict` is valid. Paste the three summaries into your lane log.
 8. Tick 1.2 in tasks.md (Edit tool). Commit:
    `fix: a failed refetch keeps the showing admin page`
 9. Set your lane log to `Status: done` and report: the two commit hashes, the Vitest summaries of steps 2 and 6, the `make test-web` counts, anything that differed.

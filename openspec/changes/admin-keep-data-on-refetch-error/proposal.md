@@ -12,7 +12,7 @@ Reproduced on this branch (6d9f7b3) before designing: 11 new Vitest tests are re
 - One guard on `/stock`: after a save, the saved quantities are written into the page on screen before it is read again, so a failed reload does not show the old quantities under "Stock saved.".
 - One test file, `src/refetch.test.tsx`, 19 tests: 11 red on the unfixed code, 8 pins.
 
-Area: admin. Capability touched: `admin-app` (4 ADDED requirements, 17 scenarios; nothing MODIFIED). Out of scope: retry or backoff (`retry: false` stays), `staleTime` and refetch-on-focus settings, a "Try again" on the notice, keeping the list on screen while a new filter or page of `/products` loads, the Dashboard and Orders pages (placeholders on main; admin-P2-L5 builds them with the same page rule, see design.md "For admin-P2-L5"), `packages/ui`, `apps/web`, Playwright (no e2e added or changed; no existing e2e string changes).
+Area: admin. Capability touched: `admin-app` (4 ADDED requirements, 18 scenarios; nothing MODIFIED). Out of scope: retry or backoff (`retry: false` stays), `staleTime` and refetch-on-focus settings, a "Try again" on the notice, keeping the list on screen while a new filter or page of `/products` loads, the Dashboard and Orders pages (placeholders on main; admin-P2-L5 builds them with the same page rule, see design.md "For admin-P2-L5"), `packages/ui`, `apps/web`, Playwright (no e2e added or changed; no existing e2e string changes).
 
 ## Capabilities
 
