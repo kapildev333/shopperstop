@@ -226,3 +226,24 @@ test('cancel refused', async () => {
   expect(screen.getByRole('dialog', { name: 'Cancel this order?' })).toBe(dialog)
   expect(asked).toEqual([id, id])
 })
+
+// A refused cancel shows the order core now holds: the page reads the order again (the seam writes the cache first).
+test('refused cancel reads the order again', async () => {
+  seed({ status: 'placed' })
+  const conflict: OrderResult = { error: { code: 'conflict', message: 'order is packing' } }
+  const send = async () => {
+    queryClient.setQueryData(orderKey('t', id), order({ status: 'packing' }))
+    return conflict
+  }
+  renderInRouter(<OrderPage id={id} send={send} />)
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+  const dialog = screen.getByRole('dialog', { name: 'Cancel this order?' })
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel order' }))
+
+  await waitFor(() => expect(within(dialog).getByRole('alert')).toHaveTextContent('This order can no longer be cancelled.'))
+  expect(screen.getByRole('dialog', { name: 'Cancel this order?' })).toBe(dialog)
+  expect(within(dialog).getByRole('button', { name: 'Keep order' })).toBeInTheDocument()
+  expect(within(dialog).queryByRole('button', { name: 'Cancel order' })).toBeNull()
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Your order is being packed.'))
+})
