@@ -215,12 +215,8 @@ function AddressCard({
                   {address.line2 && <p className="text-body text-ink">{address.line2}</p>}
                   <p className="text-body text-ink-muted tabular-nums">{address.pincode}</p>
                 </div>
-                <Chip
-                  selected={address.id === selected?.id}
-                  aria-label={`Deliver to ${address.label}`}
-                  onClick={() => onChoose(address.id)}
-                >
-                  Deliver here
+                <Chip selected={address.id === selected?.id} onClick={() => onChoose(address.id)}>
+                  Deliver to {address.label}
                 </Chip>
               </li>
             ))}
