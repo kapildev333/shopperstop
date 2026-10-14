@@ -1,0 +1,18 @@
+# web-P2-L4-T1 - checkout page: address choice and order summary (worker)
+Status: done (e2e written, not run: the manager runs it in its slot)
+## Doing
+2026-10-13: task 1 landed on `lane/web-P2-L4-checkout-orders`: red `04276a4` (test: checkout page, address choice and summary), feat `360a35f` (feat: checkout page with address choice and order summary), this log as chore. Tasks 1.1 and 1.2 ticked. Gates green (below). e2e `address added at checkout` not run: not my slot. Task 1.2's "e2e green in the manager's slot" stays open until the manager runs it.
+## Found
+- Red run (`04276a4`): 9 tests fail, 13 in the two files pass. Reasons: no `/checkout` route, so "Page not found" and no region "Order summary", "Delivery address", heading "Sign in", "Your cart is empty"; the cart bar still visible on the other page ("no bar on checkout"). The new module failed nothing at import: the tests import only existing modules (`storeKey` from cart-drawer, not `keys.store`).
+- Gates after feat: Vitest 100/100 in 22 files; lint clean; typecheck clean (covers `e2e/`); `npm run build --workspace apps/web` exit 0; `git status` clean after the build (routeTree committed); `openspec validate web-checkout-orders --strict` valid; `npm run build --workspace packages/ui` exit 0.
+- Code as landed, against design.md: `addresses.ts` (`useAddresses`, `addAddress`; `addAddress` invalidates `['addresses']` and awaits it before answering, as the account add did); `catalog.ts` (`keys.store`, `storeOptions`, `useStore`); `cart-drawer.tsx` (`ReplacedNotice` through `useStore`, `storeKey = keys.store`, exported `Totals`, `CartBar` returns nothing on `/checkout` with `useLocation` before the early return, signed-in "Proceed to checkout" is `RouterButtonLink to="/checkout"`); `order-parts.tsx` (`LineRow` with the designed `children`, unused until task 3); `checkout.tsx` (`CheckoutPage`, `AddressCard`, `SummaryCard`, the Place button with no handler); `routes/checkout.tsx` (guard).
+- `src/api.ts` untouched, as briefed. Decision 21 guards in the new code: `storeOptions` and the moved `useAddresses` throw `error ?? new Error('no answer')` when there is neither data nor error; `addAddress` answers `{ error: internal }` with no address and no error.
+- Vitest `getByRole` takes no `exact` option (string names already match whole): the Vitest file uses none; Playwright keeps `exact: true`.
+- `useAddresses`' `queryFn` now guards `error || !data` (was `if (error)`): same observable result for error answers, and a body-less 502 is an error, not a `data.items` TypeError.
+- Account: `saveAddress` now takes the add path through `addAddress(values).error`; the edit path is unchanged.
+- e2e (not run): `shopper.ts` has the constants, `freshEmail`, `expectNoViolations`, `freshShopper`, `orderPick`, `fillCart`, `signedIn`. `orderPick` assumes page 2 (101 to 148) has products with stock exactly 10 and price at least 2000; the first e2e run tests that. The existing specs keep their own copies of their helpers (no existing spec edited).
+## Requests
+- to web-P2-L4 (team lead / manager), a deviation from design.md to confirm: the empty checkout's "Your orders" link is a plain `<a href="/orders">` (full load), not a router `Link`. `/orders` is not a registered route until task 2, and a typed `Link to="/orders"` fails typecheck. Task 2's scope does not list `src/checkout.tsx`; the manager can allow the one-line switch in task 2 or task 4 (task 4 already allows layout edits to `checkout.tsx`). Ceiling until then: a full page load to the orders page.
+- to web-P2-L4 (manager): design Decision 21's `api.ts` fix (the `onResponse` middleware) is still the web-P2-L8 lane's; this branch gets it by rebase, nothing here depends on it.
+## Blockers
+None.
