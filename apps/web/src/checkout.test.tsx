@@ -1,4 +1,4 @@
-import { screen, waitFor, within, cleanup } from '@testing-library/react'
+import { act, screen, waitFor, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { queryClient } from './api'
@@ -331,4 +331,37 @@ test('the address chip is named by its visible text', async () => {
   const chip = within(addresses).getByRole('button', { name: 'Deliver to Home' })
   expect(chip.textContent).toBe('Deliver to Home')
   expect(within(addresses).getByRole('button', { name: 'Deliver to Work' }).textContent).toBe('Deliver to Work')
+})
+
+// Pins: expected green on arrival; each is shown to fail under a temporary mutation of checkout.tsx (reverted).
+test('unknown product id in the refusal marks nothing', async () => {
+  seed({ lines: [[taaza, 2]] })
+  const { send } = sender({
+    error: { code: 'out_of_stock', message: 'short', productIds: ['00000000-0000-4000-8000-0000000000ff'] },
+  })
+  renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Some products are not available in the quantity you chose.')
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  expect(within(summary).queryByRole('button', { name: 'Remove Amul Taaza' })).toBeNull()
+  expect(within(summary).queryByText(/Out of stock|Only|Not enough stock/)).toBeNull()
+})
+
+test('a line is marked only while its quantity is the refused one', async () => {
+  const low = product({ quantity: 2 })
+  seed({ lines: [[low, 3]] })
+  const { send } = sender({ error: { code: 'out_of_stock', message: 'short', productIds: [low.id] } })
+  renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  await screen.findByRole('alert')
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  expect(within(summary).getByText('Only 2 left')).toBeInTheDocument()
+
+  // The customer lowers the line in the drawer: the cart cache now holds the same line at 2.
+  act(() => {
+    queryClient.setQueryData(cartKey('t'), cartView({ storeId: koramangala, items: [{ product: low, quantity: 2 }] }))
+  })
+  // TanStack delivers the observer update on a timer: the page is awaited, not read at once.
+  await waitFor(() => expect(within(summary).queryByText('Only 2 left')).toBeNull())
+  expect(within(summary).queryByRole('button', { name: 'Remove Amul Taaza' })).toBeNull()
 })
