@@ -44,6 +44,12 @@ function setGuest(lines: [CartProduct, number][]) {
   })
 }
 
+// The router loads the route asynchronously: the shell is there once its banner is.
+async function renderShell() {
+  renderAt('/')
+  await screen.findByRole('banner')
+}
+
 function openDrawer() {
   act(() => openCart())
   return screen.getByRole('dialog', { name: 'Your cart' })
@@ -54,13 +60,13 @@ function summary(drawer: HTMLElement, label: string) {
   return within(drawer).getByText(label, { selector: 'dt' }).nextElementSibling as HTMLElement
 }
 
-test('drawer lines and totals', () => {
+test('drawer lines and totals', async () => {
   resolveStore({ deliveryFeeCents: 2500, freeDeliveryAboveCents: 19900, minOrderCents: 9900 })
   setGuest([
     [taaza, 2],
     [butter, 1],
   ])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByText('Amul Taaza')).toBeInTheDocument()
   expect(within(drawer).getByText('500 ml')).toBeInTheDocument()
@@ -75,19 +81,19 @@ test('drawer lines and totals', () => {
   expect(within(drawer).getByRole('link', { name: 'Proceed to checkout' })).toBeInTheDocument()
 })
 
-test('free delivery', () => {
+test('free delivery', async () => {
   resolveStore({ deliveryFeeCents: 2500, freeDeliveryAboveCents: 5000, minOrderCents: 1000 })
   setGuest([[taaza, 2]])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(summary(drawer, 'Delivery fee')).toHaveTextContent('Free')
   expect(within(drawer).queryByText(/more for free delivery/)).toBeNull()
 })
 
-test('checkout link signed in and out', () => {
+test('checkout link signed in and out', async () => {
   resolveStore({ minOrderCents: 0 })
   setGuest([[taaza, 2]])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByRole('link', { name: 'Proceed to checkout' })).toHaveAttribute(
     'href',
@@ -99,10 +105,10 @@ test('checkout link signed in and out', () => {
   expect(within(drawer).getByRole('link', { name: 'Proceed to checkout' })).toHaveAttribute('href', '/checkout')
 })
 
-test('out-of-stock line', () => {
+test('out-of-stock line', async () => {
   resolveStore()
   seedServerCart([[outOfStockButter, 1]])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByRole('button', { name: 'Out of stock' })).toBeDisabled()
   expect(within(drawer).getByRole('button', { name: 'Remove Amul Butter' })).toBeEnabled()
@@ -110,7 +116,7 @@ test('out-of-stock line', () => {
 
 test('empty, loading and failed cart', async () => {
   resolveStore()
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByText('Your cart is empty')).toBeInTheDocument()
   // Signed in with no cart cached: the request is made and fails under jsdom; the loading state shows first.
@@ -122,10 +128,10 @@ test('empty, loading and failed cart', async () => {
   expect(within(drawer).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
 })
 
-test('below the minimum order', () => {
+test('below the minimum order', async () => {
   resolveStore({ minOrderCents: 9900 })
   setGuest([[taaza, 2]])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByText('Minimum order is ₹99. Add ₹45 more to check out.')).toBeInTheDocument()
   expect(within(drawer).getByRole('button', { name: 'Proceed to checkout' })).toBeDisabled()
@@ -134,7 +140,7 @@ test('below the minimum order', () => {
 
 test('bar and header follow the cart', async () => {
   resolveStore({ freeDeliveryAboveCents: 19900 })
-  renderAt('/')
+  await renderShell()
   const banner = within(screen.getByRole('banner'))
   expect(screen.queryByRole('button', { name: 'View cart' })).toBeNull()
   expect(banner.getByRole('button', { name: 'Cart' })).toBeInTheDocument()
@@ -150,10 +156,10 @@ test('bar and header follow the cart', async () => {
   expect(screen.getByRole('dialog', { name: 'Your cart' })).toBeInTheDocument()
 })
 
-test('line clamped away', () => {
+test('line clamped away', async () => {
   resolveStore()
   seedServerCart([], { clamped: true })
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   expect(within(drawer).getByText('Some quantities were lowered to what the store has.')).toBeInTheDocument()
   expect(within(drawer).getByText('Your cart is empty')).toBeInTheDocument()
@@ -162,7 +168,7 @@ test('line clamped away', () => {
 test('quick taps in the drawer', async () => {
   resolveStore()
   seedServerCart([[taaza, 1]])
-  renderAt('/')
+  await renderShell()
   const drawer = openDrawer()
   const group = () => within(drawer).getByRole('group', { name: 'Quantity of Amul Taaza' })
   // Synchronous taps, no answer awaited in between: each one counts from the last.
