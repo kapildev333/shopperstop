@@ -110,9 +110,10 @@ func call(t *testing.T, method, path, token string, body any) (int, []byte) {
 // envelope is the error envelope every failure answers with.
 type envelope struct {
 	Error struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-		Field   string `json:"field"`
+		Code       string   `json:"code"`
+		Message    string   `json:"message"`
+		Field      string   `json:"field"`
+		ProductIDs []string `json:"productIds"`
 	} `json:"error"`
 }
 

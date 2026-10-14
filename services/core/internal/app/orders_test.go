@@ -1,0 +1,418 @@
+package app
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+const ordersPath = "/api/core/v1/orders"
+
+// missingOrderID names no order in any order test.
+const missingOrderID = "00000000-0000-4000-8000-0000000007fd"
+
+// orderPin numbers the pincodes of this file: 570001 onward, which no other test uses.
+var orderPin atomic.Int64
+
+var orderNumberPattern = regexp.MustCompile(`^SS-[A-Z2-7]{8}$`)
+
+// nextPincode returns a six-digit pincode no other test has used.
+func nextPincode() string { return fmt.Sprint(570000 + orderPin.Add(1)) }
+
+// shop is a store that delivers to its own pincode and has no minimum order.
+type shop struct{ ID, Pincode string }
+
+func newShop(t *testing.T) shop {
+	t.Helper()
+	s := shop{Pincode: nextPincode()}
+	s.ID = insertStore(t, true, s.Pincode)
+	if _, err := testPool.Exec(context.Background(), "update stores set min_order_cents = 0 where id = $1", s.ID); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// stockTo sets the stock of productID at storeID to n.
+func stockTo(t *testing.T, storeID, productID string, n int) {
+	t.Helper()
+	if _, err := testPool.Exec(context.Background(), "update store_stock set quantity = $3 where store_id = $1 and product_id = $2", storeID, productID, n); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// buyer is a signed-in customer with a phone and one address.
+type buyer struct{ Token, ID, AddressID string }
+
+// newBuyer makes a customer with the phone +919800000001 and a Home address at pincode.
+func newBuyer(t *testing.T, pincode string) buyer {
+	t.Helper()
+	c := newCustomer(t)
+	if status, body := call(t, http.MethodPatch, "/api/core/v1/me", c.Token, map[string]string{"phone": "+919800000001"}); status != http.StatusOK {
+		t.Fatalf("set phone: got %d %s, want 200", status, body)
+	}
+	a := createAddress(t, c.Token, map[string]any{"label": "Home", "line1": "12 Test Rd", "pincode": pincode})
+	return buyer{Token: c.Token, ID: c.Customer.ID, AddressID: a.ID}
+}
+
+// orderView, orderItemView and orderEventView are the order as the API answers it.
+type orderView struct {
+	ID      string `json:"id"`
+	Number  string `json:"number"`
+	StoreID string `json:"storeId"`
+	Status  string `json:"status"`
+	// CustomerName is the snapshot of the customer's name at placement.
+	CustomerName  string `json:"customerName"`
+	CustomerPhone string `json:"customerPhone"`
+	Address       struct {
+		Label   string `json:"label"`
+		Line1   string `json:"line1"`
+		Line2   string `json:"line2"`
+		Pincode string `json:"pincode"`
+	} `json:"address"`
+	SubtotalCents    int64            `json:"subtotalCents"`
+	DeliveryFeeCents int64            `json:"deliveryFeeCents"`
+	TotalCents       int64            `json:"totalCents"`
+	PaymentMethod    string           `json:"paymentMethod"`
+	PlacedAt         time.Time        `json:"placedAt"`
+	DeliveredAt      *time.Time       `json:"deliveredAt"`
+	CancelledAt      *time.Time       `json:"cancelledAt"`
+	CancelReason     string           `json:"cancelReason"`
+	Items            []orderItemView  `json:"items"`
+	Events           []orderEventView `json:"events"`
+}
+
+type orderItemView struct {
+	ProductID  string `json:"productId"`
+	Name       string `json:"name"`
+	UnitLabel  string `json:"unitLabel"`
+	ImageURL   string `json:"imageUrl"`
+	PriceCents int64  `json:"priceCents"`
+	MrpCents   int64  `json:"mrpCents"`
+	Quantity   int32  `json:"quantity"`
+}
+
+type orderEventView struct {
+	FromStatus string    `json:"fromStatus"`
+	ToStatus   string    `json:"toStatus"`
+	ActorType  string    `json:"actorType"`
+	Note       string    `json:"note"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+// place sends POST /orders with the buyer's address and returns the status and body.
+func place(t *testing.T, b buyer) (int, []byte) {
+	t.Helper()
+	return call(t, http.MethodPost, ordersPath, b.Token, map[string]any{"addressId": b.AddressID})
+}
+
+// mustPlace places the buyer's cart and returns the order, failing unless it is 201.
+func mustPlace(t *testing.T, b buyer) orderView {
+	t.Helper()
+	status, body := place(t, b)
+	var o orderView
+	if status != http.StatusCreated || json.Unmarshal(body, &o) != nil {
+		t.Fatalf("place: got %d %s, want 201", status, body)
+	}
+	return o
+}
+
+// requireUnchanged fails unless the buyer has no order, the cart holds exactly
+// the lines given (product id to quantity) and each product's stock at storeID is as given.
+func requireUnchanged(t *testing.T, b buyer, storeID string, cart, stock map[string]int32) {
+	t.Helper()
+	var n int
+	if err := testPool.QueryRow(context.Background(), "select count(*) from orders where customer_id = $1", b.ID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("%d orders after a refused placement, want 0", n)
+	}
+	c := readCart(t, b.Token)
+	if len(c.Items) != len(cart) {
+		t.Fatalf("cart %+v, want %d lines", c.Items, len(cart))
+	}
+	for _, l := range c.Items {
+		if q, ok := cart[l.Product.ID]; !ok || q != l.Quantity {
+			t.Fatalf("cart line %s at %d, want %v", l.Product.ID, l.Quantity, cart)
+		}
+	}
+	for p, want := range stock {
+		if got := quantityAt(t, storeID, p); got != want {
+			t.Fatalf("stock of %s is %d, want %d", p, got, want)
+		}
+	}
+}
+
+// wantAmounts fails unless the order's subtotal, delivery fee and total are the given ones.
+func wantAmounts(t *testing.T, o orderView, subtotal, fee, total int64) {
+	t.Helper()
+	if o.SubtotalCents != subtotal || o.DeliveryFeeCents != fee || o.TotalCents != total {
+		t.Fatalf("order amounts %d, %d, %d; want %d, %d, %d", o.SubtotalCents, o.DeliveryFeeCents, o.TotalCents, subtotal, fee, total)
+	}
+}
+
+func TestPlaceOrder(t *testing.T) {
+	s := newShop(t)
+	name := stockName(t)
+	p := cartProduct(t, s.ID, name, 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+
+	status, body := place(t, b)
+	var o orderView
+	if status != http.StatusCreated || json.Unmarshal(body, &o) != nil {
+		t.Fatalf("place: got %d %s, want 201", status, body)
+	}
+	if o.Status != "placed" || !orderNumberPattern.MatchString(o.Number) || o.PaymentMethod != "cod" || o.StoreID != s.ID {
+		t.Fatalf("order %+v, want status placed, a number, paymentMethod cod and the shop", o)
+	}
+	if o.CustomerName != "Asha" || o.CustomerPhone != "+919800000001" {
+		t.Fatalf("customer %q %q, want Asha and +919800000001", o.CustomerName, o.CustomerPhone)
+	}
+	if o.Address.Label != "Home" || o.Address.Line1 != "12 Test Rd" || o.Address.Pincode != s.Pincode {
+		t.Fatalf("address %+v, want Home, 12 Test Rd, %s", o.Address, s.Pincode)
+	}
+	wantAmounts(t, o, 10000, 2500, 12500)
+	if len(o.Items) != 1 {
+		t.Fatalf("items %+v, want one", o.Items)
+	}
+	it := o.Items[0]
+	if it.ProductID != p || it.Name != name || it.UnitLabel != "1 unit" || it.PriceCents != 5000 || it.MrpCents != 5000 || it.Quantity != 2 {
+		t.Fatalf("item %+v, want product %s %s, 1 unit, 5000, 5000, quantity 2", it, p, name)
+	}
+	if len(o.Events) != 1 || o.Events[0].ToStatus != "placed" || o.Events[0].ActorType != "customer" {
+		t.Fatalf("events %+v, want one placed event by the customer", o.Events)
+	}
+	if strings.Contains(string(body), "fromStatus") {
+		t.Fatalf("placement body %s has a fromStatus, want it absent", body)
+	}
+	if o.PlacedAt.Location() != time.UTC {
+		t.Fatalf("placedAt %s is not in UTC", o.PlacedAt)
+	}
+	if got := quantityAt(t, s.ID, p); got != 3 {
+		t.Fatalf("stock after placement %d, want 3", got)
+	}
+	status, cartBody := call(t, http.MethodGet, cartPath, b.Token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET cart after placement: got %d %s, want 200", status, cartBody)
+	}
+	requireEmptyCart(t, cartBody)
+}
+
+func TestPlaceOrderFee(t *testing.T) {
+	s := newShop(t)
+	cheap := cartProduct(t, s.ID, stockName(t), 5000)
+	dear := cartProduct(t, s.ID, stockName(t), 19900)
+	b1 := newBuyer(t, s.Pincode)
+	setLine(t, b1.Token, s.ID, cheap, 2)
+	wantAmounts(t, mustPlace(t, b1), 10000, 2500, 12500)
+	b2 := newBuyer(t, s.Pincode)
+	setLine(t, b2.Token, s.ID, dear, 1)
+	wantAmounts(t, mustPlace(t, b2), 19900, 0, 19900)
+}
+
+func TestPlaceOrderEmptyCart(t *testing.T) {
+	b := newBuyer(t, nextPincode())
+	status, body := place(t, b)
+	expectError(t, "empty cart", status, body, http.StatusBadRequest, "validation", "", "cart is empty")
+}
+
+func TestPlaceOrderOtherCustomersAddress(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	other := newBuyer(t, nextPincode())
+	setLine(t, b.Token, s.ID, p, 2)
+	cases := []struct {
+		name    string
+		body    map[string]any
+		message string
+	}{
+		{"another customer's address", map[string]any{"addressId": other.AddressID}, "unknown address"},
+		{"no addressId", map[string]any{}, "required"},
+		{"addressId not a uuid", map[string]any{"addressId": "abc"}, "must be a uuid"},
+	}
+	for _, c := range cases {
+		status, body := call(t, http.MethodPost, ordersPath, b.Token, c.body)
+		expectError(t, c.name, status, body, http.StatusBadRequest, "validation", "addressId", c.message)
+		requireUnchanged(t, b, s.ID, map[string]int32{p: 2}, map[string]int32{p: 5})
+	}
+}
+
+func TestPlaceOrderBelowMinimum(t *testing.T) {
+	s := newShop(t)
+	if _, err := testPool.Exec(context.Background(), "update stores set min_order_cents = 9900 where id = $1", s.ID); err != nil {
+		t.Fatal(err)
+	}
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	status, body := place(t, b)
+	expectError(t, "below the minimum", status, body, http.StatusBadRequest, "validation", "subtotal", "below the store's minimum order")
+	requireUnchanged(t, b, s.ID, map[string]int32{p: 1}, map[string]int32{p: 5})
+}
+
+func TestPlaceOrderAddressServedElsewhere(t *testing.T) {
+	a := newShop(t)
+	other := newShop(t)
+	p := cartProduct(t, a.ID, stockName(t), 5000)
+	stockTo(t, a.ID, p, 5)
+	b := newBuyer(t, other.Pincode)
+	setLine(t, b.Token, a.ID, p, 1)
+	status, body := place(t, b)
+	expectError(t, "address served by store B", status, body, http.StatusConflict, "not_serviceable", "addressId", "the store does not deliver to this address")
+	requireUnchanged(t, b, a.ID, map[string]int32{p: 1}, map[string]int32{p: 5})
+
+	// An address that no store serves is refused the same way.
+	unserved := createAddress(t, b.Token, map[string]any{"label": "Work", "line1": "4 Test Rd", "pincode": nextPincode()})
+	b.AddressID = unserved.ID
+	status, body = place(t, b)
+	expectError(t, "address no store serves", status, body, http.StatusConflict, "not_serviceable", "addressId", "the store does not deliver to this address")
+	requireUnchanged(t, b, a.ID, map[string]int32{p: 1}, map[string]int32{p: 5})
+}
+
+func TestPlaceOrderStoreClosed(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+	if _, err := testPool.Exec(context.Background(), "update stores set is_open = false where id = $1", s.ID); err != nil {
+		t.Fatal(err)
+	}
+	status, body := place(t, b)
+	expectError(t, "store closed", status, body, http.StatusConflict, "not_serviceable", "", "the store is closed")
+	requireUnchanged(t, b, s.ID, map[string]int32{p: 2}, map[string]int32{p: 5})
+}
+
+func TestPlaceOrderOutOfStock(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	q := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, q, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+	setLine(t, b.Token, s.ID, q, 3)
+	stockTo(t, s.ID, q, 1)
+	status, body := place(t, b)
+	expectError(t, "one line short", status, body, http.StatusConflict, "out_of_stock", "", "some products are out of stock")
+	if ids := decodeError(t, body).Error.ProductIDs; !slices.Equal(ids, []string{q}) {
+		t.Fatalf("productIds %v, want [%s]", ids, q)
+	}
+	requireUnchanged(t, b, s.ID, map[string]int32{p: 2, q: 3}, map[string]int32{p: 5, q: 1})
+}
+
+func TestPlaceOrderInactiveProduct(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+	if _, err := testPool.Exec(context.Background(), "update products set is_active = false where id = $1", p); err != nil {
+		t.Fatal(err)
+	}
+	status, body := place(t, b)
+	expectError(t, "deactivated product", status, body, http.StatusConflict, "out_of_stock", "", "some products are out of stock")
+	if ids := decodeError(t, body).Error.ProductIDs; !slices.Equal(ids, []string{p}) {
+		t.Fatalf("productIds %v, want [%s]", ids, p)
+	}
+	requireUnchanged(t, b, s.ID, map[string]int32{p: 2}, map[string]int32{p: 5})
+}
+
+// TestPlaceOrderRaceForLastUnit: two buyers place for the last unit at once.
+// Each round exactly one placement is 201 and the other is 409 out_of_stock.
+func TestPlaceOrderRaceForLastUnit(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	x := newBuyer(t, s.Pincode)
+	y := newBuyer(t, s.Pincode)
+	for range 5 {
+		// Stock first: the cart clamps its quantity to the stock.
+		stockTo(t, s.ID, p, 1)
+		setLine(t, x.Token, s.ID, p, 1)
+		setLine(t, y.Token, s.ID, p, 1)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		var statusX, statusY int
+		var bodyX, bodyY []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			statusX, bodyX = place(t, x)
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			statusY, bodyY = place(t, y)
+		}()
+		close(start)
+		wg.Wait()
+		created, refused := 0, 0
+		for _, r := range []struct {
+			status int
+			body   []byte
+		}{{statusX, bodyX}, {statusY, bodyY}} {
+			switch r.status {
+			case http.StatusCreated:
+				created++
+			case http.StatusConflict:
+				expectError(t, "losing placement", r.status, r.body, http.StatusConflict, "out_of_stock", "", "some products are out of stock")
+				if ids := decodeError(t, r.body).Error.ProductIDs; !slices.Equal(ids, []string{p}) {
+					t.Fatalf("losing placement productIds %v, want [%s]", ids, p)
+				}
+				refused++
+			default:
+				t.Fatalf("placement got %d %s, want 201 or 409", r.status, r.body)
+			}
+		}
+		if created != 1 || refused != 1 {
+			t.Fatalf("round: %d created and %d refused, want 1 and 1", created, refused)
+		}
+		if got := quantityAt(t, s.ID, p); got != 0 {
+			t.Fatalf("stock after the round %d, want 0", got)
+		}
+	}
+}
+
+func TestDeleteStoreWithOrder(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	mustPlace(t, b)
+	token := adminToken(t)
+	status, body := call(t, http.MethodDelete, adminStoresPath+"/"+s.ID, token, nil)
+	expectError(t, "delete a store with an order", status, body, http.StatusConflict, "conflict", "", "")
+	if status, body := call(t, http.MethodGet, adminStoresPath+"/"+s.ID, token, nil); status != http.StatusOK {
+		t.Fatalf("GET store after the refused delete: got %d %s, want 200", status, body)
+	}
+}
+
+func TestDeleteOrderedProduct(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	mustPlace(t, b)
+	token := adminToken(t)
+	status, body := call(t, http.MethodDelete, productsPath+"/"+p, token, nil)
+	expectError(t, "delete an ordered product", status, body, http.StatusConflict, "conflict", "", "product was ordered; set isActive to false instead")
+	if status, body := call(t, http.MethodGet, productsPath+"/"+p, token, nil); status != http.StatusOK {
+		t.Fatalf("GET product after the refused delete: got %d %s, want 200", status, body)
+	}
+}

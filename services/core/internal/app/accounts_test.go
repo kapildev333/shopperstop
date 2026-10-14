@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -243,7 +244,7 @@ func TestSignInFailuresLookTheSame(t *testing.T) {
 	if wrong.Error.Code != "unauthorized" || wrong.Error.Message != "wrong email or password" {
 		t.Fatalf("wrong password body %s: want unauthorized and the shared message", wrongBody)
 	}
-	if wrong != unknown {
+	if !reflect.DeepEqual(wrong, unknown) {
 		t.Fatalf("messages differ: wrong password %+v, unknown email %+v", wrong, unknown)
 	}
 	if unknownTook < wrongTook/2 {
@@ -505,6 +506,7 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, cartPath, nil, http.StatusOK},
 		{http.MethodPut, cartItemsPath, map[string]any{}, http.StatusBadRequest},
 		{http.MethodDelete, cartPath, nil, http.StatusNoContent},
+		{http.MethodPost, ordersPath, map[string]any{}, http.StatusBadRequest},
 	}
 	for _, g := range cartGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
