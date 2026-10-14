@@ -147,10 +147,11 @@ export function placeOrder(addressId: string, send = postOrder): Promise<OrderRe
       queryClient.setQueryData(cartKey(token), cartView(emptyCart))         // core emptied it in the same transaction
       if (order) queryClient.setQueryData(orderKey(token, order.id), order)
       void queryClient.invalidateQueries({ queryKey: ordersKey(token) })
-    } else if (error?.code === 'out_of_stock' || error?.field === 'subtotal') {
-      await queryClient.invalidateQueries({ queryKey: cartKey(token) })     // the lines' stock and prices as they are now
     } else if (error?.field === 'addressId' && error.code === 'validation') {
       void queryClient.invalidateQueries({ queryKey: ['addresses'] })
+    } else if (error?.code !== 'not_serviceable') {
+      // out_of_stock, subtotal: the lines as they are now. internal: the order may have gone through (Decision 21).
+      await queryClient.invalidateQueries({ queryKey: cartKey(token) })
     }
     return result
   })
@@ -161,7 +162,7 @@ export function placeOrder(addressId: string, send = postOrder): Promise<OrderRe
 
 `arrival`: `const left = Date.parse(placedAt) + promisedMinutes * 60_000 - now`; `left <= 0` → "Running late. We are getting your order to you."; else `const n = Math.ceil(left / 60_000)` → "Arriving in 1 minute" or `Arriving in ${n} minutes`.
 
-Reads (`orderOptions`, `useOrders`, `storeOptions`): the 404 case first where there is one, then `if (error || !data) throw error ?? new Error('no answer')` (Decision 21).
+Reads (`orderOptions`, `useOrders`): the 404 case first where there is one, then `if (error || !data) throw error ?? new Error('no answer')`, the shape task 1 landed in `useAddresses` and `storeOptions`.
 
 `orderOptions` in task 4: `refetchInterval: (query) => pollInterval(query.state.data)`. `refetchIntervalInBackground` is not set (TanStack's default is false: no poll while the tab is hidden) and `refetchOnWindowFocus` is not set (default true: one read when the tab comes back). No `staleTime`: every mount reads.
 
@@ -242,21 +243,31 @@ The page components sit outside `src/routes/` because the route files are code-s
 4. **409 `conflict`.** Sent once more inside the same queued job; a second `conflict` is shown as "Could not place your order. Try again.". No back-off: a collision is about one in 10^12.
 5. **`out_of_stock`.** `productIds` are product ids; a cart line is `line.product.id`. The marks are kept as `{productId: quantity at refusal}` and a line is marked while its quantity is still that one, so lowering it in the drawer, or removing it, clears its mark without a second state machine. "Remove" is `setLine(view.storeId, line.product, 0)`: the cart's store, the product object, through the queue. Ceilings: no "remove all" (one tap per line); no "set to what is left"; a line the cart read already shows as out of stock is marked only after the customer presses the button; the label can only say "Only N left" when core's stock is below the 10 the site is shown (D7).
 6. **The store is the cart's.** Everything on `/checkout` reads `view.storeId`; the stored pincode and `StoreGate` play no part, so a customer browsing Indiranagar with a Koramangala cart checks out the Koramangala cart, named as such.
-7. **An address the store does not serve** is found by core, not before: the customer chooses, presses, and gets the alert and the "Not delivered here" badge on that address (kept until the next press). Ceiling: with the demo customer and an Indiranagar cart the default address fails on the first press. Upgrade: resolve each address with `serviceabilityOptions(address.pincode)` and disable the ones at another store. Escalated.
-8. **Address choice is a `Chip` per address** (`aria-pressed`), because `@shopperstop/ui` has no radio or choice-card. Requested from ui; nothing here waits for it.
-9. **Countdown clock.** `Date.now()` is the only clock; `arrival` takes `now` as an argument. Tests fake the clock at the process boundary with `vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })` and `vi.setSystemTime`; no clock module. The promise is `placedAt` plus the store's current `promisedMinutes`. Ceilings: an admin changing the store's promise moves the countdown of open orders (requested from core: a snapshot on the order); the customer's device clock is trusted; after the promise the text is fixed, with no "N minutes late".
+7. **An address the store does not serve** is found by core, not before: the customer chooses, presses, and gets the alert and the "Not delivered here" badge on that address (kept until the next press). Ceiling: with the demo customer and an Indiranagar cart the default address fails on the first press. Upgrade: resolve each address with `serviceabilityOptions(address.pincode)` and disable the ones at another store. Confirmed by the manager.
+8. **Address choice is a `Chip` per address** (`aria-pressed`), because `@shopperstop/ui` has no radio or choice-card. Requested from ui without blocking; confirmed by the manager.
+9. **Countdown clock.** `Date.now()` is the only clock; `arrival` takes `now` as an argument. Tests fake the clock at the process boundary with `vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })` and `vi.setSystemTime`; no clock module. The promise is `placedAt` plus the store's current `promisedMinutes`. Ceilings: an admin changing the store's promise moves the countdown of open orders (a snapshot on `Order` is not coming in Phase 2, so this ceiling stays); the customer's device clock is trusted; after the promise the text is fixed, with no "N minutes late".
 10. **Polling.** `refetchInterval` as a function of the held order: 10 s while under way, off when delivered, cancelled, not found or not yet answered (a first load that fails shows the alert with "Try again" and does not hammer). TanStack keeps the interval running after a failed poll, so the page recovers by itself. Hidden tab: no poll (`refetchIntervalInBackground` left false), one read on return (`refetchOnWindowFocus` left true). The view checks `order === undefined` before `isError` (web-P2-L6's rule), so a failed poll changes nothing on screen. Ceiling: no "last updated" hint while core is unreachable.
 11. **Status announced.** The one `StatusMessage` (role `status`) is always rendered at the same place, so a new status changes its text in place and assistive technology reads it. The countdown and the history list are outside it.
-12. **Badge variants.** Under way `accent`, delivered `success`, cancelled `neutral`. Cancelled is not `danger`: status colours mean error, caution and success (CLAUDE.md), and a customer's own cancel is none of them. Escalated, because admin's board should use the same mapping.
-13. **Cancel.** No reason field: the body is `{}`. The dialog's first button is "Keep order" (`cancelLabel`), since "Cancel" beside "Cancel order" reads as the same action. Every failure keeps the dialog open; on 409 the order is read again, the confirm button goes and only "Keep order" is left. Ceiling: the store sees no reason. Escalated.
+12. **Badge variants.** Under way `accent`, delivered `success`, cancelled `neutral`. Cancelled is not `danger`: status colours mean error, caution and success (CLAUDE.md), and a customer's own cancel is none of them. This is PLAN.md D28 (orchestrator, cross-area; admin's board follows it): never `danger` or `warning` for a status, and the badge always carries the status as text. All seven values of core's enum (`placed`, `accepted`, `packing`, `ready`, `out_for_delivery`, `delivered`, `cancelled`, checked in `core.d.ts`) are in the table.
+13. **Cancel.** No reason field: the body is `{}`. The dialog's first button is "Keep order" (`cancelLabel`), since "Cancel" beside "Cancel order" reads as the same action. Every failure keeps the dialog open; on 409 the order is read again, the confirm button goes and only "Keep order" is left. Ceiling: the store sees no reason. Confirmed by the manager.
 14. **The cart bar is hidden on `/checkout`** (the page has its own total and one primary action); the header cart button stays, and "Edit cart" opens the drawer on phone. On `/orders` and `/orders/<id>` the bar behaves as everywhere (after placing the cart is empty, so there is none).
 15. **Checkout does not re-read the cart on entry**; it uses the cart cache (at most 60 s old). Core prices and checks at placement and the order page shows what was charged. Ceiling: a price changed in the last minute shows in the order, not in the summary.
-16. **History is the first page of 24**, with "Showing your latest 24 orders." beyond. Cards, not a `Table`: a table row's link is 20 px tall on a phone; a card holds a 44 px button link. Upgrade: "Load more" with `useInfiniteQuery` as the product feed does. Escalated.
+16. **History is the first page of 24**, with "Showing your latest 24 orders." beyond. Cards, not a `Table`: a table row's link is 20 px tall on a phone; a card holds a 44 px button link. Upgrade: "Load more" with `useInfiniteQuery` as the product feed does. Confirmed by the manager.
 17. **Links to `/orders`:** the account page's header ("Your orders"), the tracking page ("All orders"), the empty checkout ("Your orders"). None in the banner: it is full at 390 px.
 18. **No `docs/design/web-P2-L4.md`**: this file is enough.
 19. **Times** are formatted in the browser's zone with `Intl.DateTimeFormat('en-IN', …)` inside `<time dateTime>`. Tests assert `dateTime`, never the formatted text (it depends on the machine's zone).
-21. **A non-ok answer without core's envelope** (the proxy's 502 with an empty body while core is down) comes out of `openapi-fetch` 0.17.0 with `error` undefined and `data` undefined (admin's finding, `.claude/areas/admin.md`, 2026-10-13). Nothing in this change may read "no error" as success: `postOrder`, `postCancel` and `addAddress` answer `{ error }` with code `internal` when neither an order (or address) nor an error came, and every new read's `queryFn` ends `if (error || !data) throw error ?? new Error('no answer')`. The fix for the whole client (one `onResponse` middleware in `src/api.ts`) is not in this change; it is in the report for the manager.
+21. **A failed answer on a write.** Since web-P2-L8 (#152) `src/api.ts` hands on every failed answer without core's envelope as `{ error: { code: 'internal', … } }`, so "no error" on a failed answer no longer happens and no new code guards against it. Two things still apply here. A write is done only when its answer holds the order (or address): `postOrder`, `postCancel` and `addAddress` answer `{ error }` with code `internal` for an ok answer with no body. And `internal` on `POST /orders` (a 502, a timeout, a lost answer) does not prove the order was not placed: the page shows "Could not place your order. Try again." and `placeOrder` reads the cart again. If the order went through, the cart comes back empty and the page turns into "Your cart is empty" with its "Your orders" link; if the read fails too, the old cart stays and a second press is safe, because core answers 400 "cart is empty" and the page goes to `/orders` (Decision 3), where the order is the first card. An order is never placed twice from one cart. Ceiling: the customer is not told "your order may have been placed".
 20. **`ink-muted` text only inside a `Card`** (`ink-muted` on `canvas` fails 4.5:1, admin's axe finding). Text straight on the page is `ink` or a `StatusMessage`.
+
+## As landed
+
+Task 1 (`88c9e82`, `e4d6c45`), ruled on by the team lead:
+
+- The empty checkout's "Your orders" link is a plain `<a href="/orders">` with `buttonClass`, because `/orders` was not a route yet and a typed link fails typecheck. Task 2 switches it to the router link and proves the client-side navigation (test "empty checkout links to orders").
+- `useAddresses` and `storeOptions` end `if (error || !data) throw …`. Kept.
+- `addAddress` awaits the invalidation of `['addresses']` before it answers, so the new address is in the list when the page chooses it. Kept.
+- The empty-cart state has no description line. Kept: the two links say what to do.
+- `LineRow`'s `children` is unused until task 3 puts the badge and "Remove" there. Kept.
 
 ## Scenario → test
 
@@ -267,7 +278,7 @@ Vitest names are the scenario names in lower case. `(pin)` marks a test expected
 | Require sign-in › Signed-out checkout redirect | `src/checkout.test.tsx` | 1 |
 | Require sign-in › Signed-out order pages redirect | `src/order-tracking.test.tsx` | 2 |
 | Checkout page › Checkout summary from the cart; Summary names the cart's store | `src/checkout.test.tsx` | 1 |
-| Checkout states › Empty, loading and failed checkout | `src/checkout.test.tsx` | 1 |
+| Checkout states › Empty, loading and failed checkout | `src/checkout.test.tsx`; plus "empty checkout links to orders" (the router link, no scenario of its own) | 1; 2 |
 | Address choice › Default address chosen; Another address chosen; No address yet | `src/checkout.test.tsx` | 1 |
 | Address choice › Address added at checkout | `e2e/checkout.spec.ts` | 1 |
 | Minimum order › Checkout below the minimum | `src/checkout.test.tsx` | 1 |
@@ -295,7 +306,7 @@ Vitest names are the scenario names in lower case. `(pin)` marks a test expected
 | Order links › Account links to orders | `src/account.test.tsx` | 2 |
 | Layout › Checkout and orders on a phone | `e2e/orders.spec.ts` | 4 |
 
-44 scenarios: 33 Vitest, 9 Playwright, 2 existing.
+44 scenarios: 33 Vitest, 9 Playwright, 2 existing. One extra Vitest test in task 2 ("empty checkout links to orders").
 
 ## Test strategy
 
@@ -337,7 +348,7 @@ export async function staffHeaders(request): Promise<{ Authorization: string }> 
 - **Phone** (`test.use({ viewport: { width: 390, height: 844 } })`): boxes with `boundingBox()` as `phone-layout.spec.ts` does; a card is `getByRole('region', { name })` on `/checkout` and the order page, and the `listitem` on `/orders`; `document.documentElement.scrollWidth <= innerWidth`; `toHaveCSS('font-variant-numeric', 'tabular-nums')` on the order heading and on the "Total" amount.
 - axe (`expectNoViolations`) on every page, and with each dialog open.
 
-Two rules that bit earlier lanes: inside `page.evaluate`, `page.addInitScript` and `page.waitForFunction` callbacks nothing from the Node side exists (no imported constant, no helper, no closure variable): pass values as the callback's argument. And every `getByRole(..., { name })` and `getByText` uses `exact: true` ("Cancel order" is on the page and in the dialog; "Add address" is a button and a dialog title; "View order SS-DEMOAAAB" and "View cart").
+Two rules that bit earlier lanes: inside `page.evaluate`, `page.addInitScript` and `page.waitForFunction` callbacks nothing from the Node side exists (no imported constant, no helper, no closure variable): pass values as the callback's argument. And every Playwright `getByRole(..., { name })` and `getByText` uses `exact: true`; Testing Library has no such option on `getByRole`, where a string name already matches exactly (use a string, not a regex) ("Cancel order" is on the page and in the dialog; "Add address" is a button and a dialog title; "View order SS-DEMOAAAB" and "View cart").
 
 ## Risks / Trade-offs
 

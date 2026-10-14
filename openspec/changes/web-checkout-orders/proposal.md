@@ -32,5 +32,5 @@ None.
 ## Requests to other areas
 None blocks this change.
 - ui, optional: a single-choice control (radio group or choice card); checkout chooses an address with `Chip`s (`aria-pressed`) until then. A status-history (timeline) component if admin's order sheet wants the same list; here it is a plain `ol`.
-- core, optional: `promisedMinutes` (or a promised time) and the store's name on `Order`, as snapshots: today the countdown follows the store's current value and needs `GET /stores/{id}`.
-- admin, information: the status names and `Badge` variants in design.md (Vocabulary), so the board and the customer site say the same.
+- core: `promisedMinutes` and the store's name as snapshots on `Order` were asked for and are not coming in Phase 2; the countdown following the store's current value is a named ceiling (design Decision 9).
+- admin, information: the status names and `Badge` variants in design.md (Vocabulary) are PLAN.md D28, which the board follows too.
