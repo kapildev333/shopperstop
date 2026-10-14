@@ -2953,6 +2953,9 @@ export const Route = createFileRoute('/_staff/stock')({
 - Review 3, R3-6: the pager's markup repeats the products table's (that one uses `disabled`, this one `aria-disabled` on purpose); a shared pager is the third use's job, in ui.
 - Review 3, R3-7: the task 3 worker's lane log names the commit hashes from before the rebase.
 - Task 3b: a failure answer without core's envelope reaches every page as code `internal` and shows that page's generic failure text; the status is kept on the response but no page reads it. A lone half of a surrogate pair typed into the search field is dropped without a message.
+- Review 3b: a 304 or a status outside 200 to 599 would make `Response.json` throw in the client's `onResponse`, so the request would reject instead of answering; no admin call sends conditional headers, so a 304 cannot reach it. If one ever does: `if (response.status === 304) return response`.
+- Review 3b: when a failure answer is replaced, its original body is left unread, and a not-ok answer's body is read whole to look for core's envelope; fine for an error page, never done for a success.
+- Verification, not product (acceptance, 2026-10-14): the Chrome extension's pointer events did not reach the quantity fields in the manager's walk-through, so edits and saves in a real browser stand on the Playwright run against the real core, and the failed-save path with core down stands on its Vitest tests plus the proxy's observed text/plain 502.
 
 ## Migration Plan
 None: no data, config or dependency change. Rollback is reverting the PR; `/stock` falls back to L1's placeholder.
