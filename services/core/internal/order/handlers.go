@@ -12,7 +12,11 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/order/db"
 	"github.com/kapildev333/shopperstop/services/core/internal/pg"
+	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
+
+// statusMessage names the seven statuses, for a status that is not one of them.
+const statusMessage = "must be one of placed, accepted, packing, ready, out_for_delivery, delivered, cancelled"
 
 func invalid(field, message string) *httpx.Error {
 	return &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Field: field, Message: message}
@@ -26,6 +30,15 @@ func notFound() *httpx.Error {
 func customerScope(ctx context.Context) scope {
 	id := auth.CustomerID(ctx)
 	return scope{customerID: &id}
+}
+
+// staffScope limits a read to the signed-in store staff's store; admins see every store.
+func staffScope(ctx context.Context) scope {
+	s := auth.CurrentStaff(ctx)
+	if s.Role == "store_staff" {
+		return scope{storeID: &s.StoreID}
+	}
+	return scope{}
 }
 
 // createRequest is the POST /orders body.
@@ -141,6 +154,114 @@ func Cancel(pool *pgxpool.Pool) http.HandlerFunc {
 		sc := customerScope(ctx)
 		actor := Actor{Type: "customer", ID: auth.CustomerID(ctx)}
 		if err := Transition(ctx, pool, id, sc, db.OrderStatusCancelled, actor, reason); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		respond(w, r, pool, id, sc, http.StatusOK)
+	}
+}
+
+// StoreList answers 200 with one page of a store's orders, newest first, optionally
+// only those in one status. Store staff of another store and an unknown store are 404.
+func StoreList(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		if sc := staffScope(ctx); sc.storeID != nil && *sc.storeID != id {
+			httpx.WriteError(w, r, notFound())
+			return
+		}
+		if _, err := store.Get(ctx, pool, id); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		var status *db.OrderStatus
+		if v := r.URL.Query().Get("status"); v != "" {
+			st := db.OrderStatus(v)
+			if !st.Valid() {
+				httpx.WriteError(w, r, invalid("status", statusMessage))
+				return
+			}
+			status = &st
+		}
+		page, pageSize, err := httpx.Page(r)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		q := db.New(pool)
+		rows, err := q.StoreOrders(ctx, db.StoreOrdersParams{
+			StoreID: id, Status: status, Off: int32((page - 1) * pageSize), Lim: int32(pageSize),
+		})
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		total, err := q.CountStoreOrders(ctx, db.CountStoreOrdersParams{StoreID: id, Status: status})
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		out, err := views(ctx, q, rows)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.NewList(out, page, pageSize, total))
+	}
+}
+
+// AdminGet answers 200 with one order in the staff's scope. Store staff get only
+// their store's orders; any other order is 404.
+func AdminGet(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		respond(w, r, pool, id, staffScope(r.Context()), http.StatusOK)
+	}
+}
+
+// statusRequest is the POST /admin/orders/{id}/status body.
+type statusRequest struct {
+	Status string `json:"status"`
+	Note   string `json:"note"`
+}
+
+// SetStatus answers 200 with the order after a staff status change. A move the
+// table does not allow is 409 conflict and changes nothing. A cancel records the
+// note as cancelReason and returns the order's quantities to stock.
+func SetStatus(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		var in statusRequest
+		if err := httpx.ReadJSON(w, r, &in); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		if !db.OrderStatus(in.Status).Valid() {
+			httpx.WriteError(w, r, invalid("status", statusMessage))
+			return
+		}
+		note, err := text("note", in.Note)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		sc := staffScope(ctx)
+		actor := Actor{Type: "staff", ID: auth.CurrentStaff(ctx).ID}
+		if err := Transition(ctx, pool, id, sc, db.OrderStatus(in.Status), actor, note); err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}

@@ -1622,6 +1622,294 @@
         }
       }
     },
+    "/admin/orders/{id}": {
+      "get": {
+        "operationId": "getAdminOrder",
+        "summary": "Read one order of a store",
+        "description": "Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The order id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000703"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000703",
+                  "number": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "placed",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "label": "Home",
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "subtotalCents": 103000,
+                  "deliveryFeeCents": 0,
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "placedAt": "2026-10-13T09:20:00Z",
+                  "items": [
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 7000,
+                      "mrpCents": 7000,
+                      "quantity": 1
+                    },
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000604",
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 32000,
+                      "mrpCents": 32000,
+                      "quantity": 3
+                    }
+                  ],
+                  "events": [
+                    {
+                      "toStatus": "placed",
+                      "actorType": "customer",
+                      "createdAt": "2026-10-13T09:20:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order has this id, the signed-in store staff's store does not own it, or the id is not a uuid. Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/orders/{id}/status": {
+      "post": {
+        "operationId": "setOrderStatus",
+        "summary": "Move an order to another status",
+        "description": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The order id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000703"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderStatusChange"
+              },
+              "example": {
+                "status": "accepted",
+                "note": "Packing now"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The order after the move, with the new event last.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000703",
+                  "number": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "accepted",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "label": "Home",
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "subtotalCents": 103000,
+                  "deliveryFeeCents": 0,
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "placedAt": "2026-10-13T09:20:00Z",
+                  "items": [
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000601",
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 7000,
+                      "mrpCents": 7000,
+                      "quantity": 1
+                    },
+                    {
+                      "productId": "00000000-0000-4000-8000-000000000604",
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                      "priceCents": 32000,
+                      "mrpCents": 32000,
+                      "quantity": 3
+                    }
+                  ],
+                  "events": [
+                    {
+                      "toStatus": "placed",
+                      "actorType": "customer",
+                      "createdAt": "2026-10-13T09:20:00Z"
+                    },
+                    {
+                      "fromStatus": "placed",
+                      "toStatus": "accepted",
+                      "actorType": "staff",
+                      "note": "Packing now",
+                      "createdAt": "2026-10-13T09:21:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The status is not one of the seven (field status), the note is longer than 500 characters (field note), or the body is not JSON (no field). Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be one of placed, accepted, packing, ready, out_for_delivery, delivered, cancelled",
+                    "field": "status"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order has this id, the signed-in store staff's store does not own it, or the id is not a uuid. Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled. Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "cannot move an order from placed to packing"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/auth/sign-in": {
       "post": {
         "operationId": "postAdminAuthSignIn",
@@ -3194,6 +3482,191 @@
           },
           "404": {
             "description": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/stores/{id}/orders": {
+      "get": {
+        "operationId": "listStoreOrders",
+        "summary": "List a store's orders",
+        "description": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The store id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "One status to keep. Empty or absent keeps every status.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "placed",
+                "accepted",
+                "packing",
+                "ready",
+                "out_for_delivery",
+                "delivered",
+                "cancelled"
+              ]
+            },
+            "example": "placed"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number, from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Items per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the store's orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000703",
+                      "number": "SS-DEMOAAAD",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "status": "placed",
+                      "customerName": "Demo Customer",
+                      "customerPhone": "+919800000000",
+                      "address": {
+                        "label": "Home",
+                        "line1": "12 80 Feet Rd, Koramangala",
+                        "pincode": "560034"
+                      },
+                      "subtotalCents": 103000,
+                      "deliveryFeeCents": 0,
+                      "totalCents": 103000,
+                      "paymentMethod": "cod",
+                      "placedAt": "2026-10-13T09:20:00Z",
+                      "items": [
+                        {
+                          "productId": "00000000-0000-4000-8000-000000000601",
+                          "name": "Banana Robusta",
+                          "unitLabel": "1 kg",
+                          "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                          "priceCents": 7000,
+                          "mrpCents": 7000,
+                          "quantity": 1
+                        },
+                        {
+                          "productId": "00000000-0000-4000-8000-000000000604",
+                          "name": "Pomegranate Bhagwa",
+                          "unitLabel": "1 kg",
+                          "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                          "priceCents": 32000,
+                          "mrpCents": 32000,
+                          "quantity": 3
+                        }
+                      ],
+                      "events": [
+                        {
+                          "toStatus": "placed",
+                          "actorType": "customer",
+                          "createdAt": "2026-10-13T09:20:00Z"
+                        }
+                      ]
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The status is not one of the seven, or a page or pageSize is invalid. The field names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be one of placed, accepted, packing, ready, out_for_delivery, delivered, cancelled",
+                    "field": "status"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired, deactivated or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The signed-in staff user is store staff of another store, no store has this id, or the id is not a uuid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6641,6 +7114,33 @@
             "type": "string",
             "maxLength": 500,
             "description": "Why the order is cancelled. Optional; at most 500 characters."
+          }
+        }
+      },
+      "OrderStatusChange": {
+        "type": "object",
+        "description": "A staff status change. note is kept on the event; on a cancel it is the order's cancelReason.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "placed",
+              "accepted",
+              "packing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "cancelled"
+            ],
+            "description": "The status to move the order to."
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Why the status changes. Optional; at most 500 characters."
           }
         }
       },

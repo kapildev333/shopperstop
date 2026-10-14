@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"slices"
 
@@ -35,10 +36,11 @@ func allowed(from, to db.OrderStatus, actorType string) bool {
 // quantities to the store's stock. An order outside sc is "not found"; a move the
 // table does not allow is 409 conflict and changes nothing.
 func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to db.OrderStatus, actor Actor, note string) error {
-	return pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+	var row db.LockOrderRow
+	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
-		row, err := q.LockOrder(ctx, db.LockOrderParams{ID: id, CustomerID: sc.customerID, StoreID: sc.storeID})
-		if err != nil {
+		var err error
+		if row, err = q.LockOrder(ctx, db.LockOrderParams{ID: id, CustomerID: sc.customerID, StoreID: sc.storeID}); err != nil {
 			return pg.Map(err)
 		}
 		if !allowed(row.Status, to, actor.Type) {
@@ -65,4 +67,10 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 			ActorType: actor.Type, ActorID: &actor.ID, Note: note,
 		})
 	})
+	if err != nil {
+		return err
+	}
+	slog.InfoContext(ctx, "order transition", "orderId", id, "number", row.Number, "from", string(row.Status),
+		"to", string(to), "actorType", actor.Type, "actorId", actor.ID, "requestId", httpx.RequestID(ctx))
+	return nil
 }

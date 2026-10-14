@@ -284,6 +284,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one order of a store
+         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token.
+         */
+        get: operations["getAdminOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orders/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an order to another status
+         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token.
+         */
+        post: operations["setOrderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/auth/sign-in": {
         parameters: {
             query?: never;
@@ -481,6 +521,26 @@ export interface paths {
          * @description Admins for any store; store staff only for their own store. Sets the quantity of each listed product at the store in one transaction, creating the row where the store has none. Takes 1 to 500 rows; each product id is a uuid, names a product that exists and appears once; each quantity is from 0 to 100000. Any invalid row refuses the whole request with 400 naming the field, and nothing changes. Answers 204 with no body; the admin page reads the list again. Another store's staff and an unknown store answer 404 not_found.
          */
         put: operations["putStock"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/stores/{id}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a store's orders
+         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         */
+        get: operations["listStoreOrders"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1343,6 +1403,16 @@ export interface components {
         OrderCancel: {
             /** @description Why the order is cancelled. Optional; at most 500 characters. */
             reason?: string;
+        };
+        /** @description A staff status change. note is kept on the event; on a cancel it is the order's cancelReason. */
+        OrderStatusChange: {
+            /**
+             * @description The status to move the order to.
+             * @enum {string}
+             */
+            status: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+            /** @description Why the status changes. Optional; at most 500 characters. */
+            note?: string;
         };
         OrderList: {
             items: components["schemas"]["Order"][];
@@ -2786,6 +2856,272 @@ export interface operations {
             };
         };
     };
+    getAdminOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000703",
+                     *       "number": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "status": "placed",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "label": "Home",
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "subtotalCents": 103000,
+                     *       "deliveryFeeCents": 0,
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "cod",
+                     *       "placedAt": "2026-10-13T09:20:00Z",
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 7000,
+                     *           "mrpCents": 7000,
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000604",
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 32000,
+                     *           "mrpCents": 32000,
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "events": [
+                     *         {
+                     *           "toStatus": "placed",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No order has this id, the signed-in store staff's store does not own it, or the id is not a uuid. Nothing changes. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    setOrderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "status": "accepted",
+                 *       "note": "Packing now"
+                 *     }
+                 */
+                "application/json": components["schemas"]["OrderStatusChange"];
+            };
+        };
+        responses: {
+            /** @description The order after the move, with the new event last. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000703",
+                     *       "number": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "status": "accepted",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "label": "Home",
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "subtotalCents": 103000,
+                     *       "deliveryFeeCents": 0,
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "cod",
+                     *       "placedAt": "2026-10-13T09:20:00Z",
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 7000,
+                     *           "mrpCents": 7000,
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000604",
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 32000,
+                     *           "mrpCents": 32000,
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "events": [
+                     *         {
+                     *           "toStatus": "placed",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         },
+                     *         {
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "accepted",
+                     *           "actorType": "staff",
+                     *           "note": "Packing now",
+                     *           "createdAt": "2026-10-13T09:21:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description The status is not one of the seven (field status), the note is longer than 500 characters (field note), or the body is not JSON (no field). Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be one of placed, accepted, packing, ready, out_for_delivery, delivered, cancelled",
+                     *         "field": "status"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No order has this id, the signed-in store staff's store does not own it, or the id is not a uuid. Nothing changes. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "cannot move an order from placed to packing"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     postAdminAuthSignIn: {
         parameters: {
             query?: never;
@@ -4214,6 +4550,154 @@ export interface operations {
                 };
             };
             /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listStoreOrders: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One status to keep. Empty or absent keeps every status.
+                 * @example placed
+                 */
+                status?: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+                /**
+                 * @description Page number, from 1. Default 1.
+                 * @example 1
+                 */
+                page?: number;
+                /**
+                 * @description Items per page, from 1 to 100. Default 24.
+                 * @example 24
+                 */
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The store id.
+                 * @example 00000000-0000-4000-8000-000000000401
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the store's orders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000703",
+                     *           "number": "SS-DEMOAAAD",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "status": "placed",
+                     *           "customerName": "Demo Customer",
+                     *           "customerPhone": "+919800000000",
+                     *           "address": {
+                     *             "label": "Home",
+                     *             "line1": "12 80 Feet Rd, Koramangala",
+                     *             "pincode": "560034"
+                     *           },
+                     *           "subtotalCents": 103000,
+                     *           "deliveryFeeCents": 0,
+                     *           "totalCents": 103000,
+                     *           "paymentMethod": "cod",
+                     *           "placedAt": "2026-10-13T09:20:00Z",
+                     *           "items": [
+                     *             {
+                     *               "productId": "00000000-0000-4000-8000-000000000601",
+                     *               "name": "Banana Robusta",
+                     *               "unitLabel": "1 kg",
+                     *               "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *               "priceCents": 7000,
+                     *               "mrpCents": 7000,
+                     *               "quantity": 1
+                     *             },
+                     *             {
+                     *               "productId": "00000000-0000-4000-8000-000000000604",
+                     *               "name": "Pomegranate Bhagwa",
+                     *               "unitLabel": "1 kg",
+                     *               "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *               "priceCents": 32000,
+                     *               "mrpCents": 32000,
+                     *               "quantity": 3
+                     *             }
+                     *           ],
+                     *           "events": [
+                     *             {
+                     *               "toStatus": "placed",
+                     *               "actorType": "customer",
+                     *               "createdAt": "2026-10-13T09:20:00Z"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "pageSize": 24,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            /** @description The status is not one of the seven, or a page or pageSize is invalid. The field names it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be one of placed, accepted, packing, ready, out_for_delivery, delivered, cancelled",
+                     *         "field": "status"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The signed-in staff user is store staff of another store, no store has this id, or the id is not a uuid. */
             404: {
                 headers: {
                     [name: string]: unknown;

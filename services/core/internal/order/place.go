@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,7 @@ import (
 // Place turns the customer's whole cart into one placed order, in one
 // transaction, and answers the order's id. Any failure rolls everything back.
 func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string) (id string, err error) {
+	var number string
 	err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
 		storeID, lines, err := cart.Lines(ctx, tx, customerID)
 		if err != nil {
@@ -83,7 +85,7 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string
 		if err != nil {
 			return err
 		}
-		number, err := newNumber()
+		number, err = newNumber()
 		if err != nil {
 			return err
 		}
@@ -125,6 +127,8 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string
 	case err != nil:
 		return "", err
 	}
+	slog.InfoContext(ctx, "order transition", "orderId", id, "number", number, "to", string(db.OrderStatusPlaced),
+		"actorType", "customer", "actorId", customerID, "requestId", httpx.RequestID(ctx))
 	return id, nil
 }
 
