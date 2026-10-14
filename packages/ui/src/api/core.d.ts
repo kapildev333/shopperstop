@@ -533,7 +533,7 @@ export interface paths {
         };
         /**
          * List a store's stock
-         * @description Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         * @description Admins for any store; store staff only for their own store. The store's active products with their quantity there, sorted by name, one page at a time. q (at most 100 characters) keeps products whose name or brand contains it, case-insensitively, with % and _ matched literally. lowStock=true keeps quantities below 5, zero included; any other lowStock value answers 400 naming lowStock. A product with no stock row at the store is listed with quantity 0. A row carries imageUrl when the product has an image. Inactive products are never listed. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
          */
         get: operations["getStock"];
         /**
@@ -1066,6 +1066,8 @@ export interface components {
              * @description Selling price in paise.
              */
             priceCents: number;
+            /** @description Path of the product image, the same value as StoreProduct.imageUrl. Omitted when the product has no image. */
+            imageUrl?: string;
             /** @description The store's quantity; 0 when it has no row. */
             quantity: number;
         };
@@ -4517,6 +4519,7 @@ export interface operations {
                      *           "name": "Banana Robusta",
                      *           "unitLabel": "1 kg",
                      *           "priceCents": 7000,
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
                      *           "quantity": 17
                      *         }
                      *       ],

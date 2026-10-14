@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
+	"github.com/kapildev333/shopperstop/services/core/internal/catalog"
 	"github.com/kapildev333/shopperstop/services/core/internal/httpx"
 	"github.com/kapildev333/shopperstop/services/core/internal/stock/db"
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
@@ -24,6 +25,7 @@ type Row struct {
 	Brand      string `json:"brand,omitempty"`
 	UnitLabel  string `json:"unitLabel"`
 	PriceCents int64  `json:"priceCents"`
+	ImageURL   string `json:"imageUrl,omitempty"`
 	Quantity   int32  `json:"quantity"`
 }
 
@@ -124,7 +126,7 @@ func List(pool *pgxpool.Pool) http.HandlerFunc {
 		for _, row := range rows {
 			items = append(items, Row{
 				ProductID: row.ProductID, Name: row.Name, Brand: row.Brand, UnitLabel: row.UnitLabel,
-				PriceCents: row.PriceCents, Quantity: row.Quantity,
+				PriceCents: row.PriceCents, ImageURL: catalog.ImageURL(row.ImageKey), Quantity: row.Quantity,
 			})
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.NewList(items, page, pageSize, total))
