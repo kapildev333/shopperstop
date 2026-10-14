@@ -3,7 +3,7 @@ Scope: `apps/web/`
 Depends on: ui (`@shopperstop/ui` from task 9), core (`services/core/openapi.json` for the generated client, task 8)
 Spec: Spec 1 §4, §7, §8; Spec 2 §7, §13; plan task 10
 ## Doing
-2026-10-13, `/manage web` session (`/loop 5min`). **Running `make e2e` now in `.worktrees/web-P2-L3`** (ports 18080, 15173, 15174; `shopperstop_core_e2e`, main's schema); this line changes when the slot is released. web-P2-L1 merged (#119), archived in this PR. web-P2-L3 `web-cart`: tasks 1, 2 and 2b built and reviewed (server cart, merge at sign-in, quick taps each count through one write queue), branch re-stacked on main after #119; the team lead is cutting task 3 (drawer, bar, store change, clamp and replaced notices) against the merged browsing pages. Branch local, unpushed. Next after web-cart: web-P2-L4 `web-checkout-orders` waits on core-P2-L5.
+2026-10-13, `/manage web` session (`/loop 5min`). No `make e2e` running; the slot is free (web's run on the re-stacked `lane/web-P2-L3-cart` passed: admin 8, web 19; `make test-web` ui 54, admin 95, web 64). web-P2-L1 merged (#119), archived in this PR. web-P2-L3 `web-cart`: tasks 1, 2 and 2b built and reviewed (server cart, merge at sign-in, quick taps each count through one write queue), branch re-stacked on main after #119; the team lead is cutting task 3 (drawer, bar, store change, clamp and replaced notices) against the merged browsing pages. Branch local, unpushed. Next after web-cart: web-P2-L4 `web-checkout-orders` waits on core-P2-L5.
 
 ## Lanes
 | Lane | Task | Scope | Status |
