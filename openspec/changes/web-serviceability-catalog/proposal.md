@@ -25,7 +25,7 @@ Area: web. Capabilities touched: `web-app` (ADDED requirements; MODIFIED "Custom
 None.
 
 ### Modified Capabilities
-- `web-app`: MODIFIED "Customer site shell"; ADDED "Customer pincode choice", "Customer pincode sheet", "Customer store resolution", "Customer store notices", "Customer product card", "Customer home page", "Customer category page", "Customer search", "Customer product page".
+- `web-app`: MODIFIED "Customer site shell"; ADDED "Customer pincode choice", "Customer pincode sheet", "Customer store resolution", "Customer store notices", "Customer product card", "Customer home page", "Customer category page", "Customer paged product lists", "Customer search", "Customer product page".
 
 ## Impact
 - Files: `apps/web/**` (listed in design.md), this change folder; root `package-lock.json` only if `npm install` touches it (no new dependency).

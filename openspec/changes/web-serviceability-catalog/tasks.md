@@ -41,5 +41,5 @@ Failing tests: `src/product.test.tsx` › "product with savings", "plenty in sto
 - [x] 4.2 `useProduct`, `/p/$slug` (`feat: product page`); all gates green, e2e green; remove the `/p/$slug` Link cast in `product-card.tsx`
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-serviceability-catalog` after 4.2 lands.
+- [x] Team lead runs `/opsx:verify web-serviceability-catalog` after 4.2 lands. (2026-10-13 on `7fbb76d`: pass with follow-ups, see the lane log.)
 - Area manager archives the change by PR after the feature PR merges.
