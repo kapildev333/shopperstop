@@ -1,7 +1,7 @@
 # web-P2-L6 - web-keep-data-on-refetch-error: keep the showing page when a background refetch fails (team lead)
 Status: started
 ## Doing
-Change proposed and validated 2026-10-13; one worker task ready to launch (tasks.md, task 1). Next for this lane: answer worker questions, then `/opsx:verify` after 1.2 lands.
+Task 1 landed on the branch: 1.1 `b5a72ea` (tests, six red, four pins green), 1.2 `911d876` (fix, all gates green). Next: reviewer, then the team lead runs `/opsx:verify`.
 ## Found
 - Change: `openspec/changes/web-keep-data-on-refetch-error/` (proposal; `web-app` delta: 1 ADDED requirement "Customer pages keep data when a refetch fails", 8 scenarios; design with the audit table, the pattern, the scenario-to-test map; tasks: one). No `docs/design/web-P2-L6.md`: design.md is enough.
 - Audit of every query-driven view in `apps/web/src` (design.md, Audit). To change, five views in four files: `StoreGate` (`src/store-gate.tsx`), Home `Categories` and `Picked` (`src/routes/index.tsx`), `CategoryContent` (`src/routes/c.$slug.tsx`), `ProductContent` (`src/routes/p.$slug.tsx`). Already correct: `ProductFeed`, Search `Suggestions`, `ProfileCard`, `AddressesCard`, `AccountLink`, `PincodeButton`, `CartBody`, `CartSheet`/`CartBar`/`CartButton`, `ReplacedNotice`, `useCart`/`useCartQuantity`. The imperative `fetchQuery` reads in `src/store-change.tsx` and `src/cart.ts` are not views and stay ("a failed read is unknown", web-cart).
@@ -12,6 +12,8 @@ Change proposed and validated 2026-10-13; one worker task ready to launch (tasks
 - Archive rehearsed on a scratch copy of `openspec/`: `openspec archive` adds 1 requirement to `web-app` (38 in all), `openspec validate --all --strict` passes there (13 of 13); the merged requirement text is 446 characters (limit 500). On the branch: `openspec validate web-keep-data-on-refetch-error --strict` valid, `--all --strict` 14 of 14.
 - The branch is at 34b35ac; origin/main has moved on by two plan-only commits (#131, #132). No conflict expected; the manager rebases when it lands.
 - No e2e added (design Decision 7). The worker does not run Playwright.
+- Worker (task 1), 2026-10-13: the six red tests failed on the alert replacing the content, as the brief states; the four pins were green on arrival. Gates on `911d876` plus reflow: `npm run build --workspace packages/ui` 0, `lint` 0, `typecheck` 0, full `apps/web` suite 91 of 91 (21 files), the four touched files three times at 22 of 22 each, `build` 0 with `git status` showing only the four source files, `openspec validate web-keep-data-on-refetch-error --strict` valid. No Playwright run.
+- Deviation kept from the brief: `Picked` uses `data ? grid : error ? alert : skeleton` as written (not `data === undefined`); `data` is an array there and never `null`, so truthiness and `!== undefined` agree.
 ## Requests
 - to admin (through the web manager, information only): `apps/admin` may order `error` before `data` the same way; this lane did not read it. The pattern and the test recipe are in this change's design.md.
 ## Blockers
