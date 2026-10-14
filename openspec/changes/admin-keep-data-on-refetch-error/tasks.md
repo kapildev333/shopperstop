@@ -45,7 +45,7 @@ Scenario: Admin pages keep data when a refetch fails › Product opened while ca
 Failing test: `src/refetch.test.tsx` › "a product opened while its read is still out shows the skeleton, not the alert, when the cached categories fail to refresh".
 
 - [x] 1b.1 The test appended per design.md "Task 1b", committed red (`test: a product still loading shows the skeleton when cached categories fail to refresh`); Vitest `1 failed | 179 passed (180)`; lint and typecheck pass
-- [ ] 1b.2 EDIT 13 per design.md (`fix: the product page alerts only for a read that failed with nothing held`); Vitest `180 passed (180)`; every gate green
+- [x] 1b.2 EDIT 13 per design.md (`fix: the product page alerts only for a read that failed with nothing held`); Vitest `180 passed (180)`; every gate green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify admin-keep-data-on-refetch-error` after 1.2 lands.
