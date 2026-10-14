@@ -473,3 +473,172 @@ func TestResetLoadsDemoStock(t *testing.T) {
 	assertCount(t, "carts", 0)
 	assertCount(t, "cart_items", 0)
 }
+
+// Fixed ids of the demo orders of design Decision 15.
+const (
+	orderDelivered = "00000000-0000-4000-8000-000000000701"
+	orderCancelled = "00000000-0000-4000-8000-000000000702"
+	orderPlaced    = "00000000-0000-4000-8000-000000000703"
+	productBanana  = "00000000-0000-4000-8000-000000000601"
+)
+
+// token posts the credentials to path and returns the token of the 200 answer.
+func token(t *testing.T, base, path, email, password string) string {
+	t.Helper()
+	status, body := postJSON(t, base+path, map[string]string{"email": email, "password": password})
+	var s struct {
+		Token string `json:"token"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Token == "" {
+		t.Fatalf("sign-in %s: got %d %s, want 200 with a token", email, status, body)
+	}
+	return s.Token
+}
+
+// request sends one request with a bearer token and an optional JSON body, and
+// returns the status and the raw answer.
+func request(t *testing.T, base, method, path, bearer string, body any) (int, []byte) {
+	t.Helper()
+	var reader io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		reader = bytes.NewReader(raw)
+	}
+	req, err := http.NewRequest(method, base+path, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out
+}
+
+// TestResetLoadsDemoOrders: a reset loads the three demo orders with their
+// items and events, drops an order left over from before it, and the rows
+// agree with each other: totals, statuses, events and timestamps.
+func TestResetLoadsDemoOrders(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	addOtherRows(t)
+	var other string
+	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
+		values ('SS-OTHERAAA', '00000000-0000-4000-8000-000000000999', $1, 'Other', 'Home', 'Elsewhere', '110001', 7000, 0, 7000) returning id::text`, storeKoramangala).Scan(&other); err != nil {
+		t.Fatalf("insert other order: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, `insert into order_items (order_id, product_id, name, unit_label, price_cents, mrp_cents, quantity)
+		values ($1, $2, 'Banana Robusta', '1 kg', 7000, 7000, 1)`, other, productBanana); err != nil {
+		t.Fatalf("insert other order item: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, `insert into order_events (order_id, to_status, actor_type, actor_id)
+		values ($1, 'placed', 'customer', '00000000-0000-4000-8000-000000000999')`, other); err != nil {
+		t.Fatalf("insert other order event: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := seed.Reset(ctx, testPool); err != nil {
+			t.Fatalf("reset %d: %v", i+1, err)
+		}
+	}
+
+	assertCount(t, "orders", 3)
+	assertCount(t, "order_items", 5)
+	assertCount(t, "order_events", 9)
+
+	rows, err := testPool.Query(ctx, "select id::text, number, status::text, customer_id::text, store_id::text from orders order by id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	want := []struct{ id, number, status string }{
+		{orderDelivered, "SS-DEMOAAAB", "delivered"},
+		{orderCancelled, "SS-DEMOAAAC", "cancelled"},
+		{orderPlaced, "SS-DEMOAAAD", "placed"},
+	}
+	for i := 0; rows.Next(); i++ {
+		var id, number, status, customer, store string
+		if err := rows.Scan(&id, &number, &status, &customer, &store); err != nil {
+			t.Fatal(err)
+		}
+		if i >= len(want) || id != want[i].id || number != want[i].number || status != want[i].status || customer != customerID || store != storeKoramangala {
+			t.Fatalf("order %d: %s %s %s customer %s store %s, want %+v for the demo customer at Koramangala", i, id, number, status, customer, store, want[i])
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	assertSQL(t, "totals that do not add up", "select count(*) from orders o where o.total_cents <> o.subtotal_cents + o.delivery_fee_cents or o.subtotal_cents <> (select coalesce(sum(i.price_cents * i.quantity), 0) from order_items i where i.order_id = o.id)", 0)
+	assertSQL(t, "orders below the store minimum", "select count(*) from orders where subtotal_cents < 9900", 0)
+	assertSQL(t, "banana robusta lines in delivered and placed", "select count(*) from order_items where product_id = '00000000-0000-4000-8000-000000000601' and order_id in ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000703')", 2)
+	assertSQL(t, "orders whose status is not the latest event", "select count(*) from orders o where o.status::text <> (select e.to_status::text from order_events e where e.order_id = o.id order by e.created_at desc, e.id desc limit 1)", 0)
+	assertSQL(t, "placed events with no previous status", "select count(*) from order_events where from_status is null and to_status = 'placed'", 3)
+	assertSQL(t, "events with no actor", "select count(*) from order_events where actor_id is null", 0)
+	assertSQL(t, "delivered orders with a delivery time", "select count(*) from orders where status = 'delivered' and delivered_at is not null", 1)
+	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
+}
+
+// TestDemoOrdersThroughTheRouter: the demo customer lists the three demo
+// orders newest first, the admin cannot delete the ordered demo product, and
+// the demo customer cancels the placed order.
+func TestDemoOrdersThroughTheRouter(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	base := server(t)
+	customer := token(t, base, "/api/core/v1/auth/sign-in", "demo@shopperstop.local", "demo12345")
+	admin := token(t, base, "/api/core/v1/admin/auth/sign-in", "admin@shopperstop.local", "admin12345")
+
+	status, body := request(t, base, http.MethodGet, "/api/core/v1/orders", customer, nil)
+	var list struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+		Total int `json:"total"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &list) != nil || list.Total != 3 {
+		t.Fatalf("GET /orders: got %d %s, want 200 with total 3", status, body)
+	}
+	for i, id := range []string{orderPlaced, orderCancelled, orderDelivered} {
+		if i >= len(list.Items) || list.Items[i].ID != id {
+			t.Fatalf("GET /orders: got %s, want %s, %s, %s newest first", body, orderPlaced, orderCancelled, orderDelivered)
+		}
+	}
+
+	status, body = request(t, base, http.MethodDelete, "/api/core/v1/admin/products/"+productBanana, admin, nil)
+	var refused struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if status != http.StatusConflict || json.Unmarshal(body, &refused) != nil || refused.Error.Code != "conflict" {
+		t.Fatalf("DELETE ordered product: got %d %s, want 409 conflict", status, body)
+	}
+	assertSQL(t, "ordered product still there", "select count(*) from products where id = '"+productBanana+"'", 1)
+
+	status, body = request(t, base, http.MethodPost, "/api/core/v1/orders/"+orderPlaced+"/cancel", customer, map[string]string{})
+	var cancelled struct {
+		Status string `json:"status"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &cancelled) != nil || cancelled.Status != "cancelled" {
+		t.Fatalf("cancel placed demo order: got %d %s, want 200 cancelled", status, body)
+	}
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset after the cancel: %v", err)
+	}
+}
