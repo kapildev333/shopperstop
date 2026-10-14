@@ -19,7 +19,7 @@ Easy to get wrong:
 - The existing tests stay untouched and green, "store lookup fails" among them.
 
 - [x] 1.1 Tests and the two helpers committed, six red and four pins green (`test: a failed refetch keeps the showing page`)
-- [ ] 1.2 The four views (`fix: a failed refetch keeps the showing page`); all gates green
+- [x] 1.2 The four views (`fix: a failed refetch keeps the showing page`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-keep-data-on-refetch-error` after 1.2 lands.

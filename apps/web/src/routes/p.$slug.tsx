@@ -23,18 +23,16 @@ function ProductPage() {
 }
 
 function ProductContent({ storeId, slug }: { storeId: string; slug: string }) {
-  const { data, error, isPending, refetch } = useProduct(storeId, slug)
-  if (error) {
+  const { data, error, refetch } = useProduct(storeId, slug)
+  // A failed refetch keeps the product on screen; the alert shows only with nothing held.
+  if (data === undefined) {
     return (
       <Frame title="Product">
-        <ErrorBanner message="Could not load this product." onRetry={() => refetch()} />
-      </Frame>
-    )
-  }
-  if (isPending) {
-    return (
-      <Frame title="Product">
-        <Skeleton variant="list" count={3} />
+        {error ? (
+          <ErrorBanner message="Could not load this product." onRetry={() => refetch()} />
+        ) : (
+          <Skeleton variant="list" count={3} />
+        )}
       </Frame>
     )
   }

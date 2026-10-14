@@ -6,7 +6,7 @@ import { openPincodeSheet, usePincode } from './pincode'
 // Every catalog page renders through this: children get an open store, anything else is a notice.
 export function StoreGate({ title, children }: { title: string; children: (store: Store) => ReactNode }) {
   const { pincode } = usePincode()
-  const { data, error, isPending, refetch } = useServiceability(pincode)
+  const { data, error, refetch } = useServiceability(pincode)
 
   if (!pincode) {
     return (
@@ -17,17 +17,15 @@ export function StoreGate({ title, children }: { title: string; children: (store
       </Frame>
     )
   }
-  if (isPending) {
+  // A failed refetch keeps the answer on screen; the alert shows only with nothing held.
+  if (data === undefined) {
     return (
       <Frame title={title}>
-        <Skeleton variant="grid" count={8} />
-      </Frame>
-    )
-  }
-  if (error) {
-    return (
-      <Frame title={title}>
-        <ErrorBanner message="Could not check your pincode." onRetry={() => refetch()} />
+        {error ? (
+          <ErrorBanner message="Could not check your pincode." onRetry={() => refetch()} />
+        ) : (
+          <Skeleton variant="grid" count={8} />
+        )}
       </Frame>
     )
   }

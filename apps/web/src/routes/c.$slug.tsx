@@ -12,17 +12,15 @@ function CategoryPage() {
 
 function CategoryContent({ storeId, slug }: { storeId: string; slug: string }) {
   const { data, error, refetch } = useCategories(storeId)
-  if (error) {
+  // A failed refetch keeps the tree on screen; the alert shows only with nothing held.
+  if (data === undefined) {
     return (
       <Frame title="Category">
-        <ErrorBanner message="Could not load categories." onRetry={() => refetch()} />
-      </Frame>
-    )
-  }
-  if (!data) {
-    return (
-      <Frame title="Category">
-        <Skeleton variant="grid" count={8} />
+        {error ? (
+          <ErrorBanner message="Could not load categories." onRetry={() => refetch()} />
+        ) : (
+          <Skeleton variant="grid" count={8} />
+        )}
       </Frame>
     )
   }
