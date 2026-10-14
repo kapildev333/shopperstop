@@ -1,0 +1,22 @@
+# admin-P2-L3-R3 - review of task 3 (product form: create and change)
+Status: done
+## Doing
+Verdict: approve with nits. Reviewed 8bb2214 (test) and 109ccb8 (feat). Gates: `make test-web` exit 0 (ui 54, admin 76, web 20 passed); `openspec validate admin-catalog --type change --strict` valid; `git status` clean. Did not run e2e, Playwright or docker.
+Test-first: judged from the worker log (8 failed | 68 passed at 8bb2214, 76 passed after) and the diff; the routes were placeholders so every new test fails without the feat commit. Not re-run red. The feat commit touches only product-form.tsx, the two routes, tasks.md (3.2) and the log.
+Scope: only brief paths; routeTree.gen.ts and package.json unchanged; no lucide import; components only from `@shopperstop/ui`; no literal colours; `toCents`/`toRupees` imported from `./stores`.
+Correctness read against core (`services/core/internal/catalog/products.go`, `core.d.ts`):
+- Money: `toCents` accepts `^\d{1,7}(\.\d{1,2})?$` then `Math.round(x*100)`, so 27.99 -> 2799, 0.07 -> 7; 1e3, negative, empty, 3 decimals, "1,000" all give undefined -> field error, no request. "0" and values above 1000000 pass the client and core answers 400 on mrpCents/priceCents, shown on the field. Fine.
+- Price vs MRP: no client check (per brief); core's 23514 maps to priceCents, shown on the price field. Fine, including MRP-lowered-below-stored-price (error shows on Price, which is the right fix target).
+- PATCH body: `changed()` diffs `parse(values)` against `parse(initial(product))` where `product` is the query data prop; `setQueryData` in onSuccess refreshes it, so the second save sends only its own change (test proves; removing setQueryData or diffing against the first-render product fails it). No null anywhere: text fields are strings, `""` clears brand/description (core `checkText` min 0 accepts it). Create sends `brand: ''` and `description: ''` which core accepts.
+- Not found: core `PathID` answers 404 `not_found` for a malformed uuid too, so the `code === 'not_found'` branch covers both.
+- Create: `setQueryData` then navigate to `/products/$productId`; the products list key differs from the product key and the router default staleTime is 0, so the list refetches on mount (the table test proves the edit case).
+- Field error vs banner: validation with a known field -> field, no banner; unknown field, missing field, 500 and network errors -> banner. `set()` resets the mutation so a stale server error clears on edit.
+## Found
+No blockers. Nits, all "can ride with the nits task after task 5":
+- Nit (low), apps/admin/src/product-form.tsx:97-101 and `submit`: client-side amount errors (`errors` state) are cleared only on the next submit, not when the field is edited, while the server error clears on edit. After fixing "30.555" the red message stays until Save is pressed. Fix: in `set()` also `setErrors((e) => ({ ...e, [field]: undefined }))`.
+- Nit (low), product-form.tsx:76-82 / `changed`: core trims text, but the form keeps what was typed. Save " Milk " -> cache holds "Milk", baseline "Milk", form still " Milk ", so the next save re-sends `name: " Milk "` although the user changed nothing. Harmless data-wise (core trims again) but breaks "sends only its own change". Fix: after success, reset form values to `initial(saved)` (or sync via a `useEffect` on `product`); the same would cover a background refetch changing the product, which today leaves the form stale.
+- Nit (low), `changed()` can return `{}` when nothing differs (Save pressed untouched); PATCH `{}` is sent and "Product saved." shown. Core accepts it. Optional: skip the request when empty.
+- Nit (test gap): no test for a failing create (POST error path and no navigation), for a validation error naming an unknown field (banner branch, `field in messages` at product-form.tsx:100), or for a validation error on `name`/`mrpCents`. The `isActive` select error slot is also unreachable in practice. Add one create-failure test asserting the banner and that the path stays `/products/new`.
+- Nit (test gap): the invalid-amount test covers "30.555" and empty only; a negative or `1e3` case and a zero would be one more `it.each` on `toCents` (unit tests in stores.test, if absent) cheaply.
+- Nit (tiny), product-form.tsx messages: mrpCents says "0.01 to 1000000 rupees" while the regex allows up to 9999999.99; the gap is covered by core's 400 showing the same message, so the text stays true.
+## Requests

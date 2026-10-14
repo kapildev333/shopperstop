@@ -80,7 +80,7 @@ The server SHALL set a category's or product's `slug` on create from its name, l
 - **THEN** the response is 409 with code `conflict` and the category remains
 
 ### Requirement: Admins list and search products
-`GET /api/core/v1/admin/products` SHALL return the paged list of active and inactive products ordered by `name`, filtered by `q` (case-insensitive substring of name or brand, `%` and `_` matched literally), `categoryId` (that category and its children) and `isActive` (`true` or `false`) when given.
+`GET /api/core/v1/admin/products` SHALL return the paged list of active and inactive products ordered by `name`, filtered by `q` (case-insensitive substring of name or brand, `%` and `_` matched literally), `categoryId` (that category and its children) and `isActive` (`true` or `false`) when given. A `q` containing a NUL byte SHALL be 400 `validation` naming field `q`.
 
 #### Scenario: Search by brand in another case
 - **WHEN** an admin lists products with `q=daily farm` and a product has brand `Daily Farm`
@@ -101,6 +101,10 @@ The server SHALL set a category's or product's `slug` on create from its name, l
 #### Scenario: Bad filters
 - **WHEN** an admin lists products with `isActive=yes` or with a `categoryId` that is not a uuid
 - **THEN** the response is 400 with code `validation` and field `isActive` or `categoryId`
+
+#### Scenario: NUL byte in q
+- **WHEN** an admin lists products with `q=milk%00`
+- **THEN** the response is 400 with code `validation` and field `q`
 
 ### Requirement: Admins create and read products
 `POST /api/core/v1/admin/products` with `name`, `categoryId`, `unitLabel`, `mrpCents`, `priceCents` and optional `brand`, `description`, `isActive` (default true) SHALL answer 201 with the product; `GET /api/core/v1/admin/products/{id}` SHALL return it, or 404 `not_found`.

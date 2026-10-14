@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
+// Stored pincode so the first-visit pincode sheet does not cover Home.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560034')))
+
 const tokenKey = 'shopperstop:customer-token'
 
 function freshEmail() {
@@ -70,10 +73,12 @@ test('addresses and default', async ({ page }) => {
   await addAddress(page, 'Work', '4 Park Street', '560002')
   await page.getByRole('button', { name: 'Set Home as default' }).click()
   await page.getByRole('button', { name: 'Set Work as default' }).click()
-  await page.reload()
-
   const home = page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 3, name: 'Home' }) })
   const work = page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 3, name: 'Work' }) })
+  // Reload only once the save is visible: the reload would otherwise cut the request.
+  await expect(work.getByText('Default', { exact: true })).toBeVisible()
+  await page.reload()
+
   await expect(work.getByText('Default', { exact: true })).toBeVisible()
   await expect(home.getByText('Default', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Default', { exact: true })).toHaveCount(1)

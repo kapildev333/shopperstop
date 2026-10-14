@@ -6,11 +6,11 @@ The customer web app (`apps/web`): its shell, where it is served, how it reaches
 ## Requirements
 
 ### Requirement: Customer site shell
-Every customer page SHALL render inside a shell made of a banner that is the `brand` band holding the "ShopperStop" wordmark in `on-brand` text and an "Enter pincode" button, and a main region holding the page, on the `canvas` background; the page title SHALL be the only level-1 heading. The index route `/` SHALL be the Home page, which before a pincode is chosen shows a "Set your pincode" empty state on a `surface` card.
+Every customer page SHALL render inside a shell: a `brand` banner holding the "ShopperStop" wordmark in `on-brand` text as a link to `/`, a product search form, the pincode control and the account control, then a main region holding the page on the `canvas` background; the page title SHALL be the only level-1 heading. The pincode control SHALL read "Enter pincode" while no pincode is stored. `/` SHALL be Home, showing a "Set your pincode" empty state on a `surface` card until one is chosen.
 
 #### Scenario: Home renders in the shell
-- **WHEN** the app renders the path `/`
-- **THEN** the banner contains "ShopperStop" and an "Enter pincode" button, the level-1 heading is "Groceries in minutes", it is the only level-1 heading, and a "Set your pincode" heading is shown
+- **WHEN** the app renders the path `/` with no pincode stored
+- **THEN** the banner contains a "ShopperStop" link to `/`, a "Search products" search box and an "Enter pincode" button, the level-1 heading is "Groceries in minutes", it is the only level-1 heading, and a "Set your pincode" heading is shown
 
 ### Requirement: Customer site not found
 A path no route matches SHALL render "Page not found" as the level-1 heading inside the shell, with an empty state holding a link back to Home, never a blank page or the router's default text.
@@ -159,3 +159,382 @@ The account page SHALL list `GET /me/addresses` with label, lines and pincode, a
 #### Scenario: Address edited and deleted
 - **WHEN** the customer edits "Home" to line 1 "2 New Road" and then deletes "Work"
 - **THEN** only "Home" is listed, showing "2 New Road"
+
+### Requirement: Customer pincode choice
+The site SHALL keep the chosen pincode in memory and in `localStorage` under `shopperstop:pincode`, SHALL read it when the app loads, and SHALL ignore a stored value that is not six digits with a first digit from 1 to 9. When storage throws (blocked or full), the pincode SHALL still be held in memory for the page.
+
+#### Scenario: Pincode persisted
+- **WHEN** the pincode store is given `560034`
+- **THEN** `localStorage` `shopperstop:pincode` is `560034` and the store holds `560034`
+
+#### Scenario: Pincode restored on load
+- **WHEN** `localStorage` holds `shopperstop:pincode` = `560038` before the pincode store module loads, and in a second load holds `abc`
+- **THEN** the first store holds `560038` and the second holds no pincode
+
+#### Scenario: Blocked storage tolerated
+- **WHEN** every `localStorage` call throws and the pincode store is given `560034`
+- **THEN** loading the module does not throw and the store holds `560034`
+
+### Requirement: Customer pincode sheet
+The site SHALL offer one sheet titled "Your delivery pincode" with a "Pincode" field prefilled with the stored pincode and a "Save pincode" button. It SHALL open when Home renders with no pincode stored and when the banner's pincode control or a notice's pincode button is chosen. Saving an invalid pincode SHALL show "Enter a 6-digit pincode" under the field and store nothing; saving a valid one SHALL store it and close the sheet.
+
+#### Scenario: First visit opens the pincode sheet
+- **WHEN** the app renders `/` with no pincode stored
+- **THEN** the dialog "Your delivery pincode" is open with an empty "Pincode" field
+
+#### Scenario: Invalid pincode refused
+- **WHEN** `5600` is saved in the sheet
+- **THEN** "Enter a 6-digit pincode" shows under the field, the dialog stays open and `localStorage` has no `shopperstop:pincode`
+
+#### Scenario: Pincode saved from the sheet
+- **WHEN** `560034` is saved in the sheet opened on first visit
+- **THEN** the dialog closes and `localStorage` `shopperstop:pincode` is `560034`
+
+#### Scenario: Banner control opens the sheet
+- **WHEN** `560034` is stored, the app renders `/`, and the banner's pincode control is chosen
+- **THEN** the dialog "Your delivery pincode" opens with `560034` in the "Pincode" field
+
+### Requirement: Customer store resolution
+While a pincode is stored the site SHALL resolve it to a store with `GET /api/core/v1/serviceability?pincode=<pincode>` when the app loads and whenever the pincode changes. While an open store is resolved the banner's pincode control SHALL read "Delivery in N minutes" with N the store's `promisedMinutes`, followed by the pincode; otherwise it SHALL read the stored pincode alone.
+
+#### Scenario: Banner shows the delivery promise
+- **WHEN** `560034` is stored and resolves to an open store with `promisedMinutes` 10
+- **THEN** the banner's pincode control is a button named "Delivery in 10 minutes 560034"
+
+#### Scenario: Pincode resolves against core
+- **WHEN** a browser on `/` saves `560034` in the pincode sheet against core with the demo seed, then reloads
+- **THEN** the banner reads "Delivery in 10 minutes" and "560034" before and after the reload, the sheet is not open after the reload, and axe reports no violations on `/` with the sheet open and with it closed
+
+### Requirement: Customer store notices
+Home, Category, Product and Search SHALL show, under their own level-1 heading and instead of their content, a full-page state while no open store is resolved: no pincode, "Set your pincode"; resolving, a skeleton grid; 404 `not_serviceable`, "We do not deliver to <pincode> yet"; `isOpen` false, "<store name> is closed right now"; any other failure, an alert "Could not check your pincode." with "Try again". The first, third and fourth carry a button opening the pincode sheet.
+
+#### Scenario: Not serviceable notice
+- **WHEN** `110001` is stored, core answers 404 `not_serviceable` for it, and the app renders `/`
+- **THEN** the heading "We do not deliver to 110001 yet" is shown and choosing "Change pincode" opens the pincode sheet
+
+#### Scenario: Closed store notice
+- **WHEN** `560034` is stored and resolves to a store named "Koramangala" with `isOpen` false, and the app renders `/`
+- **THEN** the heading "Koramangala is closed right now" and a "Change pincode" button are shown, and no "Picked for you" section
+
+#### Scenario: Store lookup fails
+- **WHEN** `560034` is stored, core cannot be reached, and the app renders `/`
+- **THEN** an alert shows "Could not check your pincode." with a "Try again" button
+
+#### Scenario: Notices against core
+- **WHEN** a browser saves `110001` in the pincode sheet, and then saves a pincode served only by a store that is closed
+- **THEN** the not-serviceable notice and then the closed notice are shown, and axe reports no violations on either
+
+### Requirement: Customer product card
+Every listed product SHALL be a card with a square image tile (its `imageUrl` scaled to fit, else a placeholder icon), its name and unit inside one link to `/p/<slug>`, its `Price` with the MRP struck through when higher, and a `Stepper` labelled with its name whose maximum is its `quantity` (so out of stock shows a disabled "Out of stock" button). Choosing "ADD" SHALL set its quantity to 1 through the cart hook.
+
+#### Scenario: Card links and prices
+- **WHEN** a card renders a product "Amul Taaza" with slug `amul-taaza`, unit `500 ml`, `priceCents` 2700, `mrpCents` 2900 and no `imageUrl`
+- **THEN** a link named "Amul Taaza 500 ml" points to `/p/amul-taaza`, "₹27" and the struck-through "₹29" are shown, the image tile shows the placeholder, and an "Add Amul Taaza" button is shown
+
+#### Scenario: Add shows the count
+- **WHEN** "Add Amul Taaza" is chosen on an in-stock card
+- **THEN** the group "Quantity of Amul Taaza" shows 1
+
+### Requirement: Customer home page
+For an open store Home SHALL show a navigation "Categories" linking each parent of `GET /stores/{id}/categories` to `/c/<slug>`, a "Shop by category" section of parent tiles (square image, name, same link), and "Picked for you": in core's order, the first 12 in-stock products of page one of `GET /stores/{id}/products`. A failed load SHALL show an alert with "Try again" in place of what failed: one for the category navigation and "Shop by category" together, one inside "Picked for you".
+
+#### Scenario: Home lists categories and picks
+- **WHEN** an open store is resolved whose categories are three parents and whose first product page holds 14 products, the 2nd and 5th out of stock
+- **THEN** the "Categories" navigation and the "Shop by category" section each link the three parents to `/c/<slug>`, and "Picked for you" lists 12 products, none out of stock, in the order core answered them
+
+#### Scenario: Home against core
+- **WHEN** a browser with `560034` chosen opens `/` against core with the demo seed
+- **THEN** "Picked for you" lists 12 products, "Shop by category" holds a "Fruits & Vegetables" tile linking to `/c/fruits-vegetables`, and axe reports no violations
+
+### Requirement: Customer category page
+`/c/<slug>` SHALL find the slug among the store's categories (a parent selects itself, a child selects itself under its parent) and show the parent's name as the level-1 heading, a group "Subcategories" of `Chip`s "All" (the parent) and one per child, the selected one pressed, each navigating to `/c/<its slug>`, and the paged products of the selected category from `GET /stores/{id}/products?categoryId=`. An unknown slug SHALL show "Category not found" with a link to Home.
+
+#### Scenario: Category tabs
+- **WHEN** an open store's categories hold the parent "Dairy, Bread & Eggs" (`dairy-bread-eggs`) with children "Milk" (`milk`) and "Eggs" (`eggs`), the app renders `/c/dairy-bread-eggs`, and "Milk" is chosen
+- **THEN** the level-1 heading is "Dairy, Bread & Eggs" with "All" pressed first, and after the choice the location is `/c/milk`, "Milk" is pressed and the heading is unchanged
+
+#### Scenario: Unknown category
+- **WHEN** the app renders `/c/nope` with an open store whose categories hold no `nope`
+- **THEN** "Category not found" is shown with a link to `/`
+
+#### Scenario: Browse a category against core
+- **WHEN** a browser with `560034` chosen opens the "Dairy, Bread & Eggs" tile on Home and then the "Milk" chip
+- **THEN** the location is `/c/milk`, products are listed, and axe reports no violations on both pages
+
+### Requirement: Customer paged product lists
+The category and search pages SHALL load products in pages of 24 with `useInfiniteQuery`; while `page × pageSize` is below `total`, a "Load more" button SHALL load the next page, and the next page SHALL also load when the end of the grid scrolls into view.
+
+#### Scenario: Load more while pages remain
+- **WHEN** the first page of the selected category's products answers `total` 30 with 24 items
+- **THEN** 24 products and a "Load more" button are shown; with `total` 24 no "Load more" button is shown
+
+### Requirement: Customer search
+The banner's search form SHALL navigate to `/search?q=<trimmed text>` (to `/search` when empty). `/search` SHALL show "Results for “<q>”" as the level-1 heading (or "Search" without `q`) and the paged products of `GET /stores/{id}/products?q=`. Without `q`, or when the search answers no products, the page SHALL show an empty state ("Search for products", or "No results for “<q>”") suggesting a link to each parent category.
+
+#### Scenario: Search from the banner
+- **WHEN** "milk" is typed in the banner's "Search products" box and submitted
+- **THEN** the location is `/search?q=milk`
+
+#### Scenario: No results suggests categories
+- **WHEN** an open store's search for `zzz` answers no products and its categories hold two parents
+- **THEN** "No results for “zzz”" is shown with a link to `/c/<slug>` for each of the two parents
+
+#### Scenario: Search and load more against core
+- **WHEN** a browser with `560034` chosen searches "banana", then searches "a" and loads more
+- **THEN** "Banana Robusta" is listed for "banana", more than 24 products are listed for "a" after loading more, and axe reports no violations on `/search`
+
+### Requirement: Customer product page
+`/p/<slug>` SHALL show the product from `GET /stores/{id}/products/{slug}`: the square image tile, the name as the level-1 heading, the unit, `Price` with the MRP struck through and "Save ₹<MRP minus price>" when the MRP is higher, a stock note while in stock ("10+ left" when `quantity` is 10, "Only N left" below 10), the description, and the `Stepper` of the product card. A 404 SHALL show "Product not found" with a link to Home.
+
+#### Scenario: Product with savings
+- **WHEN** the product `amul-curd` has `priceCents` 4800, `mrpCents` 6000, `quantity` 3 and `inStock` true
+- **THEN** the level-1 heading is its name, "₹48", the struck-through "₹60", "Save ₹12" and "Only 3 left" are shown, and its "Add <name>" button is enabled
+
+#### Scenario: Plenty in stock
+- **WHEN** the product has `quantity` 10 and `inStock` true
+- **THEN** "10+ left" is shown
+
+#### Scenario: Out of stock product
+- **WHEN** the product has `inStock` false and `quantity` 0
+- **THEN** a disabled "Out of stock" button is shown, with no "Add" button and no stock note
+
+#### Scenario: Unknown product
+- **WHEN** core answers 404 for the slug
+- **THEN** "Product not found" is shown with a link to `/`
+
+#### Scenario: Product pages against core
+- **WHEN** a browser with `560034` chosen opens `/p/banana-robusta` and the page of a product the demo store holds none of
+- **THEN** the first shows "Banana Robusta" with an enabled "Add Banana Robusta" button, the second a disabled "Out of stock" button, and axe reports no violations on either
+
+### Requirement: Customer guest cart lines
+While no customer token is held, setting a line of the guest cart SHALL set it to exactly the given quantity, clamped to the product's maximum (its `quantity` while in stock, at most 20; 0 when out of stock); 0 SHALL remove the line, and a cart whose last line goes SHALL have no `storeId`. At a store other than the cart's, a quantity still above 0 after the clamp SHALL replace the cart with that one line; 0, asked for or clamped, SHALL leave it unchanged.
+
+#### Scenario: Guest line set and removed
+- **WHEN** an empty guest cart sets product P to 1 at store A, then P to 3, then product Q to 1, then P to 0
+- **THEN** the cart is at store A holding only Q with quantity 1, and after Q is set to 0 the cart has no `storeId` and no lines
+
+#### Scenario: Guest line clamped
+- **WHEN** product P has `quantity` 4 and `inStock` true and is set to 6, and product R has `inStock` false and `quantity` 0 and is set to 1
+- **THEN** P's line has quantity 4 and there is no line of R
+
+#### Scenario: Another store replaces the guest cart
+- **WHEN** a guest cart at store A holds P and Q, then R is set to 0 at store B, then R is set to 1 at store B
+- **THEN** after the first set the cart is still at A with P and Q, and after the second it is at B holding only R
+
+#### Scenario: Out of stock at another store keeps the guest cart
+- **WHEN** a guest cart at store A holds P and Q, and R, which has `inStock` false and `quantity` 0, is set to 1 at store B
+- **THEN** the cart is still at A with P and Q
+
+### Requirement: Customer guest cart storage
+The site SHALL keep the guest cart `{storeId, items: [{product, quantity}]}` in memory and in `localStorage` under `shopperstop:cart`, SHALL read it when the app loads, and SHALL treat a stored value that does not parse as that shape as an empty cart. When storage throws (blocked or full), the cart SHALL still be held in memory for the page.
+
+#### Scenario: Guest cart persisted and restored
+- **WHEN** a guest cart sets P to 2 at store A, and the cart module is loaded again; and in a third load `localStorage` `shopperstop:cart` holds `{"items":5}`
+- **THEN** `localStorage` `shopperstop:cart` holds store A and P with quantity 2, the second load holds the same cart, and the third load holds the empty cart
+
+#### Scenario: Guest cart with blocked storage
+- **WHEN** every `localStorage` call throws, the cart module loads and P is set to 1 at store A
+- **THEN** loading does not throw and the cart holds P with quantity 1
+
+### Requirement: Customer cart totals
+The guest cart SHALL show the same totals core computes for a server cart, from the resolved store's fees: `subtotalCents` the sum of price times quantity, `deliveryFeeCents` the store's fee or 0 when the subtotal is at or above its free-delivery threshold, `totalCents` subtotal plus fee, `minOrderCents` the store's minimum order, and `shortfallCents` what is missing to free delivery, never below 0. An empty cart SHALL have every amount 0.
+
+#### Scenario: Guest totals follow the store's fees
+- **WHEN** the store's fee is 2500, free delivery starts at 19900 and the minimum order is 9900, and the guest cart holds 2 of a product priced 4500
+- **THEN** the cart shows `subtotalCents` 9000, `deliveryFeeCents` 2500, `totalCents` 11500, `minOrderCents` 9900 and `shortfallCents` 10900; with 5 of it, `deliveryFeeCents` 0, `totalCents` 22500 and `shortfallCents` 0
+
+### Requirement: Customer cart behind every Stepper
+Every product `Stepper` SHALL show the product's quantity in the cart while the cart's `storeId` is the resolved store's, and 0 while the cart is empty or at another store, and SHALL set that line at the resolved store through the cart: the guest cart while no token is held, the server cart while one is.
+
+#### Scenario: Card adds to the guest cart
+- **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza" is chosen on its card
+- **THEN** the group "Quantity of Amul Taaza" shows 1 and `localStorage` `shopperstop:cart` holds the store's id and the product with quantity 1
+
+#### Scenario: Card shows the server cart
+- **WHEN** a token is held and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza
+- **THEN** its card's group "Quantity of Amul Taaza" shows 3
+
+#### Scenario: Card ignores a cart at another store
+- **WHEN** a token is held, Koramangala is the resolved store, and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza at Indiranagar
+- **THEN** its card shows the "Add Amul Taaza" button and no group "Quantity of Amul Taaza"
+
+#### Scenario: Guest taps each count
+- **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza", "Add one Amul Taaza" and "Add one Amul Taaza" are chosen one straight after the other
+- **THEN** the group "Quantity of Amul Taaza" shows 3 and `localStorage` `shopperstop:cart` holds it with quantity 3
+
+### Requirement: Customer cart quick taps
+While a customer token is held and a change to a line is still being written, that line's `Stepper` SHALL show the last quantity asked for, so every tap counts from the one before. The site SHALL send cart changes to core one at a time in the order they were made, MAY skip a change that a later one for the same line has overtaken, and SHALL end showing core's latest answer. When a write fails, the `Stepper` SHALL return to the cart's count.
+
+#### Scenario: Quick taps each count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, and "Add one Amul Taaza", "Add one Amul Taaza" and "Remove one Amul Taaza" are chosen before any answer arrives
+- **THEN** the group "Quantity of Amul Taaza" shows 2, then 3, then 2
+
+#### Scenario: Failed write returns to the cart's count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, core cannot be reached, and "Add one Amul Taaza" is chosen
+- **THEN** the group shows 2 at once and 1 again once the write has failed
+
+#### Scenario: Quick taps against core
+- **WHEN** a signed-in customer with an empty cart chooses "Add" on a product card on Home and then "Add one", "Add one" and "Remove one" on it while core's first answer is held back longer than the later ones
+- **THEN** the card shows 2, `GET /me/cart` answers that product with quantity 2, and after a reload the card still shows 2
+
+#### Scenario: Quick taps in the drawer
+- **WHEN** a token is held, the drawer is open on a cart holding 1 of Amul Taaza, and "Add one Amul Taaza" is chosen twice in the drawer before any answer arrives
+- **THEN** the drawer's group "Quantity of Amul Taaza" shows 3
+
+### Requirement: Customer server cart
+While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and `storeId` that response answers, never the ones it sent. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the cart is next changed or read from core again, also when the cart is then empty.
+
+#### Scenario: Server cart clamps above stock
+- **WHEN** a signed-in customer has 2 of a product in the cart, the store's stock of it drops to 1, and "Add one" is chosen on its page; then the stock drops to 0, the page is reloaded, and "Remove <name>" is chosen in the cart drawer
+- **THEN** its quantity shows 1 and the open cart drawer shows "Some quantities were lowered to what the store has."; after the removal the drawer shows "Your cart is empty"
+
+#### Scenario: Line clamped away
+- **WHEN** a token is held and the last `PUT /me/cart/items` answered an empty cart with `clamped: true`, and the drawer opens
+- **THEN** it shows "Some quantities were lowered to what the store has." and "Your cart is empty"
+
+### Requirement: Customer cart merge at sign-in
+When sign-in or register succeeds and the guest cart has lines, the site SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with the guest cart's `storeId` and the line's quantity, and then SHALL empty the guest cart, also when a line's request fails, and show core's cart as answered. Lines the server already holds at that store and the guest cart does not name SHALL stay. A merge still waiting when the session changes SHALL send nothing and keep the guest cart.
+
+#### Scenario: Merge bodies in guest order
+- **WHEN** the guest cart at store A holds P with 2 and then Q with 1
+- **THEN** the merge sends `{storeId: A, productId: P, quantity: 2}` and then `{storeId: A, productId: Q, quantity: 1}`
+
+#### Scenario: Guest cart discarded after merge
+- **WHEN** the guest cart holds a line and the merge runs while core cannot be reached
+- **THEN** afterwards `localStorage` has no `shopperstop:cart` and the guest cart is empty
+
+#### Scenario: Merge dropped when the session changed
+- **WHEN** the guest cart holds a line, the merge waits behind another cart write, and the customer token has changed before its turn
+- **THEN** the guest cart still holds its line
+
+#### Scenario: Guest cart merges against core
+- **WHEN** a guest with `560034` chosen adds two products on Home, sets the first to 2, and signs in on `/sign-in` as a customer with an empty cart
+- **THEN** on Home the first product shows 2 and the second 1, `localStorage` has no `shopperstop:cart`, and after a reload both quantities are unchanged
+
+### Requirement: Customer cart drawer
+The cart SHALL open in a `Sheet` titled "Your cart" listing each line with its image tile, name, unit, `Price` and a `Stepper` labelled with its name (an out-of-stock line adds a "Remove <name>" button), then "Subtotal", "Delivery fee" (or "Free" at 0) and "Total", "Add ₹<shortfall> more for free delivery" while `shortfallCents` is above 0, and a "Proceed to checkout" link to `/checkout`, or to `/sign-in?returnTo=%2Fcheckout` with no token.
+
+#### Scenario: Drawer lines and totals
+- **WHEN** the drawer opens on a cart holding 2 of "Amul Taaza" (`500 ml`, 2700) and 1 of "Amul Butter" (`100 g`, 5600) with fee 2500, free delivery from 19900 and minimum 9900
+- **THEN** both lines show their name, unit and price with a quantity group, "Subtotal" ₹110, "Delivery fee" ₹25, "Total" ₹135, "Add ₹89 more for free delivery", and a "Proceed to checkout" link
+
+#### Scenario: Free delivery
+- **WHEN** the cart's `deliveryFeeCents` and `shortfallCents` are 0 and its subtotal is above the minimum
+- **THEN** "Delivery fee" reads "Free" and no "more for free delivery" text is shown
+
+#### Scenario: Checkout link signed in and out
+- **WHEN** the drawer opens on a cart above the minimum with no token held, and again with a token held
+- **THEN** "Proceed to checkout" points to `/sign-in?returnTo=%2Fcheckout` the first time and to `/checkout` the second
+
+#### Scenario: Out-of-stock line
+- **WHEN** the server cart holds a line of "Amul Butter" whose product has `inStock` false and `quantity` 0
+- **THEN** the line shows a disabled "Out of stock" button and a "Remove Amul Butter" button
+
+### Requirement: Customer cart drawer states
+The drawer SHALL show "Your cart is empty" for an empty cart, a skeleton list while the server cart loads, and an alert "Could not load your cart." with "Try again" when it fails to load.
+
+#### Scenario: Empty, loading and failed cart
+- **WHEN** the drawer opens on an empty guest cart; then signed in before `GET /me/cart` answers; then signed in with core unreachable
+- **THEN** "Your cart is empty" is shown; then a "Loading" status; then an alert "Could not load your cart." with a "Try again" button
+
+### Requirement: Customer cart minimum order
+While the cart's subtotal is below `minOrderCents`, the drawer SHALL show "Minimum order is ₹<min>. Add ₹<missing> more to check out." and a disabled "Proceed to checkout" button in place of the link.
+
+#### Scenario: Below the minimum order
+- **WHEN** the cart's subtotal is 5400 and `minOrderCents` 9900
+- **THEN** "Minimum order is ₹99. Add ₹45 more to check out." is shown and "Proceed to checkout" is a disabled button, not a link
+
+### Requirement: Customer cart bar and header button
+While the cart has lines, every page SHALL show on phone a bar fixed to the bottom with `shadow-sheet` holding the item count ("1 item", "N items", the sum of quantities), the total as `Price` and a "View cart" button opening the drawer; the bar SHALL be absent while the cart is empty. The banner SHALL hold on desktop a cart button opening the drawer, named "Cart" while the cart is empty and "<count> <total>" otherwise.
+
+#### Scenario: Bar and header follow the cart
+- **WHEN** the app renders `/` with an empty cart, and then with a cart of 2 of a product priced 2700 (fee 2500)
+- **THEN** first no "View cart" button is shown and the banner's cart button is named "Cart"; then the bar shows "2 items" and ₹79, the banner's cart button is named "2 items ₹79", and choosing "View cart" opens the dialog "Your cart"
+
+#### Scenario: Cart drawer against core
+- **WHEN** a guest on a 390 px wide screen with `560034` chosen adds two products on Home, chooses "View cart", and adds one more of the first in the drawer
+- **THEN** the drawer lists two lines, the bar reads "3 items", "Proceed to checkout" points to `/sign-in?returnTo=%2Fcheckout`, and axe reports no violations on `/` with the bar shown and with the drawer open
+
+### Requirement: Customer store change confirm
+Saving a pincode in the pincode sheet SHALL first resolve it; when it resolves to a store other than the cart's and the cart has lines, the sheet SHALL close and a `Dialog` "Change store?" naming the new store SHALL open with "Cancel" first and "Empty cart and change". Any other save SHALL store the pincode without asking.
+
+#### Scenario: Same store or empty cart
+- **WHEN** the cart is at Koramangala with `560034` stored and `560095`, which Koramangala also serves, is saved; and separately `560038` is saved with an empty cart
+- **THEN** no dialog opens and the pincode is stored
+
+#### Scenario: Store change against core
+- **WHEN** a signed-in customer with `560034` chosen adds a product, saves `560038` in the pincode sheet, cancels, saves `560038` again, and confirms
+- **THEN** after the cancel the banner still reads `560034` and the cart button "1 item"; after the confirm the banner reads "Delivery in 12 minutes 560038", the cart button reads "Cart", `GET /me/cart` answers the empty cart, and axe reports no violations with the dialog open
+
+### Requirement: Customer store change outcome
+Confirming the store change SHALL empty the guest cart, or send `DELETE /me/cart` while a token is held, and then store the pincode; if the `DELETE` fails the dialog SHALL stay open showing "Could not empty your cart." and the pincode SHALL not change. Cancel SHALL keep the pincode and the cart.
+
+#### Scenario: Store change confirmed
+- **WHEN** the guest cart at Koramangala holds a line and `560038`, which resolves to Indiranagar, is saved in the sheet, and "Empty cart and change" is chosen
+- **THEN** the dialog "Change store?" names Indiranagar with "Cancel" as its first button, and after the choice the guest cart is empty and the stored pincode is `560038`
+
+#### Scenario: Store change cancelled
+- **WHEN** the same save is followed by "Cancel"
+- **THEN** the stored pincode is still `560034` and the cart still holds its line
+
+#### Scenario: Emptying the server cart fails
+- **WHEN** a signed-in customer's cart at Koramangala holds a line, `560038` is saved, and "Empty cart and change" is chosen while core cannot be reached
+- **THEN** the dialog stays open with an alert "Could not empty your cart." and the stored pincode is still `560034`
+
+### Requirement: Customer cart replaced notice
+When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or the sign-in merge, the site SHALL open the cart drawer once, at every width, and the drawer and the cart bar SHALL show, until the cart is next changed or read from core again, a `StatusMessage` (role `status`) reading "Your cart from <store> was replaced. A cart holds products from one store.", where <store> is the name `GET /stores/{id}` gives for the store the cart was at, or "another store" while that is not known.
+
+#### Scenario: Replaced notice names the old store
+- **WHEN** a token is held, Indiranagar is resolved, the last `PUT /me/cart/items` answered a cart of one line at Indiranagar with `replaced: true`, the cart was at Koramangala before, and `/` renders
+- **THEN** the cart drawer has opened, and it and the cart bar each show a status "Your cart from Koramangala was replaced. A cart holds products from one store."
+
+#### Scenario: Replace opens the drawer once
+- **WHEN** a token is held, `/` is shown with the drawer closed, and an answer with `replaced: true` arrives; then the customer closes the drawer; then an answer with `replaced: false` arrives
+- **THEN** the dialog "Your cart" opens on the first answer, stays closed after it is closed, and does not open on the second answer
+
+#### Scenario: Replaced notice without the old store
+- **WHEN** the same answer is shown while the store the cart was at is not known; and separately an answer with `replaced: false` is shown
+- **THEN** the bar and the drawer show "Your cart from another store was replaced. A cart holds products from one store." the first time, and no "was replaced" text the second
+
+#### Scenario: Replaced notice against core
+- **WHEN** a signed-in customer whose cart holds a product at Koramangala opens `/` on a 390 px wide screen with `560038` chosen, and chooses "Add" on a product card
+- **THEN** the drawer opens showing "Your cart from Koramangala was replaced. A cart holds products from one store.", `GET /me/cart` answers one line at Indiranagar, after "Close" the bar reads "1 item" and shows the same notice, and axe reports no violations with the drawer open and with it closed
+
+#### Scenario: Merge replaces another store's cart
+- **WHEN** a customer whose cart holds a product at Koramangala adds a product as a guest with `560038` chosen and signs in on `/sign-in`
+- **THEN** on Home the cart drawer is open, holds only the guest's product and shows "Your cart from Koramangala was replaced. A cart holds products from one store."
+
+### Requirement: Customer pages keep data when a refetch fails
+Every view of the customer site that shows the answer of a read from core SHALL keep showing the last answer it holds when a later read of the same thing fails, with no alert in its place and without unmounting what is shown beneath it. An answer of "nothing" (no store delivers to the pincode, no such product, an empty list) is an answer and SHALL be kept the same way. The alert with "Try again" SHALL show only while the view holds no answer.
+
+#### Scenario: Failed refetch keeps the store
+- **WHEN** `560034` is stored and resolved to an open store more than 60 seconds ago, the store's categories and picks are held, the app renders `/`, and the store lookup it repeats fails because core cannot be reached
+- **THEN** the "Picked for you" section is still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps the not serviceable notice
+- **WHEN** `110001` is stored and was answered 404 `not_serviceable` more than 60 seconds ago, the app renders `/`, and the lookup it repeats fails because core cannot be reached
+- **THEN** the heading "We do not deliver to 110001 yet" is still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps home
+- **WHEN** an open store is resolved, its categories and its picks were read more than 60 seconds ago, the app renders `/`, and both reads it repeats fail because core cannot be reached
+- **THEN** the "Categories" navigation and the "Picked for you" products are still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps the category page
+- **WHEN** an open store is resolved, its categories were read more than 60 seconds ago, the products of "Dairy, Bread & Eggs" are held, the app renders `/c/dairy-bread-eggs`, and the categories read it repeats fails because core cannot be reached
+- **THEN** the level-1 heading "Dairy, Bread & Eggs" and its subcategory chips are still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps the product list
+- **WHEN** an open store and its categories are resolved, the first page of the products of "Dairy, Bread & Eggs" was read more than 60 seconds ago, the app renders `/c/dairy-bread-eggs`, and the products read it repeats fails because core cannot be reached
+- **THEN** the product cards are still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps the product page
+- **WHEN** an open store is resolved, the product "Amul Taaza" was read more than 60 seconds ago, the app renders `/p/amul-taaza`, and the read it repeats fails because core cannot be reached
+- **THEN** the level-1 heading "Amul Taaza" is still shown and no alert is shown
+
+#### Scenario: Failed refetch keeps product not found
+- **WHEN** an open store is resolved, core answered 404 for the slug `no-such-thing` more than 60 seconds ago, the app renders `/p/no-such-thing`, and the read it repeats fails because core cannot be reached
+- **THEN** the level-1 heading "Product not found" is still shown and no alert is shown
+
+#### Scenario: Nothing held still alerts
+- **WHEN** an open store is resolved, nothing else is held, core cannot be reached, and the app renders `/`, then `/c/dairy-bread-eggs`, then `/p/amul-taaza`
+- **THEN** `/` shows the alerts "Could not load categories." and "Could not load products.", `/c/dairy-bread-eggs` shows the alert "Could not load categories.", and `/p/amul-taaza` shows the alert "Could not load this product.", each with a "Try again" button

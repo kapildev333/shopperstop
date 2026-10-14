@@ -18,6 +18,8 @@ import { Route as StaffStockRouteImport } from './routes/_staff/stock'
 import { Route as StaffAdminCategoriesRouteImport } from './routes/_staff/_admin/categories'
 import { Route as StaffAdminStaffRouteImport } from './routes/_staff/_admin/staff'
 import { Route as StaffAdminProductsIndexRouteImport } from './routes/_staff/_admin/products/index'
+import { Route as StaffAdminProductsProductIdRouteImport } from './routes/_staff/_admin/products/$productId'
+import { Route as StaffAdminProductsNewRouteImport } from './routes/_staff/_admin/products/new'
 import { Route as StaffAdminStoresIndexRouteImport } from './routes/_staff/_admin/stores/index'
 import { Route as StaffAdminStoresStoreIdRouteImport } from './routes/_staff/_admin/stores/$storeId'
 import { Route as StaffAdminStoresNewRouteImport } from './routes/_staff/_admin/stores/new'
@@ -65,6 +67,17 @@ const StaffAdminProductsIndexRoute = StaffAdminProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => StaffAdminRoute,
 } as any)
+const StaffAdminProductsProductIdRoute =
+  StaffAdminProductsProductIdRouteImport.update({
+    id: '/products/$productId',
+    path: '/products/$productId',
+    getParentRoute: () => StaffAdminRoute,
+  } as any)
+const StaffAdminProductsNewRoute = StaffAdminProductsNewRouteImport.update({
+  id: '/products/new',
+  path: '/products/new',
+  getParentRoute: () => StaffAdminRoute,
+} as any)
 const StaffAdminStoresIndexRoute = StaffAdminStoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -88,6 +101,8 @@ export interface FileRoutesByFullPath {
   '/stock': typeof StaffStockRoute
   '/categories': typeof StaffAdminCategoriesRoute
   '/staff': typeof StaffAdminStaffRoute
+  '/products/$productId': typeof StaffAdminProductsProductIdRoute
+  '/products/new': typeof StaffAdminProductsNewRoute
   '/stores/$storeId': typeof StaffAdminStoresStoreIdRoute
   '/stores/new': typeof StaffAdminStoresNewRoute
   '/products/': typeof StaffAdminProductsIndexRoute
@@ -100,6 +115,8 @@ export interface FileRoutesByTo {
   '/stock': typeof StaffStockRoute
   '/categories': typeof StaffAdminCategoriesRoute
   '/staff': typeof StaffAdminStaffRoute
+  '/products/$productId': typeof StaffAdminProductsProductIdRoute
+  '/products/new': typeof StaffAdminProductsNewRoute
   '/stores/$storeId': typeof StaffAdminStoresStoreIdRoute
   '/stores/new': typeof StaffAdminStoresNewRoute
   '/products': typeof StaffAdminProductsIndexRoute
@@ -115,6 +132,8 @@ export interface FileRoutesById {
   '/_staff/': typeof StaffIndexRoute
   '/_staff/_admin/categories': typeof StaffAdminCategoriesRoute
   '/_staff/_admin/staff': typeof StaffAdminStaffRoute
+  '/_staff/_admin/products/$productId': typeof StaffAdminProductsProductIdRoute
+  '/_staff/_admin/products/new': typeof StaffAdminProductsNewRoute
   '/_staff/_admin/stores/$storeId': typeof StaffAdminStoresStoreIdRoute
   '/_staff/_admin/stores/new': typeof StaffAdminStoresNewRoute
   '/_staff/_admin/products/': typeof StaffAdminProductsIndexRoute
@@ -129,6 +148,8 @@ export interface FileRouteTypes {
     | '/stock'
     | '/categories'
     | '/staff'
+    | '/products/$productId'
+    | '/products/new'
     | '/stores/$storeId'
     | '/stores/new'
     | '/products/'
@@ -141,6 +162,8 @@ export interface FileRouteTypes {
     | '/stock'
     | '/categories'
     | '/staff'
+    | '/products/$productId'
+    | '/products/new'
     | '/stores/$storeId'
     | '/stores/new'
     | '/products'
@@ -155,6 +178,8 @@ export interface FileRouteTypes {
     | '/_staff/'
     | '/_staff/_admin/categories'
     | '/_staff/_admin/staff'
+    | '/_staff/_admin/products/$productId'
+    | '/_staff/_admin/products/new'
     | '/_staff/_admin/stores/$storeId'
     | '/_staff/_admin/stores/new'
     | '/_staff/_admin/products/'
@@ -231,6 +256,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffAdminProductsIndexRouteImport
       parentRoute: typeof StaffAdminRoute
     }
+    '/_staff/_admin/products/$productId': {
+      id: '/_staff/_admin/products/$productId'
+      path: '/products/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof StaffAdminProductsProductIdRouteImport
+      parentRoute: typeof StaffAdminRoute
+    }
+    '/_staff/_admin/products/new': {
+      id: '/_staff/_admin/products/new'
+      path: '/products/new'
+      fullPath: '/products/new'
+      preLoaderRoute: typeof StaffAdminProductsNewRouteImport
+      parentRoute: typeof StaffAdminRoute
+    }
     '/_staff/_admin/stores/': {
       id: '/_staff/_admin/stores/'
       path: '/stores'
@@ -258,6 +297,8 @@ declare module '@tanstack/react-router' {
 interface StaffAdminRouteChildren {
   StaffAdminCategoriesRoute: typeof StaffAdminCategoriesRoute
   StaffAdminStaffRoute: typeof StaffAdminStaffRoute
+  StaffAdminProductsProductIdRoute: typeof StaffAdminProductsProductIdRoute
+  StaffAdminProductsNewRoute: typeof StaffAdminProductsNewRoute
   StaffAdminStoresStoreIdRoute: typeof StaffAdminStoresStoreIdRoute
   StaffAdminStoresNewRoute: typeof StaffAdminStoresNewRoute
   StaffAdminProductsIndexRoute: typeof StaffAdminProductsIndexRoute
@@ -267,6 +308,8 @@ interface StaffAdminRouteChildren {
 const StaffAdminRouteChildren: StaffAdminRouteChildren = {
   StaffAdminCategoriesRoute: StaffAdminCategoriesRoute,
   StaffAdminStaffRoute: StaffAdminStaffRoute,
+  StaffAdminProductsProductIdRoute: StaffAdminProductsProductIdRoute,
+  StaffAdminProductsNewRoute: StaffAdminProductsNewRoute,
   StaffAdminStoresStoreIdRoute: StaffAdminStoresStoreIdRoute,
   StaffAdminStoresNewRoute: StaffAdminStoresNewRoute,
   StaffAdminProductsIndexRoute: StaffAdminProductsIndexRoute,
