@@ -4,6 +4,8 @@ import { expect, test, type Page } from '@playwright/test'
 // Demo rows from core's seed (the e2e database is reset before every run); the test puts back what it changes.
 // A 1×1 PNG, built here so the repository carries no binary fixture.
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
+// The Koramangala store, by the id `core-admin seed-demo --reset` prints (services/core/internal/seed/summary.go).
+const koramangala = '00000000-0000-4000-8000-000000000401'
 
 async function signIn(page: Page, email: string, password: string) {
   await page.goto('./sign-in')
@@ -71,6 +73,31 @@ test('admin runs the catalog', async ({ page }) => {
   await expect.poll(() => tile.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1)
   await expectNoAxeViolations(page)
 
+  // Spec 2 §13, "admin creates a product and sets stock": the new product has no stock at Koramangala until it is set here.
+  await page.goto(`./stock?store=${koramangala}`)
+  await expect(page.getByLabel('Store', { exact: true }).locator('option:checked')).toHaveText('Koramangala')
+  await page.getByRole('searchbox', { name: 'Search' }).fill('e2e curd cup')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  const stock = page.getByRole('table', { name: 'Stock' })
+  const quantity = page.getByRole('textbox', { name: 'Quantity of E2E Curd Cup' })
+  await expect(stock.getByRole('textbox')).toHaveCount(1)
+  await expect(quantity).toHaveValue('0')
+  await expect(stock.getByText('Low stock', { exact: true })).toBeVisible()
+  await expect(stock.getByRole('row').nth(1).locator('img')).toHaveAttribute('src', /^\/api\/core\/v1\/files\/products\/[0-9a-f-]{36}\.png$/)
+  await expectNoAxeViolations(page)
+  await quantity.fill('12')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Stock saved.' })).toBeVisible()
+  await page.reload()
+  await expect(quantity).toHaveValue('12')
+  await expect(stock.getByText('Low stock', { exact: true })).toHaveCount(0)
+
+  // Deleting the product takes its stock with it.
+  await nav.getByRole('link', { name: 'Products' }).click()
+  await page.getByRole('searchbox', { name: 'Search' }).fill('e2e curd cup')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await products.getByRole('link', { name: 'E2E Curd Cup' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'E2E Curd Cup' })).toBeVisible()
   await page.getByRole('button', { name: 'Delete product' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page).toHaveURL(/\/admin\/products$/)
