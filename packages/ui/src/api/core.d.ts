@@ -4662,7 +4662,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrderList"];
                 };
             };
-            /** @description The status is not one of the seven, or a page or pageSize is invalid. The field names it. */
+            /** @description The 400 is for an unknown status value, or a page below 1 or a pageSize outside 1 to 100. The field names it. */
             400: {
                 headers: {
                     [name: string]: unknown;
