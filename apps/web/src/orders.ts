@@ -1,12 +1,15 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { BadgeVariant } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
-import { api } from './api'
-import { useToken } from './session'
+import { api, call, queryClient, type ApiError } from './api'
+import { cartKey, queued } from './cart'
+import { cartView, emptyCart, type CartView } from './guest-cart'
+import { getToken, useToken } from './session'
 
 export type Order = components['schemas']['Order']
 export type OrderStatus = Order['status']
 export type OrderList = components['schemas']['OrderList']
+export type OrderResult = { order?: Order; error?: ApiError }
 
 export const ordersKey = (token: string) => ['orders', token] as const
 export const orderKey = (token: string, id: string) => ['order', token, id] as const
@@ -78,5 +81,47 @@ export function useOrders() {
       if (error || !data) throw error ?? new Error('no answer')
       return data
     },
+  })
+}
+
+// One request. A placement is done only when the answer holds the order.
+export async function postOrder(addressId: string): Promise<OrderResult> {
+  const answered: { order?: Order } = {}
+  const error = await call(async () => {
+    const result = await api.POST('/orders', { body: { addressId } })
+    answered.order = result.data
+    return result
+  })
+  if (error) return { error }
+  if (!answered.order) return { error: { code: 'internal', message: 'Core answered without an order.' } }
+  return { order: answered.order }
+}
+
+// The cart is empty: a second press after a placement the page did not see. Matched on the code and the absent field, never the message.
+export const cartEmptied = (error: ApiError) => error.code === 'validation' && !error.field
+
+// Runs inside the cart's write queue, so a Stepper tap before the press is placed too.
+export function placeOrder(addressId: string, send = postOrder): Promise<OrderResult> {
+  const token = getToken()
+  if (!token) return Promise.resolve({ error: { code: 'unauthorized', message: 'sign in required' } })
+  return queued(async () => {
+    if (getToken() !== token) return { error: { code: 'unauthorized', message: 'sign in required' } }
+    let result = await send(addressId)
+    // An order-number collision is rare: one more try, then the page shows the failure.
+    if (result.error?.code === 'conflict') result = await send(addressId)
+    const { order, error } = result
+    if (order || (error && cartEmptied(error))) {
+      await queryClient.cancelQueries({ queryKey: cartKey(token) })
+      // Core emptied the cart in the same transaction: the cache is set, not invalidated, so the bar drops its count at once.
+      queryClient.setQueryData<CartView>(cartKey(token), cartView(emptyCart))
+      if (order) queryClient.setQueryData(orderKey(token, order.id), order)
+      void queryClient.invalidateQueries({ queryKey: ordersKey(token) })
+    } else if (error?.field === 'addressId' && error.code === 'validation') {
+      void queryClient.invalidateQueries({ queryKey: ['addresses'] })
+    } else if (error?.code !== 'not_serviceable') {
+      // out_of_stock, subtotal, internal: the lines as they are now. internal may still have placed the order (design Decision 21).
+      await queryClient.invalidateQueries({ queryKey: cartKey(token) })
+    }
+    return result
   })
 }
