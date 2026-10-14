@@ -71,6 +71,7 @@ type stockRow struct {
 	Brand      string `json:"brand"`
 	UnitLabel  string `json:"unitLabel"`
 	PriceCents int64  `json:"priceCents"`
+	ImageURL   string `json:"imageUrl"`
 	Quantity   int32  `json:"quantity"`
 }
 
@@ -335,4 +336,42 @@ func TestStockPutBadProductID(t *testing.T) {
 func TestStockListNULInQ(t *testing.T) {
 	status, body := call(t, http.MethodGet, stockPath(testStoreID)+"?q=a%00b", adminToken(t), nil)
 	expectError(t, "q=a%00b", status, body, http.StatusBadRequest, "validation", "q", "")
+}
+
+// TestStockListImageURL: a product with an image is listed with the imageUrl the
+// store's product page shows; a product without one has no imageUrl member.
+func TestStockListImageURL(t *testing.T) {
+	name := stockName(t)
+	with := insertProduct(t, name+" with", true)
+	without := insertProduct(t, name+" without", true)
+	var slug string
+	if err := testPool.QueryRow(context.Background(),
+		"update products set image_key = 'products/stock-image.png' where id = $1 returning slug", with).Scan(&slug); err != nil {
+		t.Fatal(err)
+	}
+	setStock(t, testStoreID, with, 3)
+
+	rows := stockByProduct(stockList(t, storeStaffToken(t), testStoreID, url.Values{"q": {name}}))
+	const want = "/api/core/v1/files/products/stock-image.png"
+	if got, ok := rows[with]; !ok || got.ImageURL != want {
+		t.Fatalf("product with an image: %+v listed %v, want imageUrl %s", got, ok, want)
+	}
+	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+testStoreID+"/products/"+slug, "", nil)
+	var shown struct {
+		ImageURL string `json:"imageUrl"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &shown) != nil || shown.ImageURL != want {
+		t.Fatalf("GET store product: got %d %s, want 200 with imageUrl %s", status, body, want)
+	}
+
+	status, body = call(t, http.MethodGet, stockPath(testStoreID)+"?"+url.Values{"q": {name + " without"}}.Encode(), adminToken(t), nil)
+	var raw struct {
+		Items []map[string]any `json:"items"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &raw) != nil || len(raw.Items) != 1 || raw.Items[0]["productId"] != without {
+		t.Fatalf("GET stock of the product without an image: got %d %s, want 200 with that one row", status, body)
+	}
+	if _, ok := raw.Items[0]["imageUrl"]; ok {
+		t.Fatalf("product without an image: row %v has an imageUrl member, want none", raw.Items[0])
+	}
 }
