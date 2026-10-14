@@ -36,6 +36,8 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
   const [chosen, setChosen] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState<Refusal>()
+  // The address core refused, with the address list as it was read then: the badge goes once the list is read again.
+  const [refused, setRefused] = useState<{ addressId: string; listedAt: number }>()
   // Product id to the line's quantity when core refused it: the line stays marked while it still has that quantity.
   const [short, setShort] = useState<Record<string, number>>({})
 
@@ -76,9 +78,12 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
 
   // The answer decides the page: an order goes to its page, an empty cart to the history, anything else stays here with its message.
   async function place() {
+    // Belt and braces: the button is disabled while busy, so no press reaches here.
+    if (busy) return
     if (!selected) return
     setBusy(true)
     setRefusal(undefined)
+    setRefused(undefined)
     setShort({})
     const { order, error } = await placeOrder(selected.id, send)
     if (order) {
@@ -99,8 +104,17 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
         ),
       )
     }
-    setRefusal(refusalOf(error, store.data?.name ?? 'The store', selected.id))
+    const failure = refusalOf(error, store.data?.name ?? 'The store', selected.id)
+    setRefusal(failure)
+    if (failure.addressId) setRefused({ addressId: failure.addressId, listedAt: addresses.dataUpdatedAt })
   }
+
+  // Choosing another address clears an address refusal's alert; the refused address keeps its badge.
+  const choose = (id: string) => {
+    setChosen(id)
+    setRefusal((current) => (current?.addressId ? undefined : current))
+  }
+  const refusedId = refused && refused.listedAt === addresses.dataUpdatedAt ? refused.addressId : undefined
 
   // Through the cart's queue, like every cart write; the store is the cart's own.
   const remove = (line: CartLine) => {
@@ -110,7 +124,7 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
   return (
     <Frame>
       <div className="grid gap-6 lg:grid-cols-2">
-        <AddressCard addresses={addresses} selected={selected} onChoose={setChosen} refusedId={refusal?.addressId} />
+        <AddressCard addresses={addresses} selected={selected} onChoose={choose} refusedId={refusedId} />
         <SummaryCard
           view={view}
           store={store.data}
