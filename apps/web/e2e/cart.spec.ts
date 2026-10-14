@@ -216,7 +216,7 @@ test('store change against core', async ({ page, request }) => {
   })
   expect(registered.ok()).toBeTruthy()
   const { token } = (await registered.json()) as { token: string }
-  await page.addInitScript((signedIn) => localStorage.setItem(tokenKey, signedIn), token)
+  await page.addInitScript(([key, signedIn]) => localStorage.setItem(key, signedIn), [tokenKey, token])
 
   await page.goto('/')
   await page.getByRole('button', { name: `Add ${name}`, exact: true }).click()
@@ -268,7 +268,7 @@ test.describe('phone', () => {
     })
     expect(seeded.status()).toBe(200)
     const [added] = await homePicks(request, 1, indiranagar)
-    await page.addInitScript((signedIn) => localStorage.setItem(tokenKey, signedIn), token)
+    await page.addInitScript(([key, signedIn]) => localStorage.setItem(key, signedIn), [tokenKey, token])
     await page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560038'))
 
     await page.goto('/')
