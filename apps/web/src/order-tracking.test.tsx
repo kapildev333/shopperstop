@@ -1,4 +1,4 @@
-import { act, cleanup, screen, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { orderKey, type Order } from './orders'
@@ -74,8 +74,9 @@ test('status change announced', async () => {
   act(() => {
     queryClient.setQueryData(orderKey('t', id), order({ status: 'accepted', events: [placed, accepted] }))
   })
+  // TanStack delivers observer updates on a timer, so the text is awaited; the element must be the same one.
+  await waitFor(() => expect(status).toHaveTextContent('The store accepted your order.'))
   expect(screen.getByRole('status')).toBe(status)
-  expect(status).toHaveTextContent('The store accepted your order.')
 })
 
 test('cancelled order shows the reason', async () => {
