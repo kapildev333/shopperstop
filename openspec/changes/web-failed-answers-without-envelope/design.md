@@ -82,13 +82,35 @@ Red on `main`: tests 1, 2, 3, 5 and 8 below. Green on `main`, kept as pins: 4, 6
 - The original status text and body are dropped, not logged. Add logging when there is somewhere to send it.
 - A non-envelope 4xx (a gateway's 404 or 413) is reported as `internal` with "Could not reach ShopperStop. Try again.", though core may have been reachable.
 - The status is kept, so a status check ahead of the error check still acts on it: `useProduct` shows "Product not found" for a bare 404. Unchanged by this lane.
-- A non-ok status that may not carry a body (304) makes `new Response` throw; the call then rejects, `call()` answers `unreachable` and a read goes to its error state. Browsers do not hand a 304 to `fetch` unless the request sets conditional headers, and the site sets none. No code for it.
+- A non-ok status for which `new Response` throws (304, which may not carry a body; 0, an opaque or error response, outside the constructor's 200 to 599) makes the call reject; `call()` then answers `unreachable` and a read goes to its error state. Fail-safe, by the reviewer's note and this design. Browsers do not hand a 304 to `fetch` unless the request sets conditional headers, and the site sets none; a same-origin request never yields status 0. No code for it.
 
 ## For web-P2-L4
 
 - Every failed answer now reaches a call site as `{ error: { error: ApiError } }`; a non-envelope one has code `internal`. `response.status` is unchanged.
 - Place the order through `call()` on the shared `api`, capture `data` the way `cart.ts:115-121` does, and treat `error || !data` as failure. Never create a second client.
 - `internal` on `POST /orders` does not prove the order was not placed: a proxy can answer 502 after core committed. Re-read the cart or the orders before offering a blind retry.
+
+## Acceptance
+
+2026-10-13, by reading the branch tip `350a544` (`apps/web/src/api.ts`, `apps/web/src/api.test.ts`); suites run by the worker, the reviewer and the manager (Vitest web 101 passed), not by this lane. The manager's `make e2e` and core-down browser probe were still queued.
+
+| Scenario | Test in `api.test.ts` | Holds |
+|---|---|---|
+| Empty failed answer becomes internal | "empty failed answer becomes internal" | yes |
+| HTML failed answer becomes internal | "HTML failed answer becomes internal" | yes |
+| Other JSON failed answer becomes internal | "other JSON failed answer becomes internal" | yes |
+| Enveloped failure passes through | "enveloped failure passes through" (same object, body read) | yes |
+| Bare 401 drops the session and becomes internal | "bare 401 drops the session and becomes internal" | yes |
+| No content answer untouched | "no content answer untouched" | yes |
+| Ok JSON answer untouched | "ok JSON answer untouched" | yes |
+| Failed write reports an error | "failed write reports an error" (local client, `fetch` option, `call()`) | yes |
+
+8 of 8. `onResponse` is Decision 1 line for line; `isEnvelope` is private; `call()`, `splitError`, `useMe` and every call site are unchanged; `test:` precedes `fix:`, red on 1, 2, 3, 5 and 8 as predicted. Nothing extra in product code.
+
+Two pins added after review, test-only, inside the requirement as written (no new scenario), each proven by a mutation:
+
+- "failed answer with a zero content length becomes internal": a 502 with `Content-Length: 0` through a local client and `call()`, and the replacement carries no `Content-Length: 0`. Red only when the original headers are copied into the replacement `Response`.
+- "JSON that is not the envelope becomes internal": `null`, `[]`, `{"error":"x"}`, `{"error":{"code":1}}`. Red only when `isEnvelope` accepts any truthy `error`.
 
 ## Files
 

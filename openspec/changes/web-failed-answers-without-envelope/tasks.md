@@ -33,5 +33,5 @@ Easy to get wrong:
 - [x] 1.2 `onResponse` as in design.md, Decision 1 (`fix: a failed answer without the error envelope is a failure`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-failed-answers-without-envelope` after 1.2 lands.
+- [x] Team lead runs `/opsx:verify web-failed-answers-without-envelope` after 1.2 lands (accepted 2026-10-13 on `350a544`, 8 of 8 scenarios; design.md, Acceptance).
 - Area manager archives the change by PR after the fix PR merges.
