@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { cartKey } from './cart'
-import { openCart } from './cart-drawer'
+import { openCart, storeKey } from './cart-drawer'
 import { keys } from './catalog'
 import { cartView, dispatchGuest, type CartProduct, type CartView } from './guest-cart'
 import { setPincode } from './pincode'
@@ -11,6 +11,7 @@ import { setToken } from './session'
 import { product, renderAt, store, type Store } from './test-data'
 
 const koramangala = '00000000-0000-4000-8000-000000000401'
+const indiranagar = '00000000-0000-4000-8000-000000000402'
 const taaza = product()
 const butter = product({
   id: '00000000-0000-4000-8000-000000000602',
@@ -34,8 +35,20 @@ function seedServerCart(lines: [CartProduct, number][], extra: Partial<CartView>
     { storeId: koramangala, items: lines.map(([p, quantity]) => ({ product: p, quantity })) },
     store(),
   )
+  const cart = { ...view, ...extra }
   setToken('t')
-  queryClient.setQueryData(cartKey('t'), { ...view, ...extra })
+  queryClient.setQueryData(cartKey('t'), cart)
+  return cart
+}
+
+// A token-held cart at Indiranagar that core answered as replaced, with the given old store (or none).
+function seedReplaced(replacedStoreId?: string) {
+  setPincode('560038')
+  queryClient.setQueryData(keys.serviceability('560038'), store({ id: indiranagar, name: 'Indiranagar', promisedMinutes: 12 }))
+  const cart = { ...cartView({ storeId: indiranagar, items: [{ product: taaza, quantity: 1 }] }, store({ id: indiranagar })), replaced: true, clamped: false, replacedStoreId }
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), cart)
+  return cart
 }
 
 function setGuest(lines: [CartProduct, number][]) {
@@ -177,4 +190,55 @@ test('quick taps in the drawer', async () => {
   expect(group()).toHaveTextContent(/^3$/)
   // Under jsdom every write fails: the drawer returns to the cart's count once the writes have settled.
   await waitFor(() => expect(group()).toHaveTextContent(/^1$/))
+})
+
+test('replaced notice names the old store', async () => {
+  queryClient.setQueryData(storeKey(koramangala), store())
+  seedReplaced(koramangala)
+  await renderShell()
+  // The answer opens the drawer by itself: nothing here calls openCart().
+  const drawer = await screen.findByRole('dialog', { name: 'Your cart' })
+  const notice = 'Your cart from Koramangala was replaced. A cart holds products from one store.'
+  expect(within(drawer).getByText(notice)).toBeInTheDocument()
+  expect(within(screen.getByRole('complementary', { name: 'Cart summary' })).getByText(notice)).toBeInTheDocument()
+})
+
+test('replaced notice without the old store', async () => {
+  const cart = seedReplaced()
+  await renderShell()
+  const drawer = await screen.findByRole('dialog', { name: 'Your cart' })
+  const notice = 'Your cart from another store was replaced. A cart holds products from one store.'
+  expect(within(drawer).getByText(notice)).toBeInTheDocument()
+  expect(within(screen.getByRole('complementary', { name: 'Cart summary' })).getByText(notice)).toBeInTheDocument()
+
+  // A later answer without a replace shows no notice.
+  act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: false }))
+  expect(screen.queryByText(/was replaced/)).toBeNull()
+})
+
+test('replace opens the drawer once', async () => {
+  resolveStore()
+  const cart = seedServerCart([[taaza, 1]])
+  await renderShell()
+  expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
+
+  act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: true, clamped: false }))
+  const drawer = await screen.findByRole('dialog', { name: 'Your cart' })
+  await userEvent.click(within(drawer).getByRole('button', { name: 'Close', exact: true }))
+  expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
+
+  // An answer with no replace does not open it again.
+  act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: false, clamped: false }))
+  expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
+})
+
+// Pin from the 3a review: green on arrival.
+test('clamp notice above the lines', async () => {
+  resolveStore()
+  seedServerCart([[taaza, 1]], { clamped: true })
+  await renderShell()
+  const drawer = openDrawer()
+  const notice = within(drawer).getByText('Some quantities were lowered to what the store has.')
+  const list = within(drawer).getByRole('list')
+  expect(notice.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })

@@ -7,6 +7,8 @@ test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('sho
 const tokenKey = 'shopperstop:customer-token'
 const cartKey = 'shopperstop:cart'
 const koramangala = '00000000-0000-4000-8000-000000000401'
+const indiranagar = '00000000-0000-4000-8000-000000000402'
+const taaza = '00000000-0000-4000-8000-000000000601'
 const admin = { email: 'admin@shopperstop.local', password: 'admin12345' }
 
 function freshEmail() {
@@ -15,8 +17,8 @@ function freshEmail() {
 
 // Products Home shows (the first 12 in stock of core's first page) with a stock of at least `minimum` at Koramangala.
 // The demo stock is low, so tests that need a count above 1 pick by stock.
-async function homePicks(request: APIRequestContext, minimum: number): Promise<string[]> {
-  const listed = await request.get(`/api/core/v1/stores/${koramangala}/products?pageSize=24`)
+async function homePicks(request: APIRequestContext, minimum: number, storeId = koramangala): Promise<string[]> {
+  const listed = await request.get(`/api/core/v1/stores/${storeId}/products?pageSize=24`)
   expect(listed.status()).toBe(200)
   const { items } = (await listed.json()) as { items: { name: string; inStock: boolean; quantity: number }[] }
   return items
@@ -30,6 +32,12 @@ async function twoPicks(request: APIRequestContext): Promise<[string, string]> {
   const picks = await homePicks(request, 2)
   expect(picks.length).toBeGreaterThanOrEqual(2)
   return [picks[0], picks[1]]
+}
+
+// The cart core holds for a token: its store id and its item count.
+async function serverCart(request: APIRequestContext, token: string) {
+  const cart = await (await request.get('/api/core/v1/me/cart', { headers: { Authorization: `Bearer ${token}` } })).json()
+  return cart as { storeId?: string; items: { product: { name: string }; quantity: number }[] }
 }
 
 function quantityOf(page: Page, name: string) {
@@ -199,4 +207,118 @@ test('server cart clamps above stock', async ({ page, request }) => {
   } finally {
     expect((await setStock(original)).status()).toBe(204)
   }
+})
+
+test('store change against core', async ({ page, request }) => {
+  const [name] = await homePicks(request, 1)
+  const registered = await page.request.post('/api/core/v1/auth/register', {
+    data: { name: 'E2E Store Change', email: freshEmail(), password: 'password123' },
+  })
+  expect(registered.ok()).toBeTruthy()
+  const { token } = (await registered.json()) as { token: string }
+  await page.addInitScript((signedIn) => localStorage.setItem(tokenKey, signedIn), token)
+
+  await page.goto('/')
+  await page.getByRole('button', { name: `Add ${name}`, exact: true }).click()
+  const banner = page.getByRole('banner')
+  const cartButton = banner.getByRole('button', { name: /^1 item/ })
+  await expect(cartButton).toBeVisible()
+
+  const sheet = page.getByRole('dialog', { name: 'Your delivery pincode' })
+  const change = page.getByRole('dialog', { name: 'Change store?' })
+  const pincodeButton = banner.getByRole('button', { name: /560034$/ })
+  // Cancel keeps the pincode and the cart.
+  await pincodeButton.click()
+  await sheet.getByLabel('Pincode').fill('560038')
+  await sheet.getByRole('button', { name: 'Save pincode', exact: true }).click()
+  await expect(change).toBeVisible()
+  await change.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(change).toBeHidden()
+  await expect(banner.getByRole('button', { name: /560034$/ })).toBeVisible()
+  await expect(cartButton).toBeVisible()
+
+  // Saving again and confirming empties the cart and changes the store.
+  await pincodeButton.click()
+  await sheet.getByLabel('Pincode').fill('560038')
+  await sheet.getByRole('button', { name: 'Save pincode', exact: true }).click()
+  await expect(change).toBeVisible()
+  await expectNoViolations(page)
+  await change.getByRole('button', { name: 'Empty cart and change', exact: true }).click()
+  await expect(change).toBeHidden()
+  await expect(banner.getByRole('button', { name: 'Delivery in 12 minutes 560038', exact: true })).toBeVisible()
+  await expect(banner.getByRole('button', { name: 'Cart', exact: true })).toBeVisible()
+  await expect.poll(async () => (await serverCart(request, token)).items.length).toBe(0)
+})
+
+const replacedNotice = 'Your cart from Koramangala was replaced. A cart holds products from one store.'
+
+test.describe('phone', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('replaced notice against core', async ({ page, request }) => {
+    const registered = await page.request.post('/api/core/v1/auth/register', {
+      data: { name: 'E2E Replaced', email: freshEmail(), password: 'password123' },
+    })
+    expect(registered.ok()).toBeTruthy()
+    const { token } = (await registered.json()) as { token: string }
+    // The cart is at Koramangala before the customer's pincode moves to Indiranagar.
+    const seeded = await page.request.put('/api/core/v1/me/cart/items', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { storeId: koramangala, productId: taaza, quantity: 1 },
+    })
+    expect(seeded.status()).toBe(200)
+    const [added] = await homePicks(request, 1, indiranagar)
+    await page.addInitScript((signedIn) => localStorage.setItem(tokenKey, signedIn), token)
+    await page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560038'))
+
+    await page.goto('/')
+    // The cart has loaded (so the site knows where it was) before the Add that replaces it.
+    const bar = page.getByRole('complementary', { name: 'Cart summary' })
+    await expect(bar.getByText('1 item', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: `Add ${added}`, exact: true }).click()
+
+    const drawer = page.getByRole('dialog', { name: 'Your cart' })
+    await expect(drawer.getByText(replacedNotice, { exact: true })).toBeVisible()
+    await expect.poll(async () => (await serverCart(request, token)).storeId).toBe(indiranagar)
+    expect((await serverCart(request, token)).items).toHaveLength(1)
+    await expectNoViolations(page)
+
+    await drawer.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(drawer).toBeHidden()
+    await expect(bar.getByText('1 item', { exact: true })).toBeVisible()
+    await expect(bar.getByText(replacedNotice, { exact: true })).toBeVisible()
+    await expectNoViolations(page)
+  })
+})
+
+test("merge replaces another store's cart", async ({ page, request }) => {
+  const [name] = await homePicks(request, 1, indiranagar)
+  const password = 'password123'
+  const email = freshEmail()
+  const registered = await page.request.post('/api/core/v1/auth/register', {
+    data: { name: 'E2E Merge Replace', email, password },
+  })
+  expect(registered.ok()).toBeTruthy()
+  const { token } = (await registered.json()) as { token: string }
+  // The server cart is at Koramangala; the guest then adds at Indiranagar and signs in.
+  const seeded = await page.request.put('/api/core/v1/me/cart/items', {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { storeId: koramangala, productId: taaza, quantity: 1 },
+  })
+  expect(seeded.status()).toBe(200)
+  await page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560038'))
+
+  await page.goto('/')
+  await page.getByRole('button', { name: `Add ${name}`, exact: true }).click()
+  await expect(page.getByRole('banner').getByRole('button', { name: /^1 item/ })).toBeVisible()
+  await page.goto('/sign-in')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL('/')
+
+  const drawer = page.getByRole('dialog', { name: 'Your cart' })
+  await expect(drawer.getByRole('listitem')).toHaveCount(1)
+  await expect(drawer.getByText(replacedNotice, { exact: true })).toBeVisible()
+  await expectNoViolations(page)
 })
