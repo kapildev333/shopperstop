@@ -3,7 +3,7 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-Session `/loop 5min /orchestrate manage admin` (admin manager only). No admin `make e2e` running; the slot is free. admin-P2-L7 `admin-keep-data-on-refetch-error` merged (#163) and archived with this PR. In progress, team leads proposing: admin-P2-L5 `admin-orders-dashboard` (`.worktrees/admin-P2-L5`) and admin-P2-L6 `admin-staff-e2e` (`.worktrees/admin-P2-L6`); both rebase onto main with L7 (one root `RefetchNotice`, no page-level notices) before workers. These two are what Phase 2 still needs from admin.
+Session `/loop 5min /orchestrate manage admin` (admin manager only). No admin `make e2e` running; the slot is free. admin-P2-L7 `admin-keep-data-on-refetch-error` merged (#163, 28b9137) and archived (the PR after #165; #165 itself carried only this plan: its archive step ran before #163 had merged). In progress, team leads proposing: admin-P2-L5 `admin-orders-dashboard` (`.worktrees/admin-P2-L5`) and admin-P2-L6 `admin-staff-e2e` (`.worktrees/admin-P2-L6`); both rebase onto main with L7 (one root `RefetchNotice`, no page-level notices) before workers. These two are what Phase 2 still needs from admin.
 
 ## Lanes
 | Lane | Task | Scope | Status |
