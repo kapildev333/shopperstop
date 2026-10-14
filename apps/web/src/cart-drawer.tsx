@@ -1,6 +1,5 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
-import { createLink } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { createLink, useLocation } from '@tanstack/react-router'
 import { ShoppingCart } from 'lucide-react'
 import {
   Button,
@@ -15,8 +14,8 @@ import {
   cn,
   formatInr,
 } from '@shopperstop/ui'
-import { api } from './api'
 import { setLine, useAsked, useCart } from './cart'
+import { keys, useStore } from './catalog'
 import { itemCount, maxQuantity, type CartLine, type CartView } from './guest-cart'
 import { ImageTile } from './product-card'
 
@@ -75,20 +74,11 @@ function CartBody() {
   return <CartContent view={view} signedIn={signedIn} />
 }
 
-export const storeKey = (id: string) => ['store', id] as const
+export const storeKey = keys.store
 
 // Names the store the cart was at, from core's public store read; "another store" while that is unknown, pending or failed.
 export function ReplacedNotice({ storeId }: { storeId?: string }) {
-  const { data: store } = useQuery({
-    queryKey: storeKey(storeId ?? ''),
-    enabled: !!storeId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id: storeId ?? '' } } })
-      if (error) throw error
-      return data
-    },
-  })
+  const { data: store } = useStore(storeId)
   return (
     <StatusMessage tone="warning">
       Your cart from {store?.name ?? 'another store'} was replaced. A cart holds products from one store.
@@ -128,17 +118,7 @@ function CartContent({ view, signedIn }: { view: CartView; signedIn: boolean }) 
           <CartLineRow key={line.product.id} storeId={storeId} line={line} />
         ))}
       </ul>
-      <dl className="flex flex-col gap-2 text-body text-ink">
-        <SummaryRow label="Subtotal">
-          <Price cents={subtotalCents} />
-        </SummaryRow>
-        <SummaryRow label="Delivery fee">
-          {deliveryFeeCents === 0 ? <span className="font-semibold text-accent">Free</span> : <Price cents={deliveryFeeCents} />}
-        </SummaryRow>
-        <SummaryRow label="Total" className="font-semibold">
-          <Price cents={totalCents} />
-        </SummaryRow>
-      </dl>
+      <Totals subtotalCents={subtotalCents} deliveryFeeCents={deliveryFeeCents} totalCents={totalCents} />
       {shortfallCents > 0 && <StatusMessage>Add {formatInr(shortfallCents)} more for free delivery</StatusMessage>}
       {belowMinimum ? (
         <>
@@ -150,10 +130,9 @@ function CartContent({ view, signedIn }: { view: CartView; signedIn: boolean }) 
           </Button>
         </>
       ) : signedIn ? (
-        // ponytail: a plain link (full load) until web-P2-L4 adds the /checkout route and this becomes a RouterButtonLink.
-        <ButtonLink size="lg" className="w-full" href="/checkout" onClick={closeCart}>
+        <RouterButtonLink size="lg" className="w-full" to="/checkout" onClick={closeCart}>
           Proceed to checkout
-        </ButtonLink>
+        </RouterButtonLink>
       ) : (
         <RouterButtonLink
           size="lg"
@@ -166,6 +145,31 @@ function CartContent({ view, signedIn }: { view: CartView; signedIn: boolean }) 
         </RouterButtonLink>
       )}
     </>
+  )
+}
+
+// The subtotal, delivery fee and total of a cart; checkout and the order page show the same rows.
+export function Totals({
+  subtotalCents,
+  deliveryFeeCents,
+  totalCents,
+}: {
+  subtotalCents: number
+  deliveryFeeCents: number
+  totalCents: number
+}) {
+  return (
+    <dl className="flex flex-col gap-2 text-body text-ink">
+      <SummaryRow label="Subtotal">
+        <Price cents={subtotalCents} />
+      </SummaryRow>
+      <SummaryRow label="Delivery fee">
+        {deliveryFeeCents === 0 ? <span className="font-semibold text-accent">Free</span> : <Price cents={deliveryFeeCents} />}
+      </SummaryRow>
+      <SummaryRow label="Total" className="font-semibold">
+        <Price cents={totalCents} />
+      </SummaryRow>
+    </dl>
   )
 }
 
@@ -211,7 +215,8 @@ function CartLineRow({ storeId, line }: { storeId: string; line: CartLine }) {
 // The bar: phone only, shown only while the cart has lines. It brings its own spacer so the last row clears it; main is untouched.
 export function CartBar() {
   const { view } = useCart()
-  if (!view || itemCount(view) === 0) return null
+  const onCheckout = useLocation({ select: (location) => location.pathname }) === '/checkout'
+  if (onCheckout || !view || itemCount(view) === 0) return null
   return (
     <>
       <div aria-hidden className={view.replaced ? 'h-40 sm:hidden' : 'h-24 sm:hidden'} />

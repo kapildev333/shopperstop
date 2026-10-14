@@ -79,7 +79,7 @@ export function useAsked(storeId: string | undefined, productId: string): number
 let chain: Promise<unknown> = Promise.resolve()
 
 // Every server write runs after the one before it settled, so answers land in the order they were asked for.
-function queued<T>(work: () => Promise<T>): Promise<T> {
+export function queued<T>(work: () => Promise<T>): Promise<T> {
   const run = chain.then(work)
   chain = run.catch(() => {})
   return run

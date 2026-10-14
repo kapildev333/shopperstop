@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
 import { expect, test } from 'vitest'
 import { routeTree } from './routeTree.gen'
+import { setToken } from './session'
 
 function renderAt(path: string) {
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) })
@@ -19,4 +20,11 @@ test('signed-out account redirect', async () => {
   const router = renderAt('/account')
   expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument()
   expect(router.state.location.href).toBe('/sign-in?returnTo=%2Faccount')
+})
+
+test('account links to orders', async () => {
+  setToken('t')
+  renderAt('/account')
+  expect(await screen.findByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Your orders' })).toHaveAttribute('href', '/orders')
 })

@@ -169,6 +169,17 @@ test('bar and header follow the cart', async () => {
   expect(screen.getByRole('dialog', { name: 'Your cart' })).toBeInTheDocument()
 })
 
+test('no bar on checkout', async () => {
+  seedServerCart([[taaza, 2]])
+  renderAt('/checkout')
+  // The header stays on every page; the bar is absent on /checkout, where the page has its own total.
+  await screen.findByRole('banner')
+  expect(screen.queryByRole('complementary', { name: 'Cart summary' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View cart' })).toBeNull()
+  expect(within(screen.getByRole('banner')).getByRole('button', { name: '2 items ₹54' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument()
+})
+
 test('line clamped away', async () => {
   resolveStore()
   seedServerCart([], { clamped: true })

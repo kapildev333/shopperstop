@@ -11,10 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as OrdersIndexRouteImport } from './routes/orders.index'
+import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -47,6 +55,16 @@ const CSlugRoute = CSlugRouteImport.update({
   path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersIdRoute = OrdersIdRouteImport.update({
+  id: '/orders/$id',
+  path: '/orders/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
@@ -56,69 +74,90 @@ const PSlugRoute = PSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/checkout': typeof CheckoutRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
   '/c/$slug': typeof CSlugRoute
+  '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
+  '/orders/': typeof OrdersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/checkout': typeof CheckoutRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
   '/c/$slug': typeof CSlugRoute
+  '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
+  '/orders': typeof OrdersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/checkout': typeof CheckoutRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
   '/c/$slug': typeof CSlugRoute
+  '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
+  '/orders/': typeof OrdersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/account'
+    | '/checkout'
     | '/register'
     | '/search'
     | '/sign-in'
     | '/c/$slug'
+    | '/orders/$id'
     | '/p/$slug'
+    | '/orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
+    | '/checkout'
     | '/register'
     | '/search'
     | '/sign-in'
     | '/c/$slug'
+    | '/orders/$id'
     | '/p/$slug'
+    | '/orders'
   id:
     | '__root__'
     | '/'
     | '/account'
+    | '/checkout'
     | '/register'
     | '/search'
     | '/sign-in'
     | '/c/$slug'
+    | '/orders/$id'
     | '/p/$slug'
+    | '/orders/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  CheckoutRoute: typeof CheckoutRoute
   RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
   SignInRoute: typeof SignInRoute
   CSlugRoute: typeof CSlugRoute
+  OrdersIdRoute: typeof OrdersIdRoute
   PSlugRoute: typeof PSlugRoute
+  OrdersIndexRoute: typeof OrdersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -135,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -165,6 +211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$id': {
+      id: '/orders/$id'
+      path: '/orders/$id'
+      fullPath: '/orders/$id'
+      preLoaderRoute: typeof OrdersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/$slug': {
       id: '/p/$slug'
       path: '/p/$slug'
@@ -178,11 +238,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  CheckoutRoute: CheckoutRoute,
   RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
   SignInRoute: SignInRoute,
   CSlugRoute: CSlugRoute,
+  OrdersIdRoute: OrdersIdRoute,
   PSlugRoute: PSlugRoute,
+  OrdersIndexRoute: OrdersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
