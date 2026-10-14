@@ -9,6 +9,7 @@ Landed on `lane/web-P2-L7-phone-card-row`: `test:` a6576a8, `fix:` 4d21ecd, this
 - Gates (worktree root, Node 22.23.3): `build packages/ui` exit 0; `lint apps/web` exit 0; `typecheck apps/web` exit 0; `test apps/web -- --run` exit 0, 21 files / 81 tests passed, no Vitest file touched; `build apps/web` exit 0; `git status` clean after the build (only the committed files); `openspec validate web-phone-card-row --strict` valid.
 - Deviation from the brief: the lane log file is `.claude/lanes/web-P2-L7-T1.md` as the brief names it; `.claude/lanes/README.md` says one file per LANE-ID. The team lead's `web-P2-L7.md` was read, not written.
 - Checked in source: `/search` renders `ProductFeed`, which renders `ProductGrid`, whose cards are `li` elements (the helper's list-item lookup depends on it). The Stepper group label is `Quantity of <name>`.
+- Review fix: `cc6272f test: measure the struck MRP only where the card shows one` (the struck MRP is measured only when the card has an `s`; the two struck-MRP tests assert `toHaveCount(1)` first; out-of-stock pick unchanged). Lint and typecheck re-run green; no Playwright.
 ## Requests
 - to web-P2-L7 (team lead): `/opsx:verify` after the manager's e2e is green.
 ## Blockers
