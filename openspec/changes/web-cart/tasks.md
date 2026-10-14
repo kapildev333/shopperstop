@@ -41,7 +41,7 @@ Scenarios: Customer cart drawer › all four; Customer cart drawer states › "E
 Failing tests: `src/cart-drawer.test.tsx` › "drawer lines and totals", "free delivery", "checkout link signed in and out", "out-of-stock line", "empty, loading and failed cart", "below the minimum order", "bar and header follow the cart", "line clamped away", "quick taps in the drawer"; `e2e/cart.spec.ts` › "cart drawer against core", "server cart clamps above stock". Folded in by the manager (design Decision 16; expected green on arrival, say so in the commit body): in `e2e/browse.spec.ts` › "product pages against core", `/p/no-such-product` shows the level-1 heading "Product not found" with no axe violations.
 Easy to get wrong: no cart state in component state and nothing mounted under `StoreGate` (Decision 10); no link to `/p/...` in the drawer, bar or header button; the bar's spacer, not padding on `main` (Decision 12); a line's Stepper value is `useAsked(view.storeId, product.id) ?? quantity` and it writes at `view.storeId`, never the resolved store's; `view` is checked before `isError`; the clamp notice also sits over the empty state; fee tests override `store()`'s `freeDeliveryAboveCents` and `minOrderCents` (both 0 by default); the replaced notice is 3b's.
 
-- [ ] 3a.1 Tests committed red (`test: cart drawer, bar and header cart button`)
+- [x] 3a.1 Tests committed red (`test: cart drawer, bar and header cart button`)
 - [ ] 3a.2 `cart-drawer.tsx`, root wiring, `test-setup.ts` (`feat: cart drawer, sticky bar and header cart button`); all gates green, e2e green (every spec), axe clean
 
 ## 3b. Store-change confirm and the replaced notice
