@@ -73,3 +73,23 @@ export async function fillCart(request: APIRequestContext, shopper: Shopper, pic
 export async function signedIn(page: Page, shopper: Shopper): Promise<void> {
   await page.addInitScript(([key, token]) => localStorage.setItem(key, token), [tokenKey, shopper.token])
 }
+
+// Adds an address to the shopper, as core answers it: the first one is the default. Returns its id.
+export async function addAddress(request: APIRequestContext, shopper: Shopper, pincode = '560034', label = 'Home'): Promise<string> {
+  const answer = await request.post('/api/core/v1/me/addresses', {
+    headers: shopper.headers,
+    data: { label, line1: '12 80 Feet Rd, Koramangala', pincode, isDefault: true },
+  })
+  expect(answer.status()).toBe(201)
+  return ((await answer.json()) as { id: string }).id
+}
+
+// The seeded demo admin's headers, for the tests that change stock. Only those tests use them.
+export async function staffHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
+  const answer = await request.post('/api/core/v1/admin/auth/sign-in', {
+    data: { email: 'admin@shopperstop.local', password: 'admin12345' },
+  })
+  expect(answer.status()).toBe(200)
+  const { token } = (await answer.json()) as { token: string }
+  return { Authorization: `Bearer ${token}` }
+}

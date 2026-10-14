@@ -1,15 +1,16 @@
-import { screen, within, cleanup } from '@testing-library/react'
+import { screen, waitFor, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { queryClient } from './api'
 import { cartKey } from './cart'
+import { CheckoutPage } from './checkout'
 import { storeKey } from './cart-drawer'
 import { keys } from './catalog'
-import { ordersKey } from './orders'
-import { cartView, type CartProduct } from './guest-cart'
+import { orderKey, ordersKey, postOrder, type OrderResult } from './orders'
+import { cartView, type CartProduct, type CartView } from './guest-cart'
 import { setPincode } from './pincode'
 import { setToken } from './session'
-import { address, product, renderAt, store, type Address, type Store } from './test-data'
+import { address, order, product, renderAt, renderInRouter, store, type Address, type Store } from './test-data'
 
 const koramangala = '00000000-0000-4000-8000-000000000401'
 const indiranagar = '00000000-0000-4000-8000-000000000402'
@@ -154,4 +155,151 @@ test('empty checkout links to orders', async () => {
   await userEvent.click(await screen.findByRole('link', { name: 'Your orders' }))
   expect(router.state.location.pathname).toBe('/orders')
   expect(await screen.findByRole('heading', { level: 1, name: 'Your orders' })).toBeInTheDocument()
+})
+
+// A send prop that answers one placement per call, in order; it records the address id of each request.
+function sender(...answers: OrderResult[]) {
+  const asked: string[] = []
+  const send = async (addressId: string) => {
+    asked.push(addressId)
+    return answers[asked.length - 1]
+  }
+  return { send, asked }
+}
+
+const placed = order({ id: '00000000-0000-4000-8000-000000000704', number: 'SS-ABCDEFGH' })
+const placeButton = () => screen.getByRole('button', { name: 'Place order (COD)' })
+
+test('order placed', async () => {
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const asked: string[] = []
+  // The answer waits at the gate, so the busy state from the press to the answer can be read.
+  const send = async (addressId: string) => {
+    asked.push(addressId)
+    await gate
+    return { order: placed }
+  }
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(placeButton()).toBeDisabled()
+  expect(placeButton()).toHaveAttribute('aria-busy', 'true')
+  release()
+  await waitFor(() => expect(router.state.location.pathname).toBe(`/orders/${placed.id}`))
+  expect(asked).toEqual([home.id])
+  expect(queryClient.getQueryData(orderKey('t', placed.id))).toEqual(placed)
+  expect(queryClient.getQueryData<CartView>(cartKey('t'))?.items).toEqual([])
+})
+
+test('order number collision retried once', async () => {
+  const conflict: OrderResult = { error: { code: 'conflict', message: 'order number taken' } }
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const first = sender(conflict, { order: placed })
+  const router = renderInRouter(<CheckoutPage send={first.send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe(`/orders/${placed.id}`))
+  expect(first.asked).toEqual([home.id, home.id])
+
+  cleanup()
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const second = sender(conflict, conflict)
+  const again = renderInRouter(<CheckoutPage send={second.send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not place your order. Try again.')
+  expect(second.asked).toEqual([home.id, home.id])
+  expect(again.state.location.pathname).toBe('/')
+  expect(placeButton()).toBeEnabled()
+})
+
+test('cart already empty goes to orders', async () => {
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'validation', message: 'cart is empty' } })
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/orders'))
+  expect(queryClient.getQueryData<CartView>(cartKey('t'))?.items).toEqual([])
+})
+
+test('out-of-stock lines marked', async () => {
+  const low = product({ quantity: 2 })
+  const out = product({ id: '00000000-0000-4000-8000-000000000602', name: 'Amul Butter', slug: 'amul-butter', inStock: false, quantity: 0 })
+  const curd = product({ id: '00000000-0000-4000-8000-000000000603', name: 'Amul Curd', slug: 'amul-curd', priceCents: 3000, mrpCents: 3000 })
+  seed({
+    lines: [
+      [low, 3],
+      [out, 1],
+      [curd, 1],
+    ],
+  })
+  const { send } = sender({
+    error: { code: 'out_of_stock', message: 'short', productIds: [low.id, out.id] },
+  })
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Some products are not available in the quantity you chose.')
+
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  const taazaLine = within(summary).getByText('Amul Taaza').closest('li') as HTMLElement
+  expect(within(taazaLine).getByText('Only 2 left')).toBeInTheDocument()
+  expect(within(taazaLine).getByRole('button', { name: 'Remove Amul Taaza' })).toBeInTheDocument()
+  const butterLine = within(summary).getByText('Amul Butter').closest('li') as HTMLElement
+  expect(within(butterLine).getByText('Out of stock')).toBeInTheDocument()
+  expect(within(butterLine).getByRole('button', { name: 'Remove Amul Butter' })).toBeInTheDocument()
+  const curdLine = within(summary).getByText('Amul Curd').closest('li') as HTMLElement
+  expect(within(curdLine).queryByText(/Out of stock|Only|Not enough stock/)).toBeNull()
+  expect(within(curdLine).queryByRole('button', { name: /Remove/ })).toBeNull()
+  expect(router.state.location.pathname).toBe('/')
+})
+
+test('address not served', async () => {
+  seed({ lines: [[taaza, 4]], addresses: [home, work], storeOverrides: { minOrderCents: 9900 } })
+  const { send, asked } = sender({
+    error: { code: 'not_serviceable', message: 'pincode not served', field: 'addressId' },
+  })
+  renderInRouter(<CheckoutPage send={send} />)
+  const addresses = await screen.findByRole('region', { name: 'Delivery address' })
+  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Work' }))
+  await userEvent.click(placeButton())
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Koramangala does not deliver to this address. Choose another address or add one.',
+  )
+  expect(asked).toEqual([work.id])
+  const badge = within(addresses).getByText('Not delivered here')
+  expect(badge.closest('li')).toHaveTextContent('Work')
+  expect(within(addresses).getAllByText('Not delivered here')).toHaveLength(1)
+  expect(within(screen.getByRole('region', { name: 'Order summary' })).getByText('Amul Taaza')).toBeInTheDocument()
+})
+
+test('store closed at placement', async () => {
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'not_serviceable', message: 'store closed' } })
+  renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Koramangala is closed right now.')
+  expect(screen.queryByText('Not delivered here')).toBeNull()
+})
+
+test('placement fails', async () => {
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  let calls = 0
+  // The first answer is core's refusal; the second is the real request, which cannot reach core under jsdom.
+  const send = async (addressId: string) => {
+    calls += 1
+    if (calls === 1) return { error: { code: 'validation', message: 'below minimum', field: 'subtotal' } } satisfies OrderResult
+    return postOrder(addressId)
+  }
+  renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent("Your cart is below the store's minimum order.")
+  expect(placeButton()).toBeEnabled()
+  expect(placeButton()).not.toHaveAttribute('aria-busy')
+
+  await userEvent.click(placeButton())
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Could not place your order. Try again.'))
+  expect(calls).toBe(2)
+  expect(placeButton()).toBeEnabled()
+  expect(placeButton()).not.toHaveAttribute('aria-busy')
 })
