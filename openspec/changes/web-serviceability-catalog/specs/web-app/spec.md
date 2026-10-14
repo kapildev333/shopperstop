@@ -85,7 +85,7 @@ Every listed product SHALL be a card with a square image tile (its `imageUrl` sc
 - **THEN** the group "Quantity of Amul Taaza" shows 1
 
 ### Requirement: Customer home page
-With an open store resolved, Home SHALL show a navigation "Categories" linking each parent category of `GET /stores/{id}/categories` to `/c/<slug>`, a "Shop by category" section with a tile per parent (square image and name, same link), and a "Picked for you" section listing, in core's order, the first 12 in-stock products of the first page of `GET /stores/{id}/products`. A failed load SHALL show an alert with "Try again" in that section.
+For an open store Home SHALL show a navigation "Categories" linking each parent of `GET /stores/{id}/categories` to `/c/<slug>`, a "Shop by category" section of parent tiles (square image, name, same link), and "Picked for you": in core's order, the first 12 in-stock products of page one of `GET /stores/{id}/products`. A failed load SHALL show an alert with "Try again" in place of what failed: one for the category navigation and "Shop by category" together, one inside "Picked for you".
 
 #### Scenario: Home lists categories and picks
 - **WHEN** an open store is resolved whose categories are three parents and whose first product page holds 14 products, the 2nd and 5th out of stock
