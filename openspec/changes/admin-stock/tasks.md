@@ -28,7 +28,7 @@ Step A, from the review of task 2 (design.md Decisions 25 to 28).
 Scenarios: Stock save › Edit typed during a save; Stock save in progress › Focus through a save, Second press during a save; Stock edits › Value read as the stored quantity; Stock store switch with unsaved edits › Return after a store change in the URL, Save answered after a store change.
 Failing tests: `src/stock.test.tsx` › "an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed" (replaces task 2's "an edit typed while a save is in flight stays unsaved"), "Save changes keeps keyboard focus through a save and is never disabled", "a value that reads as the stored quantity is no edit, and Discard with nothing unsaved changes nothing", "a store changed through the URL drops the edits for good: they are not back on return".
 Green when written (task 2 built the check; no code follows for it): "a save that answers after the store changed leaves the other store's edits alone".
-- [ ] 3.1 Step A tests committed red (`test: stock save in progress, values read as stored, edits dropped on a store change`); Vitest `4 failed | 127 passed (131)`
+- [x] 3.1 Step A tests committed red (`test: stock save in progress, values read as stored, edits dropped on a store change`); Vitest `4 failed | 127 passed (131)`
 - [ ] 3.2 `src/routes/_staff/stock.tsx` per design.md "Task 3 step A" (`fix: stock save stays attached and focusable, edits dropped on any store change`); Vitest `131 passed (131)`; every gate green; `routeTree.gen.ts` unchanged
 
 Step B.

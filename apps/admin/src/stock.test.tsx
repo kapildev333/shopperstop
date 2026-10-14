@@ -416,7 +416,7 @@ test('a quantity the page cannot send is marked, named on save and not sent', as
   expect(core.puts).toEqual([{ rows: [{ productId: milk.productId, quantity: 12 }, { productId: banana.productId, quantity: 9 }] }])
 })
 
-test('an edit typed while a save is in flight stays unsaved', async () => {
+test('an edit typed while a save is in flight stays unsaved, and the save still finishes once and is confirmed', async () => {
   setToken('tok')
   const core = stockCore(indiranagar.id, [banana, milk])
   const put = `PUT /admin/stores/${indiranagar.id}/stock`
@@ -434,12 +434,20 @@ test('an edit typed while a save is in flight stays unsaved', async () => {
   renderApp('/stock')
   await findQuantity('Banana Robusta')
   await type('Banana Robusta', '30')
-  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  await userEvent.click(save)
   await waitFor(() => expect(core.puts).toHaveLength(1))
   await type('Sunny Fields Toned Milk', '20')
+
+  expect(save).toHaveTextContent('Saving…')
+  expect(save).toHaveAttribute('aria-disabled', 'true')
+  await userEvent.click(save)
   answer()
 
-  expect(await screen.findByText('1 unsaved change')).toBeInTheDocument()
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toEqual([{ rows: [{ productId: banana.productId, quantity: 30 }] }])
+  expect(save).toHaveTextContent('Save changes')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
   expect(quantity('Banana Robusta')).toHaveValue('30')
   expect(quantity('Sunny Fields Toned Milk')).toHaveValue('20')
   expect(within(quantity('Sunny Fields Toned Milk').closest('tr')!).getByText('Unsaved')).toBeInTheDocument()
@@ -516,4 +524,107 @@ test('Back and Forward move the search field and the list with the URL, and unsa
   expect(await findQuantity('Sunny Fields Toned Milk')).toBeInTheDocument()
   expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('milk')
   expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+})
+
+test('Save changes keeps keyboard focus through a save and is never disabled', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  await userEvent.click(save)
+
+  await waitFor(() => expect(save).toHaveTextContent('Saving…'))
+  expect(save).toHaveAttribute('aria-disabled', 'true')
+  expect(save).not.toBeDisabled()
+  expect(save).toHaveFocus()
+  answer()
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  expect(save).toHaveTextContent('Save changes')
+  expect(save).not.toBeDisabled()
+  expect(save).toHaveFocus()
+})
+
+test('a value that reads as the stored quantity is no edit, and Discard with nothing unsaved changes nothing', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana, milk])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/stock')
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(screen.getByText('No unsaved changes')).toHaveAttribute('role', 'status')
+  await type('Sunny Fields Toned Milk', '017')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(quantity('Sunny Fields Toned Milk')).toHaveValue('17')
+  expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
+
+  await type('Banana Robusta', '30')
+  expect(screen.getByText('1 unsaved change')).toHaveAttribute('role', 'status')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+  expect(screen.getByText('Stock saved.')).toBeInTheDocument()
+  expect(core.puts).toHaveLength(1)
+})
+
+test('a store changed through the URL drops the edits for good: they are not back on return', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...stockCore(koramangala.id, [milk]).routes })
+
+  const router = renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await router.navigate({ to: '/stock', search: { store: koramangala.id } })
+  await findQuantity('Sunny Fields Toned Milk')
+  router.history.back()
+
+  expect(await findQuantity('Banana Robusta')).toHaveValue('0')
+  expect(screen.getByLabelText('Store')).toHaveValue(indiranagar.id)
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+})
+
+test('a save that answers after the store changed leaves the other store\'s edits alone', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana])
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...core.routes,
+    ...stockCore(koramangala.id, [banana]).routes,
+    [put]: async (request) => {
+      const response = await core.routes[put](request)
+      await new Promise<void>((resolve) => (answer = resolve))
+      return response
+    },
+  })
+
+  const router = renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(core.puts).toHaveLength(1))
+  await router.navigate({ to: '/stock', search: { store: koramangala.id } })
+  await waitFor(() => expect(screen.getByLabelText('Store')).toHaveValue(koramangala.id))
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  answer()
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'false'))
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
 })
