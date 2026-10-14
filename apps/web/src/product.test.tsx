@@ -61,6 +61,20 @@ test('out of stock product', async () => {
   expect(screen.queryByText(/left$/)).not.toBeInTheDocument()
 })
 
+test('no savings badge when the MRP is not higher', async () => {
+  seedStore()
+  queryClient.setQueryData(
+    keys.product(store().id, 'amul-taaza'),
+    product({ name: 'Amul Taaza', priceCents: 2900, mrpCents: 2900 }),
+  )
+  renderAt('/p/amul-taaza')
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Amul Taaza' })).toBeInTheDocument()
+  expect(screen.getByText('₹29')).toBeInTheDocument()
+  expect(screen.queryByText(/^Save/)).not.toBeInTheDocument()
+  expect(document.querySelector('s')).toBeNull()
+})
+
 test('unknown product', async () => {
   seedStore()
   // Core answers 404 for the slug; the page caches that as null, which is not an error.
