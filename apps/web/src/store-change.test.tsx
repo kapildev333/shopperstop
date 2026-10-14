@@ -75,7 +75,7 @@ test('store change cancelled', async () => {
     await changePincode('560038')
   })
   const dialog = await screen.findByRole('dialog', { name: 'Change store?' })
-  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel', exact: true }))
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Change store?' })).toBeNull())
   expect(getPincode()).toBe('560034')
   expect(getGuestCart().items).toHaveLength(1)

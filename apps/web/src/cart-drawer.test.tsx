@@ -212,8 +212,9 @@ test('replaced notice without the old store', async () => {
   expect(within(screen.getByRole('complementary', { name: 'Cart summary' })).getByText(notice)).toBeInTheDocument()
 
   // A later answer without a replace shows no notice.
+  // Query notifies its observers on a timer, so the change is awaited rather than read at once.
   act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: false }))
-  expect(screen.queryByText(/was replaced/)).toBeNull()
+  await waitFor(() => expect(screen.queryByText(/was replaced/)).toBeNull())
 })
 
 test('replace opens the drawer once', async () => {
@@ -224,11 +225,12 @@ test('replace opens the drawer once', async () => {
 
   act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: true, clamped: false }))
   const drawer = await screen.findByRole('dialog', { name: 'Your cart' })
-  await userEvent.click(within(drawer).getByRole('button', { name: 'Close', exact: true }))
+  await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
 
   // An answer with no replace does not open it again.
   act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: false, clamped: false }))
+  await waitFor(() => expect(screen.queryByText(/was replaced/)).toBeNull())
   expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
 })
 
