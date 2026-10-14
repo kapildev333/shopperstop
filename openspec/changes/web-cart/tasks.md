@@ -22,7 +22,7 @@ The cart shown is always the one core answered: cache every `PUT` answer whole a
 For task 3's replaced notice (D27) this task keeps where a replaced cart was, as `replacedStoreId` on the cached answer: `setLine` reads the cached cart's `storeId` before the `PUT`; the merge reads `GET /me/cart` before its pushes and also carries `replaced` from any push. No Vitest test can reach it (no HTTP mocks); task 3's two e2e tests prove it.
 
 - [x] 2.1 Tests committed red (`test: cart hook over guest and server carts, merge at sign-in`)
-- [ ] 2.2 `cart.ts`, `auth.ts` (`feat: server cart and guest merge at sign-in`); all gates green, e2e green (smoke, auth, account, browse, cart)
+- [x] 2.2 `cart.ts`, `auth.ts` (`feat: server cart and guest merge at sign-in`); all gates green, e2e green (smoke, auth, account, browse, cart)
 
 ## 3. Drawer, bar, header button and store-change confirm
 

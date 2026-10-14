@@ -22,6 +22,8 @@ export type CartView = GuestCart & {
   minOrderCents: number
   shortfallCents: number
   clamped?: boolean
+  replaced?: boolean
+  replacedStoreId?: string
 }
 export type CartAction = { type: 'set'; storeId: string; product: CartProduct; quantity: number } | { type: 'clear' }
 

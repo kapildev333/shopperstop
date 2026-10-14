@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from 'react'
 import { render } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import {
   RouterProvider,
   createMemoryHistory,
@@ -7,6 +8,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import type { components } from '@shopperstop/ui/api'
+import { queryClient } from './api'
 import { routeTree } from './routeTree.gen'
 
 export type Store = components['schemas']['Store']
@@ -63,7 +65,7 @@ export function renderAt(path: string) {
 // Renders a component that holds router Links, under a root route with no other pages.
 export function renderInRouter(ui: ReactNode) {
   const router = createRouter({
-    routeTree: createRootRoute({ component: () => ui }),
+    routeTree: createRootRoute({ component: () => createElement(QueryClientProvider, { client: queryClient }, ui) }),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
   render(createElement(RouterProvider, { router }))
