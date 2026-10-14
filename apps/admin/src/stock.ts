@@ -17,6 +17,15 @@ export const maxRows = 500
 export const maxSearch = 100
 export const maxPage = 100000
 
+// A search as core takes it: no NUL byte, no half of a surrogate pair (the request URL could not be built from one), and at
+// most 100 characters counted as core counts them, by code point, so an emoji is kept whole or left out, never cut through.
+export function cleanSearch(q: string) {
+  return Array.from(q)
+    .filter((character) => character !== '\0' && !/^[\uD800-\uDFFF]$/.test(character))
+    .slice(0, maxSearch)
+    .join('')
+}
+
 // Keys: one page of a store's stock is ['admin', 'stock', storeId, filters].
 export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: true; page: number }) =>
   queryOptions({

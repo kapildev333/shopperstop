@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
 import { api, type ApiError } from '../../api'
-import { lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
+import { cleanSearch, lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
 // A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
@@ -27,17 +27,18 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   // Rows kept from the page or filter before, while the one asked for loads: shown dimmed, not editable.
   const stale = stock.isPlaceholderData
   // Unsaved edits belong to one store, so they can never be shown for, or saved to, another.
-  const [draft, setDraft] = useState<{ store: string; edits: Edits }>({ store: storeId, edits: {} })
+  // `visit` counts the store changes: the result of a save is shown only during the visit it was made in.
+  const [draft, setDraft] = useState<{ store: string; visit: number; edits: Edits }>({ store: storeId, visit: 0, edits: {} })
   const [refused, setRefused] = useState(false)
   const [switchTo, setSwitchTo] = useState<string>()
   // A store change, however it happens (selector, link, Back), drops them for good: React renders again at once with the empty draft.
-  if (draft.store !== storeId) setDraft({ store: storeId, edits: {} })
+  if (draft.store !== storeId) setDraft({ store: storeId, visit: draft.visit + 1, edits: {} })
   const edits = draft.edits
   const count = Object.keys(edits).length
   const invalid = Object.values(edits).filter((edit) => parseQuantity(edit.value) === undefined)
 
   const save = useMutation({
-    mutationFn: async (sent: { store: string; edits: Edits }) => {
+    mutationFn: async (sent: { store: string; visit: number; edits: Edits }) => {
       const rows = toRows(sent.edits)
       const { error } = await api.PUT('/admin/stores/{id}/stock', { params: { path: { id: sent.store } }, body: { rows } })
       if (error) throw error.error
@@ -51,13 +52,14 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
       const done = new Map(rows.map((row) => [row.productId, row.quantity]))
       setDraft((current) =>
         current.store === sent.store
-          ? { store: current.store, edits: Object.fromEntries(Object.entries(current.edits).filter(([id, edit]) => !done.has(id) || done.get(id) !== parseQuantity(edit.value))) }
+          ? { ...current, edits: Object.fromEntries(Object.entries(current.edits).filter(([id, edit]) => !done.has(id) || done.get(id) !== parseQuantity(edit.value))) }
           : current,
       )
     },
   })
-  const saved = save.variables?.store === storeId
-  const saveError = saved && save.error ? (save.error as Partial<ApiError>) : undefined
+  // Not after the store changed and the admin came back, and no "try again" when nothing is left to save.
+  const saved = save.variables?.visit === draft.visit
+  const saveError = saved && save.error && count > 0 ? (save.error as Partial<ApiError>) : undefined
 
   // Filters and the store live in the URL; any change of them starts again at page 1.
   const go = (change: StockSearch) => void navigate({ search: (current) => ({ ...current, page: undefined, ...change }) })
@@ -81,19 +83,19 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
     const next = { ...edits, [row.productId]: { name: row.name, value } }
     // A value that reads as what core holds (17, 017, " 17 ") is no edit.
     if (parseQuantity(value) === row.quantity) delete next[row.productId]
-    setDraft({ store: storeId, edits: next })
+    setDraft({ ...draft, edits: next })
   }
 
   function discard() {
     if (count === 0) return
     forget()
-    setDraft({ store: storeId, edits: {} })
+    setDraft({ ...draft, edits: {} })
   }
 
   function submitSave() {
     if (count === 0 || save.isPending) return
     if (invalid.length > 0) return setRefused(true)
-    save.mutate({ store: storeId, edits })
+    save.mutate({ store: storeId, visit: draft.visit, edits })
   }
 
   function submitSearch(event: FormEvent) {
@@ -275,9 +277,10 @@ function Stock() {
 export const Route = createFileRoute('/_staff/stock')({
   // The router reads search values as JSON: `page=2` is a number, `lowStock=true` a boolean, a search of digits a number.
   // Core answers 400 to a NUL byte or more than 100 characters in q, and to a page far beyond any list: neither is sent.
+  // The field's maxLength counts UTF-16 units, so it lets through at most 100 characters; cleanSearch has the last word.
   validateSearch: (search: Record<string, unknown>): StockSearch => ({
     store: typeof search.store === 'string' ? search.store : undefined,
-    q: search.q === undefined ? undefined : String(search.q).replaceAll('\0', '').slice(0, maxSearch) || undefined,
+    q: search.q === undefined ? undefined : cleanSearch(String(search.q)) || undefined,
     lowStock: search.lowStock === true ? true : undefined,
     page: typeof search.page === 'number' && Number.isInteger(search.page) && search.page > 1 ? Math.min(search.page, maxPage) : undefined,
   }),
