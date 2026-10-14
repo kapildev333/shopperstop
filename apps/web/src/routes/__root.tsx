@@ -14,7 +14,7 @@ function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-brand px-4 py-3 sm:px-6">
-        <Link to="/" className="text-h2 text-on-brand">
+        <Link to="/" className="-my-2 inline-flex min-h-11 items-center text-h2 text-on-brand">
           ShopperStop
         </Link>
         <SearchForm className="order-last basis-full sm:order-none sm:basis-auto sm:max-w-xl sm:flex-1" />
