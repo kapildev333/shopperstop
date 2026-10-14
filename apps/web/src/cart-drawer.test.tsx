@@ -228,6 +228,25 @@ test('replace opens the drawer once', async () => {
   await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
 
+  // A re-render with no new answer (the pincode's store changes) does not reopen it.
+  act(() => queryClient.setQueryData(keys.serviceability('560034'), store({ promisedMinutes: 20 })))
+  await screen.findByRole('button', { name: 'Delivery in 20 minutes 560034' })
+  expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
+
+  // A second replace, a new answer object with other content, opens it again.
+  act(() =>
+    queryClient.setQueryData(cartKey('t'), {
+      ...cart,
+      items: [{ product: taaza, quantity: 2 }],
+      replaced: true,
+      clamped: false,
+    }),
+  )
+  const again = await screen.findByRole('dialog', { name: 'Your cart' })
+  expect(within(again).getByRole('group', { name: 'Quantity of Amul Taaza' })).toHaveTextContent(/^2$/)
+  await userEvent.click(within(again).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull()
+
   // An answer with no replace does not open it again.
   act(() => queryClient.setQueryData(cartKey('t'), { ...cart, replaced: false, clamped: false }))
   await waitFor(() => expect(screen.queryByText(/was replaced/)).toBeNull())
