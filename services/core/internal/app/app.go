@@ -76,6 +76,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.RequireCustomer).Post("/api/core/v1/orders", order.Create(pool))
 	r.With(a.RequireCustomer).Get("/api/core/v1/orders", order.List(pool))
 	r.With(a.RequireCustomer).Get("/api/core/v1/orders/{id}", order.Get(pool))
+	r.With(a.RequireCustomer).Post("/api/core/v1/orders/{id}/cancel", order.Cancel(pool))
 	return r
 }
 

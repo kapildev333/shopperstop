@@ -3,6 +3,8 @@ package order
 import (
 	"context"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -99,6 +101,50 @@ func Get(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		respond(w, r, pool, id, customerScope(r.Context()), http.StatusOK)
+	}
+}
+
+// cancelRequest is the POST /orders/{id}/cancel body.
+type cancelRequest struct {
+	Reason string `json:"reason"`
+}
+
+// text trims v and requires at most 500 characters, naming field when it is longer.
+func text(field, v string) (string, error) {
+	v = strings.TrimSpace(v)
+	if utf8.RuneCountInString(v) > 500 {
+		return "", invalid(field, "at most 500 characters")
+	}
+	return v, nil
+}
+
+// Cancel answers 200 with the customer's order cancelled and its stock returned.
+// Once the order is packing or later, or cancelled, the answer is 409 conflict.
+func Cancel(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := httpx.PathID(r, "id")
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		var in cancelRequest
+		if err := httpx.ReadJSON(w, r, &in); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		reason, err := text("reason", in.Reason)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		sc := customerScope(ctx)
+		actor := Actor{Type: "customer", ID: auth.CustomerID(ctx)}
+		if err := Transition(ctx, pool, id, sc, db.OrderStatusCancelled, actor, reason); err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		respond(w, r, pool, id, sc, http.StatusOK)
 	}
 }
 

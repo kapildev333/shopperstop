@@ -264,6 +264,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel one of the signed-in customer's orders
+         * @description Cancels the customer's own order while it is placed or accepted: its status becomes cancelled, the optional reason is recorded as cancelReason and as the event's note, and each line's quantity goes back to the store's stock in the same transaction. Send {} for no reason; a body that is not JSON is refused. Errors: 400 validation naming reason when it is longer than 500 characters, and 400 validation (invalid JSON, no field) when the body is missing or malformed; 401 with no token, an unknown token or a staff token; 404 not_found when the order is another customer's, unknown or not a uuid; 409 conflict when the order is packing, ready, out for delivery, delivered or cancelled, and nothing changes.
+         */
+        post: operations["cancelOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/auth/sign-in": {
         parameters: {
             query?: never;
@@ -1318,6 +1338,11 @@ export interface components {
              * @description One of the customer's own addresses.
              */
             addressId: string;
+        };
+        /** @description The customer's optional reason for cancelling. */
+        OrderCancel: {
+            /** @description Why the order is cancelled. Optional; at most 500 characters. */
+            reason?: string;
         };
         OrderList: {
             items: components["schemas"]["Order"][];
@@ -2593,6 +2618,166 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    cancelOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "reason": "Ordered by mistake"
+                 *     }
+                 */
+                "application/json": components["schemas"]["OrderCancel"];
+            };
+        };
+        responses: {
+            /** @description The order, cancelled. Its quantities are back in the store's stock. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000703",
+                     *       "number": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "status": "cancelled",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "label": "Home",
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "subtotalCents": 103000,
+                     *       "deliveryFeeCents": 0,
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "cod",
+                     *       "placedAt": "2026-10-13T09:20:00Z",
+                     *       "cancelledAt": "2026-10-13T09:22:00Z",
+                     *       "cancelReason": "Ordered by mistake",
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 7000,
+                     *           "mrpCents": 7000,
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000604",
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 32000,
+                     *           "mrpCents": 32000,
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "events": [
+                     *         {
+                     *           "toStatus": "placed",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         },
+                     *         {
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "cancelled",
+                     *           "actorType": "customer",
+                     *           "note": "Ordered by mistake",
+                     *           "createdAt": "2026-10-13T09:22:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description The body is not JSON (invalid JSON, no field), or the reason is longer than 500 characters (field reason). Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "at most 500 characters",
+                     *         "field": "reason"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token is missing, unknown, expired, deactivated or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No order of the signed-in customer has this id: unknown, another customer's, or not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The order is packing, ready, out for delivery, delivered or cancelled: a customer may cancel only while it is placed or accepted. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "cannot move an order from packing to cancelled"
                      *       }
                      *     }
                      */
