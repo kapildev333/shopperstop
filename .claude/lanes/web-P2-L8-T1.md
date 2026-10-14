@@ -12,3 +12,4 @@ Landed on `lane/web-P2-L8-non-json-errors`: `test:` b0a926e, `fix:` 1d3ae26, thi
 ## Requests
 - to web-P2-L8 (team lead): `/opsx:verify web-failed-answers-without-envelope` after the reviewer's pass.
 ## Blockers
+- 2026-10-13, reviewer nits addressed: `a2fd198 test: pins for a zero content length and JSON that is not the envelope` (two green-on-arrival pins; mutation 1 copying original headers turned only the zero-length pin red, mutation 2 truthy `error` turned only the JSON pin red; both reverted). Vitest 101 passed in 21 files; lint and typecheck green.
