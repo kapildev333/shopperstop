@@ -66,3 +66,31 @@ Layout cannot be shown in jsdom, so the proving tests are Playwright, in a new f
 | Wordmark tap target on a phone | `phone` › "wordmark tap target on a phone" | red: the link's box is 26 px tall |
 
 The numbers are read from classes and one screenshot, not from a run; the manager's e2e run on the `test:` commit confirms them.
+
+## Acceptance (2026-10-13, on `eb4da56`)
+
+Accepted: 4 of 4 scenarios have a passing named test, both tasks are ticked, nothing outside the brief landed (two class lists, one new e2e file). Done by reading; the runs are the manager's.
+
+What the manager's runs showed:
+
+- Pre-fix source with the final spec file, `make e2e`: all four tests of `e2e/phone-layout.spec.ts` red. Phone card: a control 14.9 px past the content area (the arithmetic above said about 15). Six-column: red, as computed. Wordmark: 26 px, needs 44. The out-of-stock pin was red on arrival, 39.9 px past: the "Out of stock" button did not shrink in the old row, so the table's "shrinks by wrapping its label" was wrong for that row and the pin is a fourth proving test.
+- Tip: `make test-web` ui 54, admin 95, web 91; `make e2e` admin 8, web 28, the four layout tests green; `openspec validate --all --strict` 14 passed.
+
+Scenario to test, as landed (`apps/web/e2e/phone-layout.spec.ts`):
+
+| Scenario | Test | Read against THEN |
+|---|---|---|
+| Card controls stay inside the card on a phone | `phone` › "card controls stay inside the card on a phone" | product picked from core (in stock, MRP above price), one `s` asserted; every button, the `s` and each "₹" text measured before Add; the same plus the quantity group after it; axe both times |
+| Out-of-stock card on a phone | `phone` › "out-of-stock card on a phone" | button asserted disabled; it and the price measured; axe (more than the scenario asks) |
+| Card controls stay inside the card in the six-column grid | `six columns` › "card controls stay inside the card in the six-column grid" | 1024x768, same pick and measure; axe (more than asked) |
+| Wordmark tap target on a phone | `phone` › "wordmark tap target on a phone" | height at least 44; no visible `a`, `button` or `input` of the banner intersects it by more than 0.5 px; axe (more than asked) |
+
+Landed as designed: `product-card.tsx` wrapper `flex flex-col items-start gap-2`; `__root.tsx` link `-my-2 inline-flex min-h-11 items-center text-h2 text-on-brand`. Review fix: the struck MRP is measured only where the card shows one, and the two struck-MRP tests assert it is there first.
+
+Ceilings, as they stand:
+
+- 320 px: the quantity group (112 px) has 0 px to spare in the card; not specified, not tested.
+- "Out of stock" (about 116 px) where the content is narrower (320 to about 328 px, 640 to about 652 px): given the pre-fix run it may stick out by up to about 4 px instead of wrapping; not tested. Cure: a narrower Stepper, a request to `ui`.
+- Cards are taller: about 52 px on a phone, 44 px on desktop.
+- Outside this change, from the review: a cart drawer line (`src/cart-drawer.tsx`) is tight at 320 px when "Remove" shows; not touched, not tested here.
+- The product page (`routes/p.$slug.tsx`) also pairs `Price` with `Stepper`; not checked here.
