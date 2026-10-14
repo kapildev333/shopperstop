@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/stock"
+	"github.com/kapildev333/shopperstop/services/core/internal/stock/db"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
 )
 
@@ -297,6 +298,44 @@ func TestReleaseAndReserveDoNotDeadlock(t *testing.T) {
 	}
 	if got := stored(t, store, q); got != 1000 {
 		t.Fatalf("Q quantity %d, want 1000 back", got)
+	}
+}
+
+// TestUpsertAndReserveDoNotDeadlock: a bulk stock upsert of {Q, P} races a reserve of {P, Q}.
+// The upsert writes in product id order, as the reservation locks, so neither is aborted.
+func TestUpsertAndReserveDoNotDeadlock(t *testing.T) {
+	store, category := newStore(t), newCategory(t)
+	ctx := context.Background()
+	p := newProduct(t, category, true)
+	q := newProduct(t, category, true)
+	if p > q {
+		p, q = q, p // P's id sorts before Q's
+	}
+	setStock(t, store, p, 1000)
+	setStock(t, store, q, 1000)
+
+	for round := 0; round < 50; round++ {
+		start := make(chan struct{})
+		errs := make(chan error, 2)
+		go func() {
+			<-start
+			errs <- pgx.BeginFunc(ctx, testPool, func(tx pgx.Tx) error {
+				return db.New(tx).UpsertStock(ctx, db.UpsertStockParams{StoreID: store, ProductIds: []string{q, p}, Quantities: []int32{1000, 1000}})
+			})
+		}()
+		go func() {
+			<-start
+			errs <- pgx.BeginFunc(ctx, testPool, func(tx pgx.Tx) error {
+				return stock.Reserve(ctx, tx, store, []stock.Line{{ProductID: p, Quantity: 1}, {ProductID: q, Quantity: 1}})
+			})
+		}()
+		close(start)
+
+		for _, err := range collect(t, errs, 2) {
+			if err != nil {
+				t.Fatalf("round %d: %v", round, err)
+			}
+		}
 	}
 }
 
