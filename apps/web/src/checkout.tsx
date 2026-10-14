@@ -46,10 +46,9 @@ export function CheckoutPage() {
                 <Link to="/" className={buttonClass({ variant: 'primary' })}>
                   Continue shopping
                 </Link>
-                {/* ponytail: a plain link until the /orders route lands (web-checkout-orders task 2); then a router Link. */}
-                <a href="/orders" className={buttonClass({ variant: 'secondary' })}>
+                <Link to="/orders" className={buttonClass({ variant: 'secondary' })}>
                   Your orders
-                </a>
+                </Link>
               </div>
             }
           />

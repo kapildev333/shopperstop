@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { createFileRoute, Navigate, useNavigate } from '@tanstack/react-router'
-import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, Input, PageHeader, Skeleton, StatusMessage } from '@shopperstop/ui'
+import { createFileRoute, Link, Navigate, useNavigate } from '@tanstack/react-router'
+import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, Input, PageHeader, Skeleton, StatusMessage, buttonClass } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { AddressDialog, type AddressValues } from '../address-dialog'
 import { addAddress, useAddresses } from '../addresses'
@@ -27,7 +27,19 @@ function AccountPage() {
   }
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Your account" actions={<Button variant="secondary" onClick={onSignOut}>Sign out</Button>} />
+      <PageHeader
+        title="Your account"
+        actions={
+          <>
+            <Link to="/orders" className={buttonClass({ variant: 'secondary' })}>
+              Your orders
+            </Link>
+            <Button variant="secondary" onClick={onSignOut}>
+              Sign out
+            </Button>
+          </>
+        }
+      />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileCard />
         <AddressesCard />

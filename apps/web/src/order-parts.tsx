@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Price } from '@shopperstop/ui'
+import { Badge, Price } from '@shopperstop/ui'
+import { statusName, statusVariant, type OrderStatus } from './orders'
 import { ImageTile } from './product-card'
 
 // One read-only line: picture, name, unit, quantity and its total. Cart lines and order items both fit it;
@@ -33,4 +34,9 @@ export function LineRow({
       <Price cents={priceCents * quantity} />
     </li>
   )
+}
+
+// The status as text in a badge: the colour never carries it alone.
+export function StatusBadge({ status }: { status: OrderStatus }) {
+  return <Badge variant={statusVariant(status)}>{statusName(status)}</Badge>
 }
