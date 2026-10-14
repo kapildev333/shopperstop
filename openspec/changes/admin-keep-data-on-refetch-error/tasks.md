@@ -33,7 +33,7 @@ Easy to get wrong:
 - The test's `refetch` helper keeps its `notifyManager.schedule` line: without it every test passes on the unfixed code.
 - No copy, class or import changes anywhere; no existing test is edited.
 
-- [ ] 1.1 `src/refetch.test.tsx` per design.md, committed red (`test: a failed refetch keeps the showing admin page`); Vitest `11 failed | 168 passed (179)`; lint and typecheck pass
+- [x] 1.1 `src/refetch.test.tsx` per design.md, committed red (`test: a failed refetch keeps the showing admin page`); Vitest `11 failed | 168 passed (179)`; lint and typecheck pass
 - [ ] 1.2 `src/refetch-notice.tsx` and EDIT 1 to 12 per design.md (`fix: a failed refetch keeps the showing admin page`); Vitest `179 passed (179)`; every gate green; `routeTree.gen.ts` unchanged
 
 ## Workflow follow-up
