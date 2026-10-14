@@ -17,7 +17,7 @@ The core service SHALL hold at most one stock quantity per store and product, ne
 - **THEN** the response is 400 with code `validation` and field `quantity`, and the stored quantity is unchanged
 
 ### Requirement: Staff list a store's stock
-`GET /api/core/v1/admin/stores/{id}/stock` SHALL answer every active product with `{productId, name, brand, unitLabel, priceCents, quantity}` at that store as a paged list sorted by name. `q` (at most 100 characters) SHALL keep products whose name or brand contains it without regard to case, `%` and `_` matched literally; `lowStock=true` SHALL keep products whose quantity is below 5, zero included; any `lowStock` value other than `true` or `false` SHALL be 400 `validation`.
+`GET /api/core/v1/admin/stores/{id}/stock` SHALL answer every active product with `{productId, name, brand, unitLabel, priceCents, imageUrl, quantity}` at that store as a paged list sorted by name. `q` (at most 100 characters) SHALL keep products whose name or brand contains it without regard to case, `%` and `_` matched literally; `lowStock=true` SHALL keep products whose quantity is below 5, zero included; any `lowStock` value other than `true` or `false` SHALL be 400 `validation`.
 
 #### Scenario: Own store with filters
 - **WHEN** a store's staff list its stock with `lowStock=true&q=milk`, where `Amul Milk` has quantity 3, `Milk Bread` has quantity 40 and `Curd` has quantity 0
@@ -107,3 +107,14 @@ The stock package SHALL offer a release that, inside the caller's transaction, a
 #### Scenario: Reset twice
 - **WHEN** `seed-demo --reset` runs twice
 - **THEN** each demo store has one stock row per demo product, a zero and a low count among them, and every quantity equals the first run's
+
+### Requirement: Stock rows carry the product image
+A row of the stock list SHALL carry `imageUrl` when its product has an image, with the same value as that product's `imageUrl` on `GET /api/core/v1/stores/{id}/products/{slug}`, and SHALL have no `imageUrl` member when the product has no image.
+
+#### Scenario: Product with an image
+- **WHEN** store staff list the stock of their store and a listed product has the image `products/stock-image.png`
+- **THEN** its row has `imageUrl` `/api/core/v1/files/products/stock-image.png`, the value `GET /api/core/v1/stores/{id}/products/{slug}` answers for that product
+
+#### Scenario: Product without an image
+- **WHEN** an admin lists the stock of a store and a listed product has no image
+- **THEN** its row has no `imageUrl` member
