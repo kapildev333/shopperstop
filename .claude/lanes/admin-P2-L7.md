@@ -1,7 +1,7 @@
 # admin-P2-L7 - admin-keep-data-on-refetch-error: a failed background refetch keeps the page that is showing (team lead)
-Status: started
+Status: done
 ## Doing
-Task 1 landed (87381e8, b31884f) and reviewed (R1, approve with nits). Task 1b cut for R1-1 (`briefs/task-1b.md`); waiting for its worker, then `/opsx:verify`.
+Accepted 2026-10-14 on `0aa0ab1`: pass. Nothing left for this lane but questions.
 ## Found
 - Change: `openspec/changes/admin-keep-data-on-refetch-error/`: proposal.md; delta `specs/admin-app/spec.md` (4 ADDED requirements, 17 scenarios, nothing MODIFIED); design.md (audit of every site, decisions, mutation flows, scenario-to-test table, 17 mutation guards, both new files and 12 edits verbatim, ceilings); tasks.md (one task); `briefs/task-1.md`. No `docs/design/admin-P2-L7.md`.
 - Defect reproduced before designing: 11 new Vitest tests red on 6d9f7b3, each because the page's content is replaced by its alert. Ten branches in nine files: stores table, store page, pincode editor, products table, product page (both reads), new product, categories table, stock table, and the admin's stores list around the stock editor (the worst: it unmounts the editor and every unsaved quantity).
@@ -14,6 +14,7 @@ Task 1 landed (87381e8, b31884f) and reviewed (R1, approve with nits). Task 1b c
 - e2e: none added or changed; no existing e2e string changes (the specs filter statuses by text).
 - admin-P2-L5 clash, for the manager: its change folder appeared at 21:37 (proposal and design, no tasks yet). Same page rule, but its Decision 13 has no helper and a notice per view with four wordings ("Could not refresh. Showing the last orders." / "… the last list." / "… the last numbers." / "… the order as last read."). With both landed an L5 page shows two notices on a failed poll; by reading, not run together, no test of either lane breaks (both find a notice by its text). Recommended in design.md: L5 drops its three page-level notices, keeps the one in the order sheet (a modal over the root notice), uses the root `RefetchNotice`.
 - Task 1b (2026-10-13, after `admin-P2-L7-R1.md`). R1-1: the product page's gate showed the alert when held categories failed to refresh while the product was still loading; EDIT 13 makes the alert need a read that failed with nothing held. No other two-read site has the shape: the store page with its pincodes, `/products/new` and `/stock` with the stores list each gate on one read (nested, never one gate over two). Spec delta now 18 scenarios (one added). Spike on base 179, reverted: `1 failed | 179 passed (180)` then `180 passed (180)`; `make test-web` exit 0 (ui 54, admin 180, web 101); lint and typecheck clean; one mutation, red on exactly the new test. R1-2 and R1-3 are ceilings in design.md. Web's count corrected to 101 in tasks.md, briefs/task-1.md and design.md.
+- Acceptance 2026-10-14 (own run): admin Vitest 180 of 180; 18 of 18 scenarios mapped to a passing test of the name design.md gives; all four task boxes ticked; landed code equals design.md's blocks byte for byte; the diff against origin/main holds only `apps/admin/src`, the change folder and lane logs; `openspec validate --all --strict` 15 passed. The e2e, postman and real-core evidence in tasks.md is the manager's.
 ## Requests
 - to admin manager: decide the admin-P2-L5 clash above before L5's workers start; both lanes may edit `src/routes/_staff/stock.tsx`, the second to land rebases.
 - to ui (information, through the manager): the notice has no frame on the Figma `Admin web` page.

@@ -48,5 +48,6 @@ Failing test: `src/refetch.test.tsx` › "a product opened while its read is sti
 - [x] 1b.2 EDIT 13 per design.md (`fix: the product page alerts only for a read that failed with nothing held`); Vitest `180 passed (180)`; every gate green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify admin-keep-data-on-refetch-error` after 1.2 lands.
-- Area manager: `make e2e` with the slot before the PR (expected unchanged: admin 10), then archives the change by PR after the fix PR merges.
+- [x] Team lead runs `/opsx:verify admin-keep-data-on-refetch-error` after 1.2 lands. Accepted 2026-10-14 on `0aa0ab1`, by a run of this lane: admin Vitest `180 passed (180)`; 18 of 18 scenarios have their test, existing by the name design.md gives and passing (20 tests in `src/refetch.test.tsx`); tasks 1.1, 1.2, 1b.1, 1b.2 ticked; both new files and EDIT 1 to 13 equal design.md's blocks byte for byte (EDIT 6's result carries EDIT 13); `git diff origin/main...HEAD` holds only `apps/admin/src` (2 new files, 9 edited), this folder and the lane's logs; `openspec validate --all --strict` 15 passed.
+- Area manager's pre-PR evidence on the final tree (the manager's runs, not this lane's): `make test-web` exit 0 (ui 54, admin 180, web 101); `make postman` exit 0, clean tree; `make e2e` exit 0, admin `10 passed`, web `28 passed`, no e2e spec changed; real core and admin preview in Chromium: on `/stock` with 77 typed over 31 and core stopped, a save shows "Could not save the stock. Try again." and keeps the 77, then a focus refetch shows "Could not refresh. Showing what was loaded last.", keeps the 25 rows and the 77, with no "Could not load" alert.
+- Area manager archives the change by PR after the fix PR merges.

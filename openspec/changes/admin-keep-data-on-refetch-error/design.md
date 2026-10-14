@@ -757,6 +757,13 @@ With:
     if (!failed) return <Skeleton variant="list" count={3} />
 ```
 
+## As landed (acceptance 2026-10-14, `0aa0ab1`)
+- Commits: `test:` then `fix:` for task 1, and again for task 1b, in that order. `src/refetch-notice.tsx`, `src/refetch.test.tsx` (the task 1 file plus the 1b test) and EDIT 1 to 13 are on the branch exactly as written here; nothing else under `apps/` changed.
+- The Scenario → test table above lists the 17 scenarios of task 1; the 18th ("Product opened while cached categories fail to refresh") is mapped in "Task 1b". All 20 tests pass in a 180-test run.
+- Decision 6's last sentence is superseded by Task 1b, as said there.
+- Web's suite is 101 on the rebased base; the 91 in "Spike" is the first base.
+- Not asserted by a test, met by construction: "SHALL replace only the part that has none" beyond the pincode case (each branch swaps only its own subtree).
+
 ## Ceilings, in one place
 - A 404 on a refetch of a non-detail read keeps the rows without a notice (Decision 5).
 - The stock save guard patches quantities only (Decision 7).
