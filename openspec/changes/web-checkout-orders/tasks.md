@@ -78,5 +78,5 @@ e2e (`e2e/orders.spec.ts`; ask the manager for the slot, never start it unasked)
 
 ## Workflow follow-up
 
-- [ ] Team lead runs `/opsx:verify web-checkout-orders` after 4.2 lands: 45 scenarios, each with its named passing test (design.md, Scenario → test).
+- [x] Team lead runs `/opsx:verify web-checkout-orders` after 4.2 lands: 45 scenarios, each with its named passing test (design.md, Scenario → test). Accepted 2026-10-13: 45 of 45 (34 Vitest run by the lane, web 140 of 140; 9 Playwright by the manager's `make e2e`, web 38; 2 existing); gaps are backlog only (design.md, Acceptance).
 - Area manager archives the change by PR after the feature PR merges.

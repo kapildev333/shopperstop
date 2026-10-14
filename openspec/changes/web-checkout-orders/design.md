@@ -284,6 +284,33 @@ Task 3 (`placeOrder`, the checkout wiring; reviewed, approve with nits applied):
 - `e2e/shopper.ts` has `addAddress`, `staffHeaders` (the seeded admin) and `demoShopper`; `placeByApi` is task 4's.
 - Ceilings from the review: a different customer signing in while a placement is in flight lands on "Order not found" (the order is cached under the old token's key and belongs to the other customer); the checkout can flash "Your cart is empty" between the cache update and the navigation; the queue ordering (a Stepper tap, then the press), a token change while queued, a second press on a kept cart and the real 201 path are proven only by e2e or by reading.
 
+Task 4 (`pollInterval`, `arrival`, `Countdown`, cancel; reviewed, one pin added):
+
+- `OrderPage` calls `useStore(order?.storeId)` before its early returns (hook order), so the store is also read for finished orders: one cached read, accepted. `OrderContent` holds the dialog state.
+- `cancelOrder` takes the token with `getToken() ?? ''`; it does not run in the cart's queue (it is not a cart write).
+- "no countdown once finished" runs on the real clock: its control is a `placed` order three minutes old that shows "Arriving in 7 minutes"; only the two `Countdown` tests fake the clock.
+- Pin "refused cancel reads the order again" (`src/order-tracking.test.tsx`), shown to fail under mutation: after a 409 the dialog stays, its "Cancel order" button goes and the status region shows what core now holds.
+- e2e "unknown order against core" proves the real 404 → "Order not found".
+- The phone e2e was green on arrival at the Cancel control (the worker had predicted red there; it did not happen). It finds the status card as the parent of the status element and the "Total" amount through `dd/span`: both break if `Card`, `StatusMessage` or `Totals` change their markup. Named ceiling.
+- Links are `Link` with `buttonClass` (the pattern of the other pages), not the `RouterButtonLink` this file's interface sketches name. Same look and behaviour.
+
+## Acceptance (2026-10-13)
+
+Accepted. 45 of 45 scenarios have a named test that asserts their THEN: 34 Vitest (run by this lane on the tip: web 140 of 140), 9 Playwright (the manager's `make e2e` on the task 4 tip, web 38 green; not run by this lane), 2 existing. Every task box is ticked. No requirement sentence is contradicted by the code. Nothing outside the delta landed except the recorded extras: Vitest "empty checkout links to orders", "the address chip is named by its visible text", "unknown product id in the refusal marks nothing", "a line is marked only while its quantity is the refused one", "refused cancel reads the order again"; e2e "unknown order against core".
+
+Tests that assert less than their scenario, or sentences with no assertion (backlog, none blocks the PR):
+
+- The status messages for `ready` and `out_for_delivery` are asserted nowhere (placed, accepted, packing, delivered and cancelled are).
+- "Customer checkout refusal cleared": the badge going when the addresses are read again is code read, not tested (the next press is).
+- "Customer order history states": the skeleton while the list loads is not asserted; nor are the address card's loading and failed states on `/checkout` (design only).
+- "Order number collision retried once", "Out-of-stock lines marked": "still on `/checkout`" is asserted as the path not changing under the bare test router (`/`).
+- "Cancel refused": the second half uses a fake `internal` answer, not an unreachable core ("Placement fails" does use the real request).
+- "Checkout summary from the cart": quantities and line totals are found in the card, not tied to their line.
+- "History against core": the second and third cards are asserted by badge, not by number.
+- "Customer checkout and order page layout": tabular numerals are computed for the order heading and "Total" only.
+- By e2e or reading only (review ceilings): the queue ordering of a Stepper tap and the press, a token change while queued, `if (busy) return`.
+- Not done by anyone: a comparison with the Figma `Customer web` frames for these three pages.
+
 ## Scenario → test
 
 Vitest names are the scenario names in lower case. `(pin)` marks a test expected green on arrival.
