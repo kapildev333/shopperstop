@@ -98,6 +98,13 @@ Vitest and Testing Library through `renderAt`, the real `queryClient`, no HTTP m
 - Nothing held: seed only the store, render, `findByRole('alert')` (Home: wait for both texts).
 - The account cards and the cart drawer get no new test: they already comply and their files are not touched. Ceiling: nothing but review stops a later edit there from reordering the check.
 
+## As landed (acceptance 2026-10-13, `1ef74da` on the rebased branch)
+- The five views carry the pattern as designed: `StoreGate`, `Categories`, `CategoryContent` and `ProductContent` branch on `data === undefined` and choose the alert or the skeleton inside it; `isPending` is gone from `store-gate.tsx` and `p.$slug.tsx`. No copy, frame or class changed; no app-code helper.
+- `Picked` reads `data ? grid : error ? alert : skeleton`, truthiness rather than `data === undefined`, as the Files table above already wrote it. Its data is an array from `select` and never `null`, so the two agree. If `usePicked` ever answers `null`, switch it to the explicit check.
+- `seedFeed` in `src/category.test.tsx` gained an optional fourth argument `stale = false`; when true it seeds through `seedStale`. Test-only, used by "failed refetch keeps the product list".
+- `refetchFailed` is `async` and awaits `waitFor`, so it returns `Promise<void>` as declared.
+- Acceptance was by reading (the manager's suites were running in the worktree): 8 of 8 scenarios have their named test, and each test seeds, waits and asserts what its scenario says. Two tests assert less than their THEN, backlog: "home alerts with nothing held" checks both alert texts and that there are two alerts, not their "Try again" buttons (the category and product pins do check the button); "failed refetch keeps the category page" checks the "Milk" chip, not every chip. "Without unmounting what is shown beneath it" is met by construction (the gate returns the same `children(data)` branch) and is not asserted by a test.
+
 ## Risks / Trade-offs
 - The pins are green on arrival, so the `test:` commit is red by six tests and green by four; the commit body says which.
 - `updatedAt` 61 s in the past is tied to the 60 s `staleTime` in `src/catalog.ts`; raising that constant makes the six tests wait for a refetch that never starts and time out, which names the cause loudly enough.

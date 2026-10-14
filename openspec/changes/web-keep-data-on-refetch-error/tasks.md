@@ -22,5 +22,5 @@ Easy to get wrong:
 - [x] 1.2 The four views (`fix: a failed refetch keeps the showing page`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-keep-data-on-refetch-error` after 1.2 lands.
+- [x] Team lead runs `/opsx:verify web-keep-data-on-refetch-error` after 1.2 lands. Accepted 2026-10-13 on `1ef74da`, by reading: 8 of 8 scenarios have their named test; the suite run is the worker's and reviewer's (91 of 91) and the manager's on the rebased branch, not this lane's. Two tests assert less than their THEN (design.md, As landed), backlog. Nothing extra landed beyond `seedFeed`'s `stale` argument.
 - Area manager archives the change by PR after the fix PR merges.
