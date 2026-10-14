@@ -329,11 +329,19 @@ func TestStoreStaffOwnOrder(t *testing.T) {
 	id := orderIn(t, a.ID, c.Customer.ID, p, "placed")
 	staff := shopStaffToken(t, a.ID)
 
-	status, body := call(t, http.MethodGet, adminOrderPath(id), staff, nil)
-	if status != http.StatusOK {
-		t.Fatalf("own order: got %d %s, want 200", status, body)
+	got := readOrder(t, adminOrderPath(id), staff)
+	if got.ID != id || got.StoreID != a.ID || got.Status != "placed" || got.CustomerName != "Asha" || got.CustomerPhone != "+919800000001" ||
+		got.Address.Label != "Home" || got.Address.Line1 != "12 Test Rd" || got.Address.Pincode != "570000" ||
+		got.SubtotalCents != 2000 || got.DeliveryFeeCents != 0 || got.TotalCents != 2000 {
+		t.Fatalf("own order: %+v, want the placed fixture order of store %s for Asha, +919800000001, Home, 12 Test Rd, 570000, 2000 + 0 = 2000", got, a.ID)
 	}
-	status, body = call(t, http.MethodGet, storeOrdersPath(a.ID), staff, nil)
+	if len(got.Items) != 1 || got.Items[0].ProductID != p || got.Items[0].Name != "Fixture" || got.Items[0].PriceCents != 1000 || got.Items[0].Quantity != 2 {
+		t.Fatalf("own order items: %+v, want one line of 2 Fixture at 1000", got.Items)
+	}
+	if len(got.Events) != 1 || got.Events[0].ToStatus != "placed" || got.Events[0].ActorType != "customer" {
+		t.Fatalf("own order events: %+v, want one placed event by the customer", got.Events)
+	}
+	status, body := call(t, http.MethodGet, storeOrdersPath(a.ID), staff, nil)
 	var board orderListView
 	if status != http.StatusOK || json.Unmarshal(body, &board) != nil || board.Total != 1 {
 		t.Fatalf("own list: got %d %s, want 200 with total 1", status, body)

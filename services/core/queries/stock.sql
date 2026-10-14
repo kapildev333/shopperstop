@@ -1,7 +1,7 @@
 -- name: ListStock :many
 -- Every active product with its quantity at the store (0 without a row).
 -- Reads products (catalog's table) read-only: design Decision 1.
-select p.id as product_id, p.name, p.brand, p.unit_label, p.price_cents,
+select p.id as product_id, p.name, p.brand, p.unit_label, p.price_cents, p.image_key,
        coalesce(s.quantity, 0)::integer as quantity
 from products p
 left join store_stock s on s.product_id = p.id and s.store_id = @store_id

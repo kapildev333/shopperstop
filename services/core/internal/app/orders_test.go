@@ -691,7 +691,13 @@ func TestOrderSnapshotsSurviveProductChange(t *testing.T) {
 	setLine(t, b.Token, s.ID, p, 1)
 	placed := mustPlace(t, b)
 
-	if _, err := testPool.Exec(context.Background(), "update products set price_cents = 6000, mrp_cents = 6000, name = 'Renamed ' || name, image_key = 'products/new.png', is_active = false where id = $1", p); err != nil {
+	status, body := call(t, http.MethodPatch, productsPath+"/"+p, adminToken(t), map[string]any{"name": "Renamed " + name, "mrpCents": 6000, "priceCents": 6000, "isActive": false})
+	var changed productView
+	if status != http.StatusOK || json.Unmarshal(body, &changed) != nil || changed.Name != "Renamed "+name || changed.PriceCents != 6000 || changed.MrpCents != 6000 || changed.IsActive {
+		t.Fatalf("PATCH product: got %d %s, want 200 renamed, 6000, 6000, inactive", status, body)
+	}
+	// The image has no PATCH member (it changes by upload), so the test moves the key directly.
+	if _, err := testPool.Exec(context.Background(), "update products set image_key = 'products/new.png' where id = $1", p); err != nil {
 		t.Fatal(err)
 	}
 	if status, body := call(t, http.MethodPatch, "/api/core/v1/me", b.Token, map[string]string{"phone": "+919800000002"}); status != http.StatusOK {
@@ -714,7 +720,7 @@ func TestOrderSnapshotsSurviveProductChange(t *testing.T) {
 
 	got := readOrder(t, ordersPath+"/"+placed.ID, b.Token)
 	checkItem("GET /orders/{id}", got)
-	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
+	status, body = call(t, http.MethodGet, ordersPath, b.Token, nil)
 	var l orderListView
 	if status != http.StatusOK || json.Unmarshal(body, &l) != nil || len(l.Items) != 1 {
 		t.Fatalf("GET /orders: got %d %s, want 200 with one order", status, body)

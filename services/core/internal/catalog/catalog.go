@@ -67,8 +67,8 @@ type Product struct {
 	ImageURL    string `json:"imageUrl,omitempty"`
 }
 
-// imageURL is the path the file route serves key at; "" when there is no image.
-func imageURL(key string) string {
+// ImageURL is the path the file route serves key at; "" when there is no image.
+func ImageURL(key string) string {
 	if key == "" {
 		return ""
 	}
@@ -79,12 +79,12 @@ func toProduct(p db.Product) Product {
 	return Product{
 		ID: p.ID, Name: p.Name, Slug: p.Slug, Description: p.Description, Brand: p.Brand,
 		UnitLabel: p.UnitLabel, MrpCents: p.MrpCents, PriceCents: p.PriceCents,
-		CategoryID: p.CategoryID, IsActive: p.IsActive, ImageURL: imageURL(p.ImageKey),
+		CategoryID: p.CategoryID, IsActive: p.IsActive, ImageURL: ImageURL(p.ImageKey),
 	}
 }
 
 func toCategory(c db.Category) Category {
-	out := Category{ID: c.ID, Name: c.Name, Slug: c.Slug, SortOrder: c.SortOrder, ImageURL: imageURL(c.ImageKey)}
+	out := Category{ID: c.ID, Name: c.Name, Slug: c.Slug, SortOrder: c.SortOrder, ImageURL: ImageURL(c.ImageKey)}
 	if c.ParentID != nil {
 		out.ParentID = *c.ParentID
 	}

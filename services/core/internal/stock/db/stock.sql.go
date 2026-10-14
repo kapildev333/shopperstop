@@ -50,7 +50,7 @@ func (q *Queries) CountStock(ctx context.Context, arg CountStockParams) (int64, 
 }
 
 const listStock = `-- name: ListStock :many
-select p.id as product_id, p.name, p.brand, p.unit_label, p.price_cents,
+select p.id as product_id, p.name, p.brand, p.unit_label, p.price_cents, p.image_key,
        coalesce(s.quantity, 0)::integer as quantity
 from products p
 left join store_stock s on s.product_id = p.id and s.store_id = $1
@@ -75,6 +75,7 @@ type ListStockRow struct {
 	Brand      string
 	UnitLabel  string
 	PriceCents int64
+	ImageKey   string
 	Quantity   int32
 }
 
@@ -101,6 +102,7 @@ func (q *Queries) ListStock(ctx context.Context, arg ListStockParams) ([]ListSto
 			&i.Brand,
 			&i.UnitLabel,
 			&i.PriceCents,
+			&i.ImageKey,
 			&i.Quantity,
 		); err != nil {
 			return nil, err

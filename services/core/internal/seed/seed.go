@@ -1,6 +1,7 @@
-// Package seed loads the demo accounts of design Decision 22 for
-// `core-admin seed-demo`. It is the one package allowed to write other
-// packages' tables.
+// Package seed loads the demo data of Spec 2 §11 for `core-admin seed-demo`:
+// accounts, stores, catalog, stock and orders, all with fixed ids (PLAN.md D20,
+// D22). Summary documents the sign-ins and the ids. It is the one package
+// allowed to write other packages' tables.
 //
 // Later lanes extend it in two places: add the table to truncateTables, and
 // add its rows to load after the rows they reference.

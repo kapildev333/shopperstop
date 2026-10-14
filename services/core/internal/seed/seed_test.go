@@ -12,6 +12,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -255,6 +257,10 @@ func TestResetTwiceLeavesDemoStores(t *testing.T) {
 
 	assertCount(t, "stores", 2)
 	assertCount(t, "store_service_areas", 4)
+	assertSQL(t, "open demo stores with their names and pincodes", `select count(*) from stores s join store_service_areas a on a.store_id = s.id
+		where s.is_open and (s.id::text, s.name, a.pincode) in (
+			('00000000-0000-4000-8000-000000000401', 'Koramangala', '560034'), ('00000000-0000-4000-8000-000000000401', 'Koramangala', '560095'),
+			('00000000-0000-4000-8000-000000000402', 'Indiranagar', '560038'), ('00000000-0000-4000-8000-000000000402', 'Indiranagar', '560008'))`, 4)
 
 	base := server(t)
 	for pincode, want := range map[string]string{"560095": storeKoramangala, "560008": storeIndiranagar} {
@@ -589,6 +595,7 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	assertSQL(t, "placed events with no previous status", "select count(*) from order_events where from_status is null and to_status = 'placed'", 3)
 	assertSQL(t, "events with no actor", "select count(*) from order_events where actor_id is null", 0)
 	assertSQL(t, "delivered orders with a delivery time", "select count(*) from orders where status = 'delivered' and delivered_at is not null", 1)
+	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 3)
 	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
 }
 
@@ -640,5 +647,99 @@ func TestDemoOrdersThroughTheRouter(t *testing.T) {
 	}
 	if err := seed.Reset(ctx, testPool); err != nil {
 		t.Fatalf("reset after the cancel: %v", err)
+	}
+}
+
+var (
+	summaryID      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	summaryPostman = regexp.MustCompile(`\(Postman (\w+)\)$`)
+)
+
+// TestSummaryMatchesSeed: every sign-in seed.Summary prints works, every id it
+// prints is one row of the table printed beside it, and the four ids marked
+// Postman are the values of docs/postman/local.postman_environment.json.
+func TestSummaryMatchesSeed(t *testing.T) {
+	ctx := context.Background()
+	if err := seed.Reset(ctx, testPool); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	base := server(t)
+	tables := map[string]bool{"staff_users": true, "customers": true, "addresses": true, "stores": true, "products": true, "orders": true}
+	postman, postmanTable := map[string]string{}, map[string]string{}
+	seenID := map[string]bool{}
+	signIns, ids := 0, 0
+	for _, line := range strings.Split(seed.Summary, "\n") {
+		f := strings.Fields(line)
+		switch {
+		case len(f) == 3 && strings.Contains(f[0], "@"):
+			signIns++
+			path := "/api/core/v1/admin/auth/sign-in"
+			if f[2] == "customer" {
+				path = "/api/core/v1/auth/sign-in"
+			}
+			status, body := postJSON(t, base+path, map[string]string{"email": f[0], "password": f[1]})
+			var s struct {
+				Staff struct {
+					Role string `json:"role"`
+				} `json:"staff"`
+			}
+			if status != http.StatusOK || json.Unmarshal(body, &s) != nil || (f[2] != "customer" && s.Staff.Role != f[2]) {
+				t.Errorf("sign-in %q: got %d %s, want 200 as %s", line, status, body, f[2])
+			}
+		case len(f) >= 2 && summaryID.MatchString(f[0]):
+			ids++
+			if seenID[f[0]] {
+				t.Errorf("line %q repeats id %s from an earlier line", line, f[0])
+			}
+			seenID[f[0]] = true
+			if !tables[f[1]] {
+				t.Errorf("line %q names table %q, want one of %v", line, f[1], tables)
+				continue
+			}
+			var n int
+			if err := testPool.QueryRow(ctx, "select count(*) from "+f[1]+" where id = $1", f[0]).Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			if n != 1 {
+				t.Errorf("line %q: %d rows in %s with that id, want 1", line, n, f[1])
+			}
+			if m := summaryPostman.FindStringSubmatch(line); m != nil {
+				postman[m[1]] = f[0]
+				postmanTable[m[1]] = f[1]
+			}
+		}
+	}
+	if signIns != 4 || ids != 12 {
+		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 12", signIns, ids)
+	}
+	// The fixed ids of PLAN.md D20 that Postman uses, and the table each marked line names.
+	wantPostman := map[string]string{"storeId": storeKoramangala, "productId": productBanana, "addressId": homeID, "orderId": orderPlaced}
+	wantTable := map[string]string{"storeId": "stores", "productId": "products", "addressId": "addresses", "orderId": "orders"}
+	if !reflect.DeepEqual(postman, wantPostman) || !reflect.DeepEqual(postmanTable, wantTable) {
+		t.Errorf("summary marks ids %v in tables %v, want ids %v in tables %v", postman, postmanTable, wantPostman, wantTable)
+	}
+
+	raw, err := os.ReadFile("../../../../docs/postman/local.postman_environment.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env struct {
+		Values []struct{ Key, Value string } `json:"values"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, v := range env.Values {
+		switch v.Key {
+		case "storeId", "productId", "addressId", "orderId":
+			seen++
+			if postman[v.Key] != v.Value {
+				t.Errorf("Postman %s is %q, the summary marks %q", v.Key, v.Value, postman[v.Key])
+			}
+		}
+	}
+	if seen != 4 || len(postman) != 4 {
+		t.Fatalf("Postman environment holds %d of the four id variables and the summary marks %d, want 4 and 4", seen, len(postman))
 	}
 }
