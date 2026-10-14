@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Button, FormField, Input, Sheet } from '@shopperstop/ui'
 import { MapPin } from 'lucide-react'
 import { useServiceability } from './catalog'
-import { closePincodeSheet, openPincodeSheet, pincodePattern, setPincode, usePincode } from './pincode'
+import { closePincodeSheet, openPincodeSheet, pincodePattern, usePincode } from './pincode'
+import { changePincode } from './store-change'
 
 export function PincodeSheet() {
   const { pincode, sheetOpen } = usePincode()
@@ -16,12 +17,14 @@ export function PincodeSheet() {
 // Mounted only while the sheet is open, so each open starts from the stored pincode.
 function PincodeForm({ pincode }: { pincode?: string }) {
   const [error, setError] = useState<string>()
+  const [busy, setBusy] = useState(false)
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const value = String(new FormData(event.currentTarget).get('pincode') ?? '').trim()
     if (!pincodePattern.test(value)) return setError('Enter a 6-digit pincode')
-    setPincode(value)
+    setBusy(true)
+    void changePincode(value).finally(() => setBusy(false))
   }
 
   return (
@@ -36,7 +39,7 @@ function PincodeForm({ pincode }: { pincode?: string }) {
           defaultValue={pincode ?? ''}
         />
       </FormField>
-      <Button type="submit" size="lg" className="w-full">
+      <Button type="submit" size="lg" className="w-full" loading={busy}>
         Save pincode
       </Button>
     </form>

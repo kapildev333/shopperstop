@@ -135,4 +135,8 @@ test('product pages against core', async ({ page, request }) => {
   await expect(page.getByRole('heading', { level: 1, name: outOfStock.name })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Out of stock' })).toBeDisabled()
   await expectNoViolations(page)
+
+  await page.goto('/p/no-such-product')
+  await expect(page.getByRole('heading', { level: 1, name: 'Product not found' })).toBeVisible()
+  await expectNoViolations(page)
 })

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { queryOptions, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
 
@@ -23,15 +23,15 @@ export function serviceabilityMissing(status: number, error: components['schemas
   return status === 404 && error?.error?.code === 'not_serviceable'
 }
 
-// Core answers 404 not_serviceable for a pincode no store delivers to: null, a notice, not an error.
-export function useServiceability(pincode: string | undefined) {
-  return useQuery({
-    queryKey: keys.serviceability(pincode ?? ''),
-    enabled: !!pincode,
+// The lookup the pages and the store-change check share: one request per pincode for a minute.
+export function serviceabilityOptions(pincode: string) {
+  return queryOptions({
+    queryKey: keys.serviceability(pincode),
     staleTime,
+    // Core answers 404 not_serviceable for a pincode no store delivers to: null, a notice, not an error.
     queryFn: async (): Promise<Store | null> => {
       const { data, error, response } = await api.GET('/serviceability', {
-        params: { query: { pincode: pincode ?? '' } },
+        params: { query: { pincode } },
       })
       if (serviceabilityMissing(response.status, error)) return null
       if (error) throw error
@@ -40,6 +40,10 @@ export function useServiceability(pincode: string | undefined) {
       return store
     },
   })
+}
+
+export function useServiceability(pincode: string | undefined) {
+  return useQuery({ ...serviceabilityOptions(pincode ?? ''), enabled: !!pincode })
 }
 
 export function useCategories(storeId: string) {
