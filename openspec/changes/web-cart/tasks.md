@@ -55,5 +55,5 @@ Easy to get wrong: the store, not the pincode, is compared (560034 and 560095 ar
 - [x] 3b.2 `store-change.tsx`, `serviceabilityOptions`, sheet submit, `ReplacedNotice`, root wiring (`feat: store-change confirm and notice when another store's cart is replaced`); all gates green, e2e green (every spec), axe clean
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-cart` after 3b.2 lands.
+- [x] Team lead runs `/opsx:verify web-cart` after 3b.2 lands. Accepted 2026-10-13 on `4ee48de`: 39 of 39 scenarios have a passing named test (design.md, Scenario → test); two tests assert less than their THEN ("drawer lines and totals" does not read the line prices; e2e "merge replaces another store's cart" counts one line without reading its name), backlog. Extras outside the delta, all recorded in design.md: three pins in `guest-cart.test.ts` and `cart-drawer.test.tsx`, the unknown-product visit in `e2e/browse.spec.ts`, the `QueryClientProvider` wrap in `test-data.ts`.
 - Area manager archives the change by PR after the feature PR merges.

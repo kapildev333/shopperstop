@@ -76,7 +76,7 @@ While a customer token is held and a change to a line is still being written, th
 - **THEN** the drawer's group "Quantity of Amul Taaza" shows 3
 
 ### Requirement: Customer server cart
-While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and `storeId` that response answers, never the ones it sent. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the next change or reload, also when the cart is then empty.
+While a customer token is held, the site SHALL read the cart from `GET /me/cart` and SHALL change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and `storeId` that response answers, never the ones it sent. When the response says `clamped: true`, the drawer SHALL show "Some quantities were lowered to what the store has." until the cart is next changed or read from core again, also when the cart is then empty.
 
 #### Scenario: Server cart clamps above stock
 - **WHEN** a signed-in customer has 2 of a product in the cart, the store's stock of it drops to 1, and "Add one" is chosen on its page; then the stock drops to 0, the page is reloaded, and "Remove <name>" is chosen in the cart drawer
@@ -98,7 +98,7 @@ When sign-in or register succeeds and the guest cart has lines, the site SHALL s
 - **THEN** afterwards `localStorage` has no `shopperstop:cart` and the guest cart is empty
 
 #### Scenario: Merge dropped when the session changed
-- **WHEN** the guest cart holds a line, the merge waits behind another cart write, and the customer token is gone before its turn
+- **WHEN** the guest cart holds a line, the merge waits behind another cart write, and the customer token has changed before its turn
 - **THEN** the guest cart still holds its line
 
 #### Scenario: Guest cart merges against core
@@ -150,7 +150,7 @@ While the cart has lines, every page SHALL show on phone a bar fixed to the bott
 - **THEN** the drawer lists two lines, the bar reads "3 items", "Proceed to checkout" points to `/sign-in?returnTo=%2Fcheckout`, and axe reports no violations on `/` with the bar shown and with the drawer open
 
 ### Requirement: Customer store change confirm
-Saving a pincode in the pincode sheet SHALL first resolve it; when it resolves to a store other than the cart's and the cart has lines, the sheet SHALL close and a `Dialog` "Change store?" naming the new store SHALL open with "Cancel" first and "Empty cart and change". Any other save SHALL store the pincode at once.
+Saving a pincode in the pincode sheet SHALL first resolve it; when it resolves to a store other than the cart's and the cart has lines, the sheet SHALL close and a `Dialog` "Change store?" naming the new store SHALL open with "Cancel" first and "Empty cart and change". Any other save SHALL store the pincode without asking.
 
 #### Scenario: Same store or empty cart
 - **WHEN** the cart is at Koramangala with `560034` stored and `560095`, which Koramangala also serves, is saved; and separately `560038` is saved with an empty cart
@@ -176,7 +176,7 @@ Confirming the store change SHALL empty the guest cart, or send `DELETE /me/cart
 - **THEN** the dialog stays open with an alert "Could not empty your cart." and the stored pincode is still `560034`
 
 ### Requirement: Customer cart replaced notice
-When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or in the merge at sign-in, the site SHALL open the cart drawer once, at every width, and the drawer and the cart bar SHALL show, until the next cart change or reload, a `StatusMessage` (role `status`) reading "Your cart from <store> was replaced. A cart holds products from one store.", where <store> is the name `GET /stores/{id}` answers for the store the cart was at, or "another store" while that is not known.
+When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or the sign-in merge, the site SHALL open the cart drawer once, at every width, and the drawer and the cart bar SHALL show, until the cart is next changed or read from core again, a `StatusMessage` (role `status`) reading "Your cart from <store> was replaced. A cart holds products from one store.", where <store> is the name `GET /stores/{id}` gives for the store the cart was at, or "another store" while that is not known.
 
 #### Scenario: Replaced notice names the old store
 - **WHEN** a token is held, Indiranagar is resolved, the last `PUT /me/cart/items` answered a cart of one line at Indiranagar with `replaced: true`, the cart was at Koramangala before, and `/` renders
