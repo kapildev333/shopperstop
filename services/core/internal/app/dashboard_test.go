@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 )
 
 const dashboardPath = "/api/core/v1/admin/dashboard"
@@ -100,6 +101,51 @@ func TestDashboardTwoDaysAgo(t *testing.T) {
 	}
 	if e.RevenueTodayCents != 0 {
 		t.Fatalf("revenueTodayCents %d, want 0", e.RevenueTodayCents)
+	}
+}
+
+// TestDashboardMidnightKolkata: "today" starts at midnight Asia/Kolkata. It fails if "today" is ever computed in UTC or the session time zone.
+func TestDashboardMidnightKolkata(t *testing.T) {
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().In(loc)
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if now.Sub(midnight) < 2*time.Minute {
+		t.Skipf("now %s is less than 2 minutes after IST midnight %s: the order placed a minute after midnight would be in the future", now, midnight)
+	}
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 1000)
+	c := newCustomer(t)
+	ctx := context.Background()
+	// Each order is delivered; the totals differ so the revenue sum says which orders counted.
+	set := func(orderID string, totalCents int64, placed, delivered time.Time) {
+		t.Helper()
+		if _, err := testPool.Exec(ctx, `update orders set status = 'delivered', subtotal_cents = $2, total_cents = $2,
+			placed_at = $3, delivered_at = $4 where id = $1`, orderID, totalCents, placed, delivered); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := orderIn(t, s.ID, c.Customer.ID, p, "delivered")
+	b := orderIn(t, s.ID, c.Customer.ID, p, "delivered")
+	cc := orderIn(t, s.ID, c.Customer.ID, p, "delivered")
+	set(a, 1111, midnight.Add(-time.Minute), midnight.Add(-time.Minute))
+	set(b, 2222, midnight.Add(time.Minute), midnight.Add(time.Minute))
+	set(cc, 3333, midnight.Add(-time.Minute), midnight.Add(time.Minute))
+
+	e := dashboardEntry(t, adminToken(t), s.ID)
+	for _, name := range statusNames {
+		want := int64(0)
+		if name == "delivered" {
+			want = 1
+		}
+		if got := e.OrdersToday[name]; got != want {
+			t.Fatalf("ordersToday[%s] = %d, want %d (only B was placed today)", name, got, want)
+		}
+	}
+	if want := int64(2222 + 3333); e.RevenueTodayCents != want {
+		t.Fatalf("revenueTodayCents %d, want %d (B and C delivered today, A not)", e.RevenueTodayCents, want)
 	}
 }
 
