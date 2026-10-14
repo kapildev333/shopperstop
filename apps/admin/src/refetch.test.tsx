@@ -283,3 +283,32 @@ test('the notice leaves with the page it was about', async () => {
   expect(await screen.findByRole('table', { name: 'Categories' })).toBeInTheDocument()
   await waitFor(() => expect(screen.queryByText(notice)).not.toBeInTheDocument())
 })
+
+test('a product opened while its read is still out shows the skeleton, not the alert, when the cached categories fail to refresh', async () => {
+  setToken('tok')
+  let categoriesDown = false
+  let answerProduct: (answer: Response) => void = () => {}
+  fakeCore({
+    ...routes,
+    'GET /admin/categories': () => (categoriesDown ? json(502) : categoryTree([fruits, dairy])),
+    [`GET ${productPath}`]: () => new Promise<Response>((resolve) => (answerProduct = resolve)),
+  })
+  renderApp('/products')
+  const link = await screen.findByRole('link', { name: tonedMilk.name })
+  // The Category column is filled from the categories: they are in the cache before the product page opens.
+  await waitFor(() => expect(screen.getByRole('table', { name: 'Products' })).toHaveTextContent('Dairy, Bread & Eggs › Milk'))
+
+  categoriesDown = true
+  await userEvent.click(link)
+
+  // The notice is the sign that the categories' refetch has failed and the page has been told.
+  expect(await screen.findByText(notice)).toBeInTheDocument()
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+  answerProduct(json(200, tonedMilk))
+  expect(await screen.findByLabelText('Name')).toHaveValue(tonedMilk.name)
+  expect(screen.getByLabelText('Category')).toHaveValue(tonedMilk.categoryId)
+  expect(screen.getAllByText(notice)).toHaveLength(1)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
