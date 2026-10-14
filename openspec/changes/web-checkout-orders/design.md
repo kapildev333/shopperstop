@@ -180,7 +180,7 @@ Order of the branches: `PageHeader title="Checkout"` always; then `view === unde
 
 Each card is `<Card role="region" aria-labelledby={headingId} className="flex flex-col gap-4 p-4 sm:p-6">` with an `h2` (`useId`): tests and e2e find a card by `getByRole('region', { name })`.
 
-"Delivery address" card: addresses `undefined` → error ? `ErrorBanner "Could not load your addresses."` : `Skeleton`; empty → `EmptyState title="No addresses yet" description="Add one to place the order."` with the "Add address" button; else `ul` of `li` (label as `h3`, a `Badge variant="accent"` "Default" on the default, lines, pincode in `tabular-nums`, `Badge variant="warning"` "Not delivered here" when `refusal?.addressId === address.id`, and `<Chip selected={address.id === selected?.id} aria-label={`Deliver to ${address.label}`} onClick={() => setChosen(address.id)}>Deliver here</Chip>`), then `<Button variant="secondary">Add address</Button>`. `selected = addresses.find(chosen) ?? addresses.find(isDefault) ?? addresses[0]`. The dialog is `<AddressDialog open={adding} onClose=… submit={async (values) => { const { address, error } = await addAddress(values); if (address) setChosen(address.id); return error }} />`.
+"Delivery address" card: addresses `undefined` → error ? `ErrorBanner "Could not load your addresses."` : `Skeleton`; empty → `EmptyState title="No addresses yet" description="Add one to place the order."` with the "Add address" button; else `ul` of `li` (label as `h3`, a `Badge variant="accent"` "Default" on the default, lines, pincode in `tabular-nums`, `Badge variant="warning"` "Not delivered here" when `refusal?.addressId === address.id`, and `<Chip selected={address.id === selected?.id} onClick={() => choose(address.id)}>Deliver to {address.label}</Chip>`; the visible text is the name, no `aria-label` (WCAG 2.5.3), and `choose` also clears an address refusal's alert), then `<Button variant="secondary">Add address</Button>`. `selected = addresses.find(chosen) ?? addresses.find(isDefault) ?? addresses[0]`. The dialog is `<AddressDialog open={adding} onClose=… submit={async (values) => { const { address, error } = await addAddress(values); if (address) setChosen(address.id); return error }} />`.
 
 "Order summary" card: `From {store.name}` and `Delivery in {store.promisedMinutes} minutes` (both omitted while the store is not known); `ul` of `LineRow` per cart line, with, when `short[line.product.id] === line.quantity`, a `Badge variant="danger"` and `<Button variant="ghost-danger" aria-label={`Remove ${name}`} onClick={() => void setLine(view.storeId, line.product, 0)}>Remove</Button>`; `Totals`; a row "Payment" / "Cash on delivery"; the minimum-order `StatusMessage tone="warning"` while `subtotalCents < minOrderCents`; `refusal && <ErrorBanner message={refusal.message} />`; `<Button size="lg" className="w-full" loading={busy} disabled={!selected || belowMinimum} onClick={place}>Place order (COD)</Button>`; `<Button variant="ghost" onClick={openCart}>Edit cart</Button>`.
 
@@ -269,6 +269,21 @@ Task 1 (`88c9e82`, `e4d6c45`), ruled on by the team lead:
 - The empty-cart state has no description line. Kept: the two links say what to do.
 - `LineRow`'s `children` is unused until task 3 puts the badge and "Remove" there. Kept.
 
+Task 2 (`orders.ts`, the two routes, the account link; reviewed, approve with nits applied):
+
+- One extra commit corrects tests with `waitFor`: TanStack Query notifies its observers on a timer, so an assertion straight after `queryClient.setQueryData` or a fake `send` resolving sees the old render. Every later test waits (`findBy…` or `waitFor`).
+- `underWay` and `canCancel` are exported from `orders.ts` for task 4. `OrderPage` is `({ id })`; task 4 adds `send`.
+- History is cards with links named "View order <number>". The tracking page shows no status badge: the status message and the history carry the status; `StatusBadge` is used by the history list only.
+- The 404 → `null` mapping in `orderOptions` is only read, not tested (the Vitest "unknown order" seeds `null`). Task 4 adds a read-only e2e visit to `/orders/<random uuid>` expecting "Order not found" (test "unknown order against core").
+
+Task 3 (`placeOrder`, the checkout wiring; reviewed, approve with nits applied):
+
+- `CheckoutPage({ send = postOrder })` is the seam, the `submit` pattern of the auth forms and the address dialog. `remove` is a const arrow. `place()` starts with `if (busy) return` (read, not tested: the disabled button already stops a second click).
+- Manager decisions from the review, now in the delta: the chip's visible text is "Deliver to <label>" with no `aria-label`, "Deliver here" is gone; choosing another address clears an address refusal's alert, while "Not delivered here" stays on the refused address until the next press or until the address list is read again (the mark is tied to the list's `dataUpdatedAt`).
+- Two tests assert that the path stays `/` under `renderInRouter` after a refusal. Two pins beyond the scenarios: "unknown product id in the refusal marks nothing", "a line is marked only while its quantity is the refused one". Also "the address chip is named by its visible text".
+- `e2e/shopper.ts` has `addAddress`, `staffHeaders` (the seeded admin) and `demoShopper`; `placeByApi` is task 4's.
+- Ceilings from the review: a different customer signing in while a placement is in flight lands on "Order not found" (the order is cached under the old token's key and belongs to the other customer); the checkout can flash "Your cart is empty" between the cache update and the navigation; the queue ordering (a Stepper tap, then the press), a token change while queued, a second press on a kept cart and the real 201 path are proven only by e2e or by reading.
+
 ## Scenario → test
 
 Vitest names are the scenario names in lower case. `(pin)` marks a test expected green on arrival.
@@ -290,7 +305,8 @@ Vitest names are the scenario names in lower case. `(pin)` marks a test expected
 | Out of stock › Out of stock at checkout against core | `e2e/checkout.spec.ts` | 3 |
 | Refusals › Address not served; Store closed at placement; Placement fails | `src/checkout.test.tsx` | 3 |
 | Refusals › Address not served against core | `e2e/checkout.spec.ts` | 3 |
-| Tracking page › Tracking shows the order; Unknown order | `src/order-tracking.test.tsx` | 2 |
+| Refusal cleared › Choosing another address clears the alert | `src/checkout.test.tsx` › "choosing another address clears the refusal alert" | 3 |
+| Tracking page › Tracking shows the order; Unknown order | `src/order-tracking.test.tsx`; plus e2e "unknown order against core" (the real 404) | 2; 4 |
 | Tracking page › Tracking against core | `e2e/orders.spec.ts` | 2 |
 | Status names › Status names and badges | `src/orders.test.ts` | 2 |
 | Status message › Status change announced; Cancelled order shows the reason | `src/order-tracking.test.tsx` | 2 |
@@ -306,7 +322,7 @@ Vitest names are the scenario names in lower case. `(pin)` marks a test expected
 | Order links › Account links to orders | `src/account.test.tsx` | 2 |
 | Layout › Checkout and orders on a phone | `e2e/orders.spec.ts` | 4 |
 
-44 scenarios: 33 Vitest, 9 Playwright, 2 existing. One extra Vitest test in task 2 ("empty checkout links to orders").
+45 scenarios: 34 Vitest, 9 Playwright, 2 existing. One extra Playwright test in task 4 ("unknown order against core"). One extra Vitest test in task 2 ("empty checkout links to orders").
 
 ## Test strategy
 
@@ -354,6 +370,7 @@ Two rules that bit earlier lanes: inside `page.evaluate`, `page.addInitScript` a
 
 - `navigate({ to: '/orders/$id' })` inside `renderInRouter`'s bare router: TanStack builds the location from the path whether or not a route matches. If a worker finds it does not, they report; they do not add a mock.
 - The Figma `Customer web` frames for these three pages were not opened by this lane; the manager's walk-through compares them.
+- Copy change since the proposal: the chip reads "Deliver to <label>"; the string "Deliver here" exists nowhere.
 - `Chip` as a single choice is announced as a pressed button, not a radio; acceptable until ui ships a choice control.
 - The poll-stop e2e waits 11 s by the clock; it is the only way to see that nothing is sent.
 - The branch was cut at `e6d8e4b`; `openspec/specs/orders` reaches it with the rebase on `origin/main` (archive of core-orders, #140). Nothing here edits it.

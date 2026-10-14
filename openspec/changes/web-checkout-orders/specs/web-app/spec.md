@@ -30,7 +30,7 @@
 - **THEN** "Your cart is empty" is shown with links to `/` and `/orders` and no "Place order (COD)" button; then a "Loading" status; then an alert "Could not load your cart." with a "Try again" button
 
 ### Requirement: Customer checkout address choice
-The "Delivery address" card SHALL list `GET /me/addresses`, each with label, lines, pincode and a `Chip` "Deliver here" named "Deliver to <label>", pressed on the chosen address: the default at first, else the first listed. "Add address" SHALL open the address dialog; an address saved there SHALL be listed and chosen. With no address the card SHALL show "No addresses yet" and "Place order (COD)" SHALL be disabled.
+The "Delivery address" card SHALL list `GET /me/addresses`, each with label, lines, pincode and a `Chip` whose text is "Deliver to <label>", pressed on the chosen address: the default at first, else the first listed. "Add address" SHALL open the address dialog; an address saved there SHALL be listed and chosen. With no address the card SHALL show "No addresses yet" and "Place order (COD)" SHALL be disabled.
 
 #### Scenario: Default address chosen
 - **WHEN** the customer's addresses are "Work" and "Home", "Home" the default, and the app renders `/checkout` with a cart above the minimum
@@ -86,7 +86,7 @@ On 409 `out_of_stock` the cart SHALL be kept and read again, an alert SHALL read
 - **THEN** after placing the alert and "Out of stock" on that line are shown and no order exists for the customer; after the removal `/checkout` shows "Your cart is empty"; and axe reports no violations with the alert showing
 
 ### Requirement: Customer checkout refusals
-Any other refusal SHALL keep the customer on `/checkout`, the cart kept, with an alert: 409 `not_serviceable` with field `addressId`, "<store> does not deliver to this address. Choose another address or add one.", and a `warning` `Badge` "Not delivered here" on that address; 409 `not_serviceable` without a field, "<store> is closed right now."; 400 with field `subtotal`, "Your cart is below the store's minimum order."; anything else, "Could not place your order. Try again.".
+A refusal other than `out_of_stock` SHALL keep `/checkout` and the cart, with an alert: 409 `not_serviceable` with field `addressId`, "<store> does not deliver to this address. Choose another address or add one." and a `warning` `Badge` "Not delivered here" on that address; without a field, "<store> is closed right now."; 400 with field `subtotal`, "Your cart is below the store's minimum order."; else "Could not place your order. Try again.".
 
 #### Scenario: Address not served
 - **WHEN** the cart is at Koramangala, "Work" is chosen and placing answers 409 `not_serviceable` with field `addressId`
@@ -103,6 +103,13 @@ Any other refusal SHALL keep the customer on `/checkout`, the cart kept, with an
 #### Scenario: Address not served against core
 - **WHEN** a customer whose only address has pincode `560038` and whose cart is at Koramangala above the minimum chooses "Place order (COD)" on `/checkout`
 - **THEN** the alert names Koramangala, the address shows "Not delivered here", `GET /me/cart` still answers the line, and axe reports no violations
+
+### Requirement: Customer checkout refusal cleared
+Choosing another address after an address was refused SHALL remove that alert; the "Not delivered here" badge SHALL stay on the refused address until "Place order (COD)" is next pressed or the addresses are read again.
+
+#### Scenario: Choosing another address clears the alert
+- **WHEN** placing with "Work" chosen answered 409 `not_serviceable` with field `addressId`, and "Deliver to Home" is then chosen
+- **THEN** no alert is shown, "Work" still shows "Not delivered here" and "Home" does not
 
 ### Requirement: Customer order tracking page
 `/orders/<id>` SHALL show the order `GET /orders/{id}` answers: "Order <number>" as the level-1 heading, its status message, a list "Status history" of its events oldest first (status name and time), its items (name, unit, "Qty <n>", line total as `Price`), "Subtotal", "Delivery fee" (or "Free"), "Total", "Cash on delivery", the delivery address, and an "All orders" link to `/orders`. A 404 SHALL show "Order not found" with a link to `/orders`.

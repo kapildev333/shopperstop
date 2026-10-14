@@ -1,7 +1,7 @@
 # web-P2-L4 - web-checkout-orders: /checkout, /orders/{id}, /orders (team lead)
 Status: started
 ## Doing
-2026-10-13: task 1 landed and is in review; artifacts updated for D28, web-P2-L8 and task 1 as landed. Next: task 2 worker.
+2026-10-13: tasks 1 to 3 landed and reviewed; artifacts updated for tasks 2 and 3 as landed; task 4's brief is complete in tasks.md. Next: task 4 worker, then acceptance.
 ## Found
 - Change: `openspec/changes/web-checkout-orders/` (proposal; `web-app` delta: 18 ADDED requirements, 1 MODIFIED "Customer cart bar and header button", 44 scenarios of which 42 new; design with files, interfaces, copy, 21 decisions, the scenario-to-test map and the e2e plan; tasks: four). No `docs/design/web-P2-L4.md`: design.md is enough.
 - `openspec validate web-checkout-orders --strict` valid (one warning, not an error: "Consider splitting changes with more than 10 deltas"); `--all --strict` 15 of 15 on the branch. Archive rehearsed on a scratch copy of `origin/main`'s `openspec/` plus this change: 18 added, 1 modified, `web-app` 58 requirements and 151 scenarios, `--all --strict` 14 of 14; the longest merged requirement of this change is 483 characters (limit 500).
@@ -18,6 +18,7 @@ Status: started
 - For web-P2-L5 (`web-e2e-flows`): `e2e/shopper.ts` will hold `freshShopper`, `addAddress`, `orderPick`, `fillCart`, `placeByApi`, `signedIn`, `staffHeaders`; page copy and accessible names are in design.md.
 - Not checked by this lane: the Figma `Customer web` frames for the three pages.
 - 2026-10-13, after the manager's rebase and task 1: (1) design Decision 21 rewritten: web-P2-L8 (#152) covers failed answers without an envelope; what stays is that a write needs the order in its answer, and that `internal` on `POST /orders` makes `placeOrder` read the cart again (a second press is safe: 400 "cart is empty" goes to `/orders`). (2) Status badges are PLAN.md D28; all seven enum values, `ready` included, are in the vocabulary, the scenario and task 2's test. (3) The other defaults stand; the snapshot request to core is closed (not in Phase 2). (4) Task 1 deviations ruled on in design.md "As landed": the plain "Your orders" link is switched in task 2 with a navigation test; the `error || !data` guards, the awaited invalidation in `addAddress`, the empty state without a description and the unused `children` are kept; the `exact: true` rule is Playwright's only.
+- 2026-10-13, tasks 2 and 3 as landed: the delta is now 19 ADDED, 1 MODIFIED, 45 scenarios. "Customer checkout address choice": the chip's text is "Deliver to <label>" (no `aria-label`, no "Deliver here"). New "Customer checkout refusal cleared" with "Choosing another address clears the alert" (landed test "choosing another address clears the refusal alert"). design.md "As landed" holds the task 2 and 3 records and the review's ceilings. Task 4 gains one read-only e2e, "unknown order against core" (the real 404), and `placeByApi`; its section in tasks.md stands alone.
 ## Requests
 - to ui (optional, through the manager): a single-choice control (radio group or choice card); checkout uses `Chip`s with `aria-pressed` until then. A status-history component if admin wants the same list.
 - (closed, not in Phase 2) to core: `promisedMinutes` and the store name as snapshots on `Order`.
