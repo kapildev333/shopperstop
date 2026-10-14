@@ -27,3 +27,6 @@ returning id, label, line1, line2, pincode, is_default;
 
 -- name: DeleteAddress :execrows
 delete from addresses where id = $1 and customer_id = $2;
+
+-- name: AddressByID :one
+select id, label, line1, line2, pincode, is_default from addresses where id = $1 and customer_id = $2;

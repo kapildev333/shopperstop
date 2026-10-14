@@ -57,6 +57,19 @@ func ForPincode(ctx context.Context, q db.DBTX, pincode string) (Store, error) {
 	return public(row), nil
 }
 
+// All answers every store by name, for the staff dashboard. Ceiling: the first 1000 stores.
+func All(ctx context.Context, q db.DBTX) ([]Store, error) {
+	rows, err := db.New(q).ListStores(ctx, db.ListStoresParams{Limit: 1000, Offset: 0})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Store, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, public(row))
+	}
+	return out, nil
+}
+
 func public(row db.Store) Store {
 	return Store{
 		ID: row.ID, Name: row.Name, IsOpen: row.IsOpen,

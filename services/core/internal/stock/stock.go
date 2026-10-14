@@ -72,7 +72,8 @@ func Reserve(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error
 }
 
 // Release adds the lines' quantities back to the store's stock, for an order
-// that is cancelled. A product with no stock row at the store is skipped.
+// that is cancelled. It locks the rows in product id order, as Reserve does, so
+// the two cannot deadlock. A product with no stock row at the store is skipped.
 func Release(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error {
 	lines, err := merge(lines)
 	if err != nil {
@@ -87,7 +88,11 @@ func Release(ctx context.Context, tx pgx.Tx, storeID string, lines []Line) error
 		ids[i] = l.ProductID
 		deltas[i] = l.Quantity
 	}
-	return db.New(tx).AddStock(ctx, db.AddStockParams{StoreID: storeID, ProductIds: ids, Deltas: deltas})
+	q := db.New(tx)
+	if _, err := q.LockStock(ctx, db.LockStockParams{StoreID: storeID, ProductIds: ids}); err != nil {
+		return err
+	}
+	return q.AddStock(ctx, db.AddStockParams{StoreID: storeID, ProductIds: ids, Deltas: deltas})
 }
 
 // Quantity answers the stored quantity of one product at the store; no row is 0.

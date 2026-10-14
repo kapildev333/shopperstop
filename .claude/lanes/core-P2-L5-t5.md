@@ -1,0 +1,17 @@
+# core-P2-L5-t5 - staff order routes, isolation, the transition matrix and the log line (task 5 of core-orders)
+Status: done
+## Doing
+Task 5 landed on `lane/core-P2-L5-orders`: test commit 5fabdea (red), feat commit 5ab330e (code, `openapi.json`, `core.d.ts`, Postman collection, boxes 5.1 and 5.2 ticked), then this chore. Gates green: `GOFLAGS=-count=1 make test-core` exit 0; `make gen postman` exit 0 and `git status --short` empty after the feat commit; `openspec validate --all --strict` 13 passed. Task 6 (staff dashboard) is next and starts from its own brief.
+## Found
+- `order.StoreList(pool)` (`GET /admin/stores/{id}/orders`), `order.AdminGet(pool)` (`GET /admin/orders/{id}`) and `order.SetStatus(pool)` (`POST /admin/orders/{id}/status`) are in `internal/order/handlers.go`, registered in `internal/app/app.go` after the customer cancel, each with `a.RequireStaff`. Helpers: `staffScope(ctx)` (store staff get their store, admins nothing), `statusMessage` (the seven-status message, shared by the list filter and the body), `statusRequest`.
+- `StoreList` checks in Decision 8's order: `PathID`, then another store's staff gets 404, then `store.Get` (404 for an unknown store), then `status`, then `httpx.Page`.
+- `Transition` (`status.go`) and `Place` (`place.go`) write one `order transition` line each after their transaction returned nil, with the fields of Decision 7. `Transition` keeps its locked row outside the closure so the line reads `number` and `from` from it. `Place` hoists `number` out of its closure; no other change to placement.
+- Matrix: `TestStatusTransitionMatrix` checks the 49 pairs against its own `staffMoves` table (the seven moves of Decision 5), not against `allowed`, so the test is an independent oracle. It uses one customer for all 49 orders, as the brief's "one customer" reads.
+- Red run (commit 5fabdea, `go test -race -v` on the new tests and `TestAuthGates`): failed with 404 `not_found` where the routes did not exist: `TestStatusTransitionMatrix` (first pair placed to placed, want 409), `TestStatusAcceptWithNote`, `TestStatusCancelByStaff`, `TestStatusDelivered`, `TestStatusUnknown`, `TestStoreOrdersBoard`, `TestStoreStaffOwnOrder`, `TestStaffOrderRoutesCustomerToken401`, `TestTransitionLogLine`, and `TestAuthGates` (the new anonymous row answered 404, want 401). Passed at red: `TestStoreStaffIsolation` and `TestAdminOrderUnknown404`. A missing route answers the same 404 they assert, so their 404 checks cannot fail before the routes exist; `TestStoreStaffOwnOrder` (200s for the own store) is the positive control and it was red.
+- Green after the feat commit: all the above pass, with `TestPlaceOrder*`, `TestCancel*`, `TestOrders*`, `TestAllowed` and the store tests still green; `make test-core` exit 0.
+- `openapi.json`: `listStoreOrders` (status enum, page, pageSize; 200 with the placed demo order, 400 field `status`, 401, 404), `getAdminOrder` (200, 401, 404), `setOrderStatus` (request example `{"status":"accepted","note":"Packing now"}`; 200 the accepted example with its second event; 400 field `status`; 401; 404; 409 `cannot move an order from placed to packing`), schema `OrderStatusChange` after `OrderCancel`. The file round-trips through Python's JSON byte for byte, so it was edited programmatically, as task 4 did.
+- Deviations from design.md: none in behaviour. The 409 for a move the table forbids, the cancel's stock return, and the event note are as Decision 5 and 6 state.
+## Requests
+- none
+## Blockers
+- none

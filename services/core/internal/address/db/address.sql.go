@@ -9,6 +9,38 @@ import (
 	"context"
 )
 
+const addressByID = `-- name: AddressByID :one
+select id, label, line1, line2, pincode, is_default from addresses where id = $1 and customer_id = $2
+`
+
+type AddressByIDParams struct {
+	ID         string
+	CustomerID string
+}
+
+type AddressByIDRow struct {
+	ID        string
+	Label     string
+	Line1     string
+	Line2     string
+	Pincode   string
+	IsDefault bool
+}
+
+func (q *Queries) AddressByID(ctx context.Context, arg AddressByIDParams) (AddressByIDRow, error) {
+	row := q.db.QueryRow(ctx, addressByID, arg.ID, arg.CustomerID)
+	var i AddressByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Label,
+		&i.Line1,
+		&i.Line2,
+		&i.Pincode,
+		&i.IsDefault,
+	)
+	return i, err
+}
+
 const clearDefaultAddress = `-- name: ClearDefaultAddress :exec
 update addresses set is_default = false where customer_id = $1 and is_default
 `

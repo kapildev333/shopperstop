@@ -20,8 +20,11 @@ where p.is_active
   and (not @low_stock::boolean or coalesce(s.quantity, 0) < 5);
 
 -- name: UpsertStock :exec
+-- Upserts in product id order, the order LockStock uses, so it cannot deadlock with a reservation.
 insert into store_stock (store_id, product_id, quantity)
-select @store_id::uuid, unnest(@product_ids::uuid[]), unnest(@quantities::integer[])
+select @store_id::uuid, t.product_id, t.quantity
+from (select unnest(@product_ids::uuid[]) as product_id, unnest(@quantities::integer[]) as quantity) t
+order by t.product_id
 on conflict (store_id, product_id) do update set quantity = excluded.quantity;
 
 -- name: Quantity :one

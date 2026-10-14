@@ -222,3 +222,13 @@ func Delete(pool *pgxpool.Pool) http.HandlerFunc {
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+// Get answers the customer's address with this id, for placing an order. Another
+// customer's or an unknown id is 404 not_found.
+func Get(ctx context.Context, d db.DBTX, customerID, id string) (Address, error) {
+	row, err := db.New(d).AddressByID(ctx, db.AddressByIDParams{ID: id, CustomerID: customerID})
+	if err != nil {
+		return Address{}, pg.Map(err)
+	}
+	return Address(row), nil
+}
