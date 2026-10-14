@@ -32,13 +32,14 @@ func customerScope(ctx context.Context) scope {
 	return scope{customerID: &id}
 }
 
-// staffScope limits a read to the signed-in store staff's store; admins see every store.
+// staffScope limits a read to the signed-in staff's store; only an admin sees every
+// store. Any other role is scoped to its store, so a future role fails closed.
 func staffScope(ctx context.Context) scope {
 	s := auth.CurrentStaff(ctx)
-	if s.Role == "store_staff" {
-		return scope{storeID: &s.StoreID}
+	if s.Role == "admin" {
+		return scope{}
 	}
-	return scope{}
+	return scope{storeID: &s.StoreID}
 }
 
 // createRequest is the POST /orders body.
