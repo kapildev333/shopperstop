@@ -161,6 +161,8 @@ export function placeOrder(addressId: string, send = postOrder): Promise<OrderRe
 
 `arrival`: `const left = Date.parse(placedAt) + promisedMinutes * 60_000 - now`; `left <= 0` → "Running late. We are getting your order to you."; else `const n = Math.ceil(left / 60_000)` → "Arriving in 1 minute" or `Arriving in ${n} minutes`.
 
+Reads (`orderOptions`, `useOrders`, `storeOptions`): the 404 case first where there is one, then `if (error || !data) throw error ?? new Error('no answer')` (Decision 21).
+
 `orderOptions` in task 4: `refetchInterval: (query) => pollInterval(query.state.data)`. `refetchIntervalInBackground` is not set (TanStack's default is false: no poll while the tab is hidden) and `refetchOnWindowFocus` is not set (default true: one read when the tab comes back). No `staleTime`: every mount reads.
 
 ### `src/checkout.tsx`
@@ -253,6 +255,7 @@ The page components sit outside `src/routes/` because the route files are code-s
 17. **Links to `/orders`:** the account page's header ("Your orders"), the tracking page ("All orders"), the empty checkout ("Your orders"). None in the banner: it is full at 390 px.
 18. **No `docs/design/web-P2-L4.md`**: this file is enough.
 19. **Times** are formatted in the browser's zone with `Intl.DateTimeFormat('en-IN', …)` inside `<time dateTime>`. Tests assert `dateTime`, never the formatted text (it depends on the machine's zone).
+21. **A non-ok answer without core's envelope** (the proxy's 502 with an empty body while core is down) comes out of `openapi-fetch` 0.17.0 with `error` undefined and `data` undefined (admin's finding, `.claude/areas/admin.md`, 2026-10-13). Nothing in this change may read "no error" as success: `postOrder`, `postCancel` and `addAddress` answer `{ error }` with code `internal` when neither an order (or address) nor an error came, and every new read's `queryFn` ends `if (error || !data) throw error ?? new Error('no answer')`. The fix for the whole client (one `onResponse` middleware in `src/api.ts`) is not in this change; it is in the report for the manager.
 20. **`ink-muted` text only inside a `Card`** (`ink-muted` on `canvas` fails 4.5:1, admin's axe finding). Text straight on the page is `ink` or a `StatusMessage`.
 
 ## Scenario → test
