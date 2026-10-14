@@ -496,8 +496,10 @@ func TestAuthGates(t *testing.T) {
 		}
 	}
 
-	// Cart routes: no token and a staff token get 401; a customer token gets past
-	// the gate. The PUT with an empty body answers 400 storeId, and writes nothing.
+	// Cart and order routes: no token and a staff token get 401; a customer token
+	// gets past the gate. The PUT with an empty body answers 400 storeId, the POST
+	// with an empty body answers 400 validation, and the GET of an order nobody
+	// owns answers 404. None of the rows writes anything.
 	cartGates := []struct {
 		method, path string
 		body         any

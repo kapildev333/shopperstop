@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"slices"
@@ -111,6 +113,35 @@ type orderEventView struct {
 func place(t *testing.T, b buyer) (int, []byte) {
 	t.Helper()
 	return call(t, http.MethodPost, ordersPath, b.Token, map[string]any{"addressId": b.AddressID})
+}
+
+// answer is one POST /orders result, collected by a goroutine for the test goroutine to check.
+type answer struct {
+	status int
+	body   []byte
+	err    error
+}
+
+// placeAsync sends POST /orders for the buyer and returns the answer. It runs in
+// goroutines, so it never fails the test itself: the caller checks err.
+func placeAsync(b buyer) answer {
+	raw, err := json.Marshal(map[string]any{"addressId": b.AddressID})
+	if err != nil {
+		return answer{err: err}
+	}
+	req, err := http.NewRequest(http.MethodPost, srv.URL+ordersPath, bytes.NewReader(raw))
+	if err != nil {
+		return answer{err: err}
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+b.Token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return answer{err: err}
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	return answer{status: resp.StatusCode, body: body, err: err}
 }
 
 // mustPlace places the buyer's cart and returns the order, failing unless it is 201.
@@ -345,26 +376,25 @@ func TestPlaceOrderRaceForLastUnit(t *testing.T) {
 		setLine(t, y.Token, s.ID, p, 1)
 		start := make(chan struct{})
 		var wg sync.WaitGroup
-		var statusX, statusY int
-		var bodyX, bodyY []byte
+		var ax, ay answer
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
 			<-start
-			statusX, bodyX = place(t, x)
+			ax = placeAsync(x)
 		}()
 		go func() {
 			defer wg.Done()
 			<-start
-			statusY, bodyY = place(t, y)
+			ay = placeAsync(y)
 		}()
 		close(start)
 		wg.Wait()
 		created, refused := 0, 0
-		for _, r := range []struct {
-			status int
-			body   []byte
-		}{{statusX, bodyX}, {statusY, bodyY}} {
+		for _, r := range []answer{ax, ay} {
+			if r.err != nil {
+				t.Fatalf("placement request: %v", r.err)
+			}
 			switch r.status {
 			case http.StatusCreated:
 				created++
@@ -385,6 +415,100 @@ func TestPlaceOrderRaceForLastUnit(t *testing.T) {
 			t.Fatalf("stock after the round %d, want 0", got)
 		}
 	}
+}
+
+// TestPlaceOrderDoubleSubmit: six placements of one cart at once place one order;
+// the other five find the cart already emptied.
+func TestPlaceOrderDoubleSubmit(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 10)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 2)
+
+	const submits = 6
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	answers := make([]answer, submits)
+	for i := range submits {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			answers[i] = placeAsync(b)
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	created, refused := 0, 0
+	for _, r := range answers {
+		if r.err != nil {
+			t.Fatalf("placement request: %v", r.err)
+		}
+		switch r.status {
+		case http.StatusCreated:
+			created++
+		case http.StatusBadRequest:
+			expectError(t, "losing submit", r.status, r.body, http.StatusBadRequest, "validation", "", "cart is empty")
+			refused++
+		default:
+			t.Fatalf("submit got %d %s, want 201 or 400", r.status, r.body)
+		}
+	}
+	if created != 1 || refused != submits-1 {
+		t.Fatalf("%d created and %d refused, want 1 and %d", created, refused, submits-1)
+	}
+	var orders int
+	if err := testPool.QueryRow(context.Background(), "select count(*) from orders where customer_id = $1", b.ID).Scan(&orders); err != nil {
+		t.Fatal(err)
+	}
+	if orders != 1 {
+		t.Fatalf("%d orders for the customer, want 1", orders)
+	}
+	if got := quantityAt(t, s.ID, p); got != 8 {
+		t.Fatalf("stock after the submits %d, want 8", got)
+	}
+}
+
+// TestPlaceOrderStockBeforeMinimum: a stock shortfall is named before the minimum
+// order is checked, and a line whose product has no stock row is out of stock.
+func TestPlaceOrderStockBeforeMinimum(t *testing.T) {
+	ctx := context.Background()
+	t.Run("short line below the minimum", func(t *testing.T) {
+		s := newShop(t)
+		if _, err := testPool.Exec(ctx, "update stores set min_order_cents = 20000 where id = $1", s.ID); err != nil {
+			t.Fatal(err)
+		}
+		p := cartProduct(t, s.ID, stockName(t), 5000)
+		stockTo(t, s.ID, p, 5)
+		b := newBuyer(t, s.Pincode)
+		setLine(t, b.Token, s.ID, p, 2) // subtotal 10000, below the minimum of 20000
+		stockTo(t, s.ID, p, 1)          // now short of the 2 in the cart
+
+		status, body := place(t, b)
+		expectError(t, "short and below the minimum", status, body, http.StatusConflict, "out_of_stock", "", "some products are out of stock")
+		if ids := decodeError(t, body).Error.ProductIDs; !slices.Equal(ids, []string{p}) {
+			t.Fatalf("productIds %v, want [%s]", ids, p)
+		}
+		requireUnchanged(t, b, s.ID, map[string]int32{p: 2}, map[string]int32{p: 1})
+	})
+	t.Run("line with no stock row", func(t *testing.T) {
+		s := newShop(t)
+		p := cartProduct(t, s.ID, stockName(t), 5000)
+		b := newBuyer(t, s.Pincode)
+		setLine(t, b.Token, s.ID, p, 1)
+		if _, err := testPool.Exec(ctx, "delete from store_stock where store_id = $1 and product_id = $2", s.ID, p); err != nil {
+			t.Fatal(err)
+		}
+
+		status, body := place(t, b)
+		expectError(t, "no stock row", status, body, http.StatusConflict, "out_of_stock", "", "some products are out of stock")
+		if ids := decodeError(t, body).Error.ProductIDs; !slices.Equal(ids, []string{p}) {
+			t.Fatalf("productIds %v, want [%s]", ids, p)
+		}
+		requireUnchanged(t, b, s.ID, map[string]int32{p: 1}, map[string]int32{p: 0})
+	})
 }
 
 func TestDeleteStoreWithOrder(t *testing.T) {
