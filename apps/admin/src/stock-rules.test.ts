@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { parseQuantity, toRows, type Edits } from './stock'
+import { cleanSearch, parseQuantity, toRows, type Edits } from './stock'
 
 test.each([
   ['0', 0],
@@ -29,4 +29,15 @@ test('one save takes the first 500 edits, in the order they were made', () => {
   expect(rows).toHaveLength(500)
   expect(rows[0]).toEqual({ productId: 'product-0', quantity: 0 })
   expect(rows[499]).toEqual({ productId: 'product-499', quantity: 499 })
+})
+
+test.each([
+  ['a NUL byte', 'mi\0lk', 'milk'],
+  ['101 characters', 'a'.repeat(101), 'a'.repeat(100)],
+  ['an emoji as its 100th character', `${'a'.repeat(99)}😀b`, `${'a'.repeat(99)}😀`],
+  ['half of a surrogate pair', 'mi\uD83Dlk', 'milk'],
+  ['nothing to clean', 'Toned Milk', 'Toned Milk'],
+])('a search with %s is cleaned to what core takes', (_, typed, cleaned) => {
+  expect(cleanSearch(typed)).toBe(cleaned)
+  expect(() => encodeURIComponent(cleanSearch(typed))).not.toThrow()
 })

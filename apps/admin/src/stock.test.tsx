@@ -782,3 +782,120 @@ test('an admin is not asked for a store name: the selector names the store', asy
   await findQuantity('Sunny Fields Toned Milk')
   expect(calls.map((call) => new URL(call.url).pathname.replace('/api/core/v1', ''))).toEqual(['/admin/me', '/admin/stores', `/admin/stores/${indiranagar.id}/stock`])
 })
+
+test('a save answered without core\'s error body is a failed save: alert, edits kept, never "Stock saved."', async () => {
+  setToken('tok')
+  const core = stockCore(indiranagar.id, [banana])
+  fakeCore({ ...asAdmin, ...core.routes, [`PUT /admin/stores/${indiranagar.id}/stock`]: () => new Response(null, { status: 502 }) })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the stock. Try again.')
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('aria-disabled', 'false')
+})
+
+test('a search in the URL whose 100th character is an emoji is cut after it, never through it', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [milk]).routes })
+  const cut = `${'a'.repeat(99)}😀`
+
+  renderApp(`/stock?q=${encodeURIComponent(`${cut}b`)}`)
+
+  expect(await screen.findByRole('heading', { level: 2, name: 'No products found' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(lastListQuery(calls).q).toBe(cut)
+  expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue(cut)
+})
+
+test('after a failed save and "Discard and switch", returning to the store shows no alert', async () => {
+  setToken('tok')
+  fakeCore({
+    ...asAdmin,
+    ...stockCore(indiranagar.id, [banana]).routes,
+    ...stockCore(koramangala.id, [milk]).routes,
+    [`PUT /admin/stores/${indiranagar.id}/stock`]: () => apiError(400, 'validation', 'unknown product', 'rows'),
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('These changes were refused')
+  await userEvent.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+  await userEvent.click(screen.getByRole('button', { name: 'Discard and switch' }))
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  await userEvent.selectOptions(screen.getByLabelText('Store'), indiranagar.id)
+
+  expect(await findQuantity('Banana Robusta')).toHaveValue('0')
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('"Stock saved." is not shown again after leaving the store and returning', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...stockCore(koramangala.id, [milk]).routes })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(await screen.findByText('Stock saved.')).toBeInTheDocument()
+  await userEvent.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+  await findQuantity('Sunny Fields Toned Milk')
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+  await userEvent.selectOptions(screen.getByLabelText('Store'), indiranagar.id)
+
+  expect(await findQuantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.queryByText('Stock saved.')).not.toBeInTheDocument()
+})
+
+test('a save that fails after its edits were discarded shows no alert asking to try again', async () => {
+  setToken('tok')
+  const put = `PUT /admin/stores/${indiranagar.id}/stock`
+  let answer = () => {}
+  fakeCore({
+    ...asAdmin,
+    ...stockCore(indiranagar.id, [banana]).routes,
+    [put]: async () => {
+      await new Promise<void>((resolve) => (answer = resolve))
+      return apiError(500, 'internal')
+    },
+  })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  const save = screen.getByRole('button', { name: 'Save changes' })
+  await userEvent.click(save)
+  await waitFor(() => expect(save).toHaveTextContent('Saving…'))
+  await userEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+  answer()
+
+  await waitFor(() => expect(save).toHaveTextContent('Save changes'))
+  expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('Escape closes the switch dialog and keeps the store and the edits', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [banana]).routes, ...stockCore(koramangala.id, [milk]).routes })
+
+  renderApp('/stock')
+  await findQuantity('Banana Robusta')
+  await type('Banana Robusta', '30')
+  await userEvent.selectOptions(screen.getByLabelText('Store'), koramangala.id)
+  expect(screen.getByRole('dialog', { name: 'Discard unsaved changes?' })).toBeInTheDocument()
+  await userEvent.keyboard('{Escape}')
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Store')).toHaveValue(indiranagar.id)
+  expect(quantity('Banana Robusta')).toHaveValue('30')
+  expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+})
