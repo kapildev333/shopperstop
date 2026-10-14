@@ -5,10 +5,13 @@ import { api } from './api'
 export type StockRow = components['schemas']['StockRow']
 // What the URL of /stock holds. Absent means: the first store (admins), no search, every quantity, page 1.
 export type StockSearch = { store?: string; q?: string; lowStock?: true; page?: number }
+// Unsaved quantities as typed, by product id, with the product's name for messages about rows on another page.
+export type Edits = Record<string, { name: string; value: string }>
 
 export const pageSize = 24
-// Core's rule (services/core/internal/stock): low stock is below 5, zero included.
+// Core's rules (services/core/internal/stock): low stock is below 5, a quantity is 0 to 100000.
 export const lowStockBelow = 5
+export const maxQuantity = 100000
 
 // Keys: one page of a store's stock is ['admin', 'stock', storeId, filters].
 export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: true; page: number }) =>
@@ -23,3 +26,18 @@ export const stockQuery = (storeId: string, filters: { q?: string; lowStock?: tr
     // The page on screen stays while the next one loads, so the pager keeps keyboard focus; never another store's rows.
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[2] === storeId ? keepPreviousData(previous) : undefined),
   })
+
+// A quantity as typed to the number core takes; anything else is not sendable.
+export function parseQuantity(value: string) {
+  const text = value.trim()
+  return /^\d{1,6}$/.test(text) && Number(text) <= maxQuantity ? Number(text) : undefined
+}
+
+// The rows of one PUT, in the order the edits were made. A value that is not a quantity is left out, never sent as a made-up
+// number; the page refuses to save before that.
+export function toRows(edits: Edits) {
+  return Object.entries(edits).flatMap(([productId, edit]) => {
+    const quantity = parseQuantity(edit.value)
+    return quantity === undefined ? [] : [{ productId, quantity }]
+  })
+}
