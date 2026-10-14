@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -664,7 +665,8 @@ func TestSummaryMatchesSeed(t *testing.T) {
 	}
 	base := server(t)
 	tables := map[string]bool{"staff_users": true, "customers": true, "addresses": true, "stores": true, "products": true, "orders": true}
-	postman := map[string]string{}
+	postman, postmanTable := map[string]string{}, map[string]string{}
+	seenID := map[string]bool{}
 	signIns, ids := 0, 0
 	for _, line := range strings.Split(seed.Summary, "\n") {
 		f := strings.Fields(line)
@@ -686,6 +688,10 @@ func TestSummaryMatchesSeed(t *testing.T) {
 			}
 		case len(f) >= 2 && summaryID.MatchString(f[0]):
 			ids++
+			if seenID[f[0]] {
+				t.Errorf("line %q repeats id %s from an earlier line", line, f[0])
+			}
+			seenID[f[0]] = true
 			if !tables[f[1]] {
 				t.Errorf("line %q names table %q, want one of %v", line, f[1], tables)
 				continue
@@ -699,11 +705,18 @@ func TestSummaryMatchesSeed(t *testing.T) {
 			}
 			if m := summaryPostman.FindStringSubmatch(line); m != nil {
 				postman[m[1]] = f[0]
+				postmanTable[m[1]] = f[1]
 			}
 		}
 	}
 	if signIns != 4 || ids != 12 {
 		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 12", signIns, ids)
+	}
+	// The fixed ids of PLAN.md D20 that Postman uses, and the table each marked line names.
+	wantPostman := map[string]string{"storeId": storeKoramangala, "productId": productBanana, "addressId": homeID, "orderId": orderPlaced}
+	wantTable := map[string]string{"storeId": "stores", "productId": "products", "addressId": "addresses", "orderId": "orders"}
+	if !reflect.DeepEqual(postman, wantPostman) || !reflect.DeepEqual(postmanTable, wantTable) {
+		t.Errorf("summary marks ids %v in tables %v, want ids %v in tables %v", postman, postmanTable, wantPostman, wantTable)
 	}
 
 	raw, err := os.ReadFile("../../../../docs/postman/local.postman_environment.json")
