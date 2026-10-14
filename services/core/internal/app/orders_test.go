@@ -416,3 +416,144 @@ func TestDeleteOrderedProduct(t *testing.T) {
 		t.Fatalf("GET product after the refused delete: got %d %s, want 200", status, body)
 	}
 }
+
+// orderListView is one page of GET /orders.
+type orderListView struct {
+	Items    []orderView `json:"items"`
+	Page     int         `json:"page"`
+	PageSize int         `json:"pageSize"`
+	Total    int64       `json:"total"`
+}
+
+// readOrder GETs path with token and returns the order; it fails unless the answer is 200.
+func readOrder(t *testing.T, path, token string) orderView {
+	t.Helper()
+	status, body := call(t, http.MethodGet, path, token, nil)
+	var o orderView
+	if status != http.StatusOK || json.Unmarshal(body, &o) != nil {
+		t.Fatalf("GET %s: got %d %s, want 200", path, status, body)
+	}
+	return o
+}
+
+// TestOrdersNewestFirst: the customer's list is newest first, paged, with the items and events of each order.
+func TestOrdersNewestFirst(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 10)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	first := mustPlace(t, b)
+	setLine(t, b.Token, s.ID, p, 1)
+	second := mustPlace(t, b)
+
+	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
+	var l orderListView
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil {
+		t.Fatalf("GET /orders: got %d %s, want 200", status, body)
+	}
+	if l.Total != 2 || l.Page != 1 || l.PageSize != 24 || len(l.Items) != 2 {
+		t.Fatalf("list %+v, want total 2, page 1, pageSize 24, two items", l)
+	}
+	if l.Items[0].ID != second.ID || l.Items[1].ID != first.ID {
+		t.Fatalf("order ids %s, %s; want the second placement first", l.Items[0].ID, l.Items[1].ID)
+	}
+	for _, o := range l.Items {
+		if len(o.Items) != 1 || len(o.Events) != 1 {
+			t.Fatalf("order %s has %d items and %d events, want 1 and 1", o.ID, len(o.Items), len(o.Events))
+		}
+	}
+
+	status, body = call(t, http.MethodGet, ordersPath+"?pageSize=1&page=2", b.Token, nil)
+	l = orderListView{}
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil {
+		t.Fatalf("GET /orders page 2: got %d %s, want 200", status, body)
+	}
+	if l.Total != 2 || len(l.Items) != 1 || l.Items[0].ID != first.ID || len(l.Items[0].Items) != 1 {
+		t.Fatalf("page 2 %+v, want total 2 and the first order with one item", l)
+	}
+}
+
+// TestOrdersEmptyList: a customer with no orders gets an empty array, not null.
+func TestOrdersEmptyList(t *testing.T) {
+	b := newBuyer(t, nextPincode())
+	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
+	if status != http.StatusOK || !strings.Contains(string(body), `"items":[]`) {
+		t.Fatalf("GET /orders: got %d %s, want 200 with \"items\":[]", status, body)
+	}
+	var l orderListView
+	if err := json.Unmarshal(body, &l); err != nil || l.Total != 0 {
+		t.Fatalf("GET /orders: total %d (%v), want 0", l.Total, err)
+	}
+}
+
+// TestOrdersBadPage: a page size outside 1 to 100 names pageSize.
+func TestOrdersBadPage(t *testing.T) {
+	b := newBuyer(t, nextPincode())
+	status, body := call(t, http.MethodGet, ordersPath+"?pageSize=0", b.Token, nil)
+	expectError(t, "pageSize 0", status, body, http.StatusBadRequest, "validation", "pageSize", "must be from 1 to 100")
+}
+
+// TestOrderOtherCustomer404: another customer's order, and a malformed id, are 404; the owner reads it.
+func TestOrderOtherCustomer404(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	a := newBuyer(t, s.Pincode)
+	setLine(t, a.Token, s.ID, p, 1)
+	placed := mustPlace(t, a)
+	other := newBuyer(t, s.Pincode)
+
+	status, body := call(t, http.MethodGet, ordersPath+"/"+placed.ID, other.Token, nil)
+	expectError(t, "another customer's order", status, body, http.StatusNotFound, "not_found", "", "not found")
+	status, body = call(t, http.MethodGet, ordersPath+"/abc", a.Token, nil)
+	expectError(t, "malformed id", status, body, http.StatusNotFound, "not_found", "", "not found")
+	got := readOrder(t, ordersPath+"/"+placed.ID, a.Token)
+	if got.ID != placed.ID || got.Number != placed.Number {
+		t.Fatalf("owner read %s %s, want %s %s", got.ID, got.Number, placed.ID, placed.Number)
+	}
+}
+
+// TestOrderSnapshotsSurviveProductChange: the order keeps what it said at placement.
+func TestOrderSnapshotsSurviveProductChange(t *testing.T) {
+	s := newShop(t)
+	name := stockName(t)
+	p := cartProduct(t, s.ID, name, 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	placed := mustPlace(t, b)
+
+	if _, err := testPool.Exec(context.Background(), "update products set price_cents = 6000, mrp_cents = 6000, name = 'Renamed ' || name where id = $1", p); err != nil {
+		t.Fatal(err)
+	}
+	if status, body := call(t, http.MethodPatch, "/api/core/v1/me", b.Token, map[string]string{"phone": "+919800000002"}); status != http.StatusOK {
+		t.Fatalf("change phone: got %d %s, want 200", status, body)
+	}
+	if status, body := call(t, http.MethodDelete, addressesPath+"/"+b.AddressID, b.Token, nil); status != http.StatusNoContent {
+		t.Fatalf("delete address: got %d %s, want 204", status, body)
+	}
+
+	got := readOrder(t, ordersPath+"/"+placed.ID, b.Token)
+	if len(got.Items) != 1 {
+		t.Fatalf("items %+v, want one", got.Items)
+	}
+	if it := got.Items[0]; it.PriceCents != 5000 || it.MrpCents != 5000 || it.Name != name {
+		t.Fatalf("item %+v, want 5000, 5000 and the name %q", it, name)
+	}
+	if got.CustomerPhone != "+919800000001" {
+		t.Fatalf("customer phone %s, want +919800000001", got.CustomerPhone)
+	}
+	if got.Address.Label != "Home" || got.Address.Line1 != "12 Test Rd" || got.Address.Pincode != s.Pincode {
+		t.Fatalf("address %+v, want Home, 12 Test Rd, %s", got.Address, s.Pincode)
+	}
+}
+
+// TestOrdersStaffToken401: a staff token is not a customer's; both order reads refuse it.
+func TestOrdersStaffToken401(t *testing.T) {
+	token := adminToken(t)
+	status, body := call(t, http.MethodGet, ordersPath, token, nil)
+	expectError(t, "staff on the list", status, body, http.StatusUnauthorized, "unauthorized", "", "")
+	status, body = call(t, http.MethodGet, ordersPath+"/"+missingOrderID, token, nil)
+	expectError(t, "staff on one order", status, body, http.StatusUnauthorized, "unauthorized", "", "")
+}
