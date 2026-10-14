@@ -12,10 +12,11 @@ import (
 // Error is one API error. It is the body of the error envelope
 // {"error": {...}}; Status is the HTTP status and is not serialised.
 type Error struct {
-	Status  int    `json:"-"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Field   string `json:"field,omitempty"`
+	Status     int      `json:"-"`
+	Code       string   `json:"code"`
+	Message    string   `json:"message"`
+	Field      string   `json:"field,omitempty"`
+	ProductIDs []string `json:"productIds,omitempty"` // only with out_of_stock
 }
 
 func (e *Error) Error() string { return e.Code + ": " + e.Message }

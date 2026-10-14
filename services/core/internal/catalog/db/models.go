@@ -150,6 +150,56 @@ type Customer struct {
 	UpdatedAt    pgtype.Timestamptz
 }
 
+type Order struct {
+	ID               string
+	Number           string
+	CustomerID       string
+	StoreID          string
+	Status           OrderStatus
+	CustomerName     string
+	CustomerPhone    string
+	AddressLabel     string
+	AddressLine1     string
+	AddressLine2     string
+	AddressPincode   string
+	SubtotalCents    int64
+	DeliveryFeeCents int64
+	TotalCents       int64
+	PaymentMethod    string
+	PlacedAt         pgtype.Timestamptz
+	DeliveredAt      pgtype.Timestamptz
+	CancelledAt      pgtype.Timestamptz
+	CancelReason     string
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
+type OrderEvent struct {
+	ID         string
+	OrderID    string
+	FromStatus *OrderStatus
+	ToStatus   OrderStatus
+	ActorType  string
+	ActorID    *string
+	Note       string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type OrderItem struct {
+	ID         string
+	OrderID    string
+	ProductID  string
+	Name       string
+	UnitLabel  string
+	ImageUrl   string
+	PriceCents int64
+	MrpCents   int64
+	Quantity   int32
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
 type Product struct {
 	ID          string
 	CategoryID  string
