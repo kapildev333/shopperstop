@@ -9,10 +9,12 @@ function NewProduct() {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <PageHeader title="New product" />
-      {categories.isPending ? (
-        <Skeleton variant="list" count={3} />
-      ) : categories.isError ? (
-        <ErrorBanner message="Could not load the categories." onRetry={() => void categories.refetch()} />
+      {categories.data === undefined ? (
+        categories.isError ? (
+          <ErrorBanner message="Could not load the categories." onRetry={() => void categories.refetch()} />
+        ) : (
+          <Skeleton variant="list" count={3} />
+        )
       ) : (
         <Card className="p-6">
           <ProductForm categories={categoryOptions(categories.data.items)} />

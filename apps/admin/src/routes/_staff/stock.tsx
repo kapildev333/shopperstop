@@ -45,11 +45,16 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
       return rows
     },
     onSuccess: async (rows, sent) => {
+      const done = new Map(rows.map((row) => [row.productId, row.quantity]))
       // Kept pages hold the old quantities: drop the ones not on screen and read this one again before the edits go.
+      // The page on screen gets what was saved first: if that read fails its rows stay, and must not show the old quantities.
       queryClient.removeQueries({ queryKey: ['admin', 'stock', sent.store], type: 'inactive' })
+      queryClient.setQueriesData<{ items: StockRow[] }>(
+        { queryKey: ['admin', 'stock', sent.store] },
+        (shown) => shown && { ...shown, items: shown.items.map((row) => ({ ...row, quantity: done.get(row.productId) ?? row.quantity })) },
+      )
       await queryClient.invalidateQueries({ queryKey: ['admin', 'stock', sent.store] })
       // Only what was sent is saved: an edit typed since, or beyond the 500 rows of one PUT, stays unsaved.
-      const done = new Map(rows.map((row) => [row.productId, row.quantity]))
       setDraft((current) =>
         current.store === sent.store
           ? { ...current, edits: Object.fromEntries(Object.entries(current.edits).filter(([id, edit]) => !done.has(id) || done.get(id) !== parseQuantity(edit.value))) }
@@ -200,10 +205,12 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
         />
       )}
       {saved && save.isSuccess && <StatusMessage tone="success">Stock saved.</StatusMessage>}
-      {stock.isPending ? (
-        <Skeleton variant="table" count={6} />
-      ) : stock.isError ? (
-        <ErrorBanner message="Could not load the stock." onRetry={() => void stock.refetch()} />
+      {stock.data === undefined ? (
+        stock.isError ? (
+          <ErrorBanner message="Could not load the stock." onRetry={() => void stock.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={6} />
+        )
       ) : stock.data.items.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No products found" description="Change the search or the filter. Only active products are listed." />
@@ -259,10 +266,12 @@ function Stock() {
       <PageHeader title="Stock" />
       {staff.storeId ? (
         <StoreStock storeId={staff.storeId} />
-      ) : stores.isPending ? (
-        <Skeleton variant="table" count={6} />
-      ) : stores.isError ? (
-        <ErrorBanner message="Could not load the stores." onRetry={() => void stores.refetch()} />
+      ) : stores.data === undefined ? (
+        stores.isError ? (
+          <ErrorBanner message="Could not load the stores." onRetry={() => void stores.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={6} />
+        )
       ) : storeId ? (
         <StoreStock storeId={storeId} stores={items} />
       ) : (

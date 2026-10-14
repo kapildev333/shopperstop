@@ -56,10 +56,12 @@ export function ServiceAreas({ storeId }: { storeId: string }) {
   return (
     <section aria-labelledby="pincodes-heading" className="flex flex-col gap-4">
       <h2 id="pincodes-heading" className="text-h2 text-ink">Delivery pincodes</h2>
-      {saved.isPending ? (
-        <Skeleton variant="table" count={2} />
-      ) : saved.isError ? (
-        <ErrorBanner message="Could not load the pincodes." onRetry={() => void saved.refetch()} />
+      {saved.data === undefined ? (
+        saved.isError ? (
+          <ErrorBanner message="Could not load the pincodes." onRetry={() => void saved.refetch()} />
+        ) : (
+          <Skeleton variant="table" count={2} />
+        )
       ) : (
         <>
           {pincodes.length === 0 ? (

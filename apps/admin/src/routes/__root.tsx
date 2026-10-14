@@ -4,6 +4,7 @@ import { Button, TabNav } from '@shopperstop/ui'
 import { api } from '../api'
 import { navLinks } from '../nav'
 import { NotFound } from '../not-found'
+import { RefetchNotice } from '../refetch-notice'
 import { clearToken } from '../session'
 
 function RootLayout() {
@@ -42,6 +43,7 @@ function RootLayout() {
         )}
       </header>
       <main className="px-4 py-6 sm:px-6">
+        <RefetchNotice />
         <Outlet />
       </main>
     </>
