@@ -16,6 +16,7 @@ export type Store = components['schemas']['Store']
 export type StoreProduct = components['schemas']['StoreProduct']
 export type CategoryNode = components['schemas']['CategoryNode']
 export type Address = components['schemas']['Address']
+export type Order = components['schemas']['Order']
 
 // Test-only: never imported by app code.
 export function address(overrides: Partial<Address> = {}): Address {
@@ -29,6 +30,34 @@ export function address(overrides: Partial<Address> = {}): Address {
   }
 }
 
+// Test-only: an order as core answers it. Events are oldest first; the default is a fresh placed order.
+export function order(overrides: Partial<Order> = {}): Order {
+  return {
+    id: '00000000-0000-4000-8000-000000000703',
+    number: 'SS-DEMOAAAD',
+    storeId: '00000000-0000-4000-8000-000000000401',
+    status: 'placed',
+    customerName: 'Demo Customer',
+    address: { label: 'Home', line1: '12 80 Feet Rd, Koramangala', pincode: '560034' },
+    subtotalCents: 7000,
+    deliveryFeeCents: 2500,
+    totalCents: 9500,
+    paymentMethod: 'cod',
+    placedAt: '2026-10-13T10:00:00.000Z',
+    items: [
+      {
+        productId: '00000000-0000-4000-8000-000000000601',
+        name: 'Banana Robusta',
+        unitLabel: '1 kg',
+        priceCents: 7000,
+        mrpCents: 7000,
+        quantity: 1,
+      },
+    ],
+    events: [{ toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T10:00:00.000Z' }],
+    ...overrides,
+  }
+}
 
 export function store(overrides: Partial<Store> = {}): Store {
   return {

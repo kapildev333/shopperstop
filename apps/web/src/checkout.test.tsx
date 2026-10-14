@@ -145,3 +145,14 @@ test('checkout below the minimum', async () => {
   expect(within(summary).getByText('Minimum order is ₹99. Add ₹45 more to place the order.')).toBeInTheDocument()
   expect(within(summary).getByRole('button', { name: 'Place order (COD)' })).toBeDisabled()
 })
+
+// The orders list is seeded empty under its key ['orders', token] (ordersKey), written as a literal so this file
+// does not import ./orders, which is not in place yet.
+test('empty checkout links to orders', async () => {
+  seed({ lines: [] })
+  queryClient.setQueryData(['orders', 't'], { items: [], page: 1, pageSize: 24, total: 0 })
+  const router = renderAt('/checkout')
+  await userEvent.click(await screen.findByRole('link', { name: 'Your orders' }))
+  expect(router.state.location.pathname).toBe('/orders')
+  expect(await screen.findByRole('heading', { level: 1, name: 'Your orders' })).toBeInTheDocument()
+})

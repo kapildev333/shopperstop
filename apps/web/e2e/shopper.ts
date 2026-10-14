@@ -25,6 +25,16 @@ export async function freshShopper(request: APIRequestContext, name: string): Pr
   return { email, password, token, headers: { Authorization: `Bearer ${token}` } }
 }
 
+// The demo customer, signed in through core: for the read-only tests only (globalSetup resets its orders before the run).
+export async function demoShopper(request: APIRequestContext): Promise<Shopper> {
+  const email = 'demo@shopperstop.local'
+  const password = 'demo12345'
+  const answer = await request.post('/api/core/v1/auth/sign-in', { data: { email, password } })
+  expect(answer.status()).toBe(200)
+  const { token } = (await answer.json()) as { token: string }
+  return { email, password, token, headers: { Authorization: `Bearer ${token}` } }
+}
+
 export type Pick = { id: string; name: string; slug: string; priceCents: number; units: number }
 
 // The n-th product of page 2 (101 to 148 by name) with stock of exactly 10 and a price of at least 20 rupees.
