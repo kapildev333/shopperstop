@@ -54,9 +54,11 @@ async function expectInsideContent(card: Locator, slug: string, extra: Locator[]
   const content = await boxOf(card.locator(`a[href="/p/${slug}"]`))
   const item = await boxOf(card)
   const area: Box = { x: content.x, width: content.width, y: item.y, height: item.height }
+  // The struck MRP renders only when the MRP is above the price, so it is measured only where it is shown.
+  const struck = (await card.locator('s').count()) > 0 ? [card.locator('s')] : []
   const parts = [
     ...(await card.locator('button').all()),
-    card.locator('s'),
+    ...struck,
     ...(await card.getByText(/₹/).all()),
     ...extra,
   ]
@@ -80,6 +82,7 @@ test.describe('phone', () => {
     const card = await openSearch(page, product)
     const add = card.getByRole('button', { name: `Add ${product.name}`, exact: true })
     await expect(add).toBeVisible()
+    await expect(card.locator('s')).toHaveCount(1)
     await expectInsideContent(card, product.slug)
     await expectNoViolations(page)
 
@@ -127,6 +130,7 @@ test.describe('six columns', () => {
     const product = await struckPick(request)
     const card = await openSearch(page, product)
     await expect(card.getByRole('button', { name: `Add ${product.name}`, exact: true })).toBeVisible()
+    await expect(card.locator('s')).toHaveCount(1)
     await expectInsideContent(card, product.slug)
     await expectNoViolations(page)
   })
