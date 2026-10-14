@@ -484,6 +484,7 @@ func TestAuthGates(t *testing.T) {
 		{http.MethodGet, storeOrdersPath(testStoreID), nil, http.StatusOK},
 		{http.MethodGet, adminOrderPath(missingOrderID), nil, http.StatusNotFound},
 		{http.MethodPost, adminOrderPath(missingOrderID) + "/status", map[string]any{"status": "accepted"}, http.StatusNotFound},
+		{http.MethodGet, dashboardPath, nil, http.StatusOK},
 	}
 	for _, g := range staffGates {
 		if status, body := call(t, g.method, g.path, "", g.body); status != http.StatusUnauthorized || decodeError(t, body).Error.Code != "unauthorized" {
