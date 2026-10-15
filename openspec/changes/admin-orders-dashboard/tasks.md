@@ -64,7 +64,7 @@ Scope: `apps/admin/src/orders-history.test.tsx` (one test appended in step A), `
 Step A, from the review of task 4.
 Scenarios: Orders URL values › Page past the end.
 Failing tests: `src/orders-history.test.tsx` › "a page past the end shows a skeleton, never the empty state, until the last page answers".
-- [ ] 5.1 Step A test committed red (`test: a page past the end shows a skeleton until the last page answers`); Vitest `1 failed | base + 72 passed` (`1 failed | 252 passed (253)`) {`1 failed | 287 passed (288)`}
+- [x] 5.1 Step A test committed red (`test: a page past the end shows a skeleton until the last page answers`); Vitest `1 failed | base + 72 passed` (`1 failed | 252 passed (253)`) {`1 failed | 287 passed (288)`}
 - [ ] 5.2 The two hunks of `src/order-history.tsx` per design.md "Task 5", step A (`fix: a page past the end is a skeleton, never the empty state`); Vitest `base + 73 passed` (`253 passed (253)`) {`288 passed (288)`}; every gate green; `routeTree.gen.ts` unchanged
 
 Step B.

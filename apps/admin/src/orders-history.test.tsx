@@ -283,3 +283,24 @@ test('a history page kept from before a status change is read again, never shown
   await screen.findByRole('table', { name: 'Order history' })
   expect(numbers()).toEqual(['SS-TEST0001'])
 })
+
+test('a page past the end shows a skeleton, never the empty state, until the last page answers', async () => {
+  setToken('tok')
+  const core = ordersCore(indiranagar.id, thirty)
+  const calls = fakeCore({ ...asAdmin, ...core.routes })
+  core.hold('lists')
+
+  const router = renderApp('/orders?tab=history&page=9')
+  await waitFor(() => expect(listRequests(calls)).toHaveLength(1))
+  // Page 9 answers (no rows, 30 orders); the move to the last page waits for core.
+  core.release('lists')
+  core.hold('lists')
+
+  await waitFor(() => expect(listRequests(calls).map((query) => query.page)).toEqual(['9', '2']))
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByText('No delivered orders')).not.toBeInTheDocument()
+  expect(screen.queryByRole('table', { name: 'Order history' })).not.toBeInTheDocument()
+  core.release('lists')
+  await screen.findByText('Page 2 of 2, 30 orders')
+  expect(router.state.location.search).toEqual({ tab: 'history', page: 2 })
+})
