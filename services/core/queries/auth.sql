@@ -61,3 +61,7 @@ set name = coalesce(sqlc.narg(name), name),
     is_active = coalesce(sqlc.narg(is_active), is_active)
 where id = @id
 returning id, email, name, role, store_id, is_active;
+
+-- name: LockActiveAdmins :many
+-- Locks the active admins in id order so concurrent deactivations serialise without deadlock.
+select id from staff_users where role = 'admin' and is_active order by id for update;

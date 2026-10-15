@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -109,6 +110,9 @@ type staffPatch struct {
 	Password *string `json:"password"`
 	IsActive *bool   `json:"isActive"`
 }
+
+// errLastAdmin refuses a patch that would leave no active admin.
+var errLastAdmin = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "cannot deactivate the last active admin", Field: "isActive"}
 
 // checkRole returns the store id to store (nil for an admin) when role and storeId agree.
 func checkRole(role, storeID string) (*string, error) {
@@ -219,7 +223,8 @@ func (a *Auth) ListStaff(w http.ResponseWriter, r *http.Request) {
 
 // UpdateStaffUser changes the name, the password (hashed at cost 12) and
 // isActive of the staff user in the path, and answers 200 with it. The role and
-// the store cannot change. An unknown id answers 404.
+// the store cannot change. An unknown id answers 404. Setting isActive false on
+// the only active admin answers 409 and changes nothing.
 func (a *Auth) UpdateStaffUser(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathID(r, "id")
 	if err != nil {
@@ -252,7 +257,23 @@ func (a *Auth) UpdateStaffUser(w http.ResponseWriter, r *http.Request) {
 		}
 		p.PasswordHash = &hash
 	}
-	row, err := a.q.UpdateStaff(r.Context(), p)
+	ctx := r.Context()
+	var row db.UpdateStaffRow
+	err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
+		q := a.q.WithTx(tx)
+		if in.IsActive != nil && !*in.IsActive {
+			admins, err := q.LockActiveAdmins(ctx)
+			if err != nil {
+				return err
+			}
+			if len(admins) == 1 && strings.EqualFold(admins[0], id) {
+				return errLastAdmin
+			}
+		}
+		updated, err := q.UpdateStaff(ctx, p)
+		row = updated
+		return err
+	})
 	if err != nil {
 		httpx.WriteError(w, r, pg.Map(err))
 		return
