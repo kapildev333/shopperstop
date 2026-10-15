@@ -1,8 +1,10 @@
 # web-P2-L11-T1 - web-checkout-failures task 1: checkout failures (worker)
 Status: done
 ## Doing
-Task 1 landed on `lane/web-P2-L11-checkout-failures`: red `0af6d54` (test: checkout failures), feat `0ae4bb3` (feat: checkout failures), this log as chore. Tasks 1.1 and 1.2 ticked. Handed back to the team lead for `/opsx:verify web-checkout-failures`. No Playwright, no servers, no Docker.
+Task 1 landed on `lane/web-P2-L11-checkout-failures`: red `0af6d54` (test: checkout failures), feat `0ae4bb3` (feat: checkout failures), this log as chore. Tasks 1.1 and 1.2 ticked. Follow-up pin `75b8156` added (review nit 3). Handed back to the team lead for `/opsx:verify web-checkout-failures`. No Playwright, no servers, no Docker.
 ## Found
+- Review follow-up (`web-P2-L11-R1` nit 3, coordinator message): pin `75b8156` (test: unconfirmed placement with the cart still full). Internal, then the cart read again holds the line: stays on the cart with the unconfirmed alert, the "Your orders" link and an enabled "Place order (COD)". Green on `2964838`'s code. Mutation (`emptied = error?.code === 'internal'`, navigate on any internal): the new test fails with `Unable to find role="alert"` (the page went to `/orders`); restored. Router starts at `/` (`renderInRouter`), so the location assertion is `/`.
+- Gates on `75b8156`: lint and typecheck green; full web Vitest 153 of 153 in 26 files; `checkout.test.tsx` 24 of 24 on each of 3 runs.
 - Red on `0af6d54` (vitest `src/checkout.test.tsx`, 3 failed, 20 passed; the three new tests, nothing else red):
   - "failed removal at checkout": `Unable to find role="alert"` under the Amul Butter line.
   - "core cannot be reached at placement": received "Could not place your order. Try again.", expected the "We could not confirm your order..." sentence.
