@@ -12,7 +12,7 @@
 - **THEN** that row shows "Unknown store" and no store's name
 
 ### Requirement: Staff users table states
-`/staff` SHALL follow the panel's rule for reads. While it holds no answer to its two reads (the staff users and the stores) it SHALL show a loading status, or, when either failed, the alert "Could not load the staff users." with "Try again", which makes both reads again. Once it shows the table, a later read that fails SHALL leave the table in place with no alert; the one notice is the root layout's.
+`/staff` SHALL follow the panel's rule for reads. While it holds no answer to its two reads (the staff users and the stores) it SHALL show a loading status, or, when a read that holds no answer failed, the alert "Could not load the staff users." with "Try again", which makes both reads again. Once it shows the table, a later read that fails SHALL leave the table in place with no alert; the one notice is the root layout's.
 
 #### Scenario: Staff users loading
 - **WHEN** an admin opens `/staff` and core has not answered the staff users yet
@@ -25,6 +25,10 @@
 #### Scenario: Failed refetch keeps the table
 - **WHEN** an admin has `/staff` open with its table shown, both reads are made again and core answers 502 without a body, and then both are made once more and answered
 - **THEN** the table still shows its rows and store names with no alert and exactly one status message "Could not refresh. Showing what was loaded last."; after the answers the table is shown and the message is gone
+
+#### Scenario: Failed refetch while the stores load
+- **WHEN** an admin opens `/staff`, core answers the staff users but not yet the stores, and a second read of the staff users fails
+- **THEN** the loading status is still shown and no alert
 
 ### Requirement: Staff users list beyond one page
 `/staff` SHALL read at most 100 staff users, the most core gives in one page, and SHALL NOT page or filter them. When core reports a `total` above the rows it sent, the page SHALL say so in a status message above the table: "Showing the first 100 of <total> staff users, by email."
@@ -45,10 +49,10 @@
 - **THEN** "Page not found" is the level-1 heading, the path is still `/staff`, and the only request made was `GET /admin/me`
 
 ### Requirement: Staff user create
-The "New staff user" button SHALL open a dialog titled "New staff user" with "Name", "Email", "Password", "Role" ("Store staff" first, or "Admin") and, for store staff only, "Store", and the buttons "Cancel" then "Create staff user". Saving SHALL send one `POST /admin/staff-users` with the values as typed, `storeId` only for store staff with a store chosen, then close the dialog and show core's answer as a row in email order without reading the list again.
+The "New staff user" button SHALL open a dialog titled "New staff user" with "Name", "Email", "Password", "Role" ("Store staff" first, or "Admin") and, for store staff only, "Store", and the buttons "Cancel" then "Create staff user". Saving SHALL send one `POST /admin/staff-users` with the values as typed, `storeId` only for store staff with a store chosen, then close the dialog and show core's answer as a row in email order, letter case ignored as in core, without reading the list again.
 
 #### Scenario: Create a store-staff user
-- **WHEN** an admin opens the dialog, types a name, `jaya@example.test` and a password, chooses Indiranagar and presses "Create staff user"
+- **WHEN** an admin opens the dialog, types a name, `Jaya@example.test` and a password, chooses Indiranagar and presses "Create staff user"
 - **THEN** focus started in "Name" and "Role" on "Store staff"; core got `{name, email, password, role: "store_staff", storeId}`; the dialog closed; the row stands between `indiranagar@…` and `koramangala@…` with "Store staff", "Indiranagar" and "Active"; and the list was read once in all
 
 #### Scenario: Create an admin

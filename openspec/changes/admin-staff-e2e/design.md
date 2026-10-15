@@ -10,6 +10,7 @@ Measured (2026-10-13, Node 22.23.3, `npm ci` at the root):
 - On main's `apps/admin/src` (1699afa, with L7) laid under the same spike: base 180; the final tree `212 passed (212)` in 19 files with the refetch test as written below; lint and typecheck clean. The two edits to `src/routes/_staff/stock.tsx` applied to main's file with `git apply --check` clean.
 - Stage by stage (on 04e68ca): task 1 tests alone `7 failed | 161 passed (168)`, with its code `168 passed`; task 2 tests `23 failed | 168 passed (191)`, with its code `191 passed`; task 3 test `1 failed | 191 passed (192)`, with its code `192 passed`.
 - 32 mutation guards (below), each applied to the final tree, run and restored.
+- Re-measured 2026-10-15 for task 2 after review R1 of task 1, on the branch rebased onto 56be587 with task 1 landed (base 180, task 1 green at `188 passed (188)`): task 2's test step `24 failed | 188 passed (212)` (the 23 dialog tests and the one R1-1 table test, each red for its missing button or for the alert), with its code `212 passed (212)`; task 3's test `1 failed | 212 passed (213)`, with its code `213 passed (213)`; lint, typecheck and build of `apps/admin` clean after task 2 alone; `make test-web` exit 0 on the final tree (ui 54, admin 213, web 140). Guards 33 and 34 below were run on that tree. Spike reverted.
 - e2e: `e2e/staff.spec.ts` as written, and the stretch added to `e2e/catalog.spec.ts` (the lines of the edit plus the delete steps after them, on a product the fake already held), each passed once, axe clean, in Chromium against a scratch `vite preview` on port 25174 with a `page.route` fake of core. Nothing has run against the real core: that is task 4, the manager's e2e slot.
 
 ## Assumptions (read in the code on 04e68ca)
@@ -41,9 +42,9 @@ Decisions 2 to 5 are the ones the manager asked to be decided and recorded (D13:
 3. **No pager, no filter: one request of 100, and a message when the list is cut.** Reason: staff are a handful per store (two stores in the seed, three users), and 100 is the most core gives in one page. Unlike the stores table, a cut list here would hide who has access, so `total > items.length` shows "Showing the first 100 of <total> staff users, by email.". Ceiling: the 101st user cannot be edited from the panel; add a pager (the stock page's) when a panel passes 100.
 4. **The admin's own row: no "Status" field, and the line "You cannot deactivate your own account."** Core would answer 200 and end the admin's own session at the next request (A4); demoting is not possible for anyone (the role cannot change, A3). Reason: with this one rule the admin at the screen stays active, so the panel can never deactivate the last active admin, without counting admins (a count on a cut list would be wrong). The row carries a "You" badge. Name and password of the own account can be changed; a saved name is written to the session entry and the guard is re-run, so the banner shows it (A13). Ceiling: two admins can still deactivate each other in two browsers at the same moment; `core-admin create-admin` is the way back, as core's description says.
 5. **A deleted store on a staff row cannot happen** (A6: core refuses the delete with 409). The store cell falls back to "Unknown store" only for a store beyond the first 100 by name (`storesQuery`'s ceiling). No link from the row to the store.
-6. **Two reads, one gate.** The page needs the staff users and the stores (the names in the rows, the choices in the dialog). L7's rule with both: `list === undefined || storeItems === undefined` → the skeleton while neither failed, else the one alert "Could not load the staff users." whose "Try again" reads both (the product page's shape, L7 Decision 6). "New staff user" is in the header only once both are held, so the dialog always has its stores. No empty state: the signed-in admin is always in the list.
+6. **Two reads, one gate.** The page needs the staff users and the stores (the names in the rows, the choices in the dialog). L7's rule with both: `list === undefined || storeItems === undefined` → the skeleton, unless a read that holds nothing has failed (`(users.isError && list === undefined) || (stores.isError && storeItems === undefined)`, R1-1: staff users held whose refetch fails while the stores still load is the skeleton, not the alert), then the one alert "Could not load the staff users." whose "Try again" reads both (the product page's shape, L7 Decision 6). "New staff user" is in the header only once both are held, so the dialog always has its stores. No empty state: the signed-in admin is always in the list.
 7. **No notice in the page.** A failed later read keeps the table (the gate asks `=== undefined`); `RefetchNotice` at the root says so. The dialog holds its own form state and makes no read, so it needs none.
-8. **After a save, core's answer is written into the list** (`withStaff`: replace by id or add, sorted by email as core orders, `total` moved by what was added) with `setQueryData`; no invalidation and no second read, so no reload can fail under a closed dialog. The list is one exact key (`['admin', 'staff-users']`): there are no other list queries to remove by prefix. Ceiling: `<` on the email strings is code-unit order, the database's `order by email` follows its collation; a row may sit one place off until the next read (every mount reads again).
+8. **After a save, core's answer is written into the list** (`withStaff`: replace by id or add, sorted by email as core orders, `total` moved by what was added) with `setQueryData`; no invalidation and no second read, so no reload can fail under a closed dialog. The list is one exact key (`['admin', 'staff-users']`): there are no other list queries to remove by prefix. Emails are compared lowercased (R1-2): core's `email` is `citext`, so `order by email` ignores letter case, and core keeps the case as typed. Ceiling: past letter case the database's collation decides (punctuation, as `a.b@` against `ab@`), which the client does not copy; such a row may sit one place off until the next read (every mount reads again). The fake `staffCore` orders the same way.
 9. **What is sent.** Create: the values as typed (core trims name and email, never the password); `storeId` only for `store_staff` with a store chosen. Change: only what differs from the row; an empty "New password" is not sent; nothing changed closes without a request. There is no client-side validation: every rule is core's (A2, A3), and its 400 lands on the field in the page's words (`messages`), because core's own speak of bytes and ids. Store staff with no store chosen therefore costs one round trip and reads "Choose a store.". Ceiling: "Enter 8 to 72 characters." is core's 8 to 72 bytes; a password of 30 emoji is refused with that sentence.
 10. **Errors.** `validation` naming a form field → that field; `conflict` on `email` → "A staff user with this email already exists." on "Email"; everything else (404, 5xx, a 400 without a field, a conflict on another field, an answer without core's error body, which `src/api.ts` hands on as `internal`) → one alert in the dialog. All of them are core's answer, so one rule clears them: the next edit of any field (`save.reset()`), never while a save runs.
 11. **A save in progress.** The submit button is `aria-disabled` with the label "Saving…", never `disabled` or `loading` (it has focus); `submit` returns while a save is pending, so a second press and Enter send nothing. `edit()` calls `save.reset()` only when no save is pending (`reset()` would detach it: the dialog would never close). Cancel and Escape do nothing while a save runs: the answer closes the dialog, and a late answer must not close a dialog opened since. Ceiling: text typed during the save is dropped when the dialog closes; a save that never answers keeps the dialog until the request fails.
@@ -57,15 +58,17 @@ Decisions 2 to 5 are the ones the manager asked to be decided and recorded (D13:
 19. **e2e: the staff flow uses a second browser context for the new user, with one admin sign-in.** The brief's wording was "signs out, signs in as that user"; with a second context the admin stays signed in, so the same test can then deactivate the user and see their session end, and the admin signs in once instead of twice. The admin signs out at the end. Cleanup: core cannot delete a staff user, so the created one is left inactive and goes with the next reset (`seed-demo --reset` deletes every staff user it does not define); the email is fixed (`e2e-staff@shopperstop.local`), which is safe because global setup resets before every Playwright run and the config has no retries.
 20. **Sign-ins per admin e2e run** (A8). On main today: admin 4 (`auth`, `catalog`, `stock`, `stores`), `koramangala@` 3, `nobody@` 1. This change adds admin 1 and `e2e-staff@` 1 (`staff.spec.ts`); the catalog stretch adds none. Total: admin 5, `koramangala@` 3, `nobody@` 1, `e2e-staff@` 1, ten in all from one IP. With admin-P2-L5 as designed (admin 2, `koramangala@` 1): admin 7, `koramangala@` 4, thirteen in all. One run fits the 10 per email; a second run against the same core process does not (admin 14), as today. Upgrade path if a lane needs more: one signed-in `storageState` shared by the admin specs.
 
+21. **Review R1 of task 1 is folded into task 2, not a fix commit of its own** (manager's call, D13). R1-1 (alert only for a read that failed holding nothing) changes one line of the `staff.tsx` that task 2 replaces whole anyway, and its test is appended to `src/staff.test.tsx`; R1-2 (lowercased emails) is a two-line edit in `src/staff.ts` and one in `src/staff-fake.ts`, and the create test types `Jaya@example.test`, which a code-unit sort puts first. Both tests join task 2's `test:` commit; the `feat:` commit carries both fixes. Task 1's eight tests stay as they are.
+
 ## Files (all under `apps/admin/`)
 | File | Task | Change |
 |---|---|---|
 | `e2e/staff.spec.ts` (new) | 1 | the staff flow, run in task 4 |
 | `e2e/catalog.spec.ts` | 1 | two insertions (a constant, the stock stretch), run in task 4 |
-| `src/staff-fake.ts` (new, test-only) | 1 | fixtures `indu`, `kiran`, `createdId`, the stateful `staffCore` |
-| `src/staff.test.tsx` (new) | 1 | 8 tests |
-| `src/staff.ts` (new) | 1 | `staffUsersQuery`, `pageSize`, `roleNames`, `withStaff` |
-| `src/routes/_staff/_admin/staff.tsx` | 1, 2 | the placeholder replaced by the table (task 1), then replaced whole with the button, the "Actions" column and the dialog (task 2) |
+| `src/staff-fake.ts` (new, test-only) | 1, 2 | fixtures `indu`, `kiran`, `createdId`, the stateful `staffCore`; task 2 makes its order case-blind |
+| `src/staff.test.tsx` (new) | 1, 2 | 8 tests; task 2 appends one (R1-1) and edits two imports |
+| `src/staff.ts` (new) | 1, 2 | `staffUsersQuery`, `pageSize`, `roleNames`, `withStaff`; task 2 lowercases its compare |
+| `src/routes/_staff/_admin/staff.tsx` | 1, 2 | the placeholder replaced by the table (task 1), then replaced whole with the button, the "Actions" column, the dialog and the R1-1 gate (task 2) |
 | `src/staff-dialog.test.tsx` (new) | 2 | 23 tests |
 | `src/staff-dialog.tsx` (new) | 2 | `StaffDialog` |
 | `src/stock.test.tsx` | 3 | one test appended |
@@ -101,10 +104,11 @@ Files: T `src/staff.test.tsx`, D `src/staff-dialog.test.tsx`, K `src/stock.test.
 | Staff users table states › Staff users loading | T "the staff table shows a skeleton while loading" |
 | Staff users table states › First load failure | T "a first load in which %s fails shows a retry that reloads" (2 runs: the staff users, the stores) |
 | Staff users table states › Failed refetch keeps the table | T "a failed refetch keeps the staff table, with the one notice from the root" |
+| Staff users table states › Failed refetch while the stores load | T "a refetch of the staff users that fails while the stores still load keeps the skeleton, not the alert" (task 2) |
 | Staff users list beyond one page › More than 100 staff users | T "more staff users than one page says the list is cut" |
 | Staff users list beyond one page › Whole list shown | T "the staff table lists every staff user by email with role, store and status" (no "Showing the first") |
 | Staff users only for admins › Store staff open /staff | T "store staff who open /staff see not found, and core is not asked for the staff users" (green when written: admin-P2-L1's route folder does it); E |
-| Staff user create › Create a store-staff user | D "create a store-staff user: core gets what was typed and the row appears in email order without a second read" |
+| Staff user create › Create a store-staff user | D "create a store-staff user: core gets what was typed and the row appears in email order, case ignored, without a second read" |
 | Staff user create › Create an admin | D "create an admin: no Store field and no store in the request" |
 | Staff user create › Created user changed at once | D "a staff user just created can be changed at once: the row is replaced, not added again" |
 | Staff user change › Change the name | D "edit shows what cannot change as text, sends only the changed name and shows core's answer in the row" |
@@ -168,9 +172,11 @@ Test names say behaviour. Rows are found through their "Edit <email>" button; fi
 | 30 | `routes/…/staff.tsx` | `'Unknown store'` → `''` | T "a staff user whose store is not among the stores read…" |
 | 31 | `routes/_staff/stock.tsx` | the "Image" column removed | K "each stock row starts with…" |
 | 32 | same | the tile without `src` | K "each stock row starts with…" |
+| 33 | `routes/…/staff.tsx` (task 2) | the alert test back to `users.isError \|\| stores.isError` | T "a refetch of the staff users that fails while the stores still load…" (measured: 1 failed of the 32 staff tests) |
+| 34 | `staff.ts` (task 2) | `key` without `toLowerCase()` | D "create a store-staff user…" (measured: 1 failed of the 32 staff tests) |
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
-Paths are under `apps/admin/`. A block marked NEW FILE or REPLACE WHOLE is the whole file. An EDIT is one insertion: the "after" text occurs exactly once in the file; put the "insert" lines directly after it and change nothing else.
+Paths are under `apps/admin/`. A block marked NEW FILE or REPLACE WHOLE is the whole file. An EDIT is one insertion: the "after" text occurs exactly once in the file; put the "insert" lines directly after it and change nothing else. An EDIT that says "Replace" swaps the given lines, found exactly once, for the "with" lines and changes nothing else.
 
 ### Task 1: the e2e written first, then the staff users table
 
@@ -641,15 +647,15 @@ async function openEdit(email: string, name: string) {
   return screen.getByRole('dialog', { name: `Edit ${name}` })
 }
 
-// Fills the create form for a store-staff user at Indiranagar.
+// Fills the create form for a store-staff user at Indiranagar. The email has a capital: core keeps it as typed and orders by it case-blind.
 async function fillNew(dialog: HTMLElement) {
   await userEvent.type(within(dialog).getByLabelText('Name'), 'Jaya Menon')
-  await userEvent.type(within(dialog).getByLabelText('Email'), 'jaya@example.test')
+  await userEvent.type(within(dialog).getByLabelText('Email'), 'Jaya@example.test')
   await userEvent.type(within(dialog).getByLabelText('Password'), 'staff12345')
   await userEvent.selectOptions(within(dialog).getByLabelText('Store'), indiranagar.id)
 }
 
-test('create a store-staff user: core gets what was typed and the row appears in email order without a second read', async () => {
+test('create a store-staff user: core gets what was typed and the row appears in email order, case ignored, without a second read', async () => {
   setToken('tok')
   const calls = fakeCore(staffCore().routes)
 
@@ -664,9 +670,9 @@ test('create a store-staff user: core gets what was typed and the row appears in
   await userEvent.click(within(dialog).getByRole('button', { name: 'Create staff user' }))
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  expect(await sent(calls, 'POST')[0].json()).toEqual({ name: 'Jaya Menon', email: 'jaya@example.test', password: 'staff12345', role: 'store_staff', storeId: indiranagar.id })
-  expect(emails()).toEqual(['Edit admin@example.test', 'Edit indiranagar@example.test', 'Edit jaya@example.test', 'Edit koramangala@example.test'])
-  for (const text of ['Jaya Menon', 'Store staff', 'Indiranagar', 'Active']) expect(within(row('jaya@example.test')).getByText(text)).toBeInTheDocument()
+  expect(await sent(calls, 'POST')[0].json()).toEqual({ name: 'Jaya Menon', email: 'Jaya@example.test', password: 'staff12345', role: 'store_staff', storeId: indiranagar.id })
+  expect(emails()).toEqual(['Edit admin@example.test', 'Edit indiranagar@example.test', 'Edit Jaya@example.test', 'Edit koramangala@example.test'])
+  for (const text of ['Jaya Menon', 'Store staff', 'Indiranagar', 'Active']) expect(within(row('Jaya@example.test')).getByText(text)).toBeInTheDocument()
   expect(listReads(calls)).toHaveLength(1)
 })
 
@@ -682,8 +688,8 @@ test('create an admin: no Store field and no store in the request', async () => 
   await userEvent.click(within(dialog).getByRole('button', { name: 'Create staff user' }))
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  expect(await sent(calls, 'POST')[0].json()).toEqual({ name: 'Jaya Menon', email: 'jaya@example.test', password: 'staff12345', role: 'admin' })
-  expect(within(row('jaya@example.test')).getByText('All stores')).toBeInTheDocument()
+  expect(await sent(calls, 'POST')[0].json()).toEqual({ name: 'Jaya Menon', email: 'Jaya@example.test', password: 'staff12345', role: 'admin' })
+  expect(within(row('Jaya@example.test')).getByText('All stores')).toBeInTheDocument()
 })
 
 test('store staff created without a store: core is asked without one and its refusal shows on Store', async () => {
@@ -910,7 +916,7 @@ test('an edit typed while a save runs leaves the save attached: it still closes 
   core.release()
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(sent(calls, 'POST')).toHaveLength(1)
-  expect(within(row('jaya@example.test')).getByText('Jaya Menon')).toBeInTheDocument()
+  expect(within(row('Jaya@example.test')).getByText('Jaya Menon')).toBeInTheDocument()
 })
 
 test('Cancel and Escape close the dialog without a request, but not while a save runs', async () => {
@@ -938,7 +944,7 @@ test('Cancel and Escape close the dialog without a request, but not while a save
   core.release()
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(sent(calls, 'POST')).toHaveLength(1)
-  expect(row('jaya@example.test')).toBeInTheDocument()
+  expect(row('Jaya@example.test')).toBeInTheDocument()
 })
 
 test('an unknown staff user on save shows the alert and leaves the row as it was', async () => {
@@ -957,22 +963,80 @@ test('an unknown staff user on save shows the alert and leaves the row as it was
 test('a staff user just created can be changed at once: the row is replaced, not added again', async () => {
   setToken('tok')
   const core = staffCore()
-  const calls = fakeCore({ ...core.routes, [`PATCH /admin/staff-users/${createdId}`]: () => json(200, { id: createdId, email: 'jaya@example.test', name: 'Jaya M', role: 'store_staff', storeId: indiranagar.id, isActive: true }) })
+  const calls = fakeCore({ ...core.routes, [`PATCH /admin/staff-users/${createdId}`]: () => json(200, { id: createdId, email: 'Jaya@example.test', name: 'Jaya M', role: 'store_staff', storeId: indiranagar.id, isActive: true }) })
 
   renderApp('/staff')
   const dialog = await openNew()
   await fillNew(dialog)
   await userEvent.click(within(dialog).getByRole('button', { name: 'Create staff user' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  const edit = await openEdit('jaya@example.test', 'Jaya Menon')
+  const edit = await openEdit('Jaya@example.test', 'Jaya Menon')
   await userEvent.type(within(edit).getByLabelText('Name'), '!')
   await userEvent.click(within(edit).getByRole('button', { name: 'Save changes' }))
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(new URL(sent(calls, 'PATCH')[0].url).pathname).toBe(`/api/core/v1/admin/staff-users/${createdId}`)
-  expect(within(row('jaya@example.test')).getByText('Jaya M')).toBeInTheDocument()
+  expect(within(row('Jaya@example.test')).getByText('Jaya M')).toBeInTheDocument()
   expect(emails()).toHaveLength(4)
 })
+```
+
+#### EDIT 1 `src/staff.test.tsx`: the testing-library import (step 1, same commit; R1-1)
+Replace:
+```tsx
+import { act, screen, within } from '@testing-library/react'
+```
+with:
+```tsx
+import { act, screen, waitFor, within } from '@testing-library/react'
+```
+
+#### EDIT 2 `src/staff.test.tsx`: the query import (same commit)
+After:
+```tsx
+import { renderApp } from './render-app'
+```
+insert:
+```tsx
+import { staffUsersQuery } from './staff'
+```
+
+#### APPEND to `src/staff.test.tsx` (same commit): after the last line of the file, one empty line, then
+```tsx
+test('a refetch of the staff users that fails while the stores still load keeps the skeleton, not the alert', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let down = false
+  fakeCore({
+    ...core.routes,
+    'GET /admin/staff-users': (request) => (down ? json(502) : core.routes['GET /admin/staff-users'](request)),
+    // The stores never answer.
+    'GET /admin/stores': () => new Promise<Response>(() => {}),
+  })
+  const router = renderApp('/staff')
+  const queryClient = router.options.context.queryClient
+  await waitFor(() => expect(queryClient.getQueryData(staffUsersQuery.queryKey)).toBeDefined())
+
+  down = true
+  await act(async () => {
+    await queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey })
+    await new Promise<void>((told) => notifyManager.schedule(told))
+  })
+
+  expect(queryClient.getQueryState(staffUsersQuery.queryKey)?.status).toBe('error')
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+```
+
+#### EDIT `src/staff-fake.ts`: the fake orders like core, case ignored (same commit; R1-2)
+Replace:
+```tsx
+      const items = [...users].sort((a, b) => (a.email < b.email ? -1 : 1))
+```
+with:
+```tsx
+      const items = [...users].sort((a, b) => (a.email.toLowerCase() < b.email.toLowerCase() ? -1 : 1))
 ```
 
 #### NEW FILE `src/staff-dialog.tsx` (step 2, `feat: staff user create and edit dialog`)
@@ -1127,6 +1191,23 @@ export function StaffDialog({ user, self, stores, onClose }: { user?: Staff; sel
 }
 ```
 
+#### EDIT `src/staff.ts`: `withStaff` compares emails lowercased (step 2, same commit; R1-2)
+Replace:
+```tsx
+export function withStaff(list: StaffList, saved: Staff): StaffList {
+  const others = list.items.filter((user) => user.id !== saved.id)
+  const items = [...others, saved].sort((a, b) => (a.email < b.email ? -1 : a.email > b.email ? 1 : 0))
+```
+with:
+```tsx
+// ponytail: core orders a citext column, so emails compare lowercased; punctuation follows the database's collation
+// (`a.b@` against `ab@`), which the client does not copy: such a row may sit one place off until the next read.
+export function withStaff(list: StaffList, saved: Staff): StaffList {
+  const others = list.items.filter((user) => user.id !== saved.id)
+  const key = (user: Staff) => user.email.toLowerCase()
+  const items = [...others, saved].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0))
+```
+
 #### REPLACE WHOLE `src/routes/_staff/_admin/staff.tsx` (step 2, same commit)
 ```tsx
 import { useQuery } from '@tanstack/react-query'
@@ -1182,8 +1263,9 @@ function StaffUsers() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Staff" actions={list && storeItems && <Button onClick={() => setEditing('new')}>New staff user</Button>} />
+      {/* The alert only for a read that failed holding nothing; a held read that fails waits under the skeleton for the other. */}
       {list === undefined || storeItems === undefined ? (
-        users.isError || stores.isError ? (
+        (users.isError && list === undefined) || (stores.isError && storeItems === undefined) ? (
           <ErrorBanner message="Could not load the staff users." onRetry={() => void Promise.all([users.refetch(), stores.refetch()])} />
         ) : (
           <Skeleton variant="table" count={4} />
@@ -1268,7 +1350,7 @@ No code: the manager's `make e2e`. See `briefs/task-4.md`.
 ## Accepted ceilings
 - First 100 staff users by email, no pager, no search; the page says when the list is cut (Decision 3).
 - "Unknown store" for a store beyond the first 100 stores by name (Decision 5).
-- A row added or renamed sits where code-unit order puts its email until the next read (Decision 8).
+- A row added or renamed sits where the lowercased email puts it until the next read; past letter case the database's collation may differ (Decision 8).
 - No client-side validation; "8 to 72 characters" stands for core's bytes (Decision 9).
 - A core error clears on any edit of the dialog, not only of its field (Decision 10).
 - Text typed during a save is dropped when the dialog closes; Cancel and Escape wait for the answer (Decision 11).

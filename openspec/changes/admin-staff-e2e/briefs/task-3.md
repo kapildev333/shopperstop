@@ -27,14 +27,14 @@ Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin
 `apps/admin/src/stock.test.tsx` › "each stock row starts with the product's image as a tile, a placeholder when it has none"
 
 ## Steps, in this order
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `211 passed (211)` (the base, 180, plus 31).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `212 passed (212)` (the base, 180, plus 32).
 1. Append the test to `apps/admin/src/stock.test.tsx` from design.md (task 3, "APPEND"): one empty line after the file's last line, then the block. Run the admin tests, see the one fail, record the summary in your lane log. Commit: `test: stock product image`. Tick 3.1.
 2. Make EDIT 1 and EDIT 2 in `apps/admin/src/routes/_staff/stock.tsx` from design.md: one import line, one column line. Each "after" text must be found exactly once. Change nothing else in the file.
 3. Run the gates. Commit the file and the 3.2 tick: `feat: stock table shows the product image`.
 
 ## Expected counts
-- After step 1: `Tests  1 failed | 211 passed (212)` (1 failed | base + 31 passed).
-- After step 2: `Tests  212 passed (212)` (base + 32).
+- After step 1: `Tests  1 failed | 212 passed (213)` (1 failed | base + 32 passed). Measured 2026-10-15.
+- After step 2: `Tests  213 passed (213)` (base + 33).
 
 ## Notes for this task
 - `ImageTile` comes from `apps/admin/src/image.tsx` (`../../image` from the route file). Do not write a new tile and do not look for one in `@shopperstop/ui`: it is not there yet.
