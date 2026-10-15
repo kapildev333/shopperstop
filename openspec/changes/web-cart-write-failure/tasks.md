@@ -26,5 +26,5 @@ Failing tests:
 - [x] 1.2 Decisions 2 to 5 (`feat: cart write failure message`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-cart-write-failure` after 1.2 lands.
+- [x] Team lead runs `/opsx:verify web-cart-write-failure` after 1.2 lands.
 - Area manager archives the change by PR after the feature PR merges.

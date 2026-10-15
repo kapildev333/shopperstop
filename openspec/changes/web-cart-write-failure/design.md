@@ -46,7 +46,7 @@ Why component state: web-cart Decision 10 keeps cart *data* out of component sta
 
 ### 3. `setLine`'s failure branch
 
-In the queued body, the existing `if (!answered.cart)` branch keeps its `invalidateQueries` and then returns:
+In the queued body, the existing `if (!answered.cart)` branch starts its `invalidateQueries` without awaiting it (review nit 2: the failure must not wait for the re-read, which takes as long again when core is down) and then returns:
 
 ```ts
 // A later tap on this line overtook this write: that one answers for the line.
@@ -100,6 +100,8 @@ Rejected: a test-only `Request` shim (it replaces a platform class to work aroun
 - A failure on the card while the drawer is open on the same line (impossible by hand: the drawer is modal) would show on the card only.
 - A 401 clears the token (middleware) and shows core's `unauthorized` message under the control; the `Stepper` then shows the guest count. Accepted: the customer learns the session ended.
 
+- The queue no longer waits for the re-read after a failed write, so a later write can run while that re-read is in flight. Benign: a later successful write `cancelQueries` it before caching core's answer, and a later failed write's `invalidateQueries` cancels and restarts it (TanStack Query's default `cancelRefetch`), so a stale re-read never overwrites a newer answer. If a write ever needs the re-read's result first, await it there.
+
 ## Tests
 
 Vitest only; jsdom shows all of it (the alert's role and text, the count, mount and unmount). No Playwright: nothing here is layout or real-network behaviour that jsdom cannot see.
@@ -112,7 +114,7 @@ Vitest only; jsdom shows all of it (the alert's role and text, the count, mount 
 | Overtaken change shows no failure | `src/cart.test.tsx` › "overtaken write shows no failure" |
 | Failed write in the drawer | `src/cart-drawer.test.tsx` › "failed write in the drawer" |
 
-"Overtaken write shows no failure" taps twice in one tick, so the first write is skipped at the top of its queued body; the `turn === mine` check at failure time (a tap made while the first write is in flight) is verified by reading: under jsdom the failing `fetch` settles too fast to tap between start and failure reliably, and without the check the same control would still end on the last write's result.
+"Overtaken write shows no failure" taps twice in one tick, so the first write is skipped at the top of its queued body. The `turn === mine` check at failure time is pinned by "overtaken in-flight write shows no failure" (`src/cart.test.tsx`, review nit 1): `fetch` holds each write until the test answers it, the second tap lands while the first is in flight. "failure shows before the cart re-read settles" holds the re-read open and expects the alert anyway.
 
 "Core cannot be reached" is the default `fetch` from `test-setup.ts` (Decision 5), so those tests need no stub of their own. The drawer test looks only `within(drawer)`: Home's own load failures are alerts outside it.
 
