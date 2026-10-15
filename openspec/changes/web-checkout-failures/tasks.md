@@ -23,5 +23,5 @@ Failing tests (`src/checkout.test.tsx`): "failed removal at checkout", "core can
 - [x] 1.2 Decisions 1 to 3 (`feat: checkout failures`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-checkout-failures` after 1.2 lands.
+- [x] Team lead runs `/opsx:verify web-checkout-failures` after 1.2 lands.
 - Area manager archives the change by PR after the feature PR merges.

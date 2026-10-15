@@ -81,6 +81,8 @@ Rejected: an idempotency key on `POST /orders` (a core change, and Context shows
 - When core stays unreachable, the alert and the link are all the customer gets; `/orders` will fail to load too until core is back. Nothing polls.
 - A second press after a committed placement is safe only because core locks and empties the cart in the placement transaction. If core ever keeps the cart after placement, an idempotency key becomes necessary (a core request then).
 - A removal that fails while core answers the re-read with a changed quantity unmarks the line, and the alert goes with it (the component unmounts); the line's new state is the answer.
+- After `internal` with an emptied cart, the page shows "Your cart is empty" for one render before `navigate('/orders')` lands (review R1 nit 1; the `cartEmptied` path does the same). Accepted.
+- Core's own 500 after a rollback is also `internal` and also reads "may have been placed" (review R1 nit 2): the client cannot tell a rolled-back 500 from a lost commit. Conservative; the copy never says the order failed, and the re-read cart (still full) plus the enabled button let the customer place it.
 - Two alerts can show at once (the out-of-stock refusal and a failed removal); each is under its own control.
 
 ## Tests
@@ -92,7 +94,7 @@ Vitest only, `src/checkout.test.tsx`. Core "cannot be reached" is `test-setup.ts
 | Customer cart write failure › Failed removal at checkout | "failed removal at checkout" (new) |
 | Customer checkout refusals › Placement fails | "placement fails" (changed: the second answer is `{ code: 'validation', field: 'addressId', message: 'unknown address' }` from the `send` prop, not the real request; green before and after) |
 | Customer checkout unconfirmed placement › Core cannot be reached at placement | "core cannot be reached at placement" (new; `send` is the real `postOrder`) |
-| Customer checkout unconfirmed placement › Unconfirmed placement that emptied the cart | "unconfirmed placement that emptied the cart" (new; `send` answers `internal`, `fetch` stubbed to answer `GET /me/cart` with the empty cart) |
+| Customer checkout unconfirmed placement › Unconfirmed placement that emptied the cart | "unconfirmed placement that emptied the cart" (new; `send` answers `internal`, `fetch` stubbed to answer `GET /me/cart` with the empty cart); the converse is pinned by "unconfirmed placement with the cart still full" (review R1 nit 3, 75b8156) |
 
 The other scenarios of the two MODIFIED requirements keep their landed tests unchanged.
 
