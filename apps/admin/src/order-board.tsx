@@ -32,8 +32,10 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   const board = useQuery(boardQuery(storeId))
   // What the last answer announced, and that answer. A failed poll brings no new answer, and an equal answer is the
   // same object (structural sharing), so neither announces anything; a changed answer with nothing new empties the region.
+  // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
+  // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
   const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
-  if (board.data && heard?.from !== board.data) {
+  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
     const known = new Set(heard?.from.map((order) => order.id))
     // The first answer is what the store already had: nothing in it is new.
     const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
@@ -57,11 +59,11 @@ export function OrderBoard({ storeId }: { storeId: string }) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-5 lg:gap-4">
           {activeStatuses.map((status) => {
-            // The longest waiting first.
-            const column = orders.filter((order) => order.status === status).sort((a, b) => a.placedAt.localeCompare(b.placedAt))
+            // The longest waiting first, by the time itself: core trims zeros, so the strings do not sort ("…00.5Z", "…00.25Z").
+            const column = orders.filter((order) => order.status === status).sort((a, b) => Date.parse(a.placedAt) - Date.parse(b.placedAt))
             return (
               <section key={status} aria-labelledby={`orders-${status}`} className="flex flex-col gap-3">
-                <h2 id={`orders-${status}`} className="flex items-center gap-2 text-h3 text-ink">
+                <h2 id={`orders-${status}`} aria-label={`${statusLabel[status]}, ${column.length === 1 ? '1 order' : `${column.length} orders`}`} className="flex items-center gap-2 text-h3 text-ink">
                   {statusLabel[status]}
                   <Badge className="tabular-nums">{column.length}</Badge>
                 </h2>
