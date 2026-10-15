@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import type { components } from '@shopperstop/ui/api'
-import { api, call, queryClient, type ApiError } from './api'
+import { api, call, queryClient, unreachable, type ApiError } from './api'
 import { useServiceability, type StoreProduct } from './catalog'
 import {
   cartView,
@@ -92,18 +92,28 @@ export function useCartQuantity(product: StoreProduct) {
   const pending = useAsked(storeId, product.id)
   const here = !!storeId && view?.storeId === storeId
   const cached = here ? (view?.items.find((line) => line.product.id === product.id)?.quantity ?? 0) : 0
-  return [
-    pending ?? cached,
-    (next: number) => {
-      if (storeId) void setLine(storeId, product, next)
-    },
-  ] as const
+  const [failure, write] = useLineWrite(storeId, product)
+  return [pending ?? cached, write, failure] as const
+}
+
+// The last failed write made from this control; it goes when the control is used again or unmounts.
+export function useLineWrite(storeId: string | undefined, product: CartProduct) {
+  const [failure, setFailure] = useState<string>()
+  const write = (quantity: number) => {
+    if (!storeId) return
+    setFailure(undefined)
+    void setLine(storeId, product, quantity).then((error) => setFailure(error?.message))
+  }
+  return [failure, write] as const
 }
 
 // Shows the asked count at once; caches core's whole answer when it lands: its items and storeId are the truth, whatever was sent.
-export async function setLine(storeId: string, product: CartProduct, quantity: number): Promise<void> {
+export async function setLine(storeId: string, product: CartProduct, quantity: number): Promise<ApiError | undefined> {
   const token = getToken()
-  if (!token) return dispatchGuest({ type: 'set', storeId, product, quantity })
+  if (!token) {
+    dispatchGuest({ type: 'set', storeId, product, quantity })
+    return undefined
+  }
   const key = lineKey(storeId, product.id)
   const mine = ++turn
   asked.set(key, { quantity, turn: mine })
@@ -114,18 +124,20 @@ export async function setLine(storeId: string, product: CartProduct, quantity: n
       if (asked.get(key)?.turn !== mine || getToken() !== token) return
       const previous = queryClient.getQueryData<CartView>(cartKey(token))?.storeId
       const answered: { cart?: CartUpdate } = {}
-      await call(async () => {
+      const error = await call(async () => {
         const result = await api.PUT('/me/cart/items', { body: { storeId, productId: product.id, quantity } })
         answered.cart = result.data
         return result
       })
       if (!answered.cart) {
         await queryClient.invalidateQueries({ queryKey: cartKey(token) })
-        return
+        // A later tap on this line overtook this write: that one answers for the line.
+        return asked.get(key)?.turn === mine ? (error ?? unreachable) : undefined
       }
       await queryClient.cancelQueries({ queryKey: cartKey(token) })
       const { cart } = answered
       queryClient.setQueryData(cartKey(token), cart.replaced ? { ...cart, replacedStoreId: previous } : cart)
+      return undefined
     } finally {
       if (asked.get(key)?.turn === mine) {
         asked.delete(key)

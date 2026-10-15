@@ -5,7 +5,7 @@ import { getToken, setToken, useToken } from './session'
 
 export type ApiError = components['schemas']['Error']['error']
 
-const unreachable: ApiError = { code: 'internal', message: 'Could not reach ShopperStop. Try again.' }
+export const unreachable: ApiError = { code: 'internal', message: 'Could not reach ShopperStop. Try again.' }
 
 function isEnvelope(body: unknown): boolean {
   const error = (body as { error?: { code?: unknown; message?: unknown } } | null)?.error
@@ -31,7 +31,11 @@ export const authMiddleware: Middleware = {
   },
 }
 
-export const api = createClient<paths>({ baseUrl: '/api/core/v1' })
+// Absolute same-origin URL: jsdom's Request rejects a relative one. fetch is looked up per call so tests can stub it.
+export const api = createClient<paths>({
+  baseUrl: `${location.origin}/api/core/v1`,
+  fetch: (request) => globalThis.fetch(request),
+})
 api.use(authMiddleware)
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

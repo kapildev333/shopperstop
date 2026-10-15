@@ -22,8 +22,8 @@ Failing tests:
 - `src/cart-write-failure.test.tsx`: "core's refusal is shown"
 - `src/cart-drawer.test.tsx`: "failed write in the drawer"
 
-- [ ] 1.1 The five tests committed (`test: cart write failure message`, then `test: core's refusal through the fetch seam`, design Decision 5); lint and typecheck green; Vitest shows the five new tests red and nothing else red
-- [ ] 1.2 Decisions 2 to 5 (`feat: cart write failure message`); all gates green
+- [x] 1.1 The five tests committed (`test: cart write failure message`, then `test: core's refusal through the fetch seam`, design Decision 5); lint and typecheck green; Vitest shows the five new tests red and nothing else red
+- [x] 1.2 Decisions 2 to 5 (`feat: cart write failure message`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-cart-write-failure` after 1.2 lands.

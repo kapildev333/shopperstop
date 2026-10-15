@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest'
 
-// api.ts captures globalThis.fetch when openapi-fetch creates the client, so the stub must be in place before auth.ts loads.
+// api.ts looks up globalThis.fetch per call, so the stub must be in place before auth.ts loads.
 vi.hoisted(() => {
   globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch
 })

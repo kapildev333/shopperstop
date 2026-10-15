@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ShoppingBasket } from 'lucide-react'
-import { Card, Price, Stepper } from '@shopperstop/ui'
+import { Card, ErrorBanner, Price, Stepper } from '@shopperstop/ui'
 import { useCartQuantity } from './cart'
 import type { StoreProduct } from './catalog'
 
@@ -20,7 +20,7 @@ export function ImageTile({ src }: { src?: string }) {
 }
 
 export function ProductCard({ product }: { product: StoreProduct }) {
-  const [quantity, setQuantity] = useCartQuantity(product)
+  const [quantity, setQuantity, failure] = useCartQuantity(product)
   return (
     <Card className="flex flex-col gap-2 p-3">
       <Link to="/p/$slug" params={{ slug: product.slug }} className="flex flex-col gap-2">
@@ -36,6 +36,7 @@ export function ProductCard({ product }: { product: StoreProduct }) {
           label={product.name}
           onChange={setQuantity}
         />
+        {failure && <ErrorBanner message={failure} />}
       </div>
     </Card>
   )
