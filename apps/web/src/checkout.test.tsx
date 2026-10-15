@@ -1,16 +1,18 @@
 import { act, screen, waitFor, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { queryClient } from './api'
 import { cartKey } from './cart'
 import { CheckoutPage } from './checkout'
 import { storeKey } from './cart-drawer'
 import { keys } from './catalog'
 import { orderKey, ordersKey, postOrder, type OrderResult } from './orders'
-import { cartView, type CartProduct, type CartView } from './guest-cart'
+import { cartView, emptyCart, type CartProduct, type CartView } from './guest-cart'
 import { setPincode } from './pincode'
 import { setToken } from './session'
 import { address, order, product, renderAt, renderInRouter, store, type Address, type Store } from './test-data'
+
+afterEach(() => vi.unstubAllGlobals())
 
 const koramangala = '00000000-0000-4000-8000-000000000401'
 const indiranagar = '00000000-0000-4000-8000-000000000402'
@@ -284,13 +286,10 @@ test('store closed at placement', async () => {
 
 test('placement fails', async () => {
   seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
-  let calls = 0
-  // The first answer is core's refusal; the second is the real request, which cannot reach core under jsdom.
-  const send = async (addressId: string) => {
-    calls += 1
-    if (calls === 1) return { error: { code: 'validation', message: 'below minimum', field: 'subtotal' } } satisfies OrderResult
-    return postOrder(addressId)
-  }
+  const { send, asked } = sender(
+    { error: { code: 'validation', message: 'below minimum', field: 'subtotal' } },
+    { error: { code: 'validation', message: 'unknown address', field: 'addressId' } },
+  )
   renderInRouter(<CheckoutPage send={send} />)
   await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
   expect(await screen.findByRole('alert')).toHaveTextContent("Your cart is below the store's minimum order.")
@@ -299,7 +298,7 @@ test('placement fails', async () => {
 
   await userEvent.click(placeButton())
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Could not place your order. Try again.'))
-  expect(calls).toBe(2)
+  expect(asked).toHaveLength(2)
   expect(placeButton()).toBeEnabled()
   expect(placeButton()).not.toHaveAttribute('aria-busy')
 })
@@ -364,4 +363,73 @@ test('a line is marked only while its quantity is the refused one', async () => 
   // TanStack delivers the observer update on a timer: the page is awaited, not read at once.
   await waitFor(() => expect(within(summary).queryByText('Only 2 left')).toBeNull())
   expect(within(summary).queryByRole('button', { name: 'Remove Amul Taaza' })).toBeNull()
+})
+
+test('failed removal at checkout', async () => {
+  const out = product({ id: '00000000-0000-4000-8000-000000000602', name: 'Amul Butter', slug: 'amul-butter', inStock: false, quantity: 0 })
+  seed({ lines: [[taaza, 4], [out, 1]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'out_of_stock', message: 'short', productIds: [out.id] } })
+  renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  const butterLine = () => within(summary).getByText('Amul Butter').closest('li') as HTMLElement
+  await userEvent.click(await within(summary).findByRole('button', { name: 'Remove Amul Butter' }))
+  // Core is not reached under jsdom: the removal's failure shows under the Butter line, not elsewhere.
+  expect(await within(butterLine()).findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  expect(within(butterLine()).getByText('Out of stock')).toBeInTheDocument()
+  expect(within(butterLine()).getByRole('button', { name: 'Remove Amul Butter' })).toBeInTheDocument()
+})
+
+test('core cannot be reached at placement', async () => {
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const router = renderInRouter(<CheckoutPage send={postOrder} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'We could not confirm your order. It may have been placed, so check Your orders before you place it again.',
+  )
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  expect(within(summary).getByRole('link', { name: 'Your orders' })).toHaveAttribute('href', '/orders')
+  expect(within(summary).getByText('Amul Taaza')).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/')
+  expect(placeButton()).toBeEnabled()
+  expect(placeButton()).not.toHaveAttribute('aria-busy')
+})
+
+test('unconfirmed placement that emptied the cart', async () => {
+  // Core placed the order but its answer was lost: the cart read again is empty.
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (new URL(request.url).pathname === '/api/core/v1/me/cart')
+      return new Response(JSON.stringify(cartView(emptyCart)), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    throw new TypeError('fetch failed')
+  })
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } })
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/orders'))
+})
+
+test('unconfirmed placement with the cart still full', async () => {
+  // Core's answer was lost and the cart read again still holds the line: the order is not known to have gone through.
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (new URL(request.url).pathname === '/api/core/v1/me/cart')
+      return new Response(JSON.stringify(cartView({ storeId: koramangala, items: [{ product: taaza, quantity: 4 }] })), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    throw new TypeError('fetch failed')
+  })
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } })
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'We could not confirm your order. It may have been placed, so check Your orders before you place it again.',
+  )
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  expect(within(summary).getByRole('link', { name: 'Your orders' })).toHaveAttribute('href', '/orders')
+  expect(within(summary).getByText('Amul Taaza')).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/')
+  expect(placeButton()).toBeEnabled()
+  expect(placeButton()).not.toHaveAttribute('aria-busy')
 })
