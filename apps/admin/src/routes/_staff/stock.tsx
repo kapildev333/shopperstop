@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
 import { api, type ApiError } from '../../api'
+import { ImageTile } from '../../image'
 import { cleanSearch, lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
@@ -109,6 +110,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   }
 
   const columns: Column<StockRow>[] = [
+    { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} className="w-10" /> },
     {
       key: 'product',
       header: 'Product',

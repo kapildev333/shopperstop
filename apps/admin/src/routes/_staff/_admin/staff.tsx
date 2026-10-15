@@ -16,6 +16,9 @@ function StaffUsers() {
   const list = users.data
   const storeItems = stores.data?.items
   const storeName = new Map(storeItems?.map((store) => [store.id, store.name]))
+  // The dialog diffs against the row as the list holds it now, so a refetch while it is open counts; the row as opened
+  // only when the list no longer holds it (a cut list that moved), so an edit never turns into a create.
+  const user = editing === 'new' ? undefined : editing && (list?.items.find((row) => row.id === editing.id) ?? editing)
 
   const columns: Column<Staff>[] = [
     {
@@ -70,8 +73,8 @@ function StaffUsers() {
       )}
       {editing && storeItems && (
         <StaffDialog
-          user={editing === 'new' ? undefined : editing}
-          self={editing !== 'new' && editing.id === me.id}
+          user={user}
+          self={user?.id === me.id}
           stores={storeItems}
           onClose={() => setEditing(undefined)}
         />
