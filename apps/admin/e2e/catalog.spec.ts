@@ -94,6 +94,7 @@ test('admin runs the catalog', async ({ page }) => {
 
   // Deleting the product takes its stock with it.
   await nav.getByRole('link', { name: 'Products' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Products' })).toBeVisible()
   await page.getByRole('searchbox', { name: 'Search' }).fill('e2e curd cup')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await products.getByRole('link', { name: 'E2E Curd Cup' }).click()
