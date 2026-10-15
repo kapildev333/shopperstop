@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import type { components } from '@shopperstop/ui/api'
 import { queryClient } from './api'
 import { cartKey, mergeGuestCart } from './cart'
@@ -12,6 +12,8 @@ import { setToken } from './session'
 import { product, renderInRouter, store } from './test-data'
 
 type Cart = components['schemas']['Cart']
+
+afterEach(() => vi.unstubAllGlobals())
 
 const koramangala = '00000000-0000-4000-8000-000000000401'
 const indiranagar = '00000000-0000-4000-8000-000000000402'
@@ -126,4 +128,100 @@ test('merge queued behind a session change leaves the guest cart', async () => {
   setToken('b')
   await merging
   expect(getGuestCart().items).toHaveLength(1)
+})
+
+test('failed write tells the customer', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  expect(shownCount()).toBe(1)
+})
+
+test('next tap clears the failure', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+})
+
+test('overtaken write shows no failure', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  await screen.findByRole('button', { name: 'Add one Amul Taaza' })
+  // Two taps in one tick: the first write is overtaken and skipped; the second one's failure is the one shown.
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(shownCount()).toBe(1))
+  await screen.findByRole('alert')
+  expect(screen.getAllByRole('alert')).toHaveLength(1)
+})
+
+// Core answers the cart read at once and holds every write until the test answers it.
+function holdWrites() {
+  const writes: ((answer: Response) => void)[] = []
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (request.method === 'GET') {
+      return new Response(JSON.stringify(serverCart(koramangala, 1)), { headers: { 'Content-Type': 'application/json' } })
+    }
+    return new Promise<Response>((resolve) => writes.push(resolve))
+  })
+  return writes
+}
+
+test('overtaken in-flight write shows no failure', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  const writes = holdWrites()
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(writes).toHaveLength(1))
+  // The second tap lands while the first write is in flight: that tap's write answers for the line.
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  writes[0](
+    new Response(JSON.stringify({ error: { code: 'validation', field: 'productId', message: 'product not available' } }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+  // The second write goes out only once the first has settled, so no alert may show by then.
+  await waitFor(() => expect(writes).toHaveLength(2))
+  expect(screen.queryByRole('alert')).toBeNull()
+  writes[1](
+    new Response(JSON.stringify({ ...serverCart(koramangala, 3), clamped: false, replaced: false }), {
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+  await waitFor(() => expect(shownCount()).toBe(3))
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('failure shows before the cart re-read settles', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  // Core cannot be reached for the write, and the re-read that follows it is held open until the test releases it.
+  let releaseRead = () => {}
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (request.method === 'GET') {
+      return new Promise<Response>((_, reject) => {
+        releaseRead = () => reject(new TypeError('fetch failed'))
+      })
+    }
+    throw new TypeError('fetch failed')
+  })
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  releaseRead()
 })

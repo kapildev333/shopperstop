@@ -14,7 +14,7 @@ import {
   cn,
   formatInr,
 } from '@shopperstop/ui'
-import { setLine, useAsked, useCart } from './cart'
+import { useAsked, useCart, useLineWrite } from './cart'
 import { keys, useStore } from './catalog'
 import { itemCount, maxQuantity, type CartLine, type CartView } from './guest-cart'
 import { ImageTile } from './product-card'
@@ -186,28 +186,27 @@ function SummaryRow({ label, className, children }: { label: string; className?:
 function CartLineRow({ storeId, line }: { storeId: string; line: CartLine }) {
   const { product, quantity } = line
   const pending = useAsked(storeId, product.id)
+  const [failure, write] = useLineWrite(storeId, product)
   const max = maxQuantity(product)
   return (
-    <li className="flex items-center gap-3 py-3">
-      <div className="w-14 shrink-0">
-        <ImageTile src={product.imageUrl} />
+    <li className="flex flex-col gap-2 py-3">
+      <div className="flex items-center gap-3">
+        <div className="w-14 shrink-0">
+          <ImageTile src={product.imageUrl} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-semibold text-ink">{product.name}</p>
+          <p className="text-small text-ink-muted">{product.unitLabel}</p>
+          <Price cents={product.priceCents} mrpCents={product.mrpCents} />
+        </div>
+        <Stepper value={pending ?? quantity} max={max} label={product.name} onChange={write} />
+        {max === 0 && (
+          <Button variant="ghost-danger" aria-label={`Remove ${product.name}`} onClick={() => write(0)}>
+            Remove
+          </Button>
+        )}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-body font-semibold text-ink">{product.name}</p>
-        <p className="text-small text-ink-muted">{product.unitLabel}</p>
-        <Price cents={product.priceCents} mrpCents={product.mrpCents} />
-      </div>
-      <Stepper
-        value={pending ?? quantity}
-        max={max}
-        label={product.name}
-        onChange={(next) => void setLine(storeId, product, next)}
-      />
-      {max === 0 && (
-        <Button variant="ghost-danger" aria-label={`Remove ${product.name}`} onClick={() => void setLine(storeId, product, 0)}>
-          Remove
-        </Button>
-      )}
+      {failure && <ErrorBanner message={failure} />}
     </li>
   )
 }

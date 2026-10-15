@@ -57,7 +57,7 @@ function ProductContent({ storeId, slug }: { storeId: string; slug: string }) {
 }
 
 function ProductDetail({ product }: { product: StoreProduct }) {
-  const [quantity, setQuantity] = useCartQuantity(product)
+  const [quantity, setQuantity, failure] = useCartQuantity(product)
   const saving = product.mrpCents - product.priceCents
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -78,6 +78,7 @@ function ProductDetail({ product }: { product: StoreProduct }) {
         <div>
           <Stepper value={quantity} max={product.inStock ? product.quantity : 0} label={product.name} onChange={setQuantity} />
         </div>
+        {failure && <ErrorBanner message={failure} />}
         {product.description && <p className="text-body text-ink">{product.description}</p>}
       </Card>
     </div>
