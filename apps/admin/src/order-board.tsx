@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage } from '@shopperstop/ui'
 import { idle } from './idle'
-import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, statusLabel, useSetStatus, useSince, type Order } from './orders'
+import { OrderSheet } from './order-sheet'
+import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, useSince, type Order } from './orders'
 
 
 // Its own component, so a minute passing renders this text and nothing else on the board.
@@ -14,11 +15,11 @@ function Since({ at }: { at: string }) {
   )
 }
 
-function OrderCard({ order, busy, saving, onNext }: { order: Order; busy: boolean; saving: boolean; onNext: () => void }) {
+function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy: boolean; saving: boolean; onNext: () => void; onOpen: () => void }) {
   return (
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span id={`number-${order.id}`} className="font-semibold text-ink tabular-nums">{order.number}</span>
+        <Button variant="ghost" id={`number-${order.id}`} className="tabular-nums" onClick={onOpen}>{order.number}</Button>
         <Since at={order.placedAt} />
       </div>
       <p className="text-small text-ink">
@@ -54,6 +55,8 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   // One status change at a time on a board: while one runs, every card's button waits.
   const move = useSetStatus(storeId)
   const [confirm, setConfirm] = useState<Order>()
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState<string>()
   const result = useRef<HTMLDivElement>(null)
   const moved = move.data?.order
   // The pressed button went with the card's old place. If that left the keyboard nowhere, go to the card's new button,
@@ -61,6 +64,12 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   useEffect(() => {
     if (moved && document.activeElement === document.body) (document.getElementById(`next-${moved.id}`) ?? result.current)?.focus()
   }, [moved])
+
+  // The sheet starts from the card, the newest this page knows of the order, and reads the order itself from there.
+  function show(order: Order) {
+    queryClient.setQueryData(orderQuery(order.id).queryKey, order)
+    setOpen(order.id)
+  }
 
   function advance(order: Order) {
     if (move.isPending || !isActive(order.status)) return
@@ -112,7 +121,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
                   <ul className="flex flex-col gap-3">
                     {column.map((order) => (
                       <li key={order.id}>
-                        <OrderCard order={order} busy={move.isPending} saving={move.isPending && move.variables.order.id === order.id} onNext={() => advance(order)} />
+                        <OrderCard order={order} busy={move.isPending} saving={move.isPending && move.variables.order.id === order.id} onNext={() => advance(order)} onOpen={() => show(order)} />
                       </li>
                     ))}
                   </ul>
@@ -122,6 +131,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
           })}
         </div>
       )}
+      {open && <OrderSheet orderId={open} onClose={() => setOpen(undefined)} />}
       <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={confirm ? `Mark ${confirm.number} delivered?` : ''}>
         <p className="mt-2 text-body text-ink">This finishes the order. It cannot be taken back.</p>
         <DialogFooter onCancel={() => setConfirm(undefined)}>

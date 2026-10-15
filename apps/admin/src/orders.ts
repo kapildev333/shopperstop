@@ -48,6 +48,23 @@ export const boardQuery = (storeId: string) =>
     refetchInterval: pollMs,
   })
 
+// One order is ['admin', 'order', id]: not under a store's lists, so dropping those never empties an open sheet.
+// The sheet follows the order like the board does.
+export const orderQuery = (id: string) =>
+  queryOptions({
+    queryKey: ['admin', 'order', id],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/admin/orders/{id}', { params: { path: { id } } })
+      if (error) throw error.error
+      return data
+    },
+    refetchInterval: pollMs,
+  })
+
+// D28, as on the customer site: an order under way is `accent`, delivered `success`, cancelled `neutral`; the badge
+// always carries the status as text, and a status is never `danger` or `warning`.
+export const statusBadge = (status: OrderStatus) => (status === 'delivered' ? 'success' : status === 'cancelled' ? 'neutral' : 'accent')
+
 // A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
 // customer cancelled): the order is then read again, so the page can show where it stands and say so.
 export function useSetStatus(storeId: string) {
@@ -67,6 +84,9 @@ export function useSetStatus(storeId: string) {
       // A poll still in the air was read before this answer: drop it, or it would put the card back where it was.
       await queryClient.cancelQueries({ queryKey: board })
       queryClient.setQueryData(board, (orders) => orders && [...orders.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])])
+      const detail = orderQuery(order.id).queryKey
+      await queryClient.cancelQueries({ queryKey: detail })
+      queryClient.setQueryData(detail, order)
     },
   })
 }
@@ -84,6 +104,10 @@ function everyFewSeconds(tick: () => void) {
   return () => clearInterval(id)
 }
 export const useSince = (placedAt: string) => useSyncExternalStore(everyFewSeconds, () => since(placedAt, Date.now()))
+
+// "13 Oct 2026, 2:50 pm", in the stores' time zone whatever the browser's is.
+const stamp = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })
+export const when = (at: string) => stamp.format(new Date(at))
 
 export function itemCount(order: Order) {
   const count = order.items.reduce((sum, item) => sum + item.quantity, 0)
