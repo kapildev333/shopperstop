@@ -10,7 +10,8 @@ Measured (2026-10-13, Node 22.23.3, `npm ci` at the root):
 - On main's `apps/admin/src` (1699afa, with L7) laid under the same spike: base 180; the final tree `212 passed (212)` in 19 files with the refetch test as written below; lint and typecheck clean. The two edits to `src/routes/_staff/stock.tsx` applied to main's file with `git apply --check` clean.
 - Stage by stage (on 04e68ca): task 1 tests alone `7 failed | 161 passed (168)`, with its code `168 passed`; task 2 tests `23 failed | 168 passed (191)`, with its code `191 passed`; task 3 test `1 failed | 191 passed (192)`, with its code `192 passed`.
 - 32 mutation guards (below), each applied to the final tree, run and restored.
-- Re-measured 2026-10-15 for task 2 after review R1 of task 1, on the branch rebased onto 56be587 with task 1 landed (base 180, task 1 green at `188 passed (188)`): task 2's test step `24 failed | 188 passed (212)` (the 23 dialog tests and the one R1-1 table test, each red for its missing button or for the alert), with its code `212 passed (212)`; task 3's test `1 failed | 212 passed (213)`, with its code `213 passed (213)`; lint, typecheck and build of `apps/admin` clean after task 2 alone; `make test-web` exit 0 on the final tree (ui 54, admin 213, web 140). Guards 33 and 34 below were run on that tree. Spike reverted.
+- Re-measured 2026-10-15 for task 2 after review R1 of task 1, on the branch rebased onto 56be587 with task 1 landed (base 180, task 1 green at `188 passed (188)`): task 2's test step `24 failed | 188 passed (212)` (the 23 dialog tests and the one R1-1 table test, each red for its missing button or for the alert), with its code `212 passed (212)`; task 3's test `1 failed | 212 passed (213)`, with its code `213 passed (213)` (superseded by the next line: task 3 now carries R2-1); lint, typecheck and build of `apps/admin` clean after task 2 alone; `make test-web` exit 0 on the final tree (ui 54, admin 213, web 140). Guards 33 and 34 below were run on that tree. Spike reverted.
+- Re-measured 2026-10-15 for task 3 after review R2 of task 2 (R2-1 folded in, Decision 22), on the branch at ade7525 with task 2 landed (`212 passed (212)`): task 3's test step (the stock test and the two R2-1 tests) `2 failed | 213 passed (215)` (the stock test for its missing column, the refetch test because no `PATCH` is sent; the row-gone test green), with its code `215 passed (215)`; `make test-web` exit 0 (ui 54, admin 215, web 140; lint, typecheck and build clean); guards 35 and 36 run on that tree. Spike reverted.
 - e2e: `e2e/staff.spec.ts` as written, and the stretch added to `e2e/catalog.spec.ts` (the lines of the edit plus the delete steps after them, on a product the fake already held), each passed once, axe clean, in Chromium against a scratch `vite preview` on port 25174 with a `page.route` fake of core. Nothing has run against the real core: that is task 4, the manager's e2e slot.
 
 ## Assumptions (read in the code on 04e68ca)
@@ -59,6 +60,7 @@ Decisions 2 to 5 are the ones the manager asked to be decided and recorded (D13:
 20. **Sign-ins per admin e2e run** (A8). On main today: admin 4 (`auth`, `catalog`, `stock`, `stores`), `koramangala@` 3, `nobody@` 1. This change adds admin 1 and `e2e-staff@` 1 (`staff.spec.ts`); the catalog stretch adds none. Total: admin 5, `koramangala@` 3, `nobody@` 1, `e2e-staff@` 1, ten in all from one IP. With admin-P2-L5 as designed (admin 2, `koramangala@` 1): admin 7, `koramangala@` 4, thirteen in all. One run fits the 10 per email; a second run against the same core process does not (admin 14), as today. Upgrade path if a lane needs more: one signed-in `storageState` shared by the admin specs.
 
 21. **Review R1 of task 1 is folded into task 2, not a fix commit of its own** (manager's call, D13). R1-1 (alert only for a read that failed holding nothing) changes one line of the `staff.tsx` that task 2 replaces whole anyway, and its test is appended to `src/staff.test.tsx`; R1-2 (lowercased emails) is a two-line edit in `src/staff.ts` and one in `src/staff-fake.ts`, and the create test types `Jaya@example.test`, which a code-unit sort puts first. Both tests join task 2's `test:` commit; the `feat:` commit carries both fixes. Task 1's eight tests stay as they are.
+22. **Review R2 of task 2: R2-1 is folded into task 3, R2-2 is accepted** (manager's call, D13). R2-1: the page held the row as it was when "Edit" was pressed, so a background refetch that changed that user while the dialog was open (another admin deactivates them) left `changes()` diffing against old data: "Active" shown, untouched, sent nothing and core kept the user inactive. Now the page still holds the opened row but uses it for its id and as a fallback only, and hands the dialog the row as `list` holds it at each render (`find` by id), so Save makes the user what the dialog shows. The form's own state is not reset by a refetch: what the admin sees and typed stays, and wins (last write wins; core has no version to compare). If the list no longer holds the row (only a list cut at 100 that moved under it: core deletes no staff user), the dialog stays on the row as opened, and its save goes to core by id; the answer puts the row back into the list (`withStaff`). Rejected: closing the dialog when the row goes, which drops what was typed and lets a save still running close whatever dialog is open by then; resetting the form on every refetch, which throws away typing. Two tests in `src/staff-dialog.test.tsx`, guards 35 and 36. R2-2 (the "Edit" text with the `aria-label` "Edit <email>", label-in-name; `staff.spec.ts` counts three "Edit" buttons) needs nothing: the row keeps exactly one button.
 
 ## Files (all under `apps/admin/`)
 | File | Task | Change |
@@ -68,8 +70,8 @@ Decisions 2 to 5 are the ones the manager asked to be decided and recorded (D13:
 | `src/staff-fake.ts` (new, test-only) | 1, 2 | fixtures `indu`, `kiran`, `createdId`, the stateful `staffCore`; task 2 makes its order case-blind |
 | `src/staff.test.tsx` (new) | 1, 2 | 8 tests; task 2 appends one (R1-1) and edits two imports |
 | `src/staff.ts` (new) | 1, 2 | `staffUsersQuery`, `pageSize`, `roleNames`, `withStaff`; task 2 lowercases its compare |
-| `src/routes/_staff/_admin/staff.tsx` | 1, 2 | the placeholder replaced by the table (task 1), then replaced whole with the button, the "Actions" column, the dialog and the R1-1 gate (task 2) |
-| `src/staff-dialog.test.tsx` (new) | 2 | 23 tests |
+| `src/routes/_staff/_admin/staff.tsx` | 1, 2, 3 | the placeholder replaced by the table (task 1), then replaced whole with the button, the "Actions" column, the dialog and the R1-1 gate (task 2); task 3 hands the dialog the row as the list holds it (R2-1: one insertion, one replacement) |
+| `src/staff-dialog.test.tsx` (new) | 2, 3 | 23 tests; task 3 appends two (R2-1) and edits two imports |
 | `src/staff-dialog.tsx` (new) | 2 | `StaffDialog` |
 | `src/stock.test.tsx` | 3 | one test appended |
 | `src/routes/_staff/stock.tsx` | 3 | two inserted lines |
@@ -114,6 +116,8 @@ Files: T `src/staff.test.tsx`, D `src/staff-dialog.test.tsx`, K `src/stock.test.
 | Staff user change › Change the name | D "edit shows what cannot change as text, sends only the changed name and shows core's answer in the row" |
 | Staff user change › Deactivate and activate | D "deactivate and activate: Status is sent alone and the row follows core's answer" |
 | Staff user change › Nothing changed | D "Save changes with nothing changed closes the dialog without a request" |
+| Staff user changed while its dialog is open › Row changed while the dialog is open | D "a row changed by a refetch while its dialog is open: the save sends what the dialog shows, against the row as it is now" (task 3, R2-1) |
+| Staff user changed while its dialog is open › Row gone from the list while the dialog is open | D "a row gone from the list while its dialog is open keeps the dialog on the row as opened" (task 3; green when written, guards the fallback) |
 | Staff user own account › Own dialog | D "an admin's own dialog has no Status field, and a saved name shows in the row and the banner" |
 | Staff user own account › Another user's dialog | D "another staff user's dialog has the Status field and no own-account line" |
 | Staff user form errors › Validation error on a field | D "a validation error from core on %s is shown on its field" (4 runs) |
@@ -174,6 +178,8 @@ Test names say behaviour. Rows are found through their "Edit <email>" button; fi
 | 32 | same | the tile without `src` | K "each stock row starts with…" |
 | 33 | `routes/…/staff.tsx` (task 2) | the alert test back to `users.isError \|\| stores.isError` | T "a refetch of the staff users that fails while the stores still load…" (measured: 1 failed of the 32 staff tests) |
 | 34 | `staff.ts` (task 2) | `key` without `toLowerCase()` | D "create a store-staff user…" (measured: 1 failed of the 32 staff tests) |
+| 35 | `routes/…/staff.tsx` (task 3) | `user` is the row as opened (`… : editing && editing`) | D "a row changed by a refetch while its dialog is open…" (measured: 1 failed of the 34 staff tests) |
+| 36 | same | no fallback (`?? editing` removed) | D "a row gone from the list while its dialog is open…" (measured: 1 failed of the 34 staff tests; the dialog turns into "New staff user") |
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
 Paths are under `apps/admin/`. A block marked NEW FILE or REPLACE WHOLE is the whole file. An EDIT is one insertion: the "after" text occurs exactly once in the file; put the "insert" lines directly after it and change nothing else. An EDIT that says "Replace" swaps the given lines, found exactly once, for the "with" lines and changes nothing else.
@@ -1295,9 +1301,9 @@ function StaffUsers() {
 export const Route = createFileRoute('/_staff/_admin/staff')({ component: StaffUsers })
 ```
 
-### Task 3: the stock table's image column
+### Task 3: the stock table's image column, and the dialog edits the row as the list holds it (R2-1)
 
-#### APPEND to `src/stock.test.tsx` (step 1, `test: stock product image`): after the last line of the file, one empty line, then
+#### APPEND to `src/stock.test.tsx` (step 1, `test: stock product image; staff row changed while its dialog is open`): after the last line of the file, one empty line, then
 ```tsx
 test('each stock row starts with the product\'s image as a tile, a placeholder when it has none', async () => {
   setToken('tok')
@@ -1317,7 +1323,74 @@ test('each stock row starts with the product\'s image as a tile, a placeholder w
 })
 ```
 
-#### EDIT 1 `src/routes/_staff/stock.tsx`: the import (step 2, `feat: stock table shows the product image`)
+#### EDIT 3 `src/staff-dialog.test.tsx`: the testing-library import (step 1, same commit as the stock test; R2-1)
+Replace:
+```tsx
+import { screen, waitFor, within } from '@testing-library/react'
+```
+with:
+```tsx
+import { act, screen, waitFor, within } from '@testing-library/react'
+```
+
+#### EDIT 4 `src/staff-dialog.test.tsx`: the query import (same commit)
+After:
+```tsx
+import { renderApp } from './render-app'
+```
+insert:
+```tsx
+import { staffUsersQuery } from './staff'
+```
+
+#### APPEND to `src/staff-dialog.test.tsx` (same commit): after the last line of the file, one empty line, then
+```tsx
+test('a row changed by a refetch while its dialog is open: the save sends what the dialog shows, against the row as it is now', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let read = core.routes['GET /admin/staff-users']
+  const calls = fakeCore({ ...core.routes, 'GET /admin/staff-users': (request) => read(request) })
+
+  const router = renderApp('/staff')
+  const dialog = await openEdit(kiran.email, kiran.name)
+  // Another admin deactivates Kiran meanwhile; a background read brings it while the dialog is open.
+  read = () => json(200, { items: [admin, indu, { ...kiran, isActive: false }], page: 1, pageSize: 100, total: 3 })
+  await act(() => router.options.context.queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey }))
+  await waitFor(() => expect(within(row(kiran.email)).getByText('Inactive')).toBeInTheDocument())
+  expect(within(dialog).getByLabelText('Status')).toHaveValue('active')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(sent(calls, 'PATCH')).toHaveLength(1)
+  expect(await sent(calls, 'PATCH')[0].json()).toEqual({ isActive: true })
+  expect(within(row(kiran.email)).getByText('Active')).toBeInTheDocument()
+})
+
+test('a row gone from the list while its dialog is open keeps the dialog on the row as opened', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let read = core.routes['GET /admin/staff-users']
+  const calls = fakeCore({ ...core.routes, 'GET /admin/staff-users': (request) => read(request) })
+
+  const router = renderApp('/staff')
+  const dialog = await openEdit(kiran.email, kiran.name)
+  read = () => json(200, { items: [admin, indu], page: 1, pageSize: 100, total: 2 })
+  await act(() => router.options.context.queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: `Edit ${kiran.email}` })).not.toBeInTheDocument())
+  expect(screen.getByRole('dialog', { name: `Edit ${kiran.name}` })).toBe(dialog)
+  expect(within(dialog).queryByLabelText('Email')).not.toBeInTheDocument()
+  await userEvent.type(within(dialog).getByLabelText('Name'), ' Jr')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(new URL(sent(calls, 'PATCH')[0].url).pathname).toBe(`/api/core/v1/admin/staff-users/${kiran.id}`)
+  expect(await sent(calls, 'PATCH')[0].json()).toEqual({ name: 'Kiran Rao Jr' })
+  expect(within(row(kiran.email)).getByText('Kiran Rao Jr')).toBeInTheDocument()
+})
+```
+The first test is red until EDIT 5 and EDIT 6 (no `PATCH` is sent: the dialog diffs against the row as opened); the second is green when written (the row as opened already keeps the dialog) and guards EDIT 5's fallback.
+
+#### EDIT 1 `src/routes/_staff/stock.tsx`: the import (step 2, `feat: stock image column; the staff dialog edits the row as the list holds it`)
 After:
 ```tsx
 import { api, type ApiError } from '../../api'
@@ -1335,6 +1408,30 @@ After:
 insert:
 ```tsx
     { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} className="w-10" /> },
+```
+
+#### EDIT 5 `src/routes/_staff/_admin/staff.tsx`: the row the dialog edits (same commit as the stock column; R2-1)
+After:
+```tsx
+  const storeName = new Map(storeItems?.map((store) => [store.id, store.name]))
+```
+insert:
+```tsx
+  // The dialog diffs against the row as the list holds it now, so a refetch while it is open counts; the row as opened
+  // only when the list no longer holds it (a cut list that moved), so an edit never turns into a create.
+  const user = editing === 'new' ? undefined : editing && (list?.items.find((row) => row.id === editing.id) ?? editing)
+```
+
+#### EDIT 6 `src/routes/_staff/_admin/staff.tsx`: the dialog's props (same commit)
+Replace:
+```tsx
+          user={editing === 'new' ? undefined : editing}
+          self={editing !== 'new' && editing.id === me.id}
+```
+with:
+```tsx
+          user={user}
+          self={user?.id === me.id}
 ```
 
 ### Task 4
@@ -1357,6 +1454,7 @@ No code: the manager's `make e2e`. See `briefs/task-4.md`.
 - `idle` exists once more (here, `stock.tsx`, and L5's `src/idle.ts`) until a follow-up or ui's `Button` takes it (Decision 13).
 - The created e2e staff user stays, inactive, until the next reset (Decision 19).
 - The Edit dialog shows the role but not the store's name next to it (the row behind it does).
+- A change made elsewhere while a dialog is open is overwritten by what the dialog shows (last write wins; core has no version check), and a row that leaves a cut list mid-edit is edited as it was opened (Decision 22).
 - No e2e for the taken email or a refused password: Vitest covers the page's side, core's tests cover core's.
 
 ## Migration Plan

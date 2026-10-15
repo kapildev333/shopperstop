@@ -78,6 +78,17 @@ The "New staff user" button SHALL open a dialog titled "New staff user" with "Na
 - **WHEN** an admin opens "Edit", moves "Status" to "Inactive" and back, and presses "Save changes"
 - **THEN** the dialog closes and no `PATCH` was sent
 
+### Requirement: Staff user changed while its dialog is open
+The "Edit" dialog SHALL compare what it shows with the row as the list holds it when "Save changes" is pressed, so a background read that changed the user while the dialog was open counts, and the form SHALL keep what it shows. When the list no longer holds the row, the dialog SHALL stay on the row as it was opened and save it by its id.
+
+#### Scenario: Row changed while the dialog is open
+- **WHEN** an admin opens "Edit" on the active Kiran Rao, a background read then says Kiran Rao is inactive, and the admin presses "Save changes" with "Status" still on "Active"
+- **THEN** the row showed "Inactive" while "Status" stayed on "Active"; core got `{"isActive":true}`; and the row shows "Active" from core's answer
+
+#### Scenario: Row gone from the list while the dialog is open
+- **WHEN** an admin opens "Edit" on Kiran Rao, a background read no longer holds Kiran Rao, and the admin adds ` Jr` to the name and saves
+- **THEN** the dialog stayed "Edit Kiran Rao" with no "Email" field; core got `{"name":"Kiran Rao Jr"}` at Kiran Rao's id; and the row is back with `Kiran Rao Jr`
+
 ### Requirement: Staff user own account
 In the dialog of the signed-in admin's own row the panel SHALL NOT offer "Status" and SHALL show "You cannot deactivate your own account."; every other row's dialog SHALL offer "Status" and not show that line. When the admin saves their own name, the banner SHALL show the saved name without another `GET /admin/me`.
 
