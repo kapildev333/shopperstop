@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
 	"github.com/kapildev333/shopperstop/services/core/internal/blob"
 )
@@ -492,5 +494,132 @@ func TestStaffSignInValidation(t *testing.T) {
 		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
 			t.Fatalf("%s: got %d %s, want 400 validation field %s", c.name, status, body, c.field)
 		}
+	}
+}
+
+// onlyActiveAdmins deactivates every active admin whose email is not in keep,
+// and reactivates them when the test ends.
+func onlyActiveAdmins(t *testing.T, keep ...string) {
+	t.Helper()
+	ctx := context.Background()
+	rows, err := testPool.Query(ctx,
+		"update staff_users set is_active = false where role = 'admin' and is_active and email::text <> all($1::text[]) returning id", keep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := testPool.Exec(ctx, "update staff_users set is_active = true where id = any($1)", ids); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+// activeAdmins counts the active admins.
+func activeAdmins(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := testPool.QueryRow(context.Background(), "select count(*) from staff_users where role = 'admin' and is_active").Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// TestDeactivateLastActiveAdmin: the only active admin cannot deactivate
+// themself, whether the patch also renames them or names the id in upper case,
+// and the refused patch changes nothing.
+func TestDeactivateLastActiveAdmin(t *testing.T) {
+	a := insertStaff(t, "admin", true)
+	onlyActiveAdmins(t, a)
+	token := staffSignIn(t, a)
+	id := staffID(t, a)
+	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+id, token, map[string]any{"name": "Renamed", "isActive": false})
+	if e := decodeError(t, body); status != http.StatusConflict || e.Error.Code != "conflict" || e.Error.Field != "isActive" {
+		t.Fatalf("last admin self-deactivation: got %d %s, want 409 conflict field isActive", status, body)
+	}
+	status, body = call(t, http.MethodPatch, staffUsersPath+"/"+strings.ToUpper(id), token, map[string]bool{"isActive": false})
+	if e := decodeError(t, body); status != http.StatusConflict || e.Error.Code != "conflict" {
+		t.Fatalf("upper-case id: got %d %s, want 409 conflict", status, body)
+	}
+	status, body = call(t, http.MethodGet, "/api/core/v1/admin/me", token, nil)
+	var me staffView
+	if status != http.StatusOK || json.Unmarshal(body, &me) != nil || !me.IsActive || me.Name != "Staff" {
+		t.Fatalf("GET /admin/me after the refusals: got %d %s, want 200 active with the old name Staff", status, body)
+	}
+}
+
+// TestDeactivateOneOfTwoAdmins: with two active admins, one may deactivate the other.
+func TestDeactivateOneOfTwoAdmins(t *testing.T) {
+	a := insertStaff(t, "admin", true)
+	b := insertStaff(t, "admin", true)
+	onlyActiveAdmins(t, a, b)
+	token := staffSignIn(t, a)
+	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, b), token, map[string]bool{"isActive": false})
+	if got := staffUserBody(t, body); status != http.StatusOK || got.IsActive {
+		t.Fatalf("deactivate one of two admins: got %d %s, want 200 with isActive false", status, body)
+	}
+}
+
+// TestAdminsDeactivateEachOtherAtOnce: two admins deactivate each other at the
+// same moment. Exactly one succeeds, the other is refused, and one admin stays
+// active. Twenty rounds, as TestCartSetSurvivesConcurrentRemoval does.
+func TestAdminsDeactivateEachOtherAtOnce(t *testing.T) {
+	// refused is the 409 the guard answers, or the 401 a session ended by the winner answers.
+	refused := func(status int, body []byte) bool {
+		e := decodeError(t, body)
+		return (status == http.StatusConflict && e.Error.Code == "conflict") ||
+			(status == http.StatusUnauthorized && e.Error.Code == "unauthorized")
+	}
+	for range 20 {
+		a := insertStaff(t, "admin", true)
+		b := insertStaff(t, "admin", true)
+		onlyActiveAdmins(t, a, b)
+		tokenA := staffSignIn(t, a)
+		tokenB := staffSignIn(t, b)
+		idA, idB := staffID(t, a), staffID(t, b)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		var statusA, statusB int
+		var bodyA, bodyB []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			statusA, bodyA = call(t, http.MethodPatch, staffUsersPath+"/"+idB, tokenA, map[string]bool{"isActive": false})
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			statusB, bodyB = call(t, http.MethodPatch, staffUsersPath+"/"+idA, tokenB, map[string]bool{"isActive": false})
+		}()
+		close(start)
+		wg.Wait()
+		okA, okB := statusA == http.StatusOK, statusB == http.StatusOK
+		if okA == okB || (!okA && !refused(statusA, bodyA)) || (!okB && !refused(statusB, bodyB)) || activeAdmins(t) != 1 {
+			t.Fatalf("A deactivates B: %d %s; B deactivates A: %d %s; active admins %d, want one 200, one refusal, one admin left",
+				statusA, bodyA, statusB, bodyB, activeAdmins(t))
+		}
+	}
+}
+
+// TestLastAdminDeactivatesStaffAndInactive: the guard only covers the last
+// active admin. Store staff, and an admin who is already inactive, are not guarded.
+func TestLastAdminDeactivatesStaffAndInactive(t *testing.T) {
+	a := insertStaff(t, "admin", true)
+	onlyActiveAdmins(t, a)
+	token := staffSignIn(t, a)
+	s := insertStaff(t, "store_staff", true)
+	i := insertStaff(t, "admin", false)
+	for _, email := range []string{s, i} {
+		status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), token, map[string]bool{"isActive": false})
+		if got := staffUserBody(t, body); status != http.StatusOK || got.IsActive {
+			t.Fatalf("deactivate %s as the last admin: got %d %s, want 200 with isActive false", email, status, body)
+		}
+	}
+	if n := activeAdmins(t); n != 1 {
+		t.Fatalf("active admins: %d, want 1", n)
 	}
 }
