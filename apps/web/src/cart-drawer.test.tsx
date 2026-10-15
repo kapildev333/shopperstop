@@ -274,3 +274,18 @@ test('clamp notice above the lines', async () => {
   const list = within(drawer).getByRole('list')
   expect(notice.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
+
+test('failed write in the drawer', async () => {
+  resolveStore()
+  seedServerCart([[taaza, 1]])
+  await renderShell()
+  const drawer = openDrawer()
+  fireEvent.click(within(drawer).getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(await within(drawer).findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  expect(within(drawer).getByRole('group', { name: 'Quantity of Amul Taaza' })).toHaveTextContent(/^1$/)
+  // Closing and reopening the drawer clears the failure: it lived in the line's state.
+  await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Your cart' })).toBeNull())
+  const reopened = openDrawer()
+  expect(within(reopened).queryByRole('alert')).toBeNull()
+})

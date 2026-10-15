@@ -127,3 +127,39 @@ test('merge queued behind a session change leaves the guest cart', async () => {
   await merging
   expect(getGuestCart().items).toHaveLength(1)
 })
+
+test('failed write tells the customer', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  expect(shownCount()).toBe(1)
+})
+
+test('next tap clears the failure', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+})
+
+test('overtaken write shows no failure', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  await screen.findByRole('button', { name: 'Add one Amul Taaza' })
+  // Two taps in one tick: the first write is overtaken and skipped; the second one's failure is the one shown.
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(shownCount()).toBe(1))
+  await screen.findByRole('alert')
+  expect(screen.getAllByRole('alert')).toHaveLength(1)
+})

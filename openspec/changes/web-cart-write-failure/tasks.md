@@ -22,7 +22,7 @@ Failing tests:
 - `src/cart-write-failure.test.tsx`: "core's refusal is shown"
 - `src/cart-drawer.test.tsx`: "failed write in the drawer"
 
-- [ ] 1.1 The five tests committed (`test: cart write failure message`); lint and typecheck green; Vitest shows the five new tests red and nothing else red
+- [x] 1.1 The five tests committed (`test: cart write failure message`); lint and typecheck green; Vitest shows the five new tests red and nothing else red
 - [ ] 1.2 Decisions 2 to 4 (`feat: cart write failure message`); all gates green
 
 ## Workflow follow-up
