@@ -23,7 +23,7 @@ Area: admin. Capability: `admin-app` (ADDED requirements only).
 None. `orders` is core's capability (seeded by core-orders); the pages are behaviour of the admin app, as every earlier admin lane decided for its pages.
 
 ### Modified Capabilities
-- `admin-app`: 27 ADDED requirements, each name starting with "Order", "Orders", "Dashboard" or "Ordered product": the board, its store, polling, announcements, the time since placed, the states, what a failed refresh keeps, the next status, a change in progress, the delivered confirmation, the 409, failures, the poll race, the sheet, the cancel, badges, the history, its pager, URL values, the dashboard, and the e2e.
+- `admin-app`: 29 ADDED requirements, each name starting with "Order", "Orders", "Dashboard" or "Ordered product": the board, its store, polling, announcements, the time since placed, the states, what a failed refresh keeps, the next status, a change in progress, the delivered confirmation, the 409, failures, the poll race, the sheet, the cancel, badges, the history, its pager, URL values, the dashboard, and the e2e.
 
 ## Out of scope
 - Sound or desktop notifications for a new order; a visible "new" marker on a card.

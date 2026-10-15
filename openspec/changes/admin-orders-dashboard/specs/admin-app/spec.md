@@ -149,7 +149,7 @@ Each card SHALL carry exactly one button for its order's next status, named with
 - **THEN** one `POST` with body `{"status":"accepted"}` was sent, "SS-TEST0001 is now Accepted." shows as a status, the card is in "Accepted" with the button "Start packing SS-TEST0001", one card is left in "Placed", and core was not asked for the lists again
 
 ### Requirement: Order status change in progress
-While a status change runs, the pressed button SHALL read "Saving…", keep keyboard focus and be `aria-disabled`, never `disabled`; every other card's button SHALL be `aria-disabled` too. A second press, on that button or another card's, SHALL send nothing. After the move, a keyboard left nowhere SHALL be put on the card's new button, or on the result when the order left the board.
+While a status change runs, the pressed button SHALL read "Saving…", keep keyboard focus and be `aria-disabled`, never `disabled`; every other card's button SHALL be `aria-disabled` too. A second press, on that button or another card's, SHALL send nothing. After the move, a keyboard left nowhere SHALL be put on the card's new button, or on the result when the order left the board; the result SHALL be a group named "Status change".
 
 #### Scenario: Second press during a change
 - **WHEN** staff press "Accept SS-TEST0001", core has not answered, and they press it again and then "Start packing SS-TEST0002"
@@ -158,6 +158,10 @@ While a status change runs, the pressed button SHALL read "Saving…", keep keyb
 #### Scenario: Focus after a move
 - **WHEN** staff press "Accept SS-TEST0001" and core answers
 - **THEN** the button "Start packing SS-TEST0001" has focus
+
+#### Scenario: Result named
+- **WHEN** staff confirm "Mark delivered" for SS-TEST0001 and core answers
+- **THEN** the keyboard is on a group named "Status change" that holds "SS-TEST0001 is now Delivered."
 
 ### Requirement: Order delivered asks first
 "Mark delivered" SHALL open a `Dialog` titled "Mark <number> delivered?" with the buttons "Cancel" then "Mark delivered", because a delivered order cannot be taken back. "Cancel" SHALL send nothing and return focus to the card's button. Confirming SHALL send `{"status":"delivered"}` once; the order then leaves the board.

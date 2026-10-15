@@ -21,7 +21,7 @@ No `docs/design/admin-P2-L5.md`: this file is enough. Every file of every task i
 - A12. `e2e/catalog.spec.ts` deletes only the product it creates ("E2E Curd Cup") and `e2e/stores.spec.ts` deletes nothing, so neither is broken by orders existing. No fix needed.
 
 ## Goals / Non-Goals
-**Goals:** the 27 requirements of the delta; every scenario a named test; five worker tasks a Haiku worker can build by copying blocks; nothing outside `apps/admin/`.
+**Goals:** the 29 requirements of the delta; every scenario a named test; five worker tasks a Haiku worker can build by copying blocks; nothing outside `apps/admin/`.
 
 **Non-Goals:** see proposal "Out of scope".
 
@@ -69,18 +69,26 @@ After the review of task 1 (2026-10-13, manager's rulings):
 
 Ceilings from the review, one line each: R1-3 the newest 100 per status and a count of what is shown (core's active filter is backlog, not Phase 2); R1-4 five reads are not one snapshot, so an order moved between two of them can show twice or not at all for one poll; R1-5 one 5-second interval per card (a shared ticker is more code than this line; revisit if a board holds hundreds); R1-8 "30 h 0 min ago" has no "yesterday", and an unparsable `placedAt` would read "NaN".
 
+After the review of task 2 (2026-10-15, `.claude/lanes/admin-P2-L5-R2.md`), folded into task 3 as its step A:
+
+33. **The delivered dialog's title has no "undefined"** (R2-1): ``title={confirm ? `Mark ${confirm.number} delivered?` : ''}``. Not observable (the ui `Dialog` renders nothing while closed, so the old string never reached the DOM): a cleanup inside step A's `fix:` commit with the suite green, no test and no guard.
+34. **The place the keyboard goes after a delivery is a named group** (R2-2): the result wrapper is `role="group" aria-label="Status change"`, so a screen reader landing on it hears what it is before the message. A group, not a region (no landmark for a one-line result); an `aria-label` on a role-less `div` is prohibited in ARIA 1.2 and flagged by axe. One new scenario ("Order status change in progress › Result named") and one test appended to `src/orders-status.test.tsx`.
+35. **Step A is two exact line replacements in `src/order-board.tsx`**, not a whole-file block: the file is replaced whole again in step B by the task-3 block, which holds both lines. A whole step-A copy would be 150 lines of design.md for two changed lines.
+
+Accepted from the review of task 2, no change: R2-3 the delivered dialog sends what it snapshotted, and a move by someone else meanwhile comes back as the 409 path ("changed by someone else"); R2-4 `cancelQueries` after a change also drops a poll carrying other orders' news, repaired by the next poll (Decision 4, already a risk below); R2-5 the column heading's `aria-label` replaces the visible text and badge in its name, label-in-name holds (the name starts with the visible word); R2-6 one 5-second interval per card (R1-5).
+
 ## Files (all under `apps/admin/`)
 | File | Task | What |
 |---|---|---|
 | `e2e/orders.spec.ts` (new) | 1 | written first, run in task 6 |
 | `e2e/catalog.spec.ts` | 1 | one test appended, run in task 6 |
 | `src/orders-fake.ts` (new, test-only) | 1 | fixtures and the fake order routes |
-| `src/orders-board.test.tsx`, `src/orders-rules.test.ts` (new) | 1 | 15 + 9 tests |
+| `src/orders-board.test.tsx`, `src/orders-rules.test.ts` (new) | 1, 9 tests appended to the first in 2 | 15 + 9 tests |
 | `src/orders.ts` (new) | 1, replaced whole in 2, 3, 4 | types, vocabulary, queries, the status change, `since`, `when` |
-| `src/order-board.tsx` (new) | 1, replaced whole in 2, 3 | the board |
+| `src/order-board.tsx` (new) | 1, replaced whole in 2 (twice) and 3 (two lines in step A, then whole) | the board |
 | `src/routes/_staff/orders.tsx` | 1 (replaces the placeholder), replaced whole in 4 | store, tabs, URL |
-| `src/orders-status.test.tsx` (new), `src/idle.ts` (new) | 2 | 9 tests; the `idle` class |
-| `src/order-sheet.test.tsx` (new), `src/order-sheet.tsx` (new) | 3 | 12 tests; the sheet and the cancel dialog |
+| `src/orders-status.test.tsx` (new), `src/idle.ts` (new) | 2, one test appended to the first in 3 | 9 tests; the `idle` class |
+| `src/order-sheet.test.tsx` (new), `src/order-sheet.tsx` (new) | 3 | 13 tests; the sheet and the cancel dialog |
 | `src/orders-history.test.tsx` (new), `src/order-history.tsx` (new) | 4 | 16 tests; the history table |
 | `src/dashboard.test.tsx` (new), `src/routes/_staff/index.tsx` (replaces the placeholder) | 5 | 7 tests; the dashboard |
 
@@ -109,32 +117,43 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Requirement › Scenario | Test | Task |
 |---|---|---|
 | Orders board › Board listed | B "the board shows a column per active status with each order's number, time since placed, item count, total and pincode"; R "the item count of a card is the quantities added up" | 1 |
+| Orders board › Orders placed in the same second | B "cards are in the order the orders were placed, also within one second and whatever the digits core trimmed" | 2 |
+| Orders board › Column name | B "a column is named by its status and how many orders it holds" | 2 |
 | Orders store for admins › Choose a store | B "choosing a store puts it in the URL and never shows or announces the other store's orders" | 1 |
 | Orders store for admins › Store in the URL | B "a store in the URL is the one shown, and one that is not a store shows the first store" | 1 |
 | Orders store for store staff › Store staff see their own store | B "store staff see the board of their own store by name, with no store selector and no stores request" | 1 |
 | Orders store for store staff › Store name unavailable | B "store staff get the board without a store name when the name cannot be read" | 1 |
 | Orders board polling › Poll | B "the board asks core again every 10 seconds and shows an order where it now stands" | 1 |
 | Orders board polling › Hidden tab | B "a hidden tab is not polled, and showing it again asks core at once" | 1 |
+| Orders board polling › Board left | B "the poll stops when the board is left" | 2 |
 | Orders board announcements › New placed order announced once | B "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing" | 1 |
+| Orders announced only while the board is open › Back to a store | B "coming back to a store announces nothing for an order placed while its board was away" | 2 |
+| Orders announced only while the board is open › Back to the orders page | B "leaving the orders page and coming back announces nothing for an order placed meanwhile" | 2 |
+| Orders announced only while the board is open › First refresh after coming back fails | B "orders kept from an earlier visit are no baseline when the first refresh after coming back fails" | 2 |
+| Orders announced only while the board is open › Placed while the tab was hidden | B "an order placed while the tab was hidden is announced when the tab shows again" | 2 |
 | Orders time since placed › A minute passes | B "the time since placed moves on without core being asked" | 1 |
 | Orders time since placed › Wording | R "an order placed %i seconds ago reads %j" (8 runs) | 1 |
 | Orders board states › Board loading | B "the board shows a skeleton while loading" | 1 |
 | Orders board states › Board load failure | B "a board that cannot be loaded offers a retry that reloads" | 1 |
+| Orders board states › One list fails on the first load | B "one of the five requests failing on the first load is a board that could not be loaded" | 2 |
 | Orders board states › No active orders | B "a store with no active orders shows the empty state" | 1 |
 | Orders board states › No stores | B "an admin with no stores is told to create one" | 1 |
 | Orders board states › Stores load failure | B "stores that cannot be loaded offer a retry that reloads" | 1 |
 | Orders kept on a failed refresh › Failed poll keeps the board | B "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" | 1 |
+| Orders kept on a failed refresh › One list fails on a later poll | B "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh" | 2 |
 | Orders kept on a failed refresh › Failed refresh keeps the sheet | D "a failed refresh keeps the order on the sheet and says it could not refresh" | 3 |
 | Orders kept on a failed refresh › Failed refresh keeps the history | H "a failed refresh keeps the history list; the next good answer shows what core then holds" | 4 |
 | Order next status › One button per card | S "each card has one button, for the next status of its order, named with the order number" | 2 |
 | Order next status › Accept | S "a press sends the next status once, moves the card with core's answer and says so, without listing the orders again" | 2 |
 | Order status change in progress › Second press during a change | S "while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card's button send nothing" | 2 |
 | Order status change in progress › Focus after a move | S "after a move the keyboard is on the card's new button" | 2 |
+| Order status change in progress › Result named | S "the keyboard after a delivery is on a result named for what it holds" | 3 (step A) |
 | Order delivered asks first › Mark delivered | S "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result" | 2 |
 | Order status conflict › Accepted by someone else, Cancelled by the customer | S "a 409 reads the order again, shows it where it stands and says someone else changed it" | 2 |
 | Order status failure › Status change fails | S "a status change that fails says so, leaves the card where it is and can be tried again" | 2 |
 | Order status failure › Conflict that cannot be read | S "a 409 whose order cannot be read again is a failed status change" | 2 |
 | Order status change and a poll in the air › Late poll answer | S "a poll answer read before a status change never moves the card back" | 2 |
+| Order cancel and a poll in the air › Late poll answer after a cancel | D "a poll answer read before a cancel never puts the order back on the board" | 3 |
 | Order detail sheet › Order opened from its card | D "a card's number opens the order: status, items, totals, customer with phone, address and events" | 3 |
 | Order detail sheet › Sheet closed | D "closing the sheet puts the keyboard back on the card" | 3 |
 | Order sheet follows core › Order changed since the last poll | D "the sheet shows the order as core holds it, not as the card did: a second address line, no phone, a note" | 3 |
@@ -169,7 +188,7 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Orders against core › Admin sees the dashboard and a store's orders | E "an admin sees the dashboard cards and opens a store's orders from one" | written 1, run 6 |
 | Ordered product against core › Ordered product offers Deactivate instead | C "an ordered product cannot be deleted and offers to be deactivated instead" | written 1, run 6 |
 
-61 scenarios; 68 Vitest runs (57 tests, two of them `test.each`) and 3 Playwright tests.
+72 scenarios; 79 Vitest runs (68 tests, two of them `test.each`) and 3 Playwright tests.
 
 ## Test strategy
 - Vitest and Testing Library through `renderApp` (the real router, guard and shell) and `fakeCore` at `fetch`; no mock of a module, of the query client or of the router.
@@ -187,26 +206,26 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 
 Tried in the first spike (before the root-notice ruling, which changed no string or element the specs use) on a scratch `vite preview` (port 25174) against a stateful `page.route` fake of core with a 60 ms answer delay, each of the three tests twice: 6 of 6 passed, axe clean on the board, the sheet, the cancel dialog, the delivered dialog, the result line, History, the history sheet, the dashboard and the delete dialog. The first try failed axe `color-contrast` on the tab strip (A9), fixed by `bg-surface` on the `TabNav`. Not run against the real core or the database: task 6, the manager's slot.
 
-## Mutation guards (for the reviewer; each run on the final tree of the spike on 2026-10-13 on the base with admin-P2-L7, 68 lane tests, only the named tests red, then restored)
+## Mutation guards (for the reviewer; each run on the final tree of the spike on 2026-10-15, task 2 landed and tasks 3 to 5 laid over it, 79 lane tests, only the named tests red, then restored)
 
 | # | Mutation | File | Tests that turn red |
 |---|---|---|---|
-| G1 | poll interval off | `src/orders.ts` | "a poll answer read before a status change never moves the card back"; "the board asks core again every 10 seconds and shows an order where it now stands"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
-| G2 | poll in a hidden tab | `src/orders.ts` | "a hidden tab is not polled, and showing it again asks core at once" |
-| G3 | first answer announced | `src/order-board.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
+| G1 | poll interval off | `src/orders.ts` | "a poll answer read before a status change never moves the card back"; "a poll answer read before a cancel never puts the order back on the board"; "the board asks core again every 10 seconds and shows an order where it now stands"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"; "coming back to a store announces nothing for an order placed while its board was away"; "orders kept from an earlier visit are no baseline when the first refresh after coming back fails"; "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh"; "the poll stops when the board is left" |
+| G2 | poll in a hidden tab | `src/orders.ts` | "a hidden tab is not polled, and showing it again asks core at once"; "an order placed while the tab was hidden is announced when the tab shows again" |
+| G3 | first answer announced | `src/order-board.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders"; "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing"; "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"; "coming back to a store announces nothing for an order placed while its board was away"; "leaving the orders page and coming back announces nothing for an order placed meanwhile"; "orders kept from an earlier visit are no baseline when the first refresh after coming back fails"; "an order placed while the tab was hidden is announced when the tab shows again" |
 | G4 | any new order announced, whatever its status | `src/order-board.tsx` | "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing" |
 | G5 | old news kept under a changed answer | `src/order-board.tsx` | "a newly placed order is announced once; the first load, an unchanged answer and an order in another status announce nothing" |
-| G6 | board error state before data | `src/order-board.tsx` | "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new" |
-| G8 | board not keyed by store | `src/routes/_staff/orders.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders" |
+| G6 | board error state before data | `src/order-board.tsx` | "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"; "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh" |
+| G8 | board not keyed by store | `src/routes/_staff/orders.tsx` | "choosing a store puts it in the URL and never shows or announces the other store's orders"; "coming back to a store announces nothing for an order placed while its board was away" |
 | G9 | store staff ask for the stores | `src/routes/_staff/orders.tsx` | "store staff see the board of their own store by name, with no store selector and no stores request" |
-| G10 | columns newest first | `src/order-board.tsx` | "the board shows a column per active status with each order's number, time since placed, item count, total and pincode" |
+| G10 | columns newest first (`Date.parse(b.placedAt) - Date.parse(a.placedAt)`) | `src/order-board.tsx` | "the board shows a column per active status with each order's number, time since placed, item count, total and pincode"; "cards are in the order the orders were placed, also within one second and whatever the digits core trimmed" |
 | G11 | no guard while a status change runs | `src/order-board.tsx` | "while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card's button send nothing" |
 | G12 | next button disabled while busy | `src/order-board.tsx` | "while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card's button send nothing" |
-| G13 | poll in the air not dropped | `src/orders.ts` | "a poll answer read before a status change never moves the card back" |
-| G14 | board refetched instead of written | `src/orders.ts` | "a press sends the next status once, moves the card with core's answer and says so, without listing the orders again"; "a 409 reads the order again, shows it where it stands and says someone else changed it"; "a poll answer read before a status change never moves the card back" |
+| G13 | poll in the air not dropped | `src/orders.ts` | "a poll answer read before a status change never moves the card back"; "a poll answer read before a cancel never puts the order back on the board" |
+| G14 | board refetched instead of written | `src/orders.ts` | "a press sends the next status once, moves the card with core's answer and says so, without listing the orders again"; "a 409 reads the order again, shows it where it stands and says someone else changed it"; "a poll answer read before a status change never moves the card back"; "a poll answer read before a cancel never puts the order back on the board" |
 | G15 | 409 thrown as a failure | `src/orders.ts` | "a 409 reads the order again, shows it where it stands and says someone else changed it"; "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board" |
-| G16 | delivered without asking | `src/order-board.tsx` | "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result"; "a history page kept from before a status change is read again, never shown as it was" |
-| G17 | no focus after a move | `src/order-board.tsx` | "after a move the keyboard is on the card's new button"; "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result" |
+| G16 | delivered without asking | `src/order-board.tsx` | "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result"; "the keyboard after a delivery is on a result named for what it holds"; "a history page kept from before a status change is read again, never shown as it was" |
+| G17 | no focus after a move | `src/order-board.tsx` | "after a move the keyboard is on the card's new button"; "Mark delivered asks first: Cancel sends nothing, confirming takes the order off the board and the keyboard goes to the result"; "the keyboard after a delivery is on a result named for what it holds" |
 | G18 | sheet does not start from the card | `src/order-board.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
 | G7 | no notice on the sheet | `src/order-sheet.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
 | G19 | sheet error state before data | `src/order-sheet.tsx` | "a failed refresh keeps the order on the sheet and says it could not refresh" |
@@ -216,7 +235,7 @@ Tried in the first spike (before the root-notice ruling, which changed no string
 | G23 | no guard while a cancel runs | `src/order-sheet.tsx` | "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays" |
 | G24 | dialog closable while a cancel runs | `src/order-sheet.tsx` | "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays" |
 | G25 | cancel button disabled while pending | `src/order-sheet.tsx` | "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays" |
-| G26 | sheet and dialog open together | `src/order-sheet.tsx` | "a cancel needs a reason: without one nothing is sent, the field says so, and the message goes when a reason is typed"; "Keep order and Escape close the dialog without sending and bring the sheet back"; "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason"; "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays"; "a cancel that fails says so in the dialog, keeps the reason and can be tried again"; "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board" |
+| G26 | sheet and dialog open together | `src/order-sheet.tsx` | "a cancel needs a reason: without one nothing is sent, the field says so, and the message goes when a reason is typed"; "Keep order and Escape close the dialog without sending and bring the sheet back"; "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason"; "while a cancel runs the button reads Cancelling…, keeps focus and is never disabled; a second press sends nothing and the dialog stays"; "a cancel that fails says so in the dialog, keeps the reason and can be tried again"; "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board"; "a poll answer read before a cancel never puts the order back on the board" |
 | G27 | detail cache not written after a change | `src/orders.ts` | "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason"; "a cancel refused with 409 shows where the order stands instead, on the sheet and on the board" |
 | G28 | status badge colours | `src/orders.ts` | "a card's number opens the order: status, items, totals, customer with phone, address and events"; "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason" |
 | G29 | finished order polled | `src/orders.ts` | "a history row opens the order without a cancel, read once and not polled" |
@@ -239,8 +258,14 @@ Tried in the first spike (before the root-notice ruling, which changed no string
 | G46 | elapsed time read once | `src/orders.ts` | "the time since placed moves on without core being asked" |
 | G47 | status change conflict message same as success | `src/order-board.tsx` | "a 409 reads the order again, shows it where it stands and says someone else changed it" |
 | G48 | filter change keeps the page | `src/order-history.tsx` | "Cancelled lists the cancelled orders with when they were cancelled, from page 1, never under the delivered rows" |
+| G49 | orders kept from an earlier visit are the baseline | `src/order-board.tsx` | "coming back to a store announces nothing for an order placed while its board was away"; "leaving the orders page and coming back announces nothing for an order placed meanwhile"; "orders kept from an earlier visit are no baseline when the first refresh after coming back fails" |
+| G50 | a failed first refresh makes the kept orders the baseline | `src/order-board.tsx` | "orders kept from an earlier visit are no baseline when the first refresh after coming back fails" |
+| G51 | cards sorted by the time as a string | `src/order-board.tsx` | "cards are in the order the orders were placed, also within one second and whatever the digits core trimmed" |
+| G52 | column heading named by its text alone | `src/order-board.tsx` | "a column is named by its status and how many orders it holds" |
+| G53 | one list request failing leaves its column empty | `src/orders.ts` | "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"; "a board that cannot be loaded offers a retry that reloads"; "orders kept from an earlier visit are no baseline when the first refresh after coming back fails"; "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh"; "one of the five requests failing on the first load is a board that could not be loaded" |
+| G54 | result of a change unnamed | `src/order-board.tsx` | "the keyboard after a delivery is on a result named for what it holds" |
 
-48 guards, none without a red test. Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again. G6, G38 and G44 (the alert shown although data is held) are caught by `queryByRole('alert')` after `refreshFailed`.
+54 guards, none without a red test. Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again. G6, G38 and G44 (the alert shown although data is held) are caught by `queryByRole('alert')` after `refreshFailed`. G49 to G53 guard the fixes from the review of task 1. The G54 of the revision of 2026-10-13 removed the same line as G13 and is merged into it (G13 turns both held-poll tests red); G54 is now the unnamed result from the review of task 2 (R2-2). R2-1 has no guard: the closed `Dialog` renders nothing, so its title never reaches the DOM.
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
 
@@ -1793,7 +1818,38 @@ export function OrderBoard({ storeId }: { storeId: string }) {
 
 ### Task 3: the detail sheet and the cancel with a reason
 
-#### `src/order-sheet.test.tsx` (new)
+Step A, from the review of task 2 (Decisions 33 to 35): one test appended, then two lines of the board changed. Step B, the sheet and the cancel, as before.
+
+#### `src/orders-status.test.tsx` (step A: append this block at the end of the file; it starts with one empty line; change nothing above)
+
+```tsx
+
+test('the keyboard after a delivery is on a result named for what it holds', async () => {
+  setToken('tok')
+  const core = ordersCore(indiranagar.id, [order(1, 'out_for_delivery'), order(2, 'placed')])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await userEvent.click(button('Mark delivered SS-TEST0001'))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Mark SS-TEST0001 delivered?' })).getByRole('button', { name: 'Mark delivered' }))
+
+  const result = await screen.findByRole('group', { name: 'Status change' })
+  await waitFor(() => expect(result).toHaveFocus())
+  expect(result).toHaveTextContent('SS-TEST0001 is now Delivered.')
+})
+```
+
+#### `src/order-board.tsx` (step A: replace exactly these two lines, each found once in the file; change nothing else)
+
+```diff
+-      <div ref={result} tabIndex={-1}>
++      <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
+-      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={`Mark ${confirm?.number} delivered?`}>
++      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={confirm ? `Mark ${confirm.number} delivered?` : ''}>
+```
+
+#### `src/order-sheet.test.tsx` (step B: new)
 
 ```tsx
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -2093,7 +2149,7 @@ test('a poll answer read before a cancel never puts the order back on the board'
 })
 ```
 
-#### `src/orders.ts` (replace the whole file)
+#### `src/orders.ts` (step B: replace the whole file)
 
 ```ts
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -2213,7 +2269,7 @@ export function itemCount(order: Order) {
 }
 ```
 
-#### `src/order-sheet.tsx` (new)
+#### `src/order-sheet.tsx` (step B: new)
 
 ```tsx
 import { useQuery } from '@tanstack/react-query'
@@ -2357,7 +2413,7 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
 }
 ```
 
-#### `src/order-board.tsx` (replace the whole file; it keeps step A's three fixes)
+#### `src/order-board.tsx` (step B: replace the whole file; it keeps task 2's fixes and step A's two lines)
 
 ```tsx
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -2449,7 +2505,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
-      <div ref={result} tabIndex={-1}>
+      <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
           (move.data.changedElsewhere ? (
@@ -2494,7 +2550,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
         </div>
       )}
       {open && <OrderSheet orderId={open} onClose={() => setOpen(undefined)} />}
-      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={`Mark ${confirm?.number} delivered?`}>
+      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={confirm ? `Mark ${confirm.number} delivered?` : ''}>
         <p className="mt-2 text-body text-ink">This finishes the order. It cannot be taken back.</p>
         <DialogFooter onCancel={() => setConfirm(undefined)}>
           <Button

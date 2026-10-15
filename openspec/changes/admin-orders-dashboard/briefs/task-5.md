@@ -34,14 +34,14 @@
 
 ## Steps, in this order
 Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH"` and run it from the worktree root. If `node_modules` is missing, run `npm ci` once. Run `npm run build --workspace packages/ui` once before the first test run.
-0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `251 passed (251)` (base + 71).
+0. Run `npm run test --workspace apps/admin -- --run` and note the summary: expected `252 passed (252)` (base + 72).
 1. Create `src/dashboard.test.tsx` from design.md. Run the admin tests, see the seven fail, record the summary and the names. Commit: `test: dashboard cards`. Tick 5.1.
 2. Replace `src/routes/_staff/index.tsx` whole with its block from design.md.
 3. Run the gates. Commit the file and the 5.2 tick: `feat: dashboard cards per store with links to orders and low stock`.
 
 ## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
-- After step 1: `Tests  7 failed | 251 passed (258)`, all seven in `dashboard.test.tsx`.
-- After step 2: `Tests  258 passed (258)`, 23 files.
+- After step 1: `Tests  7 failed | 252 passed (259)`, all seven in `dashboard.test.tsx`.
+- After step 2: `Tests  259 passed (259)`, 23 files.
 If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.
 
 ## Notes for this task
