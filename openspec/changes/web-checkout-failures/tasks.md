@@ -19,7 +19,7 @@ Scope: `apps/web/src/checkout.tsx`, `apps/web/src/checkout.test.tsx`, this file'
 Scenarios: Customer cart write failure › Failed removal at checkout; Customer checkout refusals › Placement fails; Customer checkout unconfirmed placement › both.
 Failing tests (`src/checkout.test.tsx`): "failed removal at checkout", "core cannot be reached at placement", "unconfirmed placement that emptied the cart"; "placement fails" changed (green before and after).
 
-- [ ] 1.1 The tests committed (`test: checkout failures`); lint and typecheck green; Vitest shows exactly the three new tests red
+- [x] 1.1 The tests committed (`test: checkout failures`); lint and typecheck green; Vitest shows exactly the three new tests red
 - [ ] 1.2 Decisions 1 to 3 (`feat: checkout failures`); all gates green
 
 ## Workflow follow-up
