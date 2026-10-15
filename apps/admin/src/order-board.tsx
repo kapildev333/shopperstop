@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import { Badge, Card, EmptyState, ErrorBanner, Price, Skeleton } from '@shopperstop/ui'
-import { activeStatuses, boardQuery, itemCount, statusLabel, useSince, type Order } from './orders'
+import { useEffect, useRef, useState } from 'react'
+import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage } from '@shopperstop/ui'
+import { idle } from './idle'
+import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, statusLabel, useSetStatus, useSince, type Order } from './orders'
+
 
 // Its own component, so a minute passing renders this text and nothing else on the board.
 function Since({ at }: { at: string }) {
@@ -12,17 +14,23 @@ function Since({ at }: { at: string }) {
   )
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, busy, saving, onNext }: { order: Order; busy: boolean; saving: boolean; onNext: () => void }) {
   return (
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-semibold text-ink tabular-nums">{order.number}</span>
+        <span id={`number-${order.id}`} className="font-semibold text-ink tabular-nums">{order.number}</span>
         <Since at={order.placedAt} />
       </div>
       <p className="text-small text-ink">
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
       <Price cents={order.totalCents} />
+      {isActive(order.status) && (
+        // Named by its own text and the order's number: "Accept SS-…".
+        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} className={idle} onClick={onNext}>
+          {saving ? 'Saving…' : nextLabel[order.status]}
+        </Button>
+      )}
     </Card>
   )
 }
@@ -43,6 +51,24 @@ export function OrderBoard({ storeId }: { storeId: string }) {
     setHeard({ from: board.data, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
   }
 
+  // One status change at a time on a board: while one runs, every card's button waits.
+  const move = useSetStatus(storeId)
+  const [confirm, setConfirm] = useState<Order>()
+  const result = useRef<HTMLDivElement>(null)
+  const moved = move.data?.order
+  // The pressed button went with the card's old place. If that left the keyboard nowhere, go to the card's new button,
+  // or to the result when the order has left the board.
+  useEffect(() => {
+    if (moved && document.activeElement === document.body) (document.getElementById(`next-${moved.id}`) ?? result.current)?.focus()
+  }, [moved])
+
+  function advance(order: Order) {
+    if (move.isPending || !isActive(order.status)) return
+    // Delivered ends the order and cannot be taken back: ask first.
+    if (order.status === 'out_for_delivery') return setConfirm(order)
+    move.mutate({ order, status: nextStatus[order.status] })
+  }
+
   // A poll that fails keeps the board: the alert is only for a board with nothing to show. (The app's root says that a
   // refresh failed, once for the whole page.)
   if (board.data === undefined) {
@@ -52,6 +78,19 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
+      <div ref={result} tabIndex={-1}>
+        {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
+        {move.data &&
+          (move.data.changedElsewhere ? (
+            <StatusMessage tone="warning">
+              {move.data.order.number} was changed by someone else first: it is now {statusLabel[move.data.order.status]}.
+            </StatusMessage>
+          ) : (
+            <StatusMessage tone="success">
+              {move.data.order.number} is now {statusLabel[move.data.order.status]}.
+            </StatusMessage>
+          ))}
+      </div>
       {orders.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No active orders" description="New orders show here within 10 seconds." />
@@ -73,7 +112,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
                   <ul className="flex flex-col gap-3">
                     {column.map((order) => (
                       <li key={order.id}>
-                        <OrderCard order={order} />
+                        <OrderCard order={order} busy={move.isPending} saving={move.isPending && move.variables.order.id === order.id} onNext={() => advance(order)} />
                       </li>
                     ))}
                   </ul>
@@ -83,6 +122,19 @@ export function OrderBoard({ storeId }: { storeId: string }) {
           })}
         </div>
       )}
+      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={`Mark ${confirm?.number} delivered?`}>
+        <p className="mt-2 text-body text-ink">This finishes the order. It cannot be taken back.</p>
+        <DialogFooter onCancel={() => setConfirm(undefined)}>
+          <Button
+            onClick={() => {
+              setConfirm(undefined)
+              if (confirm) move.mutate({ order: confirm, status: 'delivered' })
+            }}
+          >
+            Mark delivered
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </>
   )
 }

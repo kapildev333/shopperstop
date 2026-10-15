@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSyncExternalStore } from 'react'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
@@ -21,6 +21,16 @@ export const statusLabel: Record<OrderStatus, string> = {
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 }
+// The one move staff make from each active status, and what the card's button says.
+export const nextStatus = { placed: 'accepted', accepted: 'packing', packing: 'ready', ready: 'out_for_delivery', out_for_delivery: 'delivered' } as const satisfies Partial<Record<OrderStatus, OrderStatus>>
+export const nextLabel: Record<keyof typeof nextStatus, string> = {
+  placed: 'Accept',
+  accepted: 'Start packing',
+  packing: 'Mark ready',
+  ready: 'Send out',
+  out_for_delivery: 'Mark delivered',
+}
+export const isActive = (status: OrderStatus): status is keyof typeof nextStatus => status in nextStatus
 
 async function listOrders(storeId: string, query: { status: OrderStatus; page?: number; pageSize: number }) {
   const { data, error } = await api.GET('/admin/stores/{id}/orders', { params: { path: { id: storeId }, query } })
@@ -37,6 +47,29 @@ export const boardQuery = (storeId: string) =>
     queryFn: async () => (await Promise.all(activeStatuses.map((status) => listOrders(storeId, { status, pageSize: 100 })))).flatMap((list) => list.items),
     refetchInterval: pollMs,
   })
+
+// A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
+// customer cancelled): the order is then read again, so the page can show where it stands and say so.
+export function useSetStatus(storeId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (sent: { order: Order; status: OrderStatus; note?: string }) => {
+      const params = { path: { id: sent.order.id } }
+      const { data, error } = await api.POST('/admin/orders/{id}/status', { params, body: { status: sent.status, note: sent.note } })
+      if (!error) return { order: data, changedElsewhere: false }
+      if (error.error.code !== 'conflict') throw error.error
+      const read = await api.GET('/admin/orders/{id}', { params })
+      if (read.error) throw read.error.error
+      return { order: read.data, changedElsewhere: true }
+    },
+    onSuccess: async ({ order }) => {
+      const board = boardQuery(storeId).queryKey
+      // A poll still in the air was read before this answer: drop it, or it would put the card back where it was.
+      await queryClient.cancelQueries({ queryKey: board })
+      queryClient.setQueryData(board, (orders) => orders && [...orders.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])])
+    },
+  })
+}
 
 // "12 min ago" for a card; whole minutes, hours above 59.
 export function since(placedAt: string, now: number) {
