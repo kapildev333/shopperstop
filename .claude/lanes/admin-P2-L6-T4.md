@@ -1,8 +1,8 @@
 # admin-P2-L6-T4 - admin-staff-e2e task 4: fix worker for the 4.1 e2e failure (worker)
-Status: started
+Status: done
 
 ## Doing
-Fix worker for task 4. Step 1 done (failing output recorded below). Next: decide the side, one wait in `catalog.spec.ts`, `fix:` commit, `make test-web`. Task 4.1 is NOT ticked (the manager re-runs the e2e first).
+Fix landed on `lane/admin-P2-L6-admin-staff-e2e`: `docs(lanes)` `67b43f0` (failing output recorded), `fix:` `7f15766` (one line: heading wait after the Products nav click, `catalog.spec.ts`). Gate `make test-web` exit 0: ui `25 passed` files, admin `19 passed (215 tests)`, web `25 passed (142 tests)`. Task 4.1 is NOT ticked: the manager re-runs `make e2e` first. No e2e, Playwright or docker run by this worker.
 
 ## Found
 - Manager's `make e2e` on the final tree: admin `1 failed | 10 passed`, web 40 passed. `staff.spec.ts` passed. Failing test:
