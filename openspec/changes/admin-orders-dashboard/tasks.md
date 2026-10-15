@@ -41,7 +41,7 @@ Step A, from the review of task 2.
 Scenarios: Order status change in progress › Result named. (R2-1, the delivered dialog's title, is not observable: a cleanup in the same `fix:` commit, no test.)
 Failing tests: `src/orders-status.test.tsx` › "the keyboard after a delivery is on a result named for what it holds".
 - [x] 3.1 Step A test committed red (`test: the result of a status change is named`); Vitest `1 failed | base + 42 passed` (`1 failed | 222 passed (223)`)
-- [ ] 3.2 The two lines of `src/order-board.tsx` per design.md "Task 3", step A (`fix: the result of a status change is named; no undefined in the delivered dialog's title`); Vitest `base + 43 passed` (`223 passed (223)`); every gate green; `routeTree.gen.ts` unchanged
+- [x] 3.2 The two lines of `src/order-board.tsx` per design.md "Task 3", step A (`fix: the result of a status change is named; no undefined in the delivered dialog's title`); Vitest `base + 43 passed` (`223 passed (223)`); every gate green; `routeTree.gen.ts` unchanged
 
 Step B.
 Scenarios: Order detail sheet › Order opened from its card, Sheet closed; Order sheet follows core › Order changed since the last poll, Open sheet polled; Orders kept on a failed refresh › Failed refresh keeps the sheet; Order cancel with a reason › Cancel offered, Order cancelled, Reason missing, Keep order; Order cancel in progress and refused › Second press during a cancel, Cancel fails, Cancel refused once packing; Order cancel and a poll in the air › Late poll answer after a cancel; Order status badges › Badge of an order under way and of a cancelled one.

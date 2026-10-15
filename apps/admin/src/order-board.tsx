@@ -78,7 +78,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   return (
     <>
       <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
-      <div ref={result} tabIndex={-1}>
+      <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
           (move.data.changedElsewhere ? (
@@ -122,7 +122,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
           })}
         </div>
       )}
-      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={`Mark ${confirm?.number} delivered?`}>
+      <Dialog open={confirm !== undefined} onClose={() => setConfirm(undefined)} title={confirm ? `Mark ${confirm.number} delivered?` : ''}>
         <p className="mt-2 text-body text-ink">This finishes the order. It cannot be taken back.</p>
         <DialogFooter onCancel={() => setConfirm(undefined)}>
           <Button
