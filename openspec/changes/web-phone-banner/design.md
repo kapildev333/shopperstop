@@ -14,7 +14,7 @@
 
 Wrap the label in `<span className="max-sm:sr-only">{me.data?.name ?? 'Account'}</span>`. Signed out ("Sign in") is unchanged.
 
-Why this option: it is one class on one span, and it uses the same `max-sm:sr-only` pattern `Table`'s `stack` already uses. The link's accessible name stays the customer's name at every width, so the existing "Account link in the banner" requirement, its scenario and `e2e/account.spec.ts` keep passing unchanged. No `aria-label` duplicates the visible text. Rejected options:
+Why this option: it is one class on one span, and it uses the same `max-sm:sr-only` pattern `Table`'s `stack` already uses. The link's accessible name stays the customer's name at every width, so the existing "Customer header account control" requirement, its scenario and `e2e/account.spec.ts` keep passing unchanged. No `aria-label` duplicates the visible text. Rejected options:
 - First name: it needs a split rule (names with one word, very long first names), a second string, and an `aria-label` to keep the full name.
 - `hidden sm:inline` with an `aria-label`: it repeats the name in two places, and a base-level `hidden` on `ButtonLink` loses to its `inline-flex` (see the comment on `CartButton`).
 

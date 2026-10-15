@@ -12,7 +12,7 @@
   - `openspec/changes/web-phone-banner/tasks.md` (checkboxes only)
   - `.claude/lanes/web-P2-L9-T1.md`
   - Not `packages/ui`: if `Sheet` or `Input` seems to need a change, stop and report.
-- Scenarios: web-app › "Customer banner on a phone" (Signed-in banner on a phone; Signed-in banner on desktop) and "Pincode sheet focus" (First visit focuses the pincode field; Banner control focuses the pincode field).
+- Scenarios: web-app › "Customer banner on a phone" (Signed-in banner on a phone; Signed-in banner on desktop) and "Customer pincode sheet focus" (First visit focuses the pincode field; Banner control focuses the pincode field).
 
 ## Commit 1: `test: phone banner and pincode sheet focus`
 

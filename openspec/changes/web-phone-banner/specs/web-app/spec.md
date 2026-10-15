@@ -11,7 +11,7 @@ On a viewport narrower than 640 px the banner's account link SHALL show its icon
 - **WHEN** the same customer is signed in and `/` is shown at 1024 by 768 px
 - **THEN** the banner's "Walk Customer" link shows the name: the name's text box is at least 20 px wide
 
-### Requirement: Pincode sheet focus
+### Requirement: Customer pincode sheet focus
 When the pincode sheet opens, focus SHALL move to its Pincode field. When it closes, focus SHALL return to the control that had it before the sheet opened.
 
 #### Scenario: First visit focuses the pincode field

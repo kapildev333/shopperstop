@@ -22,7 +22,7 @@ None.
 
 ### Modified Capabilities
 
-- `web-app`: two ADDED requirements, "Customer banner on a phone" and "Pincode sheet focus". "Account link in the banner" and "Pincode sheet" are not modified: the link keeps the customer's name as its accessible name, and the sheet keeps its content.
+- `web-app`: two ADDED requirements, "Customer banner on a phone" and "Customer pincode sheet focus". "Customer header account control" and "Customer pincode sheet" are not modified: the link keeps the customer's name as its accessible name, and the sheet keeps its content.
 
 ## Impact
 

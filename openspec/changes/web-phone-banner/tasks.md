@@ -16,7 +16,7 @@ No Playwright by the worker: the manager runs e2e on the `test:` commit (red) an
 ## 1. Phone banner and pincode sheet focus
 
 Scope: `apps/web/src/account-link.tsx`, `apps/web/src/pincode-sheet.tsx`, `apps/web/src/pincode-sheet.test.tsx`, `apps/web/e2e/phone-layout.spec.ts`, this file's checkboxes, `.claude/lanes/web-P2-L9-T1.md`.
-Scenarios: Customer banner on a phone › both; Pincode sheet focus › both.
+Scenarios: Customer banner on a phone › both; Customer pincode sheet focus › both.
 Failing tests:
 - `src/pincode-sheet.test.tsx`: "first visit focuses the pincode field", "banner control focuses the pincode field" (both red)
 - `e2e/phone-layout.spec.ts`: `phone` › "signed-in banner on a phone" (red); `six columns` › "signed-in banner on desktop" (pin)
