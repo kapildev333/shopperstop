@@ -62,4 +62,5 @@ All in `apps/web/`: `src/account-link.tsx`, `src/pincode-sheet.tsx`, `src/pincod
 ## Risks
 
 - A promised time of three digits or a long pincode label could still crowd the row at 320 px. The row has room for about 100 more px at 390 px; 320 px is not a target width in Spec 1 §8.
+- From 640 px up the name and the `sm:` cart button both return, and no test measures the row between 640 and 1024 px (the desktop pin runs at 1024). A long customer name there could wrap the banner; the fix would be a `max-w` with truncation on the name span.
 - The `sr-only` name is still read by screen readers as the link name, which is intended.

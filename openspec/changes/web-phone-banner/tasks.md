@@ -25,5 +25,5 @@ Failing tests:
 - [x] 1.2 Decisions 1 to 3 (`fix: phone banner and pincode sheet focus`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-phone-banner` after 1.2 lands and the manager's e2e is green.
+- [x] Team lead runs `/opsx:verify web-phone-banner` after 1.2 lands and the manager's e2e is green.
 - Area manager archives the change by PR after the fix PR merges.
