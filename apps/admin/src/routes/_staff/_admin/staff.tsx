@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { Badge, Card, ErrorBanner, PageHeader, Skeleton, StatusMessage, Table, type Column } from '@shopperstop/ui'
+import { useState } from 'react'
+import { Badge, Button, Card, ErrorBanner, PageHeader, Skeleton, StatusMessage, Table, type Column } from '@shopperstop/ui'
 import type { Staff } from '../../../api'
 import { pageSize, roleNames, staffUsersQuery } from '../../../staff'
+import { StaffDialog } from '../../../staff-dialog'
 import { storesQuery } from '../../../stores'
 
 function StaffUsers() {
   const { staff: me } = Route.useRouteContext()
   const users = useQuery(staffUsersQuery)
-  // The stores name each store-staff row.
+  // The stores name each store-staff row and fill the dialog's "Store" choice.
   const stores = useQuery(storesQuery)
+  const [editing, setEditing] = useState<Staff | 'new'>()
   const list = users.data
   const storeItems = stores.data?.items
   const storeName = new Map(storeItems?.map((store) => [store.id, store.name]))
@@ -38,13 +41,19 @@ function StaffUsers() {
       header: 'Status',
       cell: (user) => <Badge variant={user.isActive ? 'success' : 'neutral'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>,
     },
+    {
+      key: 'actions',
+      header: 'Actions',
+      cell: (user) => <Button variant="ghost" aria-label={`Edit ${user.email}`} onClick={() => setEditing(user)}>Edit</Button>,
+    },
   ]
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Staff" />
+      <PageHeader title="Staff" actions={list && storeItems && <Button onClick={() => setEditing('new')}>New staff user</Button>} />
+      {/* The alert only for a read that failed holding nothing; a held read that fails waits under the skeleton for the other. */}
       {list === undefined || storeItems === undefined ? (
-        users.isError || stores.isError ? (
+        (users.isError && list === undefined) || (stores.isError && storeItems === undefined) ? (
           <ErrorBanner message="Could not load the staff users." onRetry={() => void Promise.all([users.refetch(), stores.refetch()])} />
         ) : (
           <Skeleton variant="table" count={4} />
@@ -58,6 +67,14 @@ function StaffUsers() {
             <Table stack caption="Staff users" columns={columns} rows={list.items} rowKey={(user) => user.id} />
           </Card>
         </>
+      )}
+      {editing && storeItems && (
+        <StaffDialog
+          user={editing === 'new' ? undefined : editing}
+          self={editing !== 'new' && editing.id === me.id}
+          stores={storeItems}
+          onClose={() => setEditing(undefined)}
+        />
       )}
     </div>
   )
