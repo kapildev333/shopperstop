@@ -130,7 +130,8 @@ export async function setLine(storeId: string, product: CartProduct, quantity: n
         return result
       })
       if (!answered.cart) {
-        await queryClient.invalidateQueries({ queryKey: cartKey(token) })
+        // The cart is re-read behind the answer: the failure does not wait for the re-read.
+        void queryClient.invalidateQueries({ queryKey: cartKey(token) })
         // A later tap on this line overtook this write: that one answers for the line.
         return asked.get(key)?.turn === mine ? (error ?? unreachable) : undefined
       }
