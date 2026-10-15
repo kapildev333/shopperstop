@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { freshShopper, signedIn } from './shopper'
 
 // Stored pincode so the first-visit pincode sheet does not cover Home.
 test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560034')))
@@ -77,6 +78,34 @@ async function expectInsideContent(card: Locator, slug: string, extra: Locator[]
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
+  test('signed-in banner on a phone', async ({ page, request }) => {
+    const shopper = await freshShopper(request, 'Walk Customer')
+    await signedIn(page, shopper)
+    await page.goto('/')
+    const banner = page.getByRole('banner')
+    const link = banner.getByRole('link', { name: 'Walk Customer', exact: true })
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute('href', '/account')
+    const linkBox = await boxOf(link)
+    expect(linkBox.height, 'account link height').toBeGreaterThanOrEqual(44)
+    expect(linkBox.width, 'account link width').toBeLessThanOrEqual(56)
+    const name = await boxOf(link.getByText('Walk Customer', { exact: true }))
+    expect(name.width, 'account name text width').toBeLessThanOrEqual(1)
+
+    const promise = await boxOf(banner.getByText('Delivery in 10 minutes', { exact: true }))
+    expect(promise.height, 'promise height (one line)').toBeLessThanOrEqual(24)
+    const pincode = await boxOf(banner.getByText('560034', { exact: true }))
+    expect(Math.abs(pincode.x - promise.x), 'pincode left edge against promise').toBeLessThanOrEqual(tolerance)
+
+    for (const [index, control] of (await banner.locator('a, button, input').all()).entries()) {
+      if (!(await control.isVisible())) continue
+      const box = await boxOf(control)
+      expect(box.x + box.width, `banner control ${index} ends past the viewport`).toBeLessThanOrEqual(390 + tolerance)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    await expectNoViolations(page)
+  })
+
   test('card controls stay inside the card on a phone', async ({ page, request }) => {
     const product = await struckPick(request)
     const card = await openSearch(page, product)
@@ -125,6 +154,16 @@ test.describe('phone', () => {
 
 test.describe('six columns', () => {
   test.use({ viewport: { width: 1024, height: 768 } })
+
+  test('signed-in banner on desktop', async ({ page, request }) => {
+    const shopper = await freshShopper(request, 'Walk Customer')
+    await signedIn(page, shopper)
+    await page.goto('/')
+    const link = page.getByRole('banner').getByRole('link', { name: 'Walk Customer', exact: true })
+    await expect(link).toBeVisible()
+    const name = await boxOf(link.getByText('Walk Customer', { exact: true }))
+    expect(name.width, 'account name text width').toBeGreaterThanOrEqual(20)
+  })
 
   test('card controls stay inside the card in the six-column grid', async ({ page, request }) => {
     const product = await struckPick(request)

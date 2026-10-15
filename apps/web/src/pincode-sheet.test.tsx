@@ -53,3 +53,22 @@ test('banner shows the delivery promise', async () => {
   const banner = await screen.findByRole('banner')
   expect(within(banner).getByRole('button', { name: 'Delivery in 10 minutes 560034' })).toBeInTheDocument()
 })
+
+test('first visit focuses the pincode field', async () => {
+  renderAt('/')
+  const dialog = await screen.findByRole('dialog', { name: 'Your delivery pincode' })
+  await waitFor(() => expect(within(dialog).getByLabelText('Pincode')).toHaveFocus())
+})
+
+test('banner control focuses the pincode field', async () => {
+  setPincode('560034')
+  queryClient.setQueryData(keys.serviceability('560034'), store())
+  renderAt('/')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Delivery in 10 minutes 560034' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Your delivery pincode' })
+  await waitFor(() => expect(within(dialog).getByLabelText('Pincode')).toHaveFocus())
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(screen.getByRole('button', { name: 'Delivery in 10 minutes 560034' })).toHaveFocus()
+})

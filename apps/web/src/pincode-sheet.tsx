@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Button, FormField, Input, Sheet } from '@shopperstop/ui'
 import { MapPin } from 'lucide-react'
 import { useServiceability } from './catalog'
@@ -7,15 +7,20 @@ import { changePincode } from './store-change'
 
 export function PincodeSheet() {
   const { pincode, sheetOpen } = usePincode()
+  const field = useRef<HTMLInputElement>(null)
+  // After Sheet's own focus effect (child effects run first), so the field wins over Close.
+  useEffect(() => {
+    if (sheetOpen) field.current?.focus()
+  }, [sheetOpen])
   return (
     <Sheet open={sheetOpen} onClose={closePincodeSheet} title="Your delivery pincode">
-      <PincodeForm pincode={pincode} />
+      <PincodeForm pincode={pincode} field={field} />
     </Sheet>
   )
 }
 
 // Mounted only while the sheet is open, so each open starts from the stored pincode.
-function PincodeForm({ pincode }: { pincode?: string }) {
+function PincodeForm({ pincode, field }: { pincode?: string; field: RefObject<HTMLInputElement | null> }) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
@@ -32,6 +37,7 @@ function PincodeForm({ pincode }: { pincode?: string }) {
       <p className="text-body text-ink-muted">We show the store that delivers to you.</p>
       <FormField label="Pincode" error={error}>
         <Input
+          ref={field}
           name="pincode"
           inputMode="numeric"
           autoComplete="postal-code"
@@ -57,7 +63,7 @@ export function PincodeButton() {
         'Enter pincode'
       ) : open ? (
         <span className="flex flex-col items-start leading-tight">
-          <span>Delivery in {open.promisedMinutes} minutes</span>{' '}
+          <span className="whitespace-nowrap">Delivery in {open.promisedMinutes} minutes</span>{' '}
           <span className="text-small">{pincode}</span>
         </span>
       ) : (
