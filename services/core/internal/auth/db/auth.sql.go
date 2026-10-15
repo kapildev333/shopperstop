@@ -244,6 +244,31 @@ func (q *Queries) ListStaff(ctx context.Context, arg ListStaffParams) ([]ListSta
 	return items, nil
 }
 
+const lockActiveAdmins = `-- name: LockActiveAdmins :many
+select id from staff_users where role = 'admin' and is_active order by id for update
+`
+
+// Locks the active admins in id order so concurrent deactivations serialise without deadlock.
+func (q *Queries) LockActiveAdmins(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, lockActiveAdmins)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const staffByEmail = `-- name: StaffByEmail :one
 select id, email, password_hash, name, role, store_id, is_active from staff_users where email = $1
 `

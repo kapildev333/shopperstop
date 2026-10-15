@@ -3488,7 +3488,7 @@
           "request": {
             "name": "Change a staff user",
             "description": {
-              "content": "Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account; core-admin create-admin with another email makes a new admin. A null value is refused with 400 naming the field. An id that is not one answers 404.",
+              "content": "Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account while another admin is active; deactivating the only active admin answers 409 and changes nothing (core-admin create-admin with another email makes a new admin). A null value is refused with 400 naming the field. An id that is not one answers 404.",
               "type": "text/plain"
             },
             "url": {
@@ -3884,6 +3884,74 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The patch sets isActive false on the only active admin. Nothing is changed.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "staff-users",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The staff user id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000101",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"cannot deactivate the last active admin\",\n    \"field\": \"isActive\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }

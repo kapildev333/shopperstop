@@ -443,7 +443,7 @@ export interface paths {
         head?: never;
         /**
          * Change a staff user
-         * @description Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account; core-admin create-admin with another email makes a new admin. A null value is refused with 400 naming the field. An id that is not one answers 404.
+         * @description Admins only. Changes only the fields present: name; password, which replaces the old one at once (the old one then fails to sign in); isActive, where false ends the user's signed-in sessions at their next request. Role and store cannot change; create a new staff user instead. An admin may deactivate their own account while another admin is active; deactivating the only active admin answers 409 and changes nothing (core-admin create-admin with another email makes a new admin). A null value is refused with 400 naming the field. An id that is not one answers 404.
          */
         patch: operations["patchStaffUser"];
         trace?: never;
@@ -3728,6 +3728,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The patch sets isActive false on the only active admin. Nothing is changed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "cannot deactivate the last active admin",
+                     *         "field": "isActive"
                      *       }
                      *     }
                      */

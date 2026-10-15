@@ -1,7 +1,7 @@
 # core-P2-L7-t1 - refuse deactivating the last active admin (task 1 of core-last-active-admin)
-Status: not started
+Status: done
 ## Doing
-Brief below, written by the team lead. The worker replaces this section with its progress and keeps the rest of the file as its log.
+Done. Commits `79eac9c test: the last active admin cannot be deactivated` and the `feat: refuse deactivating the last active admin` commit (hash in the report). Gates green: `make test-core` exit 0, `make gen postman` leaves the tree clean, `openspec validate --all --strict` 15 of 15 passed.
 
 ### Brief
 - LANE-ID: core-P2-L7 (task 1 of 1). Area: `core`.
@@ -19,6 +19,39 @@ Brief below, written by the team lead. The worker replaces this section with its
   2. `PATH=$HOME/.local/node-v22.23.3/bin:$PATH make gen postman`; after the last commit `git status --short` prints nothing.
   3. `PATH=$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH openspec validate --all --strict` passes.
 - Known: `TestSignInFailuresLookTheSame` (timing ratio) can flake under heavy machine load; re-run quiet before treating it as a defect.
+
+## Log
+
+### Red (box 1.1, commit 79eac9c)
+`go test -count=1 -v -run 'LastActiveAdmin|OneOfTwoAdmins|EachOtherAtOnce|DeactivatesStaffAndInactive' ./internal/app`:
+```
+--- FAIL: TestDeactivateLastActiveAdmin (0.27s)
+    staff_test.go: last admin self-deactivation: got 200 {... "name":"Renamed", "isActive":false}, want 409 conflict field isActive
+--- PASS: TestDeactivateOneOfTwoAdmins (0.01s)
+--- FAIL: TestAdminsDeactivateEachOtherAtOnce (0.02s)
+    A deactivates B: 200 ...; B deactivates A: 200 ...; active admins 0, want one 200, one refusal, one admin left
+--- PASS: TestLastAdminDeactivatesStaffAndInactive (0.01s)
+```
+Matches the brief's "At red" column.
+
+### Green (box 1.2)
+- Query `LockActiveAdmins` appended to `queries/auth.sql`; `make gen` regenerated `db/auth.sql.go` (`LockActiveAdmins(ctx) ([]string, error)`) and `core.d.ts`. `make gen postman` regenerated the Postman collection.
+- `staff.go`: `strings` import, `errLastAdmin`, transaction in `UpdateStaffUser` with `pgx.BeginFunc` and `WithTx`, doc comment updated, as design.md.
+- `openapi.json`: the `patchStaffUser` description and the 409 response (with example) added. Edited with an exact-string Node script; JSON re-parsed.
+- Four target tests with `-race`: `ok ... internal/app`.
+
+### Gate tails
+- `GOFLAGS=-count=1 make test-core` exit 0: every package `ok` (cmd/core, cmd/core-admin, internal/app 101 s, auth, blob, cart, catalog, config, httpx, migrate, order, pg, seed, stock, store); gofmt and `go vet ./...` clean.
+- `make gen postman`: `# tests 11 # pass 11 # fail 0`.
+- `openspec validate --all --strict`: `Totals: 15 passed, 0 failed (15 items)`.
+
 ## Found
+- The `core-P2-L7.md` lane file (lead-owned) is not touched by this worker; it says the change is waiting for the worker, and its Found notes match the implementation.
+- The race's loser answers 401 when it reaches `RequireStaff` after the winner commits, 409 when it reaches the lock first; the test accepts both, as the scenario does.
+- `TestSignInFailuresLookTheSame` was not re-run; the full `make test-core` passed on the first run.
+
 ## Requests
+- to admin (through the core area plan, after merge): `PATCH /admin/staff-users/{id}` answers 409 `{code: "conflict", field: "isActive", message: "cannot deactivate the last active admin"}`; showing it next to the switch is optional.
+
 ## Blockers
+None.
