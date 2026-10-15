@@ -304,7 +304,7 @@ History SHALL have a pager: "Previous", "Page <x> of <y>, <n> orders" and "Next"
 - **THEN** "Previous" was `aria-disabled` and asked core nothing; while page 2 loads the table is `aria-busy` and still reads "Page 1 of 2, 30 orders" with its own rows; then page 2 shows six orders, not busy, "Next" has focus, is `aria-disabled` and not disabled, the URL holds `page=2`, "History" is still the current tab, and another press of "Next" asks core nothing
 
 ### Requirement: Orders URL values
-The page SHALL read only what it can use from the URL and never ask core for what core would refuse: a `tab` other than `history` is the board; a `status` other than `cancelled` is the delivered list; a `page` that is not a whole number above 1 is page 1; a `page` above 100000 is cut to 100000. A page past the end SHALL move to the last page that has rows.
+The page SHALL read only what it can use from the URL and never ask core for what core would refuse: a `tab` other than `history` is the board; a `status` other than `cancelled` is the delivered list; a `page` that is not a whole number above 1 is page 1; a `page` above 100000 is cut to 100000. A page past the end SHALL move to the last page that has rows, and SHALL show a skeleton, never the empty state, until that page answers.
 
 #### Scenario: Unreadable values
 - **WHEN** the URL holds `tab=archive`; `tab=history&status=placed`; `tab=history&page=banana`, `page=0` or `page=1.5`
@@ -313,6 +313,10 @@ The page SHALL read only what it can use from the URL and never ask core for wha
 #### Scenario: Over-large page
 - **WHEN** an admin opens `/orders?tab=history&page=2147483648` at a store with 30 delivered orders
 - **THEN** core was asked for page 100000 and then page 2, "Page 2 of 2, 30 orders" shows and the URL holds `page=2`
+
+#### Scenario: Page past the end
+- **WHEN** an admin opens `/orders?tab=history&page=9` at a store with 30 delivered orders, core answers page 9 with no rows and has not answered page 2 yet
+- **THEN** a skeleton shows with no table and no "No delivered orders"; once core answers, "Page 2 of 2, 30 orders" shows and the URL holds `page=2`
 
 ### Requirement: Orders history and the store
 Choosing a store on History SHALL keep the tab, start at page 1 with one request, and never show the other store's rows. A history list kept from before a status change SHALL be read again on the next visit and SHALL NOT be shown meanwhile as it was.

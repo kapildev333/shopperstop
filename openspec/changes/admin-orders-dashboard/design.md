@@ -79,6 +79,15 @@ Accepted from the review of task 2, no change: R2-3 the delivered dialog sends w
 
 Accepted from the review of task 3 (2026-10-15, `.claude/lanes/admin-P2-L5-R3.md`), no change, nothing folded into task 4: R3-1 the sheet's cancel has its own `useSetStatus`, outside the board's one change at a time; the modal cancel dialog keeps the board's buttons out of reach while it runs; R3-2 `maxLength={500}` counts UTF-16 units where core counts runes after trimming, so astral characters reach the limit earlier, never later (the safe side); R3-3 the cancel's result ("Order cancelled." or the conflict notice) stays on the sheet until it closes, as the scenarios want; R3-4 the card's number is a ghost `Button` and the next-status button's `aria-labelledby` still resolves to its text. Task 4 re-spiked on the branch with task 3 landed (236): `16 failed | 236 passed (252)`, then 252; task 5 `7 failed | 252 passed (259)`, then 259; lint, typecheck and build green; `make test-web` exit 0 after task 4 (ui 54, admin 252, web 140).
 
+After the review of task 4 (2026-10-15, `.claude/lanes/admin-P2-L5-R4.md`), folded into task 5 as its step A:
+
+36. **A page past the end is a skeleton until the last page answers** (R4-1): `order-history.tsx` shows the skeleton while `history.data === undefined || (empty && page > 1)`, and the alert only while `data === undefined`. Measured in the spike: the empty state did not show for one render only, as the review read it, but for the whole read of the last page, because the empty page past the end is the placeholder of the next one (same status: `historyQuery`'s `placeholderData`). `page > 1` covers both the render before the move and the placeholder; a move to page 1 (a store with no orders of the status) shows the empty state, which is then the truth. One new scenario ("Orders URL values › Page past the end"), one test appended to `src/orders-history.test.tsx`, guard G55. Rejected: `empty && stale` (passes the test, but leaves the one render before the move), an extra `|| stale` (no test can tell it apart from `page > 1`).
+37. **R4-2 not taken**: the finished column's `order.deliveredAt ?? order.cancelledAt ?? order.placedAt` stays. Without the last fallback `when` needs a non-null assertion (`when` takes a `string`, and `new Date(undefined)` throws in `Intl.DateTimeFormat.format`); the fallback is the type-safe form of "core always sets one", and it costs nothing.
+
+Accepted from the review of task 4, no change: R4-3 the tab links drop `status` and `page`, and a Delivered/Cancelled chip pressed while selected pushes a history entry; R4-4 the 4.1 tick was its own `test:` commit after the tests, the order test, feat still holds.
+
+Re-spiked 2026-10-15 on the branch with task 4 landed (252) and reverted: step A `1 failed | 252 passed (253)`, then 253 (three runs each way); task 5 `7 failed | 253 passed (260)`, then 260; `make test-web` exit 0 (ui 54, admin 260, web 140); guards G44, G45 and G55 red. Then once more with main at 09772d3 laid over (admin-staff-e2e merged, #182; `apps/`, `packages/ui/src/api/core.d.ts` and `services/core/openapi.json` of main, this lane's files kept): admin before task 5 `287 passed (287)` (+35 from admin-staff-e2e), step A `1 failed | 287 passed (288)`, then 288; task 5 `7 failed | 288 passed (295)`, then 295; `make test-web` exit 0 (ui 54, admin 295, web 149); `openspec validate --all --strict` 15 passed with main's `openspec/specs/admin-app/spec.md`, no requirement name shared.
+
 ## Files (all under `apps/admin/`)
 | File | Task | What |
 |---|---|---|
@@ -91,7 +100,7 @@ Accepted from the review of task 3 (2026-10-15, `.claude/lanes/admin-P2-L5-R3.md
 | `src/routes/_staff/orders.tsx` | 1 (replaces the placeholder), replaced whole in 4 | store, tabs, URL |
 | `src/orders-status.test.tsx` (new), `src/idle.ts` (new) | 2, one test appended to the first in 3 | 9 tests; the `idle` class |
 | `src/order-sheet.test.tsx` (new), `src/order-sheet.tsx` (new) | 3 | 13 tests; the sheet and the cancel dialog |
-| `src/orders-history.test.tsx` (new), `src/order-history.tsx` (new) | 4 | 16 tests; the history table |
+| `src/orders-history.test.tsx` (new), `src/order-history.tsx` (new) | 4; one test appended to the first and two hunks of the second in 5 (step A) | 16 + 1 tests; the history table |
 | `src/dashboard.test.tsx` (new), `src/routes/_staff/index.tsx` (replaces the placeholder) | 5 | 7 tests; the dashboard |
 
 `src/routeTree.gen.ts`, `src/fake-core.ts`, `package.json` and every existing test are unchanged. `src/shell.test.tsx` and `src/sign-in.test.tsx` open `/` without a dashboard route in their fake: the page then shows its alert under the "Dashboard" heading they look for, and they pass unchanged (measured).
@@ -112,6 +121,9 @@ The lane's documents were written on e6d8e4b. admin-stock has merged since; admi
 Counts: the admin suite on e6d8e4b alone is `95 passed`; with admin-stock at d106b53 `160`; on L7's branch at 0aa0ab1 `180 passed (180)` in 17 files. Every count in tasks.md is "base + n" with base 180 in brackets; if the rebased branch starts elsewhere, only the base moves. Playwright: base + 3 (two in `orders.spec.ts`, one in `catalog.spec.ts`).
 
 Not buildable before the rebase: task 1 needs `storeNameQuery` and the root notice, task 5 the typed `/stock` search. Step 0 of brief 1 checks both.
+
+### Rebase onto main with admin-staff-e2e (admin-P2-L6, merged as #182, archived as #183)
+Main moved past this branch's base 56be587 with admin-staff-e2e and web and core lanes. Under `apps/admin` it changes `e2e/catalog.spec.ts`, adds `e2e/staff.spec.ts`, `src/staff*.ts(x)`, and inserts an Image column into `src/routes/_staff/stock.tsx` (two lines) with one test in `src/stock.test.tsx`. Only `e2e/catalog.spec.ts` is edited by both lanes: main adds the `koramangala` constant after `png` and a stock stretch inside "admin runs the catalog"; this lane appends "an ordered product cannot be deleted …" at the end. `git merge-file` of the two over the merge base: 0 conflicts, three tests. **Keep both lanes' edits**; if git stops on the file anyway, take main's file and append this lane's last 18 lines (the empty line, the two comment lines and the test). `/stock`'s `store` and `lowStock` search params are unchanged, so the dashboard's typed link holds. Counts move by +35 in Vitest (admin 287 before task 5) and +1 in Playwright (`staff.spec.ts`): admin e2e 14.
 
 ## Tests (scenario -> test)
 Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/orders-status.test.tsx`, D `src/order-sheet.test.tsx`, H `src/orders-history.test.tsx`, X `src/dashboard.test.tsx`, E `e2e/orders.spec.ts`, C `e2e/catalog.spec.ts`.
@@ -177,6 +189,7 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Orders history pager › Pager | H "the pager moves between pages and keeps focus; rows kept while the next page loads are marked busy under their own page number" | 4 |
 | Orders URL values › Unreadable values | H "?%s in the URL is read as %s" (5 runs) | 4 |
 | Orders URL values › Over-large page | H "a page in the URL beyond what core accepts is cut to one it does, then to the last page" | 4 |
+| Orders URL values › Page past the end | H "a page past the end shows a skeleton, never the empty state, until the last page answers" | 5 (step A) |
 | Orders history and the store › Store chosen on History | H "choosing a store on the History tab keeps the tab, starts at page 1 and never shows the other store's rows" | 4 |
 | Orders history and the store › History after a delivery | H "a history page kept from before a status change is read again, never shown as it was" | 4 |
 | Dashboard › Dashboard cards | X "an admin sees a card per store in core's order, with today's orders by status and in all, revenue and the low-stock count" | 5 |
@@ -190,7 +203,7 @@ Test files: B `src/orders-board.test.tsx`, R `src/orders-rules.test.ts`, S `src/
 | Orders against core › Admin sees the dashboard and a store's orders | E "an admin sees the dashboard cards and opens a store's orders from one" | written 1, run 6 |
 | Ordered product against core › Ordered product offers Deactivate instead | C "an ordered product cannot be deleted and offers to be deactivated instead" | written 1, run 6 |
 
-72 scenarios; 79 Vitest runs (68 tests, two of them `test.each`) and 3 Playwright tests.
+73 scenarios; 80 Vitest runs (69 tests, two of them `test.each`) and 3 Playwright tests.
 
 ## Test strategy
 - Vitest and Testing Library through `renderApp` (the real router, guard and shell) and `fakeCore` at `fetch`; no mock of a module, of the query client or of the router.
@@ -266,8 +279,9 @@ Tried in the first spike (before the root-notice ruling, which changed no string
 | G52 | column heading named by its text alone | `src/order-board.tsx` | "a column is named by its status and how many orders it holds" |
 | G53 | one list request failing leaves its column empty | `src/orders.ts` | "a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new"; "a board that cannot be loaded offers a retry that reloads"; "orders kept from an earlier visit are no baseline when the first refresh after coming back fails"; "one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh"; "one of the five requests failing on the first load is a board that could not be loaded" |
 | G54 | result of a change unnamed | `src/order-board.tsx` | "the keyboard after a delivery is on a result named for what it holds" |
+| G55 | past-the-end skeleton only for the render before the move (`history.data === undefined \|\| pastEnd`) | `src/order-history.tsx` | "a page past the end shows a skeleton, never the empty state, until the last page answers" |
 
-54 guards, none without a red test. Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again. G6, G38 and G44 (the alert shown although data is held) are caught by `queryByRole('alert')` after `refreshFailed`. G49 to G53 guard the fixes from the review of task 1. The G54 of the revision of 2026-10-13 removed the same line as G13 and is merged into it (G13 turns both held-poll tests red); G54 is now the unnamed result from the review of task 2 (R2-2). R2-1 has no guard: the closed `Dialog` renders nothing, so its title never reaches the DOM.
+55 guards, none without a red test (G55 run in the re-spike after task 4, on task 4's landed tree with step A and task 5 laid over). Three had none on the first run (G5, G42, G48: the behaviour converged through another path); the tests gained an assertion each and the guards were run again. G6, G38 and G44 (the alert shown although data is held) are caught by `queryByRole('alert')` after `refreshFailed`. G49 to G53 guard the fixes from the review of task 1. The G54 of the revision of 2026-10-13 removed the same line as G13 and is merged into it (G13 turns both held-poll tests red); G54 is now the unnamed result from the review of task 2 (R2-2). R2-1 has no guard: the closed `Dialog` renders nothing, so its title never reaches the DOM.
 
 ## Code and tests per task (spiked; workers copy it byte for byte)
 
@@ -3174,7 +3188,67 @@ export const Route = createFileRoute('/_staff/orders')({
 
 ### Task 5: the dashboard
 
-#### `src/dashboard.test.tsx` (new)
+Step A, from the review of task 4 (Decisions 36 and 37): one test appended to the history tests, then two hunks of `order-history.tsx`. Step B, the dashboard, as before.
+
+#### `src/orders-history.test.tsx` (step A: append this block at the end of the file; it starts with one empty line; change nothing above)
+
+```tsx
+
+test('a page past the end shows a skeleton, never the empty state, until the last page answers', async () => {
+  setToken('tok')
+  const core = ordersCore(indiranagar.id, thirty)
+  const calls = fakeCore({ ...asAdmin, ...core.routes })
+  core.hold('lists')
+
+  const router = renderApp('/orders?tab=history&page=9')
+  await waitFor(() => expect(listRequests(calls)).toHaveLength(1))
+  // Page 9 answers (no rows, 30 orders); the move to the last page waits for core.
+  core.release('lists')
+  core.hold('lists')
+
+  await waitFor(() => expect(listRequests(calls).map((query) => query.page)).toEqual(['9', '2']))
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByText('No delivered orders')).not.toBeInTheDocument()
+  expect(screen.queryByRole('table', { name: 'Order history' })).not.toBeInTheDocument()
+  core.release('lists')
+  await screen.findByText('Page 2 of 2, 30 orders')
+  expect(router.state.location.search).toEqual({ tab: 'history', page: 2 })
+})
+```
+
+#### `src/order-history.tsx` (step A: two hunks, each found once in the file; replace the `-` lines with the `+` lines, change nothing else; the block is `git apply`-able as the spike's diff)
+
+```diff
+diff --git a/apps/admin/src/order-history.tsx b/apps/admin/src/order-history.tsx
+--- a/apps/admin/src/order-history.tsx
++++ b/apps/admin/src/order-history.tsx
+@@ -16,8 +16,10 @@ export function OrderHistory({ storeId, status, page, go }: { storeId: string; s
+   const total = history.data?.total ?? 0
+   const pages = Math.max(1, Math.ceil(total / pageSize))
+ 
+-  // A page past the end (a typed URL) moves to the last page that has rows.
+-  const pastEnd = page > 1 && !stale && history.data?.items.length === 0
++  // A page past the end (a typed URL) moves to the last page that has rows. Until that page answers, an empty page
++  // past the end, or kept while the last page loads, is a skeleton: never "No … orders" for a store that has some.
++  const empty = history.data?.items.length === 0
++  const pastEnd = page > 1 && !stale && empty
+   useEffect(() => {
+     const last = Math.ceil(total / pageSize)
+     if (pastEnd) go({ page: last > 1 ? last : undefined }, true)
+@@ -44,8 +46,8 @@ export function OrderHistory({ storeId, status, page, go }: { storeId: string; s
+         <Chip selected={status === 'delivered'} onClick={() => go({ status: undefined, page: undefined })}>Delivered</Chip>
+         <Chip selected={status === 'cancelled'} onClick={() => go({ status: 'cancelled', page: undefined })}>Cancelled</Chip>
+       </div>
+-      {history.data === undefined ? (
+-        history.isError ? (
++      {history.data === undefined || (empty && page > 1) ? (
++        history.isError && history.data === undefined ? (
+           <ErrorBanner message="Could not load the orders." onRetry={() => void history.refetch()} />
+         ) : (
+           <Skeleton variant="table" count={6} />
+```
+
+#### `src/dashboard.test.tsx` (step B: new)
 
 ```tsx
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -3325,7 +3399,7 @@ test('an admin with no stores is told to create one', async () => {
 })
 ```
 
-#### `src/routes/_staff/index.tsx` (replace the whole placeholder file)
+#### `src/routes/_staff/index.tsx` (step B: replace the whole placeholder file)
 
 ```tsx
 import { queryOptions, useQuery } from '@tanstack/react-query'
