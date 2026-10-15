@@ -2,7 +2,7 @@
 Status: done
 
 ## Doing
-Task 4 landed on `lane/admin-P2-L5-admin-orders-dashboard`, in order: `test: orders history tab` (`d1205fb`, red, `orders-history.test.tsx` byte for byte from design.md), `test: orders history tab (tick 4.1)` (`6a82fbd`, the 4.1 tick as its own commit, see Found), then `feat: orders history tab with status filter and pager` (the three code files and the 4.2 tick, green), then this `docs(lanes)` log. Nothing pushed. Nothing running.
+Task 4 landed on `lane/admin-P2-L5-admin-orders-dashboard`, in order: `test: orders history tab` (`d1205fb`, red, `orders-history.test.tsx` byte for byte from design.md), `test: orders history tab (tick 4.1)` (`6a82fbd`, the 4.1 tick as its own commit, see Found), then this `docs(lanes)` log (`0a36318`), then `feat: orders history tab with status filter and pager` (`ed38a85`, the three code files and the 4.2 tick, green), then the log correction. Nothing pushed. Nothing running.
 
 ## Found
 - Step 0 base: admin Vitest `Test Files 21 passed (21)`, `Tests 236 passed (236)`. Matches the brief (base 180 + task 3's 56).
