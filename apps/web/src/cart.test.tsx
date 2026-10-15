@@ -205,3 +205,23 @@ test('overtaken in-flight write shows no failure', async () => {
   await waitFor(() => expect(shownCount()).toBe(3))
   expect(screen.queryByRole('alert')).toBeNull()
 })
+
+test('failure shows before the cart re-read settles', async () => {
+  resolveStore()
+  setToken('t')
+  queryClient.setQueryData(cartKey('t'), serverCart(koramangala, 1))
+  renderInRouter(<ProductCard product={product({ name: 'Amul Taaza' })} />)
+  // Core cannot be reached for the write, and the re-read that follows it is held open until the test releases it.
+  let releaseRead = () => {}
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (request.method === 'GET') {
+      return new Promise<Response>((_, reject) => {
+        releaseRead = () => reject(new TypeError('fetch failed'))
+      })
+    }
+    throw new TypeError('fetch failed')
+  })
+  fireEvent.click(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  releaseRead()
+})
