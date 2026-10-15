@@ -19,7 +19,7 @@ export function staffCore(start: Staff[] = [admin, indu, kiran]) {
     'GET /admin/me': () => json(200, admin),
     'GET /admin/stores': () => storeList([indiranagar, koramangala]),
     'GET /admin/staff-users': () => {
-      const items = [...users].sort((a, b) => (a.email < b.email ? -1 : 1))
+      const items = [...users].sort((a, b) => (a.email.toLowerCase() < b.email.toLowerCase() ? -1 : 1))
       return json(200, { items, page: 1, pageSize: 100, total: items.length })
     },
     'POST /admin/staff-users': async (request) => {

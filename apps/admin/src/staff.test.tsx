@@ -1,10 +1,11 @@
 import { notifyManager } from '@tanstack/react-query'
-import { act, screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, apiError, fakeCore, json, koramangala, storeStaff } from './fake-core'
 import { renderApp } from './render-app'
+import { staffUsersQuery } from './staff'
 import { indu, kiran, staffCore } from './staff-fake'
 
 afterEach(() => {
@@ -137,4 +138,29 @@ test('store staff who open /staff see not found, and core is not asked for the s
   expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/staff')
   expect(paths(calls)).toEqual(['/admin/me'])
+})
+
+test('a refetch of the staff users that fails while the stores still load keeps the skeleton, not the alert', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let down = false
+  fakeCore({
+    ...core.routes,
+    'GET /admin/staff-users': (request) => (down ? json(502) : core.routes['GET /admin/staff-users'](request)),
+    // The stores never answer.
+    'GET /admin/stores': () => new Promise<Response>(() => {}),
+  })
+  const router = renderApp('/staff')
+  const queryClient = router.options.context.queryClient
+  await waitFor(() => expect(queryClient.getQueryData(staffUsersQuery.queryKey)).toBeDefined())
+
+  down = true
+  await act(async () => {
+    await queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey })
+    await new Promise<void>((told) => notifyManager.schedule(told))
+  })
+
+  expect(queryClient.getQueryState(staffUsersQuery.queryKey)?.status).toBe('error')
+  expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
