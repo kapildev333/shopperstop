@@ -408,3 +408,28 @@ test('unconfirmed placement that emptied the cart', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/orders'))
 })
+
+test('unconfirmed placement with the cart still full', async () => {
+  // Core's answer was lost and the cart read again still holds the line: the order is not known to have gone through.
+  vi.stubGlobal('fetch', async (request: Request) => {
+    if (new URL(request.url).pathname === '/api/core/v1/me/cart')
+      return new Response(JSON.stringify(cartView({ storeId: koramangala, items: [{ product: taaza, quantity: 4 }] })), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    throw new TypeError('fetch failed')
+  })
+  seed({ lines: [[taaza, 4]], storeOverrides: { minOrderCents: 9900 } })
+  const { send } = sender({ error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } })
+  const router = renderInRouter(<CheckoutPage send={send} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Place order (COD)' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'We could not confirm your order. It may have been placed, so check Your orders before you place it again.',
+  )
+  const summary = screen.getByRole('region', { name: 'Order summary' })
+  expect(within(summary).getByRole('link', { name: 'Your orders' })).toHaveAttribute('href', '/orders')
+  expect(within(summary).getByText('Amul Taaza')).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/')
+  expect(placeButton()).toBeEnabled()
+  expect(placeButton()).not.toHaveAttribute('aria-busy')
+})
