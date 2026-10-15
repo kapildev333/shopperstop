@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react'
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import type { components } from '@shopperstop/ui/api'
 import { queryClient } from './api'
 import { cartKey } from './cart'
@@ -9,21 +9,20 @@ import { setPincode } from './pincode'
 import { setToken } from './session'
 import { product, renderInRouter, store } from './test-data'
 
-// api.ts captures globalThis.fetch when openapi-fetch creates the client, so the stub must be in place before api.ts loads.
-vi.hoisted(() => {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ error: { code: 'validation', field: 'productId', message: 'product not available' } }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })) as typeof fetch
-})
-
 type Cart = components['schemas']['Cart']
 
 const koramangala = '00000000-0000-4000-8000-000000000401'
 
-// Core answers every request with the 400 above, so the cached cart stays shown.
+afterEach(() => vi.unstubAllGlobals())
+
+// Core answers every request with the 400 below, so the cached cart stays shown.
 test("core's refusal is shown", async () => {
+  vi.stubGlobal('fetch', async () =>
+    new Response(JSON.stringify({ error: { code: 'validation', field: 'productId', message: 'product not available' } }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
   setPincode('560034')
   queryClient.setQueryData(keys.serviceability('560034'), store())
   setToken('t')
