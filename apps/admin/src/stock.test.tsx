@@ -899,3 +899,20 @@ test('Escape closes the switch dialog and keeps the store and the edits', async 
   expect(quantity('Banana Robusta')).toHaveValue('30')
   expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
 })
+
+test('each stock row starts with the product\'s image as a tile, a placeholder when it has none', async () => {
+  setToken('tok')
+  const pictured = { ...banana, imageUrl: '/api/core/v1/files/products/seed-fruits-vegetables.png' }
+  fakeCore({ ...asAdmin, ...stockCore(indiranagar.id, [pictured, milk]).routes })
+
+  renderApp('/stock')
+
+  const table = await screen.findByRole('table', { name: 'Stock' })
+  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Image', 'Product', 'Unit', 'Price', 'Quantity', 'Status'])
+  const [first, second] = within(table).getAllByRole('row').slice(1)
+  const image = first.querySelector('td')!.querySelector('img')
+  expect(image).toHaveAttribute('src', pictured.imageUrl)
+  expect(image).toHaveAttribute('alt', '')
+  expect(second.querySelector('img')).toBeNull()
+  expect(second.querySelector('td')!.querySelector('[data-placeholder]')).not.toBeNull()
+})

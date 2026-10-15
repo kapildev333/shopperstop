@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, apiError, fakeCore, indiranagar, json } from './fake-core'
 import { renderApp } from './render-app'
+import { staffUsersQuery } from './staff'
 import { createdId, indu, kiran, staffCore } from './staff-fake'
 
 afterEach(() => {
@@ -360,4 +361,47 @@ test('a staff user just created can be changed at once: the row is replaced, not
   expect(new URL(sent(calls, 'PATCH')[0].url).pathname).toBe(`/api/core/v1/admin/staff-users/${createdId}`)
   expect(within(row('Jaya@example.test')).getByText('Jaya M')).toBeInTheDocument()
   expect(emails()).toHaveLength(4)
+})
+
+test('a row changed by a refetch while its dialog is open: the save sends what the dialog shows, against the row as it is now', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let read = core.routes['GET /admin/staff-users']
+  const calls = fakeCore({ ...core.routes, 'GET /admin/staff-users': (request) => read(request) })
+
+  const router = renderApp('/staff')
+  const dialog = await openEdit(kiran.email, kiran.name)
+  // Another admin deactivates Kiran meanwhile; a background read brings it while the dialog is open.
+  read = () => json(200, { items: [admin, indu, { ...kiran, isActive: false }], page: 1, pageSize: 100, total: 3 })
+  await act(() => router.options.context.queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey }))
+  await waitFor(() => expect(within(row(kiran.email)).getByText('Inactive')).toBeInTheDocument())
+  expect(within(dialog).getByLabelText('Status')).toHaveValue('active')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(sent(calls, 'PATCH')).toHaveLength(1)
+  expect(await sent(calls, 'PATCH')[0].json()).toEqual({ isActive: true })
+  expect(within(row(kiran.email)).getByText('Active')).toBeInTheDocument()
+})
+
+test('a row gone from the list while its dialog is open keeps the dialog on the row as opened', async () => {
+  setToken('tok')
+  const core = staffCore()
+  let read = core.routes['GET /admin/staff-users']
+  const calls = fakeCore({ ...core.routes, 'GET /admin/staff-users': (request) => read(request) })
+
+  const router = renderApp('/staff')
+  const dialog = await openEdit(kiran.email, kiran.name)
+  read = () => json(200, { items: [admin, indu], page: 1, pageSize: 100, total: 2 })
+  await act(() => router.options.context.queryClient.refetchQueries({ queryKey: staffUsersQuery.queryKey }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: `Edit ${kiran.email}` })).not.toBeInTheDocument())
+  expect(screen.getByRole('dialog', { name: `Edit ${kiran.name}` })).toBe(dialog)
+  expect(within(dialog).queryByLabelText('Email')).not.toBeInTheDocument()
+  await userEvent.type(within(dialog).getByLabelText('Name'), ' Jr')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(new URL(sent(calls, 'PATCH')[0].url).pathname).toBe(`/api/core/v1/admin/staff-users/${kiran.id}`)
+  expect(await sent(calls, 'PATCH')[0].json()).toEqual({ name: 'Kiran Rao Jr' })
+  expect(within(row(kiran.email)).getByText('Kiran Rao Jr')).toBeInTheDocument()
 })
