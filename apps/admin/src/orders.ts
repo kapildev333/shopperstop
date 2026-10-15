@@ -1,15 +1,19 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSyncExternalStore } from 'react'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
 
 export type Order = components['schemas']['Order']
 export type OrderStatus = Order['status']
-// What the URL of /orders holds. Absent means: the first store (admins).
-export type OrdersSearch = { store?: string }
+export type Finished = 'delivered' | 'cancelled'
+// What the URL of /orders holds. Absent means: the first store (admins), the board, delivered orders, page 1.
+export type OrdersSearch = { store?: string; tab?: 'history'; status?: 'cancelled'; page?: number }
 
 // The board asks core again this often (Spec 2 §8). TanStack Query stops the interval while the tab is hidden and asks at once when it shows again.
 export const pollMs = 10_000
+export const pageSize = 24
+// A page core does not refuse as too large (its limit at 24 a page is 89478486).
+export const maxPage = 100000
 // The statuses with a column, in the order an order moves through them (services/core/internal/order/status.go).
 export const activeStatuses = ['placed', 'accepted', 'packing', 'ready', 'out_for_delivery'] as const satisfies readonly OrderStatus[]
 export const statusLabel: Record<OrderStatus, string> = {
@@ -48,8 +52,17 @@ export const boardQuery = (storeId: string) =>
     refetchInterval: pollMs,
   })
 
+// One page of a store's finished orders, newest first: ['admin', 'orders', storeId, 'history', status, page].
+export const historyQuery = (storeId: string, status: Finished, page: number) =>
+  queryOptions({
+    queryKey: ['admin', 'orders', storeId, 'history', status, page],
+    queryFn: () => listOrders(storeId, { status, page, pageSize }),
+    // The page on screen stays while the next one loads, so the pager keeps keyboard focus; never the other status's rows.
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[4] === status ? keepPreviousData(previous) : undefined),
+  })
+
 // One order is ['admin', 'order', id]: not under a store's lists, so dropping those never empties an open sheet.
-// The sheet follows the order like the board does.
+// The sheet follows the order like the board does, until the order is finished: nothing changes after that.
 export const orderQuery = (id: string) =>
   queryOptions({
     queryKey: ['admin', 'order', id],
@@ -58,7 +71,7 @@ export const orderQuery = (id: string) =>
       if (error) throw error.error
       return data
     },
-    refetchInterval: pollMs,
+    refetchInterval: (query) => (query.state.data && !isActive(query.state.data.status) ? false : pollMs),
   })
 
 // D28, as on the customer site: an order under way is `accent`, delivered `success`, cancelled `neutral`; the badge
@@ -87,6 +100,8 @@ export function useSetStatus(storeId: string) {
       const detail = orderQuery(order.id).queryKey
       await queryClient.cancelQueries({ queryKey: detail })
       queryClient.setQueryData(detail, order)
+      // Lists kept from before (history pages) no longer hold what core holds: the next visit reads them again.
+      queryClient.removeQueries({ queryKey: ['admin', 'orders', storeId], type: 'inactive' })
     },
   })
 }
