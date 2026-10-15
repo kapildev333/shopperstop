@@ -16,8 +16,10 @@ export function OrderHistory({ storeId, status, page, go }: { storeId: string; s
   const total = history.data?.total ?? 0
   const pages = Math.max(1, Math.ceil(total / pageSize))
 
-  // A page past the end (a typed URL) moves to the last page that has rows.
-  const pastEnd = page > 1 && !stale && history.data?.items.length === 0
+  // A page past the end (a typed URL) moves to the last page that has rows. Until that page answers, an empty page
+  // past the end, or kept while the last page loads, is a skeleton: never "No … orders" for a store that has some.
+  const empty = history.data?.items.length === 0
+  const pastEnd = page > 1 && !stale && empty
   useEffect(() => {
     const last = Math.ceil(total / pageSize)
     if (pastEnd) go({ page: last > 1 ? last : undefined }, true)
@@ -44,8 +46,8 @@ export function OrderHistory({ storeId, status, page, go }: { storeId: string; s
         <Chip selected={status === 'delivered'} onClick={() => go({ status: undefined, page: undefined })}>Delivered</Chip>
         <Chip selected={status === 'cancelled'} onClick={() => go({ status: 'cancelled', page: undefined })}>Cancelled</Chip>
       </div>
-      {history.data === undefined ? (
-        history.isError ? (
+      {history.data === undefined || (empty && page > 1) ? (
+        history.isError && history.data === undefined ? (
           <ErrorBanner message="Could not load the orders." onRetry={() => void history.refetch()} />
         ) : (
           <Skeleton variant="table" count={6} />
