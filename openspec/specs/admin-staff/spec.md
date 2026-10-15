@@ -69,6 +69,25 @@ An admin SHALL list staff users at `GET /api/core/v1/admin/staff-users` as a pag
 - **WHEN** an admin patches a staff id that does not exist
 - **THEN** the response is 404 with code `not_found`
 
+### Requirement: The last active admin stays active
+A staff-user patch that sets `isActive` false on the only active admin SHALL answer 409 `conflict` with field `isActive` and change nothing; concurrent patches SHALL never leave no active admin.
+
+#### Scenario: Last active admin cannot be deactivated
+- **WHEN** the only active admin patches their own id with `{"name":"Renamed","isActive":false}`
+- **THEN** the response is 409 with code `conflict` and field `isActive`, and `GET /admin/me` with their token answers 200 with `isActive` true and the old name
+
+#### Scenario: One of two active admins is deactivated
+- **WHEN** exactly two admins are active and one sets the other's `isActive` to false
+- **THEN** the response is 200 with `isActive` false
+
+#### Scenario: Two admins deactivate each other at once
+- **WHEN** exactly two admins are active and each sets the other's `isActive` to false at the same moment
+- **THEN** exactly one response is 200, the other is 409 `conflict` or, when its own session was already ended, 401 `unauthorized`, and exactly one admin is still active
+
+#### Scenario: Store staff and inactive users are not guarded
+- **WHEN** only one admin is active and they set `isActive` false on an active store-staff user, and then on an admin who is already inactive
+- **THEN** both responses are 200 with `isActive` false
+
 ### Requirement: Staff user fields are validated
 Staff users SHALL follow the customer rules for `email`, `password` and `name`; `role` SHALL be `admin` or `store_staff`; `storeId` SHALL be a uuid, required for `store_staff` and refused for `admin`. A bad value SHALL answer 400 `validation` naming the field; an email taken without regard to case SHALL answer 409 `conflict` with field `email`.
 
