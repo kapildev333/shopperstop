@@ -1,7 +1,7 @@
 # web-P2-L10 - web-cart-write-failure: tell the customer when a cart write fails (team lead)
 Status: started
 ## Doing
-Change written and valid; waiting for the manager to launch worker web-P2-L10-T1 on `briefs/task-1.md`. Then `/opsx:verify`.
+Answered T1's seam question (design Decision 5, brief Commit 1b); waiting for T1's 1b and feat commits, then `/opsx:verify`.
 ## Found
 - Change: `openspec/changes/web-cart-write-failure/` (proposal; `web-app` delta: 2 ADDED requirements, "Customer cart write failure" and "Customer cart write failure cleared", 5 scenarios; design; tasks, one task; `briefs/task-1.md`). No `docs/design/web-P2-L10.md`: design.md is enough.
 - Root cause: `setLine` in `src/cart.ts` drops the error `call()` returns; the `Stepper` snaps back when `asked` is cleared in `finally`. `call()` and the middleware already map every failure to an envelope with a message, so no new mapping and no new copy.
@@ -10,6 +10,7 @@ Change written and valid; waiting for the manager to launch worker web-P2-L10-T1
 - Stock: core never refuses on stock; it clamps with 200 `clamped: true`, and the drawer's existing "Some quantities were lowered" notice stays the only stock message. `PUT /me/cart/items` answers 200, 400 `validation`, 401.
 - Ceilings in design.md: checkout's Remove stays silent; core's 400 copy is terse ("product not available"); the card grows while the message shows; the product page has no test of its own; the in-flight overtaken check is verified by reading.
 - `openspec validate web-cart-write-failure --strict` valid. Vitest not run by this lane (design only).
+- 2026-10-15, answer to web-P2-L10-T1 (seam for "core's refusal is shown"): option (c), admin's seam. `api.ts` gets `baseUrl: \`${location.origin}/api/core/v1\`` and `fetch: (request) => globalThis.fetch(request)`; `test-setup.ts` sets a default `fetch` that throws `TypeError('fetch failed')` so "cannot reach" tests stay deterministic and off the network; the refusal test uses `vi.stubGlobal` plus `vi.unstubAllGlobals`. Rejected the `Request` shim and the api.test.ts-only cover. Design wording corrected: it was `Request` rejecting the relative URL, not `fetch`. Rehearsed in a scratch worktree (T1's uncommitted feature diff plus the seam, removed after): Vitest 147/147, typecheck and lint clean. 1.1 unticked until commit 1b lands.
 ## Requests
 - to web manager: launch web-P2-L10-T1 on `openspec/changes/web-cart-write-failure/briefs/task-1.md`; add to Backlog: checkout's Remove on an out-of-stock line still fails silently.
 ## Blockers

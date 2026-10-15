@@ -7,6 +7,7 @@
 - Scope paths (edit nothing else):
   - `apps/web/src/api.ts`, `apps/web/src/cart.ts`, `apps/web/src/product-card.tsx`, `apps/web/src/routes/p.$slug.tsx`, `apps/web/src/cart-drawer.tsx`
   - `apps/web/src/cart.test.tsx`, `apps/web/src/cart-drawer.test.tsx`, `apps/web/src/cart-write-failure.test.tsx` (new)
+  - `apps/web/src/test-setup.ts`, `apps/web/src/auth.test.ts` (its fetch comment only)
   - `openspec/changes/web-cart-write-failure/tasks.md` (checkboxes only)
   - `.claude/lanes/web-P2-L10-T1.md`
   - Not `packages/ui`, not `checkout.tsx`: if either seems to need a change, stop and report.
@@ -14,40 +15,39 @@
 
 ## Commit 1: `test: cart write failure message`
 
-Under jsdom a relative `fetch` throws, so every cart write already fails with "Could not reach ShopperStop. Try again." (see the existing "failed write returns to the cart's count"). Use the files' existing helpers (`resolveStore`, `serverCart`, `shownCount`, `seedServerCart`, `renderShell`, `openDrawer`, `koramangala`, `taaza`).
+Today `Request` rejects the client's relative URL under jsdom, so every cart write already fails with "Could not reach ShopperStop. Try again." (see the existing "failed write returns to the cart's count"). Use the files' existing helpers (`resolveStore`, `serverCart`, `shownCount`, `seedServerCart`, `renderShell`, `openDrawer`, `koramangala`, `taaza`).
 
 `src/cart.test.tsx`, appended:
 1. "failed write tells the customer": `resolveStore()`, `setToken('t')`, `serverCart(koramangala, 1)` in `cartKey('t')`, render `<ProductCard product={product({ name: 'Amul Taaza' })} />` with `renderInRouter`; await the "Add one Amul Taaza" button; `fireEvent.click` it; `expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')`; `expect(shownCount()).toBe(1)`.
 2. "next tap clears the failure": same setup and first tap, await the alert; `fireEvent.click` "Add one Amul Taaza" again; `expect(screen.queryByRole('alert')).toBeNull()` straight after (no await); then `expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')`.
 3. "overtaken write shows no failure": same setup; two `fireEvent.click`s on "Add one Amul Taaza" in a row; `await waitFor(() => expect(shownCount()).toBe(1))`; `await screen.findByRole('alert')`; `expect(screen.getAllByRole('alert')).toHaveLength(1)`.
 
-`src/cart-write-failure.test.tsx`, new. Core's answer is faked at the process boundary, as `src/auth.test.ts` does: `api.ts` captures `globalThis.fetch` when the client is created, so stub it in `vi.hoisted` before any import of the app:
-```ts
-vi.hoisted(() => {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ error: { code: 'validation', field: 'productId', message: 'product not available' } }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })) as typeof fetch
-})
-```
-Every request (the PUT and the refetch of `GET /me/cart` after it) answers that 400; the cached cart stays shown. Then 4. "core's refusal is shown": the same setup as test 1 (copy the small `resolveStore`/`serverCart` lines; do not export them from `cart.test.tsx`), one tap, `expect(await screen.findByRole('alert')).toHaveTextContent('product not available')`, `expect(shownCount()).toBe(1)` (or the group's text).
+`src/cart-write-failure.test.tsx`, new: test 4 "core's refusal is shown" (landed in `24436e4` with a `vi.hoisted` stub that cannot reach the client; replaced in commit 1b below).
 
 `src/cart-drawer.test.tsx`, appended:
 5. "failed write in the drawer": `resolveStore()`, `seedServerCart([[taaza, 1]])`, `await renderShell()`, `const drawer = openDrawer()`; `fireEvent.click(within(drawer).getByRole('button', { name: 'Add one Amul Taaza' }))`; `expect(await within(drawer).findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')`; the drawer's group "Quantity of Amul Taaza" has text `/^1$/`; click `within(drawer).getByRole('button', { name: 'Close' })`; wait for no dialog; `openDrawer()` again and `expect(within(<new drawer>).queryByRole('alert')).toBeNull()`. Look only `within(drawer)`: Home's own load failures are alerts outside it.
 
 All five must be red (no alert today) and every other test green; lint and typecheck green. Write the red list in the commit body.
 
+## Commit 1b: `test: core's refusal through the fetch seam` (team lead decision, 2026-10-15, design Decision 5)
+
+On top of `24436e4`, before any feature code is committed (stash the uncommitted feature code first, or commit only these two files):
+- `src/test-setup.ts`: at module level, above `afterEach`, the default `fetch` exactly as design.md Decision 5 (throws `TypeError('fetch failed')`, with its one-line comment).
+- `src/cart-write-failure.test.tsx`: drop the `vi.hoisted` block and its comment. Import `afterEach` from vitest; add `afterEach(() => vi.unstubAllGlobals())`. As the first line of the test: `vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: { code: 'validation', field: 'productId', message: 'product not available' } }), { status: 400, headers: { 'Content-Type': 'application/json' } }))`. The rest of the test as landed.
+
+On this commit the five new tests are still red, the four jsdom ones with `Unable to find role="alert"` and the refusal one the same way (the relative URL still never reaches `fetch`), and every other test green. Record that in the commit body.
+
 ## Commit 2: `feat: cart write failure message`
 
 Exactly design.md:
-- Decision 3: `api.ts`: `export` on `unreachable`, nothing else. `cart.ts` › `setLine` answers `Promise<ApiError | undefined>`; keep `call(...)`'s result as `error`; in the `!answered.cart` branch, after the `invalidateQueries`, `return asked.get(key)?.turn === mine ? (error ?? unreachable) : undefined` with the one-line comment; every other path answers `undefined` (guest: `dispatchGuest(...)` then `return undefined`).
+- Decision 5: `api.ts`: the `createClient` call exactly as design.md (absolute `${location.origin}` base, `fetch: (request) => globalThis.fetch(request)`, the comment); `src/auth.test.ts`: its comment line becomes `// fetch is looked up per call, so this stub reaches the client.` and nothing else changes.
+- Decision 3: `api.ts`: `export` on `unreachable`. `cart.ts` › `setLine` answers `Promise<ApiError | undefined>`; keep `call(...)`'s result as `error`; in the `!answered.cart` branch, after the `invalidateQueries`, `return asked.get(key)?.turn === mine ? (error ?? unreachable) : undefined` with the one-line comment; every other path answers `undefined` (guest: `dispatchGuest(...)` then `return undefined`).
 - Decision 2: `useLineWrite(storeId, product)` in `cart.ts` as written in design.md; `useCartQuantity` returns `[quantity, write, failure]` using it.
 - Decision 4: `{failure && <ErrorBanner message={failure} />}` in `product-card.tsx`, `routes/p.$slug.tsx` › `ProductDetail`, and `cart-drawer.tsx` › `CartLineRow` (the `<li>` restructure as written; the `Stepper` and Remove both call the row's `write`).
 
 Do not add:
 - `onRetry` on these banners, a timer, a dismiss button
-- a module-level failure store, a new component or a new export beyond `unreachable` and `useLineWrite`
+- a module-level failure store, a new component or a new export beyond `unreachable` and `useLineWrite`, a `Request` shim, `vi.resetModules`
 - new copy: the message is core's, or `unreachable`'s
 - any change to `checkout.tsx`, `mergeGuestCart` or `clearCart`
 

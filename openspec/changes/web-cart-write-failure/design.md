@@ -64,6 +64,33 @@ where `error` is what `call(...)` returned (today discarded). The check runs bef
 
 Copy: core's `message` as answered, like every other banner that shows core's error (`splitError`). No new copy.
 
+### 5. Test seam: absolute same-origin `baseUrl`, `fetch` looked up per call
+
+Found by the worker (web-P2-L10-T1): today no test can fake an answer through the shared `api` client. `openapi-fetch` takes `globalThis.fetch` when `createClient` runs, and `test-setup.ts` imports `api.ts` before any test file, so a stub set later never reaches it. And the client builds `new Request('/api/core/v1/…')` with a relative URL, which `Request` rejects with "Invalid URL" before `fetch` is called. That rejection, not a failing `fetch`, is what every "core cannot be reached" test has relied on so far.
+
+The seam is the one admin already ships (`apps/admin/src/api.ts`, relayed to web in the area plan's Requests):
+
+```ts
+// Absolute same-origin URL: jsdom's Request rejects a relative one. fetch is looked up per call so tests can stub it.
+export const api = createClient<paths>({
+  baseUrl: `${location.origin}/api/core/v1`,
+  fetch: (request) => globalThis.fetch(request),
+})
+```
+
+In the browser this is the same origin the relative URL meant, so the proxy (Vite, Caddy) is unchanged. Under jsdom requests would now reach a real `fetch` against `http://localhost:3000`. To keep "core cannot be reached" deterministic and off the network, `test-setup.ts` sets a default at module load, before any test file:
+
+```ts
+// Core cannot be reached in tests unless a test stubs fetch: no request leaves the process.
+globalThis.fetch = async () => {
+  throw new TypeError('fetch failed')
+}
+```
+
+`call()` turns that throw into `unreachable`, and a query turns it into its error state, exactly as the `Request` rejection did. A test that needs core's answer uses `vi.stubGlobal('fetch', …)` with a real `Response` and `afterEach(() => vi.unstubAllGlobals())`, which restores the default. `src/auth.test.ts`'s `vi.hoisted` assignment runs after the setup file and still wins for that file; its comment ("captures globalThis.fetch when openapi-fetch creates the client") becomes "fetch is looked up per call", nothing else there changes.
+
+Rejected: a test-only `Request` shim (it replaces a platform class to work around the client, and leaves the capture problem for the next test); covering the 400 only at the middleware in `api.test.ts` (it already is; the scenario is that the *card* shows core's message).
+
 ## Ceilings
 
 - Checkout's Remove (out-of-stock line) still fails silently: it has no `Stepper` and the page has its own refusal banner; add `useLineWrite` there when it matters.
@@ -80,15 +107,15 @@ Vitest only; jsdom shows all of it (the alert's role and text, the count, mount 
 | Scenario | File › test |
 |---|---|
 | Failed write tells the customer | `src/cart.test.tsx` › "failed write tells the customer" |
-| Core's refusal is shown | `src/cart-write-failure.test.tsx` › "core's refusal is shown" (new file; `vi.hoisted` stubs `globalThis.fetch` before `api.ts` loads, as `src/auth.test.ts` does, with a 400 envelope) |
+| Core's refusal is shown | `src/cart-write-failure.test.tsx` › "core's refusal is shown" (new file; `vi.stubGlobal('fetch', …)` answers a 400 envelope, Decision 5) |
 | Next tap clears the failure | `src/cart.test.tsx` › "next tap clears the failure" |
 | Overtaken change shows no failure | `src/cart.test.tsx` › "overtaken write shows no failure" |
 | Failed write in the drawer | `src/cart-drawer.test.tsx` › "failed write in the drawer" |
 
 "Overtaken write shows no failure" taps twice in one tick, so the first write is skipped at the top of its queued body; the `turn === mine` check at failure time (a tap made while the first write is in flight) is verified by reading: under jsdom the failing `fetch` settles too fast to tap between start and failure reliably, and without the check the same control would still end on the last write's result.
 
-Under jsdom a relative `fetch` throws, so "core cannot be reached" needs no stub (the existing "failed write returns to the cart's count" relies on it). The drawer test looks only `within(drawer)`: Home's own load failures are alerts outside it.
+"Core cannot be reached" is the default `fetch` from `test-setup.ts` (Decision 5), so those tests need no stub of their own. The drawer test looks only `within(drawer)`: Home's own load failures are alerts outside it.
 
 ## Files
 
-All in `apps/web/`: `src/api.ts`, `src/cart.ts`, `src/product-card.tsx`, `src/routes/p.$slug.tsx`, `src/cart-drawer.tsx`, `src/cart.test.tsx`, `src/cart-drawer.test.tsx`, `src/cart-write-failure.test.tsx` (new).
+All in `apps/web/`: `src/api.ts`, `src/test-setup.ts`, `src/auth.test.ts` (one comment), `src/cart.ts`, `src/product-card.tsx`, `src/routes/p.$slug.tsx`, `src/cart-drawer.tsx`, `src/cart.test.tsx`, `src/cart-drawer.test.tsx`, `src/cart-write-failure.test.tsx` (new).

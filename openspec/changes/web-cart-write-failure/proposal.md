@@ -25,5 +25,5 @@ None.
 
 ## Impact
 
-- `apps/web/src/api.ts` (export the existing `unreachable` error), `apps/web/src/cart.ts` (`setLine` answers the failure; one hook), `apps/web/src/product-card.tsx`, `apps/web/src/routes/p.$slug.tsx`, `apps/web/src/cart-drawer.tsx` (render the banner), tests in `apps/web/src/cart.test.tsx`, `apps/web/src/cart-drawer.test.tsx` and a new `apps/web/src/cart-write-failure.test.tsx`.
+- `apps/web/src/api.ts` (export the existing `unreachable` error; absolute same-origin `baseUrl` and per-call `fetch`, the seam admin already uses), `apps/web/src/test-setup.ts` (default `fetch` that cannot reach core), `apps/web/src/cart.ts` (`setLine` answers the failure; one hook), `apps/web/src/product-card.tsx`, `apps/web/src/routes/p.$slug.tsx`, `apps/web/src/cart-drawer.tsx` (render the banner), tests in `apps/web/src/cart.test.tsx`, `apps/web/src/cart-drawer.test.tsx` and a new `apps/web/src/cart-write-failure.test.tsx`.
 - Cross-area contracts relied on, unchanged: the `@shopperstop/ui` export `ErrorBanner` (`role="alert"`, message, optional retry); `services/core/openapi.json` `PUT /me/cart/items` answers 200 `CartUpdate`, 400 and 401 with the error envelope.
