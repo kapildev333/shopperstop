@@ -45,6 +45,12 @@ Matches the brief's "At red" column.
 - `make gen postman`: `# tests 11 # pass 11 # fail 0`.
 - `openspec validate --all --strict`: `Totals: 15 passed, 0 failed (15 items)`.
 
+### Test fix (seed staff)
+- `TestAdminDeactivatesSelf` and `TestDeactivatedWhileSignedIn` now call `seedStaff(t)` first (signature fits, no change to the helper).
+- Red, run alone before the fix: `TestAdminDeactivatesSelf` got 409 (the last-admin guard blocked the only admin); `TestDeactivatedWhileSignedIn` got 401 on the admin sign-in (no admin seeded).
+- Green, run alone after the fix: both `ok` with `-race -count=1`.
+- `GOFLAGS=-count=1 make test-core` exit 0, every package `ok`.
+
 ## Found
 - The `core-P2-L7.md` lane file (lead-owned) is not touched by this worker; it says the change is waiting for the worker, and its Found notes match the implementation.
 - The race's loser answers 401 when it reaches `RequireStaff` after the winner commits, 409 when it reaches the lock first; the test accepts both, as the scenario does.

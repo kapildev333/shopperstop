@@ -352,6 +352,7 @@ func TestPatchStaffUserRules(t *testing.T) {
 // TestAdminDeactivatesSelf: an admin may deactivate their own account, and the
 // session that did it then answers 401.
 func TestAdminDeactivatesSelf(t *testing.T) {
+	seedStaff(t)
 	email := insertStaff(t, "admin", true)
 	token := staffSignIn(t, email)
 	status, body := call(t, http.MethodPatch, staffUsersPath+"/"+staffID(t, email), token, map[string]bool{"isActive": false})
@@ -375,6 +376,7 @@ func TestPatchUnknownStaff(t *testing.T) {
 }
 
 func TestDeactivatedWhileSignedIn(t *testing.T) {
+	seedStaff(t)
 	email := insertStaff(t, "store_staff", true)
 	token := staffSignIn(t, email)
 	admin := staffSignIn(t, adminStaffEmail)
