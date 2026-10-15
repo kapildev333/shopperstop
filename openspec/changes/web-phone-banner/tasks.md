@@ -22,7 +22,7 @@ Failing tests:
 - `e2e/phone-layout.spec.ts`: `phone` › "signed-in banner on a phone" (red); `six columns` › "signed-in banner on desktop" (pin)
 
 - [x] 1.1 The four tests committed (`test: phone banner and pincode sheet focus`); lint and typecheck green; Vitest shows the two new tests red and nothing else red
-- [ ] 1.2 Decisions 1 to 3 (`fix: phone banner and pincode sheet focus`); all gates green
+- [x] 1.2 Decisions 1 to 3 (`fix: phone banner and pincode sheet focus`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-phone-banner` after 1.2 lands and the manager's e2e is green.

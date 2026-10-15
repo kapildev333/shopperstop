@@ -23,7 +23,7 @@ export function AccountLink() {
   return (
     <RouterButtonLink variant="secondary" to="/account">
       <UserRound size={16} aria-hidden />
-      {me.data?.name ?? 'Account'}
+      <span className="max-sm:sr-only">{me.data?.name ?? 'Account'}</span>
     </RouterButtonLink>
   )
 }
