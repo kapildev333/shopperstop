@@ -49,7 +49,7 @@ Prefix every command with `PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin
 2. Create `src/order-history.tsx`; replace `src/orders.ts` and `src/routes/_staff/orders.tsx` whole with their task-4 blocks from design.md.
 3. Run the gates. Commit the three files and the 4.2 tick: `feat: orders history tab with status filter and pager`.
 
-## Expected counts (measured by the team lead in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
+## Expected counts (re-measured on 2026-10-15 on this branch with task 3 landed, base 236 before step 1; first measured in the spike; base 180 = the admin suite on main with admin-stock and admin-P2-L7's fix at 0aa0ab1)
 - After step 1: `Tests  16 failed | 236 passed (252)`, all sixteen in `orders-history.test.tsx` (twelve tests, one of them five runs).
 - After step 2: `Tests  252 passed (252)`, 22 files.
 If the base differs from 180, every number above moves by the same difference; anything else that differs is a stop.

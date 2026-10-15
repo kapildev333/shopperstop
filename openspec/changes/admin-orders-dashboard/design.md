@@ -77,6 +77,8 @@ After the review of task 2 (2026-10-15, `.claude/lanes/admin-P2-L5-R2.md`), fold
 
 Accepted from the review of task 2, no change: R2-3 the delivered dialog sends what it snapshotted, and a move by someone else meanwhile comes back as the 409 path ("changed by someone else"); R2-4 `cancelQueries` after a change also drops a poll carrying other orders' news, repaired by the next poll (Decision 4, already a risk below); R2-5 the column heading's `aria-label` replaces the visible text and badge in its name, label-in-name holds (the name starts with the visible word); R2-6 one 5-second interval per card (R1-5).
 
+Accepted from the review of task 3 (2026-10-15, `.claude/lanes/admin-P2-L5-R3.md`), no change, nothing folded into task 4: R3-1 the sheet's cancel has its own `useSetStatus`, outside the board's one change at a time; the modal cancel dialog keeps the board's buttons out of reach while it runs; R3-2 `maxLength={500}` counts UTF-16 units where core counts runes after trimming, so astral characters reach the limit earlier, never later (the safe side); R3-3 the cancel's result ("Order cancelled." or the conflict notice) stays on the sheet until it closes, as the scenarios want; R3-4 the card's number is a ghost `Button` and the next-status button's `aria-labelledby` still resolves to its text. Task 4 re-spiked on the branch with task 3 landed (236): `16 failed | 236 passed (252)`, then 252; task 5 `7 failed | 252 passed (259)`, then 259; lint, typecheck and build green; `make test-web` exit 0 after task 4 (ui 54, admin 252, web 140).
+
 ## Files (all under `apps/admin/`)
 | File | Task | What |
 |---|---|---|
