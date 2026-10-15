@@ -40,7 +40,7 @@ Scope: `apps/admin/src/orders-status.test.tsx` (one test appended in step A), `a
 Step A, from the review of task 2.
 Scenarios: Order status change in progress › Result named. (R2-1, the delivered dialog's title, is not observable: a cleanup in the same `fix:` commit, no test.)
 Failing tests: `src/orders-status.test.tsx` › "the keyboard after a delivery is on a result named for what it holds".
-- [ ] 3.1 Step A test committed red (`test: the result of a status change is named`); Vitest `1 failed | base + 42 passed` (`1 failed | 222 passed (223)`)
+- [x] 3.1 Step A test committed red (`test: the result of a status change is named`); Vitest `1 failed | base + 42 passed` (`1 failed | 222 passed (223)`)
 - [ ] 3.2 The two lines of `src/order-board.tsx` per design.md "Task 3", step A (`fix: the result of a status change is named; no undefined in the delivered dialog's title`); Vitest `base + 43 passed` (`223 passed (223)`); every gate green; `routeTree.gen.ts` unchanged
 
 Step B.

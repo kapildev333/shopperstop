@@ -192,3 +192,18 @@ test('a poll answer read before a status change never moves the card back', asyn
   await act(() => vi.advanceTimersByTimeAsync(10_000))
   await waitFor(() => expect(listRequests(calls)).toHaveLength(15))
 })
+
+test('the keyboard after a delivery is on a result named for what it holds', async () => {
+  setToken('tok')
+  const core = ordersCore(indiranagar.id, [order(1, 'out_for_delivery'), order(2, 'placed')])
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await userEvent.click(button('Mark delivered SS-TEST0001'))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Mark SS-TEST0001 delivered?' })).getByRole('button', { name: 'Mark delivered' }))
+
+  const result = await screen.findByRole('group', { name: 'Status change' })
+  await waitFor(() => expect(result).toHaveFocus())
+  expect(result).toHaveTextContent('SS-TEST0001 is now Delivered.')
+})
