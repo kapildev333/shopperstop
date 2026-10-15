@@ -116,3 +116,21 @@ test('store staff open the catalog pages', async ({ page }) => {
     await expectNoAxeViolations(page)
   }
 })
+
+// Banana Robusta (...0601) is on the seeded orders, so core refuses to delete it. The offer is checked and not taken:
+// other specs and the customer site's suite rely on the product staying active.
+test('an ordered product cannot be deleted and offers to be deactivated instead', async ({ page }) => {
+  await signIn(page, 'admin@shopperstop.local', 'admin12345')
+  await page.goto('./products/00000000-0000-4000-8000-000000000601')
+  await expect(page.getByRole('heading', { level: 1, name: 'Banana Robusta' })).toBeVisible()
+  await page.getByRole('button', { name: 'Delete product' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Delete Banana Robusta?' })
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+  await expect(dialog.getByRole('alert')).toHaveText('This product was ordered, so it cannot be deleted. Deactivate it instead: customers no longer see it.')
+  await expect(dialog.getByRole('button')).toHaveText(['Cancel', 'Deactivate instead'])
+  await expectNoAxeViolations(page)
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Banana Robusta' })).toBeVisible()
+})
