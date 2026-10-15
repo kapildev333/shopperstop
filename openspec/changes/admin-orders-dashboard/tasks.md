@@ -70,7 +70,7 @@ Failing tests: `src/orders-history.test.tsx` › "a page past the end shows a sk
 Step B.
 Scenarios: Dashboard › Dashboard cards, Dashboard links, Store staff dashboard; Dashboard states › Dashboard loading, Dashboard load failure, Failed refresh keeps the dashboard, No stores on the dashboard.
 Failing tests: `src/dashboard.test.tsx` › "an admin sees a card per store in core's order, with today's orders by status and in all, revenue and the low-stock count", "a card links to its store's orders and to its stock filtered to low stock", "store staff see the one card core gives them, for their own store", "the dashboard shows a skeleton while loading", "a dashboard that cannot be loaded offers a retry that reloads", "a failed refresh keeps the cards; the next good answer shows the new numbers", "an admin with no stores is told to create one".
-- [ ] 5.3 Step B tests committed red (`test: dashboard cards`); Vitest `7 failed | base + 73 passed` (`7 failed | 253 passed (260)`) {`7 failed | 288 passed (295)`}
+- [x] 5.3 Step B tests committed red (`test: dashboard cards`); Vitest `7 failed | base + 73 passed` (`7 failed | 253 passed (260)`) {`7 failed | 288 passed (295)`}
 - [ ] 5.4 `src/routes/_staff/index.tsx` per design.md "Task 5", step B (`feat: dashboard cards per store with links to orders and low stock`); Vitest `base + 80 passed` (`260 passed (260)`) {`295 passed (295)`}; every gate green (`make test-web` on the final tree of the re-spike of 2026-10-15: exit 0, ui 54, admin 260, web 140 {admin 295, web 149}); `routeTree.gen.ts` unchanged
 
 ## 6. Orders, the dashboard and the ordered product against core (the manager's e2e slot)
