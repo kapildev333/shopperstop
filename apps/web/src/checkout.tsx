@@ -15,7 +15,7 @@ import {
 } from '@shopperstop/ui'
 import { AddressDialog } from './address-dialog'
 import { addAddress, useAddresses, type Address } from './addresses'
-import { cartKey, setLine, useCart } from './cart'
+import { cartKey, useCart, useLineWrite } from './cart'
 import { openCart, Totals } from './cart-drawer'
 import { useStore, type Store } from './catalog'
 import { queryClient, type ApiError } from './api'
@@ -25,7 +25,7 @@ import { LineRow } from './order-parts'
 import { useToken } from './session'
 
 // A refusal the page shows: its message, and the address it is about when core named one.
-type Refusal = { message: string; addressId?: string }
+type Refusal = { message: string; addressId?: string; unconfirmed?: true }
 
 export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) {
   const { view, isError, refetch } = useCart()
@@ -90,7 +90,9 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
       await navigate({ to: '/orders/$id', params: { id: order.id } })
       return
     }
-    if (error && cartEmptied(error)) {
+    // internal, then core's cart came back empty: the order went through.
+    const emptied = error?.code === 'internal' && queryClient.getQueryData<CartView>(cartKey(token))?.items.length === 0
+    if (error && (cartEmptied(error) || emptied)) {
       await navigate({ to: '/orders' })
       return
     }
@@ -116,11 +118,6 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
   }
   const refusedId = refused && refused.listedAt === addresses.dataUpdatedAt ? refused.addressId : undefined
 
-  // Through the cart's queue, like every cart write; the store is the cart's own.
-  const remove = (line: CartLine) => {
-    if (view.storeId) void setLine(view.storeId, line.product, 0)
-  }
-
   return (
     <Frame>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -133,7 +130,6 @@ export function CheckoutPage({ send = postOrder }: { send?: typeof postOrder }) 
           refusal={refusal}
           short={short}
           onPlace={() => void place()}
-          onRemove={remove}
         />
       </div>
     </Frame>
@@ -149,6 +145,12 @@ function refusalOf(error: ApiError | undefined, storeName: string, addressId: st
       : { message: `${storeName} is closed right now.` }
   }
   if (error?.field === 'subtotal') return { message: "Your cart is below the store's minimum order." }
+  // The request may have reached core and committed (design Context): never say it failed.
+  if (error?.code === 'internal')
+    return {
+      message: 'We could not confirm your order. It may have been placed, so check Your orders before you place it again.',
+      unconfirmed: true,
+    }
   return { message: 'Could not place your order. Try again.' }
 }
 
@@ -157,6 +159,22 @@ function shortText(product: CartProduct, quantity: number): string {
   if (!product.inStock) return 'Out of stock'
   if (product.quantity < quantity) return `Only ${product.quantity} left`
   return 'Not enough stock'
+}
+
+// A refusal core gave a line: why, and Remove through the cart; a failed removal shows under it, like the drawer's.
+function ShortLine({ storeId, line }: { storeId?: string; line: CartLine }) {
+  const [failure, write] = useLineWrite(storeId, line.product)
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="danger">{shortText(line.product, line.quantity)}</Badge>
+        <Button variant="ghost-danger" aria-label={`Remove ${line.product.name}`} onClick={() => write(0)}>
+          Remove
+        </Button>
+      </div>
+      {failure && <ErrorBanner message={failure} />}
+    </div>
+  )
 }
 
 function Frame({ children }: { children: ReactNode }) {
@@ -246,7 +264,6 @@ function SummaryCard({
   refusal,
   short,
   onPlace,
-  onRemove,
 }: {
   view: CartView
   store?: Store
@@ -255,7 +272,6 @@ function SummaryCard({
   refusal?: Refusal
   short: Record<string, number>
   onPlace: () => void
-  onRemove: (line: CartLine) => void
 }) {
   const headingId = useId()
   const belowMinimum = view.subtotalCents < view.minOrderCents
@@ -280,14 +296,7 @@ function SummaryCard({
             priceCents={line.product.priceCents}
             quantity={line.quantity}
           >
-            {short[line.product.id] === line.quantity && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge variant="danger">{shortText(line.product, line.quantity)}</Badge>
-                <Button variant="ghost-danger" aria-label={`Remove ${line.product.name}`} onClick={() => onRemove(line)}>
-                  Remove
-                </Button>
-              </div>
-            )}
+            {short[line.product.id] === line.quantity && <ShortLine storeId={view.storeId} line={line} />}
           </LineRow>
         ))}
       </ul>
@@ -303,6 +312,11 @@ function SummaryCard({
         </StatusMessage>
       )}
       {refusal && <ErrorBanner message={refusal.message} />}
+      {refusal?.unconfirmed && (
+        <Link to="/orders" className={buttonClass({ variant: 'secondary' })}>
+          Your orders
+        </Link>
+      )}
       <Button size="lg" className="w-full" loading={busy} disabled={!canPlace} onClick={onPlace}>
         Place order (COD)
       </Button>

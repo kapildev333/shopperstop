@@ -20,7 +20,7 @@ Scenarios: Customer cart write failure › Failed removal at checkout; Customer 
 Failing tests (`src/checkout.test.tsx`): "failed removal at checkout", "core cannot be reached at placement", "unconfirmed placement that emptied the cart"; "placement fails" changed (green before and after).
 
 - [x] 1.1 The tests committed (`test: checkout failures`); lint and typecheck green; Vitest shows exactly the three new tests red
-- [ ] 1.2 Decisions 1 to 3 (`feat: checkout failures`); all gates green
+- [x] 1.2 Decisions 1 to 3 (`feat: checkout failures`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-checkout-failures` after 1.2 lands.
