@@ -28,7 +28,7 @@ const assignedQuery = {
   },
 }
 
-// Shown as a card's own time text: a minute passing re-renders this and nothing else.
+// `useSince` re-renders this card each minute; the page does not re-render.
 function ReadyCard({ order, onPick }: { order: ReadyOrder; onPick: () => void }) {
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -88,6 +88,11 @@ export function ReadyPage() {
     setPicking(order)
   }
 
+  // A pick up in flight keeps its dialog: the answer then belongs to the order the rider confirmed.
+  function closePick() {
+    if (!claim.isPending) setPicking(undefined)
+  }
+
   const assignedItems = assigned.data ?? []
   const readyOrders = ready.data
 
@@ -135,9 +140,9 @@ export function ReadyPage() {
           )}
         </>
       )}
-      <Dialog open={picking !== undefined} onClose={() => setPicking(undefined)} title={picking ? `Pick up ${picking.number}?` : ''}>
+      <Dialog open={picking !== undefined} onClose={closePick} title={picking ? `Pick up ${picking.number}?` : ''}>
         {claim.isError && <ErrorBanner message="Could not pick up the order. Try again." className="mt-4" />}
-        <DialogFooter onCancel={() => setPicking(undefined)}>
+        <DialogFooter onCancel={closePick}>
           <Button loading={claim.isPending} onClick={() => picking && claim.mutate(picking)}>
             Pick up
           </Button>

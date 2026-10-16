@@ -14,7 +14,7 @@ export function useLocationReport(active: boolean): string | undefined {
   useEffect(() => {
     if (!active || unavailable) return
     let latest: { lat: number; lng: number } | undefined
-    let sentFirst = false
+    let timer: ReturnType<typeof setInterval> | undefined
     const send = (fix: { lat: number; lng: number }) => {
       void rider.PUT('/me/location', { body: fix }).catch(() => undefined)
     }
@@ -22,15 +22,15 @@ export function useLocationReport(active: boolean): string | undefined {
     const watch = geolocation.watchPosition(
       (position) => {
         latest = { lat: position.coords.latitude, lng: position.coords.longitude }
-        if (!sentFirst) {
-          sentFirst = true
+        // The count starts with the first fix, so a late first fix is not followed by a send one second later.
+        if (timer === undefined) {
           send(latest)
+          timer = setInterval(() => latest && send(latest), everyMs)
         }
       },
       () => setFailed(true),
       { enableHighAccuracy: true, maximumAge: 10_000 },
     )
-    const timer = setInterval(() => latest && send(latest), everyMs)
     return () => {
       geolocation.clearWatch(watch)
       clearInterval(timer)
