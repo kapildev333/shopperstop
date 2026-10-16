@@ -333,7 +333,7 @@ export interface paths {
         };
         /**
          * Today's orders, low stock and revenue for each store
-         * @description Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.
+         * @description Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. isOpen is the store's open switch. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.
          */
         get: operations["getDashboard"];
         put?: never;
@@ -557,7 +557,7 @@ export interface paths {
         };
         /**
          * List a store's orders
-         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
+         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["listStoreOrders"];
         put?: never;
@@ -1386,6 +1386,10 @@ export interface components {
             number: string;
             /** Format: uuid */
             storeId: string;
+            /** @description The store's name at placement. */
+            storeName: string;
+            /** @description The store's promised delivery minutes at placement. */
+            promisedMinutes: number;
             /** @enum {string} */
             status: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             customerName: string;
@@ -1460,6 +1464,8 @@ export interface components {
             /** Format: uuid */
             storeId: string;
             storeName: string;
+            /** @description Whether the store takes orders now. */
+            isOpen: boolean;
             /** @description Orders placed since midnight Asia/Kolkata, by current status. All seven statuses are always present. */
             ordersToday: {
                 placed: number;
@@ -2442,6 +2448,8 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000703",
                      *           "number": "SS-DEMOAAAD",
                      *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "storeName": "Koramangala",
+                     *           "promisedMinutes": 10,
                      *           "status": "placed",
                      *           "customerName": "Demo Customer",
                      *           "customerPhone": "+919800000000",
@@ -2558,6 +2566,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2675,6 +2685,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2791,6 +2803,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "cancelled",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2942,6 +2956,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -3160,6 +3176,7 @@ export interface operations {
                      *         {
                      *           "storeId": "00000000-0000-4000-8000-000000000401",
                      *           "storeName": "Koramangala",
+                     *           "isOpen": true,
                      *           "ordersToday": {
                      *             "placed": 1,
                      *             "accepted": 0,
@@ -4756,6 +4773,11 @@ export interface operations {
                  */
                 status?: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
                 /**
+                 * @description true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status.
+                 * @example true
+                 */
+                active?: "true";
+                /**
                  * @description Page number, from 1. Default 1.
                  * @example 1
                  */
@@ -4791,6 +4813,8 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000703",
                      *           "number": "SS-DEMOAAAD",
                      *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "storeName": "Koramangala",
+                     *           "promisedMinutes": 10,
                      *           "status": "placed",
                      *           "customerName": "Demo Customer",
                      *           "customerPhone": "+919800000000",
@@ -4841,7 +4865,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrderList"];
                 };
             };
-            /** @description The 400 is for an unknown status value, or a page below 1 or a pageSize outside 1 to 100. The field names it. */
+            /** @description The 400 is for an unknown status value, an active value other than true, active=true with a status, or a page below 1 or a pageSize outside 1 to 100. The field names it. */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -2196,7 +2196,7 @@
           "request": {
             "name": "Today's orders, low stock and revenue for each store",
             "description": {
-              "content": "Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.",
+              "content": "Admins get every store, by name. Store staff get their own store only. Today starts at midnight Asia/Kolkata: ordersToday counts the orders placed today by their current status, and revenueTodayCents is the total of the orders delivered today. isOpen is the store's open switch. lowStockCount counts the active products below 5 at the store. A missing token, an unknown one or a customer token answers 401.",
               "type": "text/plain"
             },
             "url": {
@@ -2269,7 +2269,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"storeName\": \"Koramangala\",\n      \"ordersToday\": {\n        \"placed\": 1,\n        \"accepted\": 0,\n        \"packing\": 0,\n        \"ready\": 0,\n        \"out_for_delivery\": 0,\n        \"delivered\": 0,\n        \"cancelled\": 0\n      },\n      \"lowStockCount\": 20,\n      \"revenueTodayCents\": 0\n    }\n  ]\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"storeName\": \"Koramangala\",\n      \"isOpen\": true,\n      \"ordersToday\": {\n        \"placed\": 1,\n        \"accepted\": 0,\n        \"packing\": 0,\n        \"ready\": 0,\n        \"out_for_delivery\": 0,\n        \"delivered\": 0,\n        \"cancelled\": 0\n      },\n      \"lowStockCount\": 20,\n      \"revenueTodayCents\": 0\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -13158,7 +13158,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000703\",\n      \"number\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"placed\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"label\": \"Home\",\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"subtotalCents\": 103000,\n      \"deliveryFeeCents\": 0,\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"placedAt\": \"2026-10-13T09:20:00Z\",\n      \"items\": [\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000601\",\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 7000,\n          \"mrpCents\": 7000,\n          \"quantity\": 1\n        },\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000604\",\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 32000,\n          \"mrpCents\": 32000,\n          \"quantity\": 3\n        }\n      ],\n      \"events\": [\n        {\n          \"toStatus\": \"placed\",\n          \"actorType\": \"customer\",\n          \"createdAt\": \"2026-10-13T09:20:00Z\"\n        }\n      ]\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000703\",\n      \"number\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"storeName\": \"Koramangala\",\n      \"promisedMinutes\": 10,\n      \"status\": \"placed\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"label\": \"Home\",\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"subtotalCents\": 103000,\n      \"deliveryFeeCents\": 0,\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"placedAt\": \"2026-10-13T09:20:00Z\",\n      \"items\": [\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000601\",\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 7000,\n          \"mrpCents\": 7000,\n          \"quantity\": 1\n        },\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000604\",\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 32000,\n          \"mrpCents\": 32000,\n          \"quantity\": 3\n        }\n      ],\n      \"events\": [\n        {\n          \"toStatus\": \"placed\",\n          \"actorType\": \"customer\",\n          \"createdAt\": \"2026-10-13T09:20:00Z\"\n        }\n      ]\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -13392,7 +13392,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -13667,7 +13667,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -13913,7 +13913,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"cancelled\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"cancelledAt\": \"2026-10-13T09:22:00Z\",\n  \"cancelReason\": \"Ordered by mistake\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"cancelled\",\n      \"actorType\": \"customer\",\n      \"note\": \"Ordered by mistake\",\n      \"createdAt\": \"2026-10-13T09:22:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"cancelled\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"cancelledAt\": \"2026-10-13T09:22:00Z\",\n  \"cancelReason\": \"Ordered by mistake\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"cancelled\",\n      \"actorType\": \"customer\",\n      \"note\": \"Ordered by mistake\",\n      \"createdAt\": \"2026-10-13T09:22:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -14297,7 +14297,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -14547,7 +14547,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"accepted\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"accepted\",\n      \"actorType\": \"staff\",\n      \"note\": \"Packing now\",\n      \"createdAt\": \"2026-10-13T09:21:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"accepted\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"accepted\",\n      \"actorType\": \"staff\",\n      \"note\": \"Packing now\",\n      \"createdAt\": \"2026-10-13T09:21:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -14907,7 +14907,7 @@
           "request": {
             "name": "List a store's orders",
             "description": {
-              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
+              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
               "type": "text/plain"
             },
             "url": {
@@ -14929,6 +14929,15 @@
                   },
                   "key": "status",
                   "value": "placed"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status. (This can only be one of true)",
+                    "type": "text/plain"
+                  },
+                  "key": "active",
+                  "value": "true"
                 },
                 {
                   "disabled": false,
@@ -15008,6 +15017,15 @@
                     {
                       "disabled": false,
                       "description": {
+                        "content": "true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status. (This can only be one of true)",
+                        "type": "text/plain"
+                      },
+                      "key": "active",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
                         "content": "Page number, from 1. Default 1.",
                         "type": "text/plain"
                       },
@@ -15062,12 +15080,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000703\",\n      \"number\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"placed\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"label\": \"Home\",\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"subtotalCents\": 103000,\n      \"deliveryFeeCents\": 0,\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"placedAt\": \"2026-10-13T09:20:00Z\",\n      \"items\": [\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000601\",\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 7000,\n          \"mrpCents\": 7000,\n          \"quantity\": 1\n        },\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000604\",\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 32000,\n          \"mrpCents\": 32000,\n          \"quantity\": 3\n        }\n      ],\n      \"events\": [\n        {\n          \"toStatus\": \"placed\",\n          \"actorType\": \"customer\",\n          \"createdAt\": \"2026-10-13T09:20:00Z\"\n        }\n      ]\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000703\",\n      \"number\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"storeName\": \"Koramangala\",\n      \"promisedMinutes\": 10,\n      \"status\": \"placed\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"label\": \"Home\",\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"subtotalCents\": 103000,\n      \"deliveryFeeCents\": 0,\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"placedAt\": \"2026-10-13T09:20:00Z\",\n      \"items\": [\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000601\",\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 7000,\n          \"mrpCents\": 7000,\n          \"quantity\": 1\n        },\n        {\n          \"productId\": \"00000000-0000-4000-8000-000000000604\",\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n          \"priceCents\": 32000,\n          \"mrpCents\": 32000,\n          \"quantity\": 3\n        }\n      ],\n      \"events\": [\n        {\n          \"toStatus\": \"placed\",\n          \"actorType\": \"customer\",\n          \"createdAt\": \"2026-10-13T09:20:00Z\"\n        }\n      ]\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The 400 is for an unknown status value, or a page below 1 or a pageSize outside 1 to 100. The field names it.",
+              "name": "The 400 is for an unknown status value, an active value other than true, active=true with a status, or a page below 1 or a pageSize outside 1 to 100. The field names it.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -15088,6 +15106,15 @@
                       },
                       "key": "status",
                       "value": "placed"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status. (This can only be one of true)",
+                        "type": "text/plain"
+                      },
+                      "key": "active",
+                      "value": "true"
                     },
                     {
                       "disabled": false,
@@ -15176,6 +15203,15 @@
                     {
                       "disabled": false,
                       "description": {
+                        "content": "true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status. (This can only be one of true)",
+                        "type": "text/plain"
+                      },
+                      "key": "active",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
                         "content": "Page number, from 1. Default 1.",
                         "type": "text/plain"
                       },
@@ -15256,6 +15292,15 @@
                       },
                       "key": "status",
                       "value": "placed"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps every order that is not delivered or cancelled. Only true is accepted; absent or empty keeps every status. Not with status. (This can only be one of true)",
+                        "type": "text/plain"
+                      },
+                      "key": "active",
+                      "value": "true"
                     },
                     {
                       "disabled": false,

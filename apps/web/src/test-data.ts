@@ -36,6 +36,7 @@ export function order(overrides: Partial<Order> = {}): Order {
     id: '00000000-0000-4000-8000-000000000703',
     number: 'SS-DEMOAAAD',
     storeId: '00000000-0000-4000-8000-000000000401',
+    ...{ storeName: 'Koramangala', promisedMinutes: 10 },
     status: 'placed',
     customerName: 'Demo Customer',
     address: { label: 'Home', line1: '12 80 Feet Rd, Koramangala', pincode: '560034' },

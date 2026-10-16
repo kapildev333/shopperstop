@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -52,9 +53,9 @@ func orderIn(t *testing.T, storeID, customerID, productID, status string) string
 	number := "SS-" + base32.StdEncoding.EncodeToString(n[3:])
 	ctx := context.Background()
 	var id string
-	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, status, customer_name, customer_phone,
+	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, store_name, promised_minutes, status, customer_name, customer_phone,
 		address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
-		values ($1, $2, $3, $4::order_status, 'Asha', '+919800000001', 'Home', '12 Test Rd', '570000', 2000, 0, 2000)
+		values ($1, $2, $3, 'Test store', 10, $4::order_status, 'Asha', '+919800000001', 'Home', '12 Test Rd', '570000', 2000, 0, 2000)
 		returning id`, number, customerID, storeID, status).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
@@ -526,5 +527,53 @@ func TestTransitionLogLine(t *testing.T) {
 	}
 	if packing != 1 {
 		t.Fatalf("%d lines to packing, want 1 (the refused move logs none)", packing)
+	}
+}
+
+// TestStoreOrdersActive: active=true lists every order that is neither delivered
+// nor cancelled, newest first, with total counting all of them; it refuses any
+// other value and a status beside it.
+func TestStoreOrdersActive(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 1000)
+	c := newCustomer(t)
+	var active []string // newest first
+	for _, st := range []string{"placed", "delivered", "packing", "cancelled", "ready", "out_for_delivery"} {
+		id := orderIn(t, s.ID, c.Customer.ID, p, st)
+		if st != "delivered" && st != "cancelled" {
+			active = append([]string{id}, active...)
+		}
+	}
+	token := adminToken(t)
+	list := func(query string) (int, []byte) {
+		return call(t, http.MethodGet, storeOrdersPath(s.ID)+query, token, nil)
+	}
+
+	status, body := list("?active=true&pageSize=100")
+	var board orderListView
+	if status != http.StatusOK || json.Unmarshal(body, &board) != nil {
+		t.Fatalf("active board: got %d %s, want 200", status, body)
+	}
+	got := make([]string, len(board.Items))
+	for i, o := range board.Items {
+		got[i] = o.ID
+	}
+	if board.Total != 4 || !slices.Equal(got, active) {
+		t.Fatalf("active board: total %d, ids %v; want 4, %v", board.Total, got, active)
+	}
+
+	status, body = list("?active=true&pageSize=2")
+	if status != http.StatusOK || json.Unmarshal(body, &board) != nil || board.Total != 4 || len(board.Items) != 2 {
+		t.Fatalf("active board page of 2: got %d %s, want 200 with total 4 and two items", status, body)
+	}
+
+	status, body = list("?active=")
+	if status != http.StatusOK || json.Unmarshal(body, &board) != nil || board.Total != 6 {
+		t.Fatalf("empty active: got %d %s, want 200 with total 6", status, body)
+	}
+
+	for _, q := range []string{"?active=false", "?active=TRUE", "?active=1", "?active=true&status=placed"} {
+		status, body = list(q)
+		expectError(t, "list"+q, status, body, http.StatusBadRequest, "validation", "active", "")
 	}
 }

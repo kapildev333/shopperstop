@@ -543,8 +543,8 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	}
 	addOtherRows(t)
 	var other string
-	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
-		values ('SS-OTHERAAA', '00000000-0000-4000-8000-000000000999', $1, 'Other', 'Home', 'Elsewhere', '110001', 7000, 0, 7000) returning id::text`, storeKoramangala).Scan(&other); err != nil {
+	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
+		values ('SS-OTHERAAA', '00000000-0000-4000-8000-000000000999', $1, 'Koramangala', 10, 'Other', 'Home', 'Elsewhere', '110001', 7000, 0, 7000) returning id::text`, storeKoramangala).Scan(&other); err != nil {
 		t.Fatalf("insert other order: %v", err)
 	}
 	if _, err := testPool.Exec(ctx, `insert into order_items (order_id, product_id, name, unit_label, price_cents, mrp_cents, quantity)
@@ -596,6 +596,7 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	assertSQL(t, "events with no actor", "select count(*) from order_events where actor_id is null", 0)
 	assertSQL(t, "delivered orders with a delivery time", "select count(*) from orders where status = 'delivered' and delivered_at is not null", 1)
 	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 3)
+	assertSQL(t, "orders with the Koramangala snapshot", "select count(*) from orders where store_name = 'Koramangala' and promised_minutes = 10", 3)
 	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
 }
 

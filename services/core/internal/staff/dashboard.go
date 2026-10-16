@@ -13,11 +13,12 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
-// DashboardStore is one store's line of the dashboard: today's orders by status,
-// the low-stock count and today's delivered revenue.
+// DashboardStore is one store's line of the dashboard: whether it is open, today's
+// orders by status, the low-stock count and today's delivered revenue.
 type DashboardStore struct {
 	StoreID           string           `json:"storeId"`
 	StoreName         string           `json:"storeName"`
+	IsOpen            bool             `json:"isOpen"`
 	OrdersToday       map[string]int64 `json:"ordersToday"` // seven keys
 	LowStockCount     int64            `json:"lowStockCount"`
 	RevenueTodayCents int64            `json:"revenueTodayCents"`
@@ -63,7 +64,7 @@ func Dashboard(pool *pgxpool.Pool) http.HandlerFunc {
 				return
 			}
 			items = append(items, DashboardStore{
-				StoreID: st.ID, StoreName: st.Name, OrdersToday: byStatus,
+				StoreID: st.ID, StoreName: st.Name, IsOpen: st.IsOpen, OrdersToday: byStatus,
 				LowStockCount: low, RevenueTodayCents: revenue,
 			})
 		}

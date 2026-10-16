@@ -91,7 +91,7 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string
 		}
 		q := db.New(tx)
 		id, err = q.CreateOrder(ctx, db.CreateOrderParams{
-			Number: number, CustomerID: customerID, StoreID: storeID,
+			Number: number, CustomerID: customerID, StoreID: storeID, StoreName: s.Name, PromisedMinutes: s.PromisedMinutes,
 			CustomerName: c.Name, CustomerPhone: c.Phone,
 			AddressLabel: addr.Label, AddressLine1: addr.Line1, AddressLine2: addr.Line2, AddressPincode: addr.Pincode,
 			SubtotalCents: subtotal, DeliveryFeeCents: fee, TotalCents: subtotal + fee,

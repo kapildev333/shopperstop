@@ -163,7 +163,8 @@ func Cancel(pool *pgxpool.Pool) http.HandlerFunc {
 }
 
 // StoreList answers 200 with one page of a store's orders, newest first, optionally
-// only those in one status. Store staff of another store and an unknown store are 404.
+// only those in one status, or with active=true only those neither delivered nor
+// cancelled. Store staff of another store and an unknown store are 404.
 func StoreList(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := httpx.PathID(r, "id")
@@ -189,6 +190,11 @@ func StoreList(pool *pgxpool.Pool) http.HandlerFunc {
 			}
 			status = &st
 		}
+		active, err := activeParam(r, status != nil)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
 		page, pageSize, err := httpx.Page(r)
 		if err != nil {
 			httpx.WriteError(w, r, err)
@@ -196,13 +202,13 @@ func StoreList(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		q := db.New(pool)
 		rows, err := q.StoreOrders(ctx, db.StoreOrdersParams{
-			StoreID: id, Status: status, Off: int32((page - 1) * pageSize), Lim: int32(pageSize),
+			StoreID: id, Status: status, Active: active, Off: int32((page - 1) * pageSize), Lim: int32(pageSize),
 		})
 		if err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}
-		total, err := q.CountStoreOrders(ctx, db.CountStoreOrdersParams{StoreID: id, Status: status})
+		total, err := q.CountStoreOrders(ctx, db.CountStoreOrdersParams{StoreID: id, Status: status, Active: active})
 		if err != nil {
 			httpx.WriteError(w, r, err)
 			return
@@ -213,6 +219,22 @@ func StoreList(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.NewList(out, page, pageSize, total))
+	}
+}
+
+// activeParam reads the store list's active filter: absent or empty is false,
+// "true" is true, and any other value, or true with a status, is 400 field active.
+func activeParam(r *http.Request, withStatus bool) (bool, error) {
+	switch r.URL.Query().Get("active") {
+	case "":
+		return false, nil
+	case "true":
+		if withStatus {
+			return false, invalid("active", "cannot be combined with status")
+		}
+		return true, nil
+	default:
+		return false, invalid("active", "must be true")
 	}
 }
 
