@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Redirect, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
@@ -8,10 +8,11 @@ import { Banknote, Check, ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { formatInr } from '@shopperstop/ui/format'
 import { useAddresses } from './addresses'
 import { AddressCard, chosenAddress } from './checkout-address'
-import { blockReason } from './checkout'
+import { blockReason, outcomeOf, placeOrder, type Refusal } from './checkout'
 import { imageUri } from './catalog'
-import { openCartSheet, storeOptions, useCart } from './cart'
+import { cartKey, openCartSheet, storeOptions, useCart, type CartView } from './cart'
 import type { CartLine } from './cart-guest'
+import { queryClient } from './api'
 import { useBack } from './screen-support'
 import { useToken } from './session'
 import { Button, IconButton } from './ui/button'
@@ -37,8 +38,43 @@ function Checkout() {
   // The address chosen on this screen; none until the customer chooses one, so the card shows the default.
   const [chosen, setChosen] = useState<string>()
   const selected = chosenAddress(addresses.data, chosen)
+  const token = useToken() ?? ''
+  // A ref, not the state: a second press in the same tick must not send a second order.
+  const sending = useRef(false)
+  const [busy, setBusy] = useState(false)
+  const [refusal, setRefusal] = useState<Refusal>()
+  // The address core refused, with the address list as it was read then: the badge goes once the list is read again.
+  const [refused, setRefused] = useState<{ addressId: string; listedAt: number }>()
   // The lines are the cart's store: the pincode's store is never read here.
   const store = useQuery({ ...storeOptions(view?.storeId ?? ''), enabled: !!view?.storeId })
+
+  // The answer decides the screen: an order or an emptied cart replaces it; anything else stays here with its refusal.
+  async function place() {
+    // Nothing to send to until the address list has answered with a chosen address.
+    if (sending.current || !selected) return
+    sending.current = true
+    setBusy(true)
+    setRefusal(undefined)
+    setRefused(undefined)
+    const result = await placeOrder(selected.id)
+    const outcome = outcomeOf(result, queryClient.getQueryData<CartView>(cartKey(token)), store.data?.name ?? 'The store', selected.id)
+    if ('to' in outcome) {
+      // Replaced, not pushed: Back from the order does not return to an empty checkout. The sending ref stays set.
+      router.replace(outcome.to)
+      return
+    }
+    sending.current = false
+    setBusy(false)
+    setRefusal(outcome.refusal)
+    if (outcome.refusal.addressId) setRefused({ addressId: outcome.refusal.addressId, listedAt: addresses.dataUpdatedAt })
+  }
+
+  // Choosing another address clears an address refusal's alert; the refused address keeps its badge.
+  const choose = (id: string) => {
+    setChosen(id)
+    setRefusal((current) => (current?.addressId ? undefined : current))
+  }
+  const refusedId = refused && refused.listedAt === addresses.dataUpdatedAt ? refused.addressId : undefined
 
   let body
   if (!view) {
@@ -77,7 +113,8 @@ function Checkout() {
     body = (
       <>
         <ScrollView style={styles.flex} contentContainerStyle={styles.scroll}>
-          <AddressCard chosen={chosen} onChoose={setChosen} />
+          {refusal ? <Alert refusal={refusal} onOrders={() => router.navigate('/orders')} /> : null}
+          <AddressCard chosen={chosen} onChoose={choose} refusedId={refusedId} />
           <View style={styles.card}>
             {store.data ? (
               <View style={styles.gap}>
@@ -126,7 +163,7 @@ function Checkout() {
             </View>
           </View>
         </ScrollView>
-        <Bar total={view.totalCents} reason={reason} />
+        <Bar total={view.totalCents} reason={reason} busy={busy} onPlace={() => void place()} />
       </>
     )
   }
@@ -172,6 +209,21 @@ function Line({ line }: { line: CartLine }) {
   )
 }
 
+// The refusal, with its second line and, for an unconfirmed placement, the way to check the orders.
+function Alert({ refusal, onOrders }: { refusal: Refusal; onOrders: () => void }) {
+  return (
+    <View accessibilityRole="alert" style={styles.alert}>
+      <Text style={{ fontFamily: fontFamily(600) }}>{refusal.message}</Text>
+      {refusal.detail ? <Text>{refusal.detail}</Text> : null}
+      {refusal.unconfirmed ? (
+        <Button variant="secondary" onPress={onOrders}>
+          Your orders
+        </Button>
+      ) : null}
+    </View>
+  )
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.row}>
@@ -182,7 +234,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 // The one bar: the amount to pay, or the block that says why the order cannot be placed.
-function Bar({ total, reason }: { total: number; reason?: string }) {
+function Bar({ total, reason, busy, onPlace }: { total: number; reason?: string; busy: boolean; onPlace: () => void }) {
   return (
     <SafeAreaView edges={['bottom']} style={styles.bar}>
       {reason ? (
@@ -190,7 +242,7 @@ function Bar({ total, reason }: { total: number; reason?: string }) {
           <Text style={[styles.blockText, { fontFamily: fontFamily(600) }]}>{reason}</Text>
         </View>
       ) : (
-        <Pressable accessibilityRole="button" accessibilityLabel="Place order" style={styles.place}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Place order" accessibilityState={{ busy }} onPress={onPlace} style={styles.place}>
           <Text variant="button" tone="onAccent" tabular style={{ fontFamily: fontFamily(700) }}>
             {formatInr(total)}
           </Text>
@@ -221,6 +273,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   pad: { padding: spacing.unit * 3, gap: spacing.unit * 3 },
+  alert: {
+    borderRadius: radius.card,
+    backgroundColor: colors.dangerSoft,
+    padding: spacing.unit * 3,
+    gap: spacing.unit * 2,
+  },
   actions: { alignSelf: 'stretch', gap: spacing.unit * 2 },
   scroll: { padding: spacing.unit * 3, gap: spacing.unit * 3 },
   card: {

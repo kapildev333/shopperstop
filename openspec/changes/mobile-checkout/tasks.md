@@ -61,8 +61,8 @@ Scenarios: Place order sent once; Address not served; Store closed at placement;
 Starts from: `src/checkout-place.test.tsx` test `Place order sent once` (red: the press sends nothing): `POST /orders` held; fire two presses of "Place order" unawaited (common rules); `waitFor` one `POST /orders` and the button `toBeBusy()`; then release the held answer (a 409 `conflict` twice is simplest: no navigation) and `waitFor` the button not busy. Then the refusal scenarios in the same file, each a non-navigating render as task 3 (Work chosen through "Change" for "Address not served"; "Placement fails" is three renders in one test, or three tests named `Placement fails (subtotal)`, `(address)`, `(conflict)`). Navigating, one per file, with `renderRouter({ _layout: Layout, checkout: CheckoutRoute, 'orders/[id]': OrderRoute, orders: Stub }, { initialUrl: '/checkout' })` (`OrderRoute` is the default export of `src/app/orders/[id].tsx`; `Layout` as task 3 without the sheet): `Order placed` (`POST /orders` 201, `GET /orders/<id>` answering the same order; path `/orders/<id>`, heading "Order SS-ABCDEFGH", `getCartSummary().count` 0, one `POST` with Home's id), `Cart already empty goes to orders` (400 `validation` "cart is empty", no field; path `/orders`), `Unconfirmed placement that emptied the cart` (`POST /orders` answers 502 with no body, the next `GET /me/cart` the empty cart; path `/orders`).
 Build: the design file "Screen state" and scroll item 1 (the alert), design.md Decisions 5 and 9.
 
-- [ ] 4.1 `test:` the nine scenarios, red
-- [ ] 4.2 `feat:` placing, the alert, the badge and the navigation; gates green
+- [x] 4.1 `test:` the nine scenarios, red
+- [x] 4.2 `feat:` placing, the alert, the badge and the navigation; gates green
 
 ## 5. Out-of-stock marks — group D, after 4
 
