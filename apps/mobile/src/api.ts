@@ -1,7 +1,7 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, useQuery } from '@tanstack/react-query'
 import createClient, { type Middleware } from 'openapi-fetch'
 import type { components, paths } from '@shopperstop/ui/api'
-import { getToken, setToken } from './session'
+import { getToken, setToken, useToken } from './session'
 
 export type ApiError = components['schemas']['Error']['error']
 
@@ -53,4 +53,19 @@ export async function call(request: () => Promise<{ error?: { error: ApiError } 
   } catch {
     return unreachable
   }
+}
+
+// The customer read, keyed by the token like the address list. Throws core's envelope so ErrorBanner can tell the cases apart.
+export function useMe() {
+  const token = useToken()
+  return useQuery({
+    queryKey: ['me', token],
+    enabled: !!token,
+    queryFn: async () => {
+      const { data, error } = await api.GET('/me')
+      if (error) throw error.error
+      if (!data) throw unreachable
+      return data
+    },
+  })
 }

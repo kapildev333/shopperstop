@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Link, Redirect, useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, ReceiptText } from 'lucide-react-native'
 import { deleteAddress, setDefaultAddress, useAddresses, type Address } from '../addresses'
 import { useBack } from '../auth-forms'
-import { api, unreachable, type ApiError } from '../api'
+import { useMe, type ApiError } from '../api'
 import { signOut } from '../auth'
 import { AddressSheet } from '../address-sheet'
 import { ProfileSheet } from '../profile-sheet'
@@ -17,22 +16,6 @@ import { Skeleton } from '../ui/skeleton'
 import { Text } from '../ui/text'
 import { useToken } from '../session'
 import { colors, fontFamily, radius, shadows, spacing } from '../ui/tokens'
-
-// The customer read, keyed by the token like the address list. Throws core's envelope so ErrorBanner can tell the cases apart.
-// ponytail: lives here, not in api.ts, because the account screen is its only reader; move it when a second screen needs it.
-function useMe() {
-  const token = useToken()
-  return useQuery({
-    queryKey: ['me', token],
-    enabled: !!token,
-    queryFn: async () => {
-      const { data, error } = await api.GET('/me')
-      if (error) throw error.error
-      if (!data) throw unreachable
-      return data
-    },
-  })
-}
 
 // Signed out, the screen asks to sign in and comes back here.
 export default function Account() {
