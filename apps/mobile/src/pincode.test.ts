@@ -26,10 +26,11 @@ function loadFresh() {
     waitFor: typeof waitFor
   }
   jest.isolateModules(() => {
-    const testing = require('@testing-library/react-native/pure')
+    const testing = jest.requireActual<typeof import('@testing-library/react-native/pure')>('@testing-library/react-native/pure')
     fresh = {
-      pincode: require('./pincode'),
-      storage: require('@react-native-async-storage/async-storage').default,
+      pincode: jest.requireActual<typeof import('./pincode')>('./pincode'),
+      // The store's own import of the storage, which the setup mocks; the mock is a plain CommonJS object with no `default` key.
+      storage: jest.requireMock<typeof AsyncStorage>('@react-native-async-storage/async-storage'),
       act: testing.act,
       renderHook: testing.renderHook,
       waitFor: testing.waitFor,

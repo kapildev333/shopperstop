@@ -81,11 +81,11 @@ Scope: `apps/mobile/{package.json,jest.setup.ts}`, `apps/mobile/src/{pincode.ts,
 Scenarios: Pincode persisted, Pincode restored on load, Chosen pincode wins over a late read, Blocked storage tolerated.
 Starts from: `src/pincode.test.ts`: the four scenario names, plus `sheet open state` (`openPincodeSheet`/`closePincodeSheet` flip `usePincodeSheetOpen`). Load the module in `jest.isolateModules` for the read scenarios; make the read late by giving the mocked `getItem` a promise the test resolves; make storage reject with `jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(...)` (and `getItem`).
 
-- [ ] 6.1 `package.json`: add `"@react-native-async-storage/async-storage": "2.2.0"` (Expo 58's pin) to `dependencies`; in the `e2e` script put `EXPO_PUBLIC_RIDER_URL=http://localhost:18081` next to `EXPO_PUBLIC_CORE_URL=http://localhost:18080` (mobile-P4-L4a's request; skip if it is already there); nothing else: the `test` script and `expo-splash-screen` are L5a's (design.md Decision 12), keep them as they are on the branch; `npm install` from the worktree root
-- [ ] 6.2 `jest.setup.ts`: `jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'))`; after each test `setPincode(undefined)`, `closePincodeSheet()`, `AsyncStorage.clear()`
-- [ ] 6.3 Red: `src/pincode.test.ts`
-- [ ] 6.4 `src/pincode.ts` per the interfaces in the design file and design.md Decision 2
-- [ ] 6.5 Gates green
+- [x] 6.1 `package.json`: add `"@react-native-async-storage/async-storage": "2.2.0"` (Expo 58's pin) to `dependencies`; in the `e2e` script put `EXPO_PUBLIC_RIDER_URL=http://localhost:18081` next to `EXPO_PUBLIC_CORE_URL=http://localhost:18080` (mobile-P4-L4a's request; skip if it is already there); nothing else: the `test` script and `expo-splash-screen` are L5a's (design.md Decision 12), keep them as they are on the branch; `npm install` from the worktree root
+- [x] 6.2 `jest.setup.ts`: `jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'))`; after each test `setPincode(undefined)`, `closePincodeSheet()`, `AsyncStorage.clear()`
+- [x] 6.3 Red: `src/pincode.test.ts`
+- [x] 6.4 `src/pincode.ts` per the interfaces in the design file and design.md Decision 2
+- [x] 6.5 Gates green
 
 ## 7. Cart counts stub
 
