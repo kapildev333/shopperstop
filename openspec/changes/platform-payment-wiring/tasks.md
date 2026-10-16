@@ -41,7 +41,7 @@ Commit: `feat: payment ci job, docs and area lists`.
 
 ## 4. Manager verification and runtime evidence (area manager, not a worker)
 
-- [ ] 4.1 Re-run on the branch: `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh`, `node --test scripts/postman.test.mjs`, `make test`, `make postman` twice (tree clean), `make gen` (tree clean), `openspec validate --all --strict`
+- [x] 4.1 Re-run on the branch: `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh`, `node --test scripts/postman.test.mjs`, `make test`, `make postman` twice (tree clean), `make gen` (tree clean), `openspec validate --all --strict`
 - [x] 4.2 Database: after the orchestrator applied the payment statements (D33), the pgx checks of 1.4 print `1` and exactly `shopperstop_payment`, `shopperstop_payment_e2e`, `shopperstop_payment_test`
-- [ ] 4.3 One `make e2e` (take the slot per D35): `E2E_ENV` gained payment values; every suite stays green with the `e2e: services/payment absent, skipping` line and core accepting the two-entry e2e token list
+- [x] 4.3 One `make e2e` (take the slot per D35): `E2E_ENV` gained payment values; every suite stays green with the `e2e: services/payment absent, skipping` line and core accepting the two-entry e2e token list
 - [ ] 4.4 Pending until the payment area lands, recorded by the orchestrator at phase close: a fresh volume gets the payment role and databases from `initdb.sql` (CI `payment` job once billing is fixed, or a fresh-clone `make dev`); `make dev` reaches six servers and Ctrl-C stops all of them; `make prod-local` serves `/api/payment/`
