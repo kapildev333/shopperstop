@@ -2,7 +2,7 @@
 
 ### Requirement: make dev runs the rider service and app
 
-`make dev` SHALL run `make db`, then `make seed` (core, then rider: `migrate` and `seed-demo --reset`), then `core`, `rider`, `web`, `admin` and `rider-app` side by side until interrupted. Rider commands SHALL receive the `SHOPPERSTOP_RIDER_*` dev defaults, each overridable from the shell or the make command line, and core SHALL accept the rider's dev service token, the rider app's origin and the mobile app's web export origin (`http://localhost:5176`, D39). The mobile app has no make target: it runs from `apps/mobile` with Expo (D39).
+`make dev` SHALL run `make db`, then `make seed` (core, then rider: `migrate` and `seed-demo --reset`), then `core`, `rider`, `web`, `admin` and `rider-app` side by side until interrupted. Rider commands SHALL receive the `SHOPPERSTOP_RIDER_*` dev defaults, each overridable from the shell or the make command line, core SHALL accept the rider's dev service token, the rider app's origin and the mobile app's web export origin (`http://localhost:5176`, D39), and the rider's dev origins SHALL include the same mobile origin. The mobile app has no make target: it runs from `apps/mobile` with Expo (D39).
 
 #### Scenario: Dry run shows five servers
 - **WHEN** `make -n dev` runs with `services/core`, `services/rider`, `apps/web`, `apps/admin`, `apps/rider` and `packages/ui` present
@@ -14,11 +14,11 @@
 
 #### Scenario: Core accepts the mobile web export's dev origin
 - **WHEN** `make -n core` runs with `SHOPPERSTOP_CORE_WEB_ORIGINS` unset in the environment
-- **THEN** the core command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'`, the `Makefile` names `localhost:5176` exactly once, and no `Makefile` line names `apps/mobile` or `expo`
+- **THEN** the core command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'`, the `Makefile` names `localhost:5176` exactly twice (core's and the rider's dev defaults), and no `Makefile` line names `apps/mobile` or `expo`
 
 #### Scenario: Rider dev defaults
 - **WHEN** `make -n rider` runs with `services/rider` present and no rider variable in the environment
-- **THEN** the command carries `SHOPPERSTOP_RIDER_DATABASE_URL` for `shopperstop_rider` as `shopperstop_rider`, `SHOPPERSTOP_RIDER_ADDR=':8081'`, a `SHOPPERSTOP_RIDER_SESSION_PEPPER` of at least 32 bytes, `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'`, `SHOPPERSTOP_RIDER_CORE_URL='http://localhost:8080'` and a non-empty `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN`
+- **THEN** the command carries `SHOPPERSTOP_RIDER_DATABASE_URL` for `shopperstop_rider` as `shopperstop_rider`, `SHOPPERSTOP_RIDER_ADDR=':8081'`, a `SHOPPERSTOP_RIDER_SESSION_PEPPER` of at least 32 bytes, `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'`, `SHOPPERSTOP_RIDER_CORE_URL='http://localhost:8080'` and a non-empty `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN`
 
 #### Scenario: A rider variable is overridden
 - **WHEN** `make -n rider SHOPPERSTOP_RIDER_ADDR=:9091` runs with `services/rider` present
@@ -26,7 +26,7 @@
 
 ### Requirement: make e2e gives the rider an isolated environment
 
-`make e2e` SHALL, when `services/rider` exists, migrate and reseed `shopperstop_rider_e2e` after core's e2e database and before building the workspaces, and SHALL run every core, rider and `npm run e2e` command with one fixed environment holding both services' e2e values. Values from the developer's shell or the dev defaults SHALL NOT reach it. Core's e2e web origins SHALL include the mobile app's web export preview, `http://localhost:15176` (D39).
+`make e2e` SHALL, when `services/rider` exists, migrate and reseed `shopperstop_rider_e2e` after core's e2e database and before building the workspaces, and SHALL run every core, rider and `npm run e2e` command with one fixed environment holding both services' e2e values. Values from the developer's shell or the dev defaults SHALL NOT reach it. Both services' e2e web origins SHALL include the mobile app's web export preview, `http://localhost:15176` (D39).
 
 #### Scenario: Dev rider variables do not leak into e2e
 - **WHEN** the shell exports `SHOPPERSTOP_RIDER_DATABASE_URL=leak` and `SHOPPERSTOP_CORE_DATABASE_URL=leak` and `make -n e2e` runs with `services/core`, `services/rider` and `apps/web` present
@@ -34,11 +34,11 @@
 
 #### Scenario: e2e core accepts the e2e rider token
 - **WHEN** `make -n e2e` runs with `services/core`, `services/rider` and `apps/web` present
-- **THEN** the `npm run e2e` command carries `SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:` followed by exactly its `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN` value, that value differs from the dev default, core's web origins are `http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176` and the rider's are `http://localhost:15173,http://localhost:15174,http://localhost:15175`
+- **THEN** the `npm run e2e` command carries `SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:` followed by exactly its `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN` value, that value differs from the dev default, both services' web origins are `http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176`
 
-#### Scenario: e2e core accepts the mobile web export preview
-- **WHEN** the shell exports `SHOPPERSTOP_CORE_WEB_ORIGINS=leak` and `make -n e2e` runs
-- **THEN** the printed `npm run e2e` command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'`, no printed line contains `leak`, and the `Makefile` names `localhost:15176` exactly once
+#### Scenario: e2e services accept the mobile web export preview
+- **WHEN** the shell exports `SHOPPERSTOP_CORE_WEB_ORIGINS=leak` and `SHOPPERSTOP_RIDER_WEB_ORIGINS=leak` and `make -n e2e` runs
+- **THEN** the printed `npm run e2e` command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'` and `SHOPPERSTOP_RIDER_WEB_ORIGINS` with the same value, no printed line contains `leak`, and the `Makefile` names `localhost:15176` exactly twice
 
 ### Requirement: Repository documentation matches the tree
 

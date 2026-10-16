@@ -16,21 +16,22 @@ make)
   dev="'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'"
   e2e="'http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'"
   has "make -n core" "$(env -u SHOPPERSTOP_CORE_WEB_ORIGINS make -n core 2>&1)" "SHOPPERSTOP_CORE_WEB_ORIGINS=$dev"
-  has "make -n rider" "$(env -u SHOPPERSTOP_RIDER_WEB_ORIGINS make -n rider 2>&1)" \
-    "SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'"
-  out=$(SHOPPERSTOP_CORE_WEB_ORIGINS=leak make -n e2e 2>&1)
+  has "make -n rider" "$(env -u SHOPPERSTOP_RIDER_WEB_ORIGINS make -n rider 2>&1)" "SHOPPERSTOP_RIDER_WEB_ORIGINS=$dev"
+  out=$(SHOPPERSTOP_CORE_WEB_ORIGINS=leak SHOPPERSTOP_RIDER_WEB_ORIGINS=leak make -n e2e 2>&1)
   lacks "make -n e2e" "$out" leak
   line=$(printf '%s\n' "$out" | grep -F 'npm run e2e')
   has "make -n e2e npm run e2e" "$line" "SHOPPERSTOP_CORE_WEB_ORIGINS=$e2e"
-  has "make -n e2e npm run e2e" "$line" "SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'"
-  [ "$(count Makefile localhost:5176)" = 1 ] || fail "Makefile: want localhost:5176 exactly once"
-  [ "$(count Makefile localhost:15176)" = 1 ] || fail "Makefile: want localhost:15176 exactly once"
+  has "make -n e2e npm run e2e" "$line" "SHOPPERSTOP_RIDER_WEB_ORIGINS=$e2e"
+  [ "$(count Makefile localhost:5176)" = 2 ] || fail "Makefile: want localhost:5176 exactly twice"
+  [ "$(count Makefile localhost:15176)" = 2 ] || fail "Makefile: want localhost:15176 exactly twice"
   grep -nE 'apps/mobile|expo' Makefile && fail "Makefile names apps/mobile or expo"
-  # The rider-wiring make checks still hold, except its two assertions on core's old three-origin lists.
+  # The rider-wiring make checks still hold, except its four assertions on the old three-origin lists.
   if [ -f "$prior" ]; then
     sh "$prior" make 2>&1 | grep '^FAIL' \
       | grep -vF "make -n core lacks: SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'" \
       | grep -vF "make -n e2e npm run e2e lacks: SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'" \
+      | grep -vF "make -n rider lacks: SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'" \
+      | grep -vF "make -n e2e npm run e2e lacks: SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'" \
       | while read -r l; do echo "prior $l"; done | grep . && fail "rider-wiring make checks regressed (lines above)"
   else fail "missing $prior"; fi
   ;;

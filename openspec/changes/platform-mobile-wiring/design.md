@@ -1,18 +1,18 @@
 ## Context
 
-PLAN.md D36 to D40 make the customer mobile app Phase 4: an Expo workspace `apps/mobile` (mobile area) whose web export runs on :5176 in development and is served on :15176 for Playwright under `make e2e`, and which calls core at `EXPO_PUBLIC_CORE_URL` (default `http://localhost:8080`). D39 limits platform's part to core's two origins, three docs and the canvas link. `.claude/commands/orchestrate.md` and `manage.md` already name the `mobile` area and its scope (read on 8dc76d1); `CLAUDE.md` already lists the area; neither needs an edit. Files touched, all platform: `Makefile`, `README.md`, `CLAUDE.md`, `docs/figma.md`, this folder.
+PLAN.md D36 to D40 make the customer mobile app Phase 4: an Expo workspace `apps/mobile` (mobile area) whose web export runs on :5176 in development and is served on :15176 for Playwright under `make e2e`, and which calls core at `EXPO_PUBLIC_CORE_URL` (default `http://localhost:8080`). D39 (as amended by the orchestrator, 2026-10-16) limits platform's part to the two origins on core and on the rider service, three docs and the canvas link. `.claude/commands/orchestrate.md` and `manage.md` already name the `mobile` area and its scope (read on 8dc76d1); `CLAUDE.md` already lists the area; neither needs an edit. Files touched, all platform: `Makefile`, `README.md`, `CLAUDE.md`, `docs/figma.md`, this folder.
 
 ## Goals / Non-Goals
 
-Goals: core accepts the web export's dev and e2e origins; README, CLAUDE.md and `docs/figma.md` tell a reader how to run the app, where it lives and where its screens are designed; one script tests all of it.
+Goals: core and the rider service accept the web export's dev and e2e origins; README, CLAUDE.md and `docs/figma.md` tell a reader how to run the app, where it lives and where its screens are designed; one script tests all of it.
 
-Non-goals: a `make mobile` target or `make dev` running Expo; CI changes; the rider service's origins; anything in `apps/mobile` or `packages/ui`.
+Non-goals: a `make mobile` target or `make dev` running Expo; CI changes; anything in `apps/mobile` or `packages/ui`.
 
 ## Decisions
 
-### 1. Core's origins only; the rider's stay three (escalated)
+### 1. Core and the rider service both accept the mobile origins (orchestrator decision)
 
-D39 names core's `WEB_ORIGINS` only, so `SHOPPERSTOP_RIDER_WEB_ORIGINS` (dev and e2e) is unchanged and the delta says so. Ceiling: mobile-P4-L4's optional rider card reads `GET /api/rider/v1/orders/{orderId}/delivery` straight from the app; native requests carry no `Origin` and work, but the web export on :5176 and :15176 is cross-origin to the rider service and the browser blocks it. Upgrade: append the same two origins to the rider's dev default and e2e value (two strings, a follow-up change or an amendment to this one before the worker starts). Escalated to the orchestrator.
+D39 named core's `WEB_ORIGINS` only; the orchestrator decided (D13, 2026-10-16) that the rider service accepts them too, because mobile-P4-L4's optional rider card reads `GET /api/rider/v1/orders/{orderId}/delivery` straight from the app and the web export on :5176 and :15176 is cross-origin to the rider service (native requests carry no `Origin` and need nothing). So `http://localhost:5176` joins both dev defaults and `http://localhost:15176` both e2e values. That is four values but three Makefile lines: the two `?=` defaults, and the single `E2E_ENV` line that holds both e2e values, so `git diff -- Makefile` shows three changed lines.
 
 ### 2. No mobile make target: the workspace rides on today's targets
 
@@ -39,19 +39,22 @@ The docs say `npx expo start --port 5176` rather than the bare `npx expo start` 
 
 ### 6. The test is a committed check script
 
-Like platform-rider-wiring, the scenarios are text and `make -n` output with no framework: `check-mobile-wiring.sh` (sections `make`, `docs`) greps the files and dry-run output and runs the two archived checks (`check-docs.sh`; `check-wiring.sh` `docs`, and its `make` section with its two assertions on core's old three-origin lists filtered out, because this change supersedes exactly those). On 8dc76d1 it prints 22 FAIL lines; on a scratch copy with the edits below it prints `mobile wiring check: ok`, and `check-docs.sh` and `check-wiring.sh deploy ci docs` stay ok. The worker's red step is that failing run, the commit is `feat:`.
+Like platform-rider-wiring, the scenarios are text and `make -n` output with no framework: `check-mobile-wiring.sh` (sections `make`, `docs`) greps the files and dry-run output and runs the two archived checks (`check-docs.sh`; `check-wiring.sh` `docs`, and its `make` section with its four assertions on the old three-origin lists filtered out, because this change supersedes exactly those). On 8dc76d1 it prints 24 FAIL lines; on a scratch copy with the edits below it prints `mobile wiring check: ok`, and `check-docs.sh` and `check-wiring.sh deploy ci docs` stay ok. The worker's red step is that failing run, the commit is `feat:`.
 
 ## The edits
 
 Replace each "old" with its "new" exactly; each old text occurs once in its file.
 
-### Makefile (two values)
+### Makefile (four values on three lines)
 
 1. old: `SHOPPERSTOP_CORE_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175`
    new: `SHOPPERSTOP_CORE_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176`
-2. In the `E2E_ENV` line, old: `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'`
+2. old: `SHOPPERSTOP_RIDER_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175`
+   new: `SHOPPERSTOP_RIDER_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176`
+3. In the `E2E_ENV` line, old: `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'`
    new: `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'`
-   (the `SHOPPERSTOP_RIDER_WEB_ORIGINS` value in the same line stays as is)
+4. In the same `E2E_ENV` line, old: `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'`
+   new: `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'`
 
 ### README.md (five places)
 
@@ -110,5 +113,5 @@ new: ``Mobile: the customer mobile app's screens (Phase 4, D36) live in the desi
 ## Risks / Trade-offs
 
 - README says "`apps/mobile` is not on `main` yet" and the e2e rows say "once `apps/mobile` lands": stale once mobile-P4-L1 merges. The platform lane at Phase 4 close (or the orchestrator's close chore) drops them; the scenario only demands the phrase while `apps/mobile` is absent.
-- The archived `check-wiring.sh make` section now fails on two lines by design; `check-mobile-wiring.sh` filters exactly those, so any other regression there still fails.
+- The archived `check-wiring.sh make` section now fails on four lines by design; `check-mobile-wiring.sh` filters exactly those, so any other regression there still fails.
 - `platform-ci-makefile` is still an open change on main although its requirements shipped in Phase 1 (archive order was set in platform-P3-L1's log); it does not touch the requirements modified here, and `openspec validate --all --strict` passes with both open.
