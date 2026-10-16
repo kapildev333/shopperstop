@@ -14,6 +14,8 @@ Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.
 
 Phase 3 (the rider service and rider app) is in progress; `services/rider` and `apps/rider` are not on `main` yet, and their targets skip until they land. `core-admin seed-demo --reset` loads the demo data and prints the demo sign-ins.
 
+Phase 4 (the customer mobile app, `apps/mobile`, built with Expo) runs alongside Phase 3's tail; see [Mobile app](#mobile-app).
+
 ## Quick start
 
 Prerequisites:
@@ -73,6 +75,19 @@ Local databases only. `core-admin seed-demo --reset` loads these accounts and pr
 
 The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008). The four rider rows are from Phase 3: `rider-admin seed-demo --reset` loads them once the rider service lands, and they are not on `main` yet.
 
+## Mobile app
+
+The customer mobile app is an Expo (React Native) app in `apps/mobile`, from Phase 4; `apps/mobile` is not on `main` yet. It uses the same core service as the customer web, so start the stack with `make dev` first, then in another terminal:
+
+```sh
+cd apps/mobile && npx expo start --port 5176
+```
+
+- On a phone: install Expo Go, join the same Wi-Fi as the computer and scan the QR code. A phone cannot reach `localhost`, so point the app at the computer's LAN address: `EXPO_PUBLIC_CORE_URL=http://<lan-ip>:8080 npx expo start --port 5176` (on macOS, `ipconfig getifaddr en0` prints `<lan-ip>`). Core listens on every interface on :8080; allow it through the firewall if asked.
+- In a browser: press `w`, or run `npx expo start --web --port 5176`, to open the web export on <http://localhost:5176>; core accepts that origin under `make dev`.
+
+`--port 5176` keeps Expo's bundler off its default port 8081, which the rider service uses. The app has no make target of its own: `make test-web` and `make e2e` run its workspace scripts like the other apps' (its e2e preview is on :15176).
+
 ## Commands
 
 | Command | What it does |
@@ -85,7 +100,7 @@ The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pin
 | `make rider` | The rider service alone, on :8081. |
 | `make rider-app` | The rider app's dev server alone, on :5175 under /rider/. |
 | `make test-web` | Builds `packages/ui`, then lint, typecheck, test and build for every workspace. |
-| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/). |
+| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/), mobile web export preview on :15176 once `apps/mobile` lands. |
 | `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists), `packages/ui/src/api/core.d.ts` from `openapi.json`, and the rider sqlc code and `packages/ui/src/api/rider.d.ts` once the rider contract exists. |
 | `make postman` | Regenerates one Postman collection per service and the shared environment under `docs/postman/`. |
 | `make prod-local` | Builds the apps and serves them through Caddy on <http://localhost>. |
@@ -98,7 +113,7 @@ The contract and the documentation are [services/core/openapi.json](services/cor
 
 ## Design
 
-The look is a yellow brand surface with green for actions and prices, dense product grids and a sticky cart bar. The tokens are in [packages/ui/src/tokens.css](packages/ui/src/tokens.css). The Figma file, with its three pages, is linked from [docs/figma.md](docs/figma.md).
+The look is a yellow brand surface with green for actions and prices, dense product grids and a sticky cart bar. The tokens are in [packages/ui/src/tokens.css](packages/ui/src/tokens.css). The Figma file, with its three pages, is linked from [docs/figma.md](docs/figma.md), and so is the design canvas with the mobile app's screens.
 
 ## Screenshots
 
@@ -114,4 +129,4 @@ Filled by the first phase that has screens.
 
 ## How it is built
 
-The repository is split into areas with disjoint scopes (`platform`, `core`, `ui`, `web`, `admin`, and `rider` from Phase 3). Each area has a manager session that runs team-lead, worker and reviewer lanes for one OpenSpec change at a time: the change is specified, the test is written first, and the work lands through a pull request. [CLAUDE.md](CLAUDE.md) holds the conventions and the rules the agents follow, [openspec/](openspec/) the specs and changes, and [PLAN.md](PLAN.md) the plan and its decisions.
+The repository is split into areas with disjoint scopes (`platform`, `core`, `ui`, `web`, `admin`, `rider` from Phase 3 and `mobile` from Phase 4). Each area has a manager session that runs team-lead, worker and reviewer lanes for one OpenSpec change at a time: the change is specified, the test is written first, and the work lands through a pull request. [CLAUDE.md](CLAUDE.md) holds the conventions and the rules the agents follow, [openspec/](openspec/) the specs and changes, and [PLAN.md](PLAN.md) the plan and its decisions.
