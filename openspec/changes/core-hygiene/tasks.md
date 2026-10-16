@@ -33,5 +33,5 @@ Scope: `services/core/internal/httpx/` (`router.go`, `router_test.go`), `service
 
 `make test-web` fails on this task until ui has landed the `core.test.ts` change in design.md "Cross-area" on main and the branch is merged with main. If it fails only with TS2344 in `packages/ui/src/api/core.test.ts`, commit the core work anyway, write it in the lane log and report: that file is not core's.
 
-- [ ] 4.1 Apply the Task 4 test diffs; see both fail; commit.
-- [ ] 4.2 Apply the `router.go` diff; run the Task 4 `openapi.json` script; `make gen postman` (only `core.d.ts` changes); run the gates; tick 4.1 and 4.2; commit.
+- [x] 4.1 Apply the Task 4 test diffs; see both fail; commit.
+- [x] 4.2 Apply the `router.go` diff; run the Task 4 `openapi.json` script; `make gen postman` (only `core.d.ts` changes); run the gates; tick 4.1 and 4.2; commit.
