@@ -104,4 +104,4 @@ No failing test first, and why: a refactor of the e2e suite with no app behaviou
 
 ## 6. Acceptance (team lead)
 
-- [ ] 6.1 `/opsx:verify mobile-account-security`: every scenario in design.md's map has its passing test, tasks 1 to 5 ticked, nothing outside the Files list changed against origin/main, `openspec validate --all --strict` green.
+- [x] 6.1 `/opsx:verify mobile-account-security`: every scenario in design.md's map has its passing test, tasks 1 to 5 ticked, nothing outside the Files list changed against origin/main, `openspec validate --all --strict` green.

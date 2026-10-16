@@ -150,7 +150,7 @@ Against `services/core/openapi.json` on main (`core.d.ts` has every route and `C
 ## Ceilings
 
 - `ponytail:` no resend on the sent card; a second send needs the screen opened again.
-- `ponytail:` the verify query has `staleTime: Infinity`; reopening the same link within the cache's life shows the cached outcome without posting again (a spent code would be refused anyway).
+- `ponytail:` the verify query has `staleTime: Infinity` and (R1, F1) `retryOnMount`, `refetchOnMount` and `refetchOnWindowFocus` off, so a code is posted once per screen life even after a refusal and a remount; retyping the same code is the explicit resend (`verify.refetch()`). Reopening the same link within the cache's life shows the cached outcome.
 - `ponytail:` no show-password toggle on reset; add one if the walk finds two blind fields hard.
 - `ponytail:` the card's send has no same-tick guard (the button is disabled once `pending` renders); two sends at most mail two codes, the newest wins in core.
 - `ponytail:` `support.ts` is one flat module; split by theme if it passes about 300 lines.

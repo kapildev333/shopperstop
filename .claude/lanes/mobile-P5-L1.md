@@ -1,7 +1,7 @@
 # mobile-P5-L1 - mobile-account-security (team lead)
-Status: started
+Status: done
 ## Doing
-T1 and T3 launched by the manager (group A); T2 after T1's feat commit, then T4 and T5 with the e2e slot. Acceptance (6.1) after T5. Answering worker questions here.
+Acceptance 6.1 done (`/opsx:verify mobile-account-security`): pass.
 ## Found
 - Change `openspec/changes/mobile-account-security/`: proposal, `specs/mobile-app/spec.md` (14 ADDED requirements, 28 scenarios, every requirement under 500 characters), design.md (web requirement mirrored per behaviour, 6 decisions, scenario-to-test map, contract audit, ceilings), tasks.md (5 worker briefs T1 to T5, acceptance 6.1). No `docs/design/mobile-P5-L1.md`: design.md settles every choice and no new artboard exists. `openspec validate --all --strict`: 20 passed.
 - Read at start: area plan (Phase 5 package, Found), PLAN.md Phase 5 and D53, core's five routes in `services/core/openapi.json`, `accounts` spec, the archived `web-account-security` change and web lane log, `mobile-app` spec, archived mobile designs (L1, L5b), every in-flight lane file (none touches `apps/mobile`).
@@ -11,6 +11,10 @@ T1 and T3 launched by the manager (group A); T2 after T1's feat commit, then T4 
 - Deviation: "profile sheet" in the package read as the "My account" screen (web's `/account`); the Edit profile sheet is only open while editing.
 - 2026-10-16 manager confirmed all five decisions as proposed: verify code field, card on "My account", "code" copy, refused reset code under the field with "Request a new code", hygiene last. Manager relays the two core requests (mail link, 429 on `POST /me/email-verification`) to the orchestrator.
 - Contract audit: no blocking gap. Core mails no link (bare code); no 429 on `POST /me/email-verification`; no public resend for a signed-out customer.
+- 6.1 verify at 642f6fb: all 27 Jest/e2e scenarios in design.md's map have a test of that exact name; the 8 Jest files ran here, 8 suites / 27 tests green (the other test is the e2e pair). The two e2e scenarios passed in T4's green `make e2e` (mobile 28) and both T5 runs (mobile 28 each; run 1 exit 2 on web's `browse.spec.ts:99` search refill flake, not mobile; run 2 exit 0). Scenario "Picks answer from the setup read": no `await orderPick(request` or `await homePicks(request` left in any spec, `orderPick`/`homePicks` synchronous in `e2e/support.ts`, picks from `global-setup.ts` via `SHOPPERSTOP_MOBILE_E2E_PICKS`, mobile suite green. Tasks 1.1 to 5.1 ticked, 6.1 ticked here.
+- Test-first: T1 b6f3f11 before 61b2550 (aaee059 test-only fix), T2 0cf3efa before 39378ed, T3 8db53d4 before d0dc3e8, T4 c8e46bb (red recorded: `mailedCode` timeouts) before 68a9f14, R1 fixes a2f8c3c before 81b7453 and d964133 before 95f651c. T5 4ebb5c8 is a `refactor:` with no red first, by design (tasks.md task 5 names why).
+- Scope vs origin/main: every changed file is in design.md's Files list (incl. T5's `e2e/support.ts`, `e2e/global-setup.ts` and the seven specs, and R1/F1's edits to `src/auth-forms.tsx`, `src/app/verify-email.tsx` and two test files), plus this change and the P5-L1 lane logs. Nothing extra. design.md's verify ceiling updated for F1's query options. `openspec validate --all --strict`: 20 passed.
+- Deferred: the native `shopperstop://verify-email?token=` link is untested on a device (D37; device walks wait on the owner's Accessibility grant); core requests relayed by the manager (link in the mail body, 429 on `POST /me/email-verification`); web's `browse.spec.ts:99` search flake is web's (seen in T5 run 1).
 ## Requests
 - to mobile manager: T2 after T1's `feat:` commit, T4 after T2 and T3 (e2e slot), T5 after T4 (e2e slot).
 ## Blockers
