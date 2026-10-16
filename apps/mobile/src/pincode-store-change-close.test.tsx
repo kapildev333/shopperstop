@@ -3,8 +3,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native'
 import { queryClient } from './api'
 import { cartKey } from './cart'
 import { fakeCore, apiError, json } from './fake-core'
-import { openPincodeSheet } from './pincode'
+import { openPincodeSheet, setPincode } from './pincode'
 import { PincodeSheet } from './pincode-sheet'
+import { resolvePincode } from './serviceability'
 import { setToken } from './session'
 
 // The device keeps a dialog's children mounted while it fades out; this stand-in does the same, so the closing frame is in the tree.
@@ -47,6 +48,8 @@ test('a dialog closing after Keep still names the switch it was asked', async ()
     },
   })
   setToken('t-1')
+  setPincode('560034')
+  await resolvePincode('560034')
   queryClient.setQueryData(cartKey('t-1'), {
     storeId: koramangala.id,
     items: [{ product: taaza, quantity: 2 }],
