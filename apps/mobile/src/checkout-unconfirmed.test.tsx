@@ -57,7 +57,7 @@ test('Unconfirmed placement that emptied the cart', async () => {
   const router = await renderRouter({ _layout: Layout, checkout: CheckoutRoute, orders: Stub }, { initialUrl: '/checkout' })
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText('Orders stub')).toBeTruthy()
   await waitFor(() => expect(router.getPathname()).toBe('/orders'))

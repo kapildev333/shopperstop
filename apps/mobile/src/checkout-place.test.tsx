@@ -93,8 +93,8 @@ test('Place order sent once', async () => {
   await screen.findByText('From Koramangala')
 
   const button = screen.getByRole('button', { name: 'Place order' })
-  fireEvent.press(button)
-  fireEvent.press(button)
+  await fireEvent.press(button)
+  await fireEvent.press(button)
   await waitFor(() => expect(posts).toBe(1))
   expect(screen.getByRole('button', { name: 'Place order' })).toBeBusy()
 
@@ -117,7 +117,7 @@ test('Place order sends nothing while the address list is unread', async () => {
   await screen.findByText('Amul Taaza')
 
   // The bar does not block on an address that is not read yet, so the button shows; a press with no chosen address sends nothing.
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
   expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
 
   release(addresses([home]))
@@ -137,7 +137,7 @@ test('Address not served', async () => {
   await chooseAddress('Work')
   expect(await screen.findByText('Delivering to Work')).toBeTruthy()
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText('Koramangala does not deliver to this address. Choose another address or add one.')).toBeTruthy()
   expect(screen.getByText('Not delivered here')).toBeTruthy()
@@ -157,7 +157,7 @@ test('Store closed at placement', async () => {
   await renderScreen()
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText('Koramangala is closed right now.')).toBeTruthy()
   expect(screen.queryByText('Not delivered here')).toBeNull()
@@ -176,7 +176,7 @@ test('Placement fails (subtotal)', async () => {
   await renderScreen()
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText("Your cart is below the store's minimum order.")).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Place order' })).not.toBeBusy()
@@ -193,7 +193,7 @@ test('Placement fails (address)', async () => {
   await renderScreen()
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText('Could not place your order. Try again.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Place order' })).not.toBeBusy()
@@ -210,7 +210,7 @@ test('Placement fails (conflict)', async () => {
   await renderScreen()
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByText('Could not place your order. Try again.')).toBeTruthy()
   expect(calls.filter((call) => call.method === 'POST')).toHaveLength(2)
@@ -229,7 +229,7 @@ test('Choosing another address clears the alert', async () => {
   await screen.findByText('From Koramangala')
   await chooseAddress('Work')
   expect(await screen.findByText('Delivering to Work')).toBeTruthy()
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
   expect(await screen.findByText('Koramangala does not deliver to this address. Choose another address or add one.')).toBeTruthy()
 
   await chooseAddress('Home')
@@ -254,7 +254,7 @@ test('Core cannot be reached at placement', async () => {
   await renderScreen()
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(
     await screen.findByText('We could not confirm your order. It may have been placed, so check Your orders before you place it again.'),

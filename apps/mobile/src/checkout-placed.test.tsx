@@ -74,7 +74,7 @@ test('Order placed', async () => {
   const router = await renderRouter({ _layout: Layout, checkout: CheckoutRoute, 'orders/[id]': OrderRoute, orders: Stub }, { initialUrl: '/checkout' })
   await screen.findByText('From Koramangala')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
 
   expect(await screen.findByRole('heading', { name: 'Order SS-ABCDEFGH' })).toBeTruthy()
   await waitFor(() => expect(router.getPathname()).toBe(`/orders/${orderId}`))
