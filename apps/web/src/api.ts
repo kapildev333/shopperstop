@@ -1,6 +1,7 @@
 import { QueryClient, useQuery } from '@tanstack/react-query'
 import createClient, { type Middleware } from 'openapi-fetch'
 import type { components, paths } from '@shopperstop/ui/api'
+import type { paths as RiderPaths } from '@shopperstop/ui/api/rider'
 import { getToken, setToken, useToken } from './session'
 
 export type ApiError = components['schemas']['Error']['error']
@@ -37,6 +38,13 @@ export const api = createClient<paths>({
   fetch: (request) => globalThis.fetch(request),
 })
 api.use(authMiddleware)
+
+// The rider service, same origin (/api/rider is proxied like /api/core), with the customer's core token and the same middleware.
+export const riderApi = createClient<RiderPaths>({
+  baseUrl: `${location.origin}/api/rider/v1`,
+  fetch: (request) => globalThis.fetch(request),
+})
+riderApi.use(authMiddleware)
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 

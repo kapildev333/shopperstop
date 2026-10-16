@@ -1,7 +1,9 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+import { MapPin } from 'lucide-react'
 import {
   Button,
+  ButtonLink,
   Card,
   Dialog,
   DialogFooter,
@@ -10,12 +12,13 @@ import {
   PageHeader,
   Skeleton,
   StatusMessage,
+  VisuallyHidden,
   buttonClass,
 } from '@shopperstop/ui'
 import { useStore, type Store } from './catalog'
 import { Totals } from './cart-drawer'
-import { cancelOrder, canCancel, formatWhen, postCancel, statusMessage, statusName, underWay, useOrder, type Order } from './orders'
-import { Countdown, LineRow } from './order-parts'
+import { cancelOrder, canCancel, formatWhen, lastSeen, postCancel, riderStage, statusMessage, statusName, underWay, useDelivery, useOrder, type Order } from './orders'
+import { Countdown, LineRow, StatusBadge, useNow } from './order-parts'
 
 export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof postCancel }) {
   const { data: order, isError, refetch } = useOrder(id)
@@ -102,6 +105,7 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
           </div>
         )}
       </Card>
+      <RiderCard order={order} />
       <History order={order} />
       <Section title="Items">
         <ul className="flex flex-col divide-y divide-line">
@@ -143,6 +147,43 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
         </DialogFooter>
       </Dialog>
     </div>
+  )
+}
+
+// From out for delivery on: who carries the order and where they were last seen. Nothing while no rider is known.
+function RiderCard({ order }: { order: Order }) {
+  const { data: delivery } = useDelivery(order)
+  const now = useNow()
+  // Core's snapshot first; the rider read names the rider when core has none (the demo seed's delivered order).
+  const name = order.riderName ?? delivery?.riderName
+  if (!riderStage(order.status) || !name) return null
+  const location = delivery?.location
+  return (
+    <Section title="Rider">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-h3 text-ink">{name}</p>
+        <StatusBadge status={order.status} />
+      </div>
+      {location && (
+        <>
+          <time dateTime={location.recordedAt} className="text-small text-ink-muted">
+            {lastSeen(location.recordedAt, now)}
+          </time>
+          <div>
+            <ButtonLink
+              variant="secondary"
+              href={`https://www.google.com/maps?q=${location.lat},${location.lng}`}
+              target="_blank"
+              rel="noopener"
+            >
+              <MapPin size={16} aria-hidden />
+              Open in Maps{" "}
+              <VisuallyHidden>(opens in a new tab)</VisuallyHidden>
+            </ButtonLink>
+          </div>
+        </>
+      )}
+    </Section>
   )
 }
 

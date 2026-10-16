@@ -20,7 +20,7 @@ Scenarios: Customer order rider card › the four Vitest scenarios; Customer rid
 Failing tests: `src/orders.test.ts` "last seen wording", "rider read follows the status"; `src/order-tracking.test.tsx` "rider on the way with a position", "rider without a position", "no rider card before a rider", "delivered order names the rider from the rider read", "last seen kept current", "failed rider read keeps the card".
 
 - [x] 1.1 The tests committed (`test: rider card on the tracking page`); lint green; Vitest shows exactly the eight new tests red
-- [ ] 1.2 Decisions 1 to 4 (`feat: rider card on the tracking page`); all gates green
+- [x] 1.2 Decisions 1 to 4 (`feat: rider card on the tracking page`); all gates green
 
 ## 2. Rider names in the history, countdown from the order
 

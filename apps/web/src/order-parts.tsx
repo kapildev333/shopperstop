@@ -41,12 +41,18 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
   return <Badge variant={statusVariant(status)}>{statusName(status)}</Badge>
 }
 
-// The minutes left, counted from Date.now() once a second. Outside the status message, so a minute changing is not announced.
-export function Countdown({ placedAt, promisedMinutes }: { placedAt: string; promisedMinutes: number }) {
+// Date.now(), refreshed once a second, so a sentence counted from it stays current.
+export function useNow(): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [])
+  return now
+}
+
+// The minutes left, counted from Date.now() once a second. Outside the status message, so a minute changing is not announced.
+export function Countdown({ placedAt, promisedMinutes }: { placedAt: string; promisedMinutes: number }) {
+  const now = useNow()
   return <p className="text-h3 text-ink">{arrival(placedAt, promisedMinutes, now)}</p>
 }
