@@ -302,3 +302,29 @@ test('a poll answer read before a cancel never puts the order back on the board'
   expect(screen.queryByText('SS-TEST0001')).not.toBeInTheDocument()
   expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
 })
+
+test('the sheet names the order\'s rider, and the rider on the events the rider made', async () => {
+  setToken('tok')
+  const delivered = order(1, 'delivered', {
+    riderName: 'Arjun Rao',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T09:20:00Z' },
+      { fromStatus: 'placed', toStatus: 'accepted', actorType: 'staff', createdAt: '2026-10-13T09:21:00Z' },
+      { fromStatus: 'ready', toStatus: 'out_for_delivery', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:25:00Z' },
+      { fromStatus: 'out_for_delivery', toStatus: 'delivered', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:31:00Z' },
+    ],
+  })
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [delivered]).routes })
+
+  renderApp('/orders?tab=history')
+  await userEvent.click(await screen.findByRole('button', { name: 'SS-TEST0001' }))
+  const sheet = screen.getByRole('dialog', { name: 'Order SS-TEST0001' })
+
+  expect(await within(sheet).findByText('Rider: Arjun Rao')).toBeInTheDocument()
+  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
+    'Placed by the customer, 13 Oct 2026, 2:50 pm',
+    'Accepted by staff, 13 Oct 2026, 2:51 pm',
+    'Out for delivery by Arjun Rao, 13 Oct 2026, 2:55 pm',
+    'Delivered by Arjun Rao, 13 Oct 2026, 3:01 pm',
+  ])
+})

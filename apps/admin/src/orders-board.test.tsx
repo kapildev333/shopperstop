@@ -475,3 +475,16 @@ test('the poll stops when the board is left', async () => {
 
   expect(listRequests(calls)).toHaveLength(10)
 })
+
+test('a card taken out by a rider names the rider; a card without one does not', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'ready'), order(2, 'out_for_delivery', { riderName: 'Arjun Rao' }), order(3, 'out_for_delivery')]).routes })
+
+  renderApp('/orders')
+
+  const out = within(await screen.findByRole('region', { name: /^Out for delivery/ })).getAllByRole('listitem')
+  expect(out[0]).toHaveTextContent('SS-TEST0003')
+  expect(out[0]).not.toHaveTextContent('Rider')
+  expect(out[1]).toHaveTextContent('Rider: Arjun Rao')
+  expect(within(column('Ready')).getByRole('listitem')).not.toHaveTextContent('Rider')
+})
