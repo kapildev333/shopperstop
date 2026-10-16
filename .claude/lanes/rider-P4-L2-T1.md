@@ -1,5 +1,5 @@
 # rider-P4-L2-T1 - Sign-in sweeps expired sessions (task 1 of rider-hygiene-carryover)
-Status: in progress (red committed; green next)
+Status: done (test 8c0e202, feat next; tasks 1.1 and 1.2 ticked)
 
 ## Brief
 - LANE-ID: rider-P4-L2 (task T1). Area: `rider`.
@@ -26,6 +26,20 @@ FAIL	github.com/kapildev333/shopperstop/services/rider/internal/auth	4.495s
 ```
 Commit `test: rider sign-in sweeps expired sessions` (auth_test.go, this file).
 ## Green run
+Applied the `queries/auth.sql` and `internal/auth/auth.go` hunks of "Task 1: sweep, code"; `make gen` regenerated `auth.sql.go` and its diff equals the design hunk (only index line differs). `make gen` left `core.d.ts` and `rider.d.ts` unchanged.
+```
+--- PASS: TestRiderSessionExpired (2.68s)
+--- PASS: TestRiderSessionSlides (0.01s)
+--- PASS: TestRiderSessionWithinHourUnchanged (0.00s)
+--- PASS: TestStartSessionSweepsExpired (0.01s)
+ok  	github.com/kapildev333/shopperstop/services/rider/internal/auth	4.084s
+```
 ## Gates
+- `GOFLAGS=-count=1 make test-rider`: exit 0; tail: `ok` for cmd/rider, cmd/rider-admin, internal/app (40.9s), internal/auth (11.4s), internal/config, internal/core, internal/httpx, internal/migrate, internal/pg, internal/seed; no FAIL.
+- `make gen postman`: ran clean; `git status --short` shows only the task's files (tasks.md, auth.go, auth.sql.go, auth.sql, this file).
+- `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
 ## Found
+- The brief's `sed -i` tick command fails on macOS (BSD sed needs `-i ''`); ticked with a script instead. No effect on content.
+- Test-first ordering: `auth_test.go` alone was committed red; `auth.sql` and `auth.go` came in the feat commit.
 ## Blockers
+None. Tasks 2.1 and 2.2 untouched (not in T1 scope).

@@ -10,8 +10,8 @@ Gates, from the worktree root with `export PATH=$HOME/.local/node-v22.23.3/bin:$
 
 Scope: `services/rider/queries/auth.sql`, `services/rider/internal/auth/db/auth.sql.go` (generated), `services/rider/internal/auth/auth.go`, `services/rider/internal/auth/auth_test.go`, this file (ticks). Scenario: rider-service "Expired rider sessions are deleted" / Sign-in sweeps expired sessions; the existing session tests (Expiry and sliding, Sign-out ends only that session) stay green. Starts from `services/rider/internal/auth/auth_test.go` `TestStartSessionSweepsExpired` (fails: `expired session still stored (1 rows), want swept`). Commits: `test: rider sign-in sweeps expired sessions`, `feat: rider sign-in deletes expired sessions first`.
 
-- [ ] 1.1 Apply the "Task 1: sweep, tests" diff; run `go test -race -count=1 -run TestStartSessionSweepsExpired ./internal/auth/` from `services/rider` with `SHOPPERSTOP_RIDER_TEST_DATABASE_URL` from the Makefile and see it fail; commit.
-- [ ] 1.2 Apply the `auth.sql` and `auth.go` hunks of "Task 1: sweep, code"; `make gen` (only `services/rider/internal/auth/db/auth.sql.go` changes, equal to the diff's hunk); run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 Apply the "Task 1: sweep, tests" diff; run `go test -race -count=1 -run TestStartSessionSweepsExpired ./internal/auth/` from `services/rider` with `SHOPPERSTOP_RIDER_TEST_DATABASE_URL` from the Makefile and see it fail; commit.
+- [x] 1.2 Apply the `auth.sql` and `auth.go` hunks of "Task 1: sweep, code"; `make gen` (only `services/rider/internal/auth/db/auth.sql.go` changes, equal to the diff's hunk); run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. The sign-in limiter trusts a proxy only when told
 
