@@ -104,8 +104,8 @@ Scope: `e2e/cart.spec.ts` (new); fixes inside the scopes of tasks 1 to 8 only, e
 Scenarios: Guest cart against core; Quick taps against core; Merge at sign-in against core; Clamp against core; Server store change against core; Replaced notice against core.
 Starts from: `e2e/cart.spec.ts` with the six scenario names, committed red before any fix. Helpers: copy `freshShopper`, `signedIn` (it presets `shopperstop:pincode` 560034 in `localStorage` so the first-visit sheet does not open), `staffHeaders`, `expectNoViolations` and the Koramangala id from `e2e/orders.spec.ts`, and `sheet` / `savePincode` from `e2e/catalog.spec.ts`; stock reads and writes, held-back answers (`page.route` on `**/me/cart/items` delaying the first `PUT`) and the restore-in-`finally` pattern from `apps/web/e2e/cart.spec.ts` ("server cart clamps above stock", "quick taps against core"). Pick products with a stock of at least 3 from `GET /stores/<id>/products?pageSize=100` (demo stock is low). Choose the pincode through the sheet in a fresh context; wait for `getByRole('dialog', { name: 'Where should we deliver?' })`, `{ name: 'My cart' }` and `{ name: /^Switch to the/ }` before axe or a press. Reach product screens only in-app (search, then the result). The guest storage key is `localStorage` `shopperstop:cart`. Ask the manager for the e2e slot before running.
 
-- [ ] 9.1 `test:` the spec, red; `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L3 && make e2e` output in the log
-- [ ] 9.2 `fix:` commits until green; an axe failure on markup the app does not control stops the worker (no rule switched off)
+- [x] 9.1 `test:` the spec, red; `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L3 && make e2e` output in the log
+- [x] 9.2 `fix:` commits until green; an axe failure on markup the app does not control stops the worker (no rule switched off)
 - [ ] 9.3 `make e2e` exits 0 (same command, with the slot); mobile suite all green
 
 ## 10. Acceptance (team lead)
