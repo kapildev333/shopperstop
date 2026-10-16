@@ -16,3 +16,7 @@ test('entry exports the shared helpers', () => {
   expect(typeof app.when).toBe('function')
   expect(source).not.toMatch(/^\s*import\s.*\.css/m)
 })
+
+test('entry specifiers carry .js so plain Node resolves them', () => {
+  expect(source.match(/^export \* from '\.\/\w+\.js'$/gm)).toHaveLength(3)
+})
