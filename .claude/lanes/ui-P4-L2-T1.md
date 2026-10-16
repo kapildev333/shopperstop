@@ -1,5 +1,5 @@
 # ui-P4-L2-T1 - brief: package entry and token store (task 1)
-Status: brief
+Status: done (feat commit on lane branch lane/ui-P4-L2-app-shared; gates green)
 LANE-ID ui-P4-L2, task T1, area ui. Change `ui-app-shared`, task 1 (design 1, 2, 3, 6). Parallel with T2 (disjoint files); T3 starts after you and T2 land.
 
 Worktree `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/ui-P4-L2`, branch `lane/ui-P4-L2-app-shared` (shared with the other ui-P4-L2 workers). Setup: `export PATH=$HOME/.local/node-v22.23.3/bin:$PATH`; at the worktree root `test -d node_modules || npm ci`. Read `openspec/changes/ui-app-shared/{proposal,design,tasks}.md` and the delta `specs/design-system/spec.md` first; design.md has the exact interfaces.
@@ -23,3 +23,17 @@ Keep your own log `.claude/lanes/<your id>.md` (format in `.claude/lanes/README.
 
 ## Done when
 Gates green; `git diff origin/main -- package-lock.json` touches only the `packages/ui` entry (paste it); `packages/ui/dist/app/index.js` exists after the build.
+
+## Doing
+Done: `test:` 745ee66 (red: missing `./session`; `./app` export missing), then the `feat:` commit with the `@shopperstop/ui/app` entry and `createTokenStore`.
+
+## Found
+- `openapi-fetch` 0.17.0 is now a peer and dev dependency of `packages/ui`; root `package-lock.json` diff is two lines in the `packages/ui` entry only.
+- `src/app/time.ts` and `time.test.tsx` in the shared worktree belong to T2 and are not in this commit; the build compiles all of `src`, so `dist/app/` also holds T2's `time.*`.
+- `npm ci` in this worktree failed twice with ENOTEMPTY while another process installed into the same `node_modules`; it succeeded once that process finished.
+
+## Requests
+- to orchestrator: record `openapi-fetch` 0.17.0 as a peer dependency of `packages/ui` (design 6; D10 covers dev tooling only).
+
+## Blockers
+None.
