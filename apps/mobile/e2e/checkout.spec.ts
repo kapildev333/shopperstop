@@ -184,7 +184,8 @@ test('Order placed against core', async ({ page, request }) => {
   await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
   await expect(main.getByRole('heading', { level: 1, name: /^Order SS-.{8}$/ })).toBeVisible()
   await expect(main.getByText('Order placed. Waiting for the store to accept it.', { exact: true })).toBeVisible()
-  await expect(main.getByText(pick.name, { exact: true })).toBeVisible()
+  // The tracking screen draws each line as one text: "<qty> × <name>".
+  await expect(main.getByText(`${pick.units} × ${pick.name}`, { exact: true })).toBeVisible()
   await expectNoViolations(page)
 
   expect((await serverCart(request, shopper.token)).items).toEqual([])
