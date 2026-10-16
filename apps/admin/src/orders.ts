@@ -96,7 +96,12 @@ export function useSetStatus(storeId: string) {
       const board = boardQuery(storeId).queryKey
       // A poll still in the air was read before this answer: drop it, or it would put the card back where it was.
       await queryClient.cancelQueries({ queryKey: board })
-      queryClient.setQueryData(board, (list) => list && { ...list, items: [...list.items.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])] })
+      queryClient.setQueryData(board, (list) => {
+        if (!list) return list
+        const items = [...list.items.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])]
+        // Core's total moves with the board: an order that left it, or joined it on a 409, counts.
+        return { ...list, items, total: list.total + items.length - list.items.length }
+      })
       const detail = orderQuery(order.id).queryKey
       await queryClient.cancelQueries({ queryKey: detail })
       queryClient.setQueryData(detail, order)

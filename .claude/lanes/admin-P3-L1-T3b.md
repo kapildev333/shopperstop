@@ -31,3 +31,10 @@ Orders board › More active orders than one page: no "Showing the newest" note 
 - Report the commit hashes, both Vitest summaries, the `make test-web` exit code and `git status --short`.
 
 # Worker log
+- 3b.1 committed as `cad4c0a` `test: an order leaving the board takes its count with it`. Patch applied cleanly. Admin Vitest: `Test Files  2 failed | 25 passed (27)` / `Tests  2 failed | 322 passed (324)`; the two named tests failed (`a cancel that takes the order off the board takes its count with it`, `an order that leaves the board takes its count with it`).
+- 3b.2 applied cleanly (`orders.ts` total, `stock.tsx` blank line). Admin Vitest: `Tests  324 passed (324)`.
+- Gates before the fix commit: `make test-web` exit 0 (packages/ui 83/83, admin 324/324, web 153/153 in the run log); `openspec validate admin-riders --strict` valid.
+- Fix commit carries the 3b.2 tick and this log.
+
+## Blockers
+None.

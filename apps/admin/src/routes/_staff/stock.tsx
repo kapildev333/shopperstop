@@ -6,7 +6,6 @@ import { api, type ApiError } from '../../api'
 import { cleanSearch, lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
-
 function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[] }) {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
