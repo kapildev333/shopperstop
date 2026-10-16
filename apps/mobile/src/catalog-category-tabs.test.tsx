@@ -53,7 +53,7 @@ test('category tabs', async () => {
   fireEvent.press(screen.getByRole('tab', { name: 'Milk' }))
 
   await waitFor(() => expect(screen.getByRole('tab', { name: 'Milk', selected: true })).toBeTruthy())
-  expect(router).toHavePathname('/category/milk')
+  expect(router.getPathname()).toBe('/category/milk')
   expect(screen.getByRole('heading', { name: 'Dairy, Bread & Eggs' })).toBeTruthy()
   await waitFor(() =>
     expect(calls.some((request) => new URL(request.url).searchParams.get('categoryId') === 'c-milk')).toBe(true),

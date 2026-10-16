@@ -1,6 +1,8 @@
 import { screen } from '@testing-library/react-native'
 import { renderRouter } from 'expo-router/testing-library'
+import { QueryClientProvider } from '@tanstack/react-query'
 import Category from './app/category/[slug]'
+import { queryClient } from './api'
 import { fakeCore, json } from './fake-core'
 import { setPincode } from './pincode'
 
@@ -9,6 +11,15 @@ jest.mock('@expo-google-fonts/inter', () => ({
   ...jest.requireActual('@expo-google-fonts/inter'),
   useFonts: () => [true, null],
 }))
+
+// The root layout provides the query client; a map-based render has no layout, so the test provides it.
+function CategoryScreen() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Category />
+    </QueryClientProvider>
+  )
+}
 
 const storeId = '00000000-0000-4000-8000-000000000401'
 const store = {
@@ -29,7 +40,7 @@ test('unknown category', async () => {
       json(200, { items: [{ id: 'c-dairy', name: 'Dairy, Bread & Eggs', slug: 'dairy-bread-eggs', sortOrder: 1, children: [] }] }),
   })
 
-  await renderRouter({ 'category/[slug]': Category }, { initialUrl: '/category/nope' })
+  await renderRouter({ 'category/[slug]': CategoryScreen }, { initialUrl: '/category/nope' })
 
   expect(await screen.findByRole('heading', { name: 'Category not found' })).toHaveProp('aria-level', 1)
   expect(screen.getByRole('link', { name: 'Go to Home' })).toBeTruthy()
