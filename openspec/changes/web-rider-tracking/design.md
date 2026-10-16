@@ -107,8 +107,8 @@ function RiderCard({ order }: { order: Order }) {
               rel="noopener"
             >
               <MapPin size={16} aria-hidden />
-              Open in Maps
-              <VisuallyHidden> (opens in a new tab)</VisuallyHidden>
+              Open in Maps{' '}
+              <VisuallyHidden>(opens in a new tab)</VisuallyHidden>
             </ButtonLink>
           </div>
         </>
