@@ -38,7 +38,7 @@ Scope: `src/ui/sheet.tsx`, `src/ui/sheet.test.tsx`.
 Scenario: none directly (design.md Decision 5; used by Mobile cart checkout and minimum order).
 Starts from: `src/ui/sheet.test.tsx` new test `footer stays below the scroll` (render `<Sheet open title="My cart" footer={<Text>Proceed</Text>}>` with content: "Proceed" is shown, and it is not inside the `ScrollView`: walk `.parent` from the "Proceed" text and find no element whose type is `RCTScrollView`; the content text is inside it). Add `footer?: ReactNode` rendered after the `ScrollView`; nothing else changes; every existing sheet test stays green unchanged.
 
-- [ ] 2.1 `test:` red
+- [x] 2.1 `test:` red
 - [ ] 2.2 `feat:` the prop; gates green
 
 ## 3. Cart hooks and writes (`src/cart.ts`) — group B, after 1
