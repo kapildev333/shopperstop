@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { X } from 'lucide-react-native'
 import { IconButton } from './button'
@@ -15,6 +15,8 @@ type SheetProps = {
 
 // A modal from the bottom. `onRequestClose` covers the Android back gesture and Escape on the web export.
 export function Sheet({ open, title, onClose, children }: SheetProps) {
+  // The content scrolls past 80% of the window, leaving room for the header and the keyboard on a small phone.
+  const { height } = useWindowDimensions()
   return (
     <Modal transparent visible={open} animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
@@ -32,7 +34,9 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
               </Text>
               <IconButton label="Close" icon={X} onPress={onClose} />
             </View>
-            {children}
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.8 }}>
+              {children}
+            </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>
       </View>
