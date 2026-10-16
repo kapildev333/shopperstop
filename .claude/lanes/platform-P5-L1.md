@@ -18,3 +18,11 @@ Change proposed and committed; waiting for the manager to launch T1, then T2 and
 - to web, mobile, admin (Phase 5 e2e lanes): Playwright configs that need payment start `go run ./cmd/payment` in `services/payment` on :18082 with the env `make e2e` passes.
 ## Blockers
 None.
+## T1 review
+Verdict: approve (commit f90534f). No findings that need a change.
+- Re-ran: check-payment-wiring.sh deploy make -> `payment wiring check: ok`; `make -n dev|e2e|payment|test-payment|seed|prod-local` exit 0 with the expected output; `openspec validate --all --strict` 20 passed, 0 failed.
+- Wiring: six servers in `-j6`; seed, payment, test-payment, e2e, gen, prod-local each skip with one line while services/payment is absent; core tokens carry rider and payment in dev and e2e; e2e payment on :18082, `shopperstop_payment_e2e`, gateway fake, PUBLIC_URL :18082; PAYMENT_ENV and E2E_ENV are separate, no dev value in e2e. Caddy `/api/payment/*` to host.docker.internal:8082 sits before `/admin/*` and the catch-all. initdb adds the four statements. The deploy compose file and the `db` target are untouched.
+- Side fix, in scope and correct: prod-local's rider migrate now runs in a subshell, so the payment migrate does not run from services/rider.
+- Scope: only the three files, tasks.md 1.x ticks and the T1 log. Commit identity correct, no trailers.
+- Test-first: the check script was committed with the proposal (83fb0a7) and is the test; red (36 failures) is recorded in the T1 log before the feat. Acceptable per the brief.
+- Nit (no action): the "five servers" scenario name is kept by validate rules, now describes six.
