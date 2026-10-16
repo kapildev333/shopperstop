@@ -71,8 +71,8 @@ Scenarios: Out-of-stock lines marked; Marked line removed; Failed removal at che
 Starts from: `src/checkout-out-of-stock.test.tsx` test `Out-of-stock lines marked` (red: no marks): non-navigating render as task 3; `POST /orders` answers 409 `{"error":{"code":"out_of_stock","message":"some products are out of stock","productIds":[taaza, butter]}}`; `GET /me/cart` answers the three lines (Taaza 3 with product `quantity` 2, Butter `inStock` false `quantity` 0, Curd 1). "Marked line removed": `productIds` names Butter only; `PUT /me/cart/items` records its body and answers the cart without Butter (a `CartUpdate`). "Failed removal": `PUT` throws.
 Build: the design file lines card (marked line) and "Screen state" (`short`), `blockReason` with `marked`, `useLineWrite` and `CartWriteAlert` from L3 per marked line (a small `MarkedLine` component in the screen file, as web's `ShortLine`).
 
-- [ ] 5.1 `test:` the three scenarios, red
-- [ ] 5.2 `feat:` the marks; gates green
+- [x] 5.1 `test:` the three scenarios, red
+- [x] 5.2 `feat:` the marks; gates green
 
 ## 6. Checkout e2e against core — group E, after 5
 

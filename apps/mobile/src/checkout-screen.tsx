@@ -8,9 +8,10 @@ import { Banknote, Check, ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { formatInr } from '@shopperstop/ui/format'
 import { useAddresses } from './addresses'
 import { AddressCard, chosenAddress } from './checkout-address'
-import { blockReason, outcomeOf, placeOrder, type Refusal } from './checkout'
+import { blockReason, outcomeOf, placeOrder, shortText, type Refusal } from './checkout'
 import { imageUri } from './catalog'
-import { cartKey, openCartSheet, storeOptions, useCart, type CartView } from './cart'
+import { cartKey, openCartSheet, storeOptions, useCart, useLineWrite, type CartView } from './cart'
+import { CartWriteAlert } from './cart-alert'
 import type { CartLine } from './cart-guest'
 import { queryClient } from './api'
 import { useBack } from './screen-support'
@@ -45,6 +46,8 @@ function Checkout() {
   const [refusal, setRefusal] = useState<Refusal>()
   // The address core refused, with the address list as it was read then: the badge goes once the list is read again.
   const [refused, setRefused] = useState<{ addressId: string; listedAt: number }>()
+  // The lines core named out of stock, by product id, with the quantity they were asked for: a line is marked while its quantity is unchanged.
+  const [short, setShort] = useState<Record<string, number>>({})
   // The lines are the cart's store: the pincode's store is never read here.
   const store = useQuery({ ...storeOptions(view?.storeId ?? ''), enabled: !!view?.storeId })
 
@@ -56,8 +59,11 @@ function Checkout() {
     setBusy(true)
     setRefusal(undefined)
     setRefused(undefined)
+    setShort({})
     const result = await placeOrder(selected.id)
-    const outcome = outcomeOf(result, queryClient.getQueryData<CartView>(cartKey(token)), store.data?.name ?? 'The store', selected.id)
+    // placeOrder has read the cart again: the lines as core holds them now.
+    const cartAfter = queryClient.getQueryData<CartView>(cartKey(token))
+    const outcome = outcomeOf(result, cartAfter, store.data?.name ?? 'The store', selected.id)
     if ('to' in outcome) {
       // Replaced, not pushed: Back from the order does not return to an empty checkout. The sending ref stays set.
       router.replace(outcome.to)
@@ -67,7 +73,12 @@ function Checkout() {
     setBusy(false)
     setRefusal(outcome.refusal)
     if (outcome.refusal.addressId) setRefused({ addressId: outcome.refusal.addressId, listedAt: addresses.dataUpdatedAt })
+    if (outcome.productIds)
+      setShort(
+        Object.fromEntries(cartAfter?.items.filter((line) => outcome.productIds?.includes(line.product.id)).map((line) => [line.product.id, line.quantity]) ?? []),
+      )
   }
+  const isMarked = (line: CartLine) => short[line.product.id] === line.quantity
 
   // Choosing another address clears an address refusal's alert; the refused address keeps its badge.
   const choose = (id: string) => {
@@ -104,7 +115,7 @@ function Checkout() {
     )
   } else {
     const reason = blockReason({
-      marked: false,
+      marked: view.items.some(isMarked),
       subtotalCents: view.subtotalCents,
       minOrderCents: view.minOrderCents,
       // Until the list is read, no address is known to be missing: the block waits for the answer.
@@ -126,9 +137,9 @@ function Checkout() {
                 </Text>
               </View>
             ) : null}
-            {view.items.map((line) => (
-              <Line key={line.product.id} line={line} />
-            ))}
+            {view.items.map((line) =>
+              isMarked(line) ? <MarkedLine key={line.product.id} storeId={view.storeId} line={line} /> : <Line key={line.product.id} line={line} />,
+            )}
           </View>
           <View style={[styles.card, styles.gapTight]}>
             <Text variant="h3" heading={2}>
@@ -205,6 +216,29 @@ function Line({ line }: { line: CartLine }) {
       <Text tabular style={{ fontFamily: fontFamily(600) }}>
         {formatInr(product.priceCents * quantity)}
       </Text>
+    </View>
+  )
+}
+
+// A line core named out of stock: why it is short in place of its unit, Remove through the cart in place of its price, and a failed removal under it.
+function MarkedLine({ storeId, line }: { storeId?: string; line: CartLine }) {
+  const { product, quantity } = line
+  const [failure, write] = useLineWrite(storeId, product)
+  return (
+    <View>
+      <View style={styles.line}>
+        <ImageTile uri={imageUri(product.imageUrl)} size={48} />
+        <View style={styles.flex}>
+          <Text numberOfLines={2}>{product.name}</Text>
+          <Text variant="small" tone="danger" style={{ fontFamily: fontFamily(600) }}>
+            {shortText(product, quantity)}
+          </Text>
+        </View>
+        <Button variant="ghostDanger" size="compact" accessibilityLabel={`Remove ${product.name}`} onPress={() => write(0)}>
+          Remove
+        </Button>
+      </View>
+      <CartWriteAlert message={failure} />
     </View>
   )
 }
