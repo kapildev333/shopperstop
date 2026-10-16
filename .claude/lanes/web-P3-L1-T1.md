@@ -1,13 +1,20 @@
 # web-P3-L1-T1 - web-rider-tracking task 1: rider client and tracking card (worker)
-Status: blocked
+Status: done
 ## Doing
-2026-10-15: commit 1 (red tests, 5abcfd0) landed. Commit 2 (feat, design Decisions 1 to 4) written, not committed: the one test it fails is "rider on the way with a position" (design code as written). Stopped per the brief; worktree is at 5abcfd0 plus this log.
+2026-10-15: task 1 done. Commits: 5abcfd0 test (red), e839ac7 feat (design Decisions 1 to 4, tasks 1.1 and 1.2 ticked). Gates green (see Found).
 ## Found
-- Red on commit 1: `npx vitest --run src/orders.test.ts src/order-tracking.test.tsx` shows 8 failed, 15 passed. The eight: orders "last seen wording", "rider read follows the status"; tracking "rider on the way with a position", "rider without a position", "no rider card before a rider", "delivered order names the rider from the rider read", "failed rider read keeps the card", "last seen kept current". Each fails with `lastSeen`/`deliveryOptions`/`deliveryKey is not a function`.
-- Typecheck on commit 1: exactly four errors, TS2305 for `deliveryKey`, `Delivery` (tracking test) and `deliveryOptions`, `lastSeen` (orders test). Lint green.
-- Feat with design code as written: 22 of 23 pass across the two files. The failure is "rider on the way with a position": the link's accessible name is "Open in Maps(opens in a new tab)", no space. Cause: the JSX `Open in Maps` line ends without a trailing space (JSX trims the line break), and `VisuallyHidden` is a plain span whose leading space " (opens in a new tab)" is trimmed in the name computation. Verified: with `Open in Maps{" "}` on the line before `<VisuallyHidden>` (and the hidden text without its leading space) all 19 tests of `order-tracking.test.tsx` pass. Not committed.
-- The design code as written is saved at `/private/tmp/claude-501/-Users-kapilsoni-KapilProjects-ShopperStop/c9f989cb-8b76-4343-90c4-6d61e15963d7/scratchpad/feat-as-designed.patch` (apps/web api.ts, orders.ts, order-parts.tsx, order-tracking.tsx).
+- Red on commit 1: 8 failed, 15 passed in `src/orders.test.ts` and `src/order-tracking.test.tsx`. Typecheck: exactly four TS2305 errors (`deliveryKey`, `Delivery`, `deliveryOptions`, `lastSeen`). Lint green.
+- Feat: the design's Maps link failed "rider on the way with a position" (accessible name "Open in Maps(opens in a new tab)"). Per the manager's decision (D13) the link is `Open in Maps{" "}` then `<VisuallyHidden>(opens in a new tab)</VisuallyHidden>`, with no leading space in the span. All else as design Decisions 1 to 4.
+- Gates on e839ac7:
+  - `npm run lint --workspace apps/web`: exit 0 (eslint .).
+  - `npm run typecheck --workspace apps/web`: exit 0, 0 errors.
+  - `npm run test --workspace apps/web -- --run`: 26 files passed, 161 tests passed.
+  - Fake-clock check, `src/order-tracking.test.tsx` three runs: 19 of 19 passed each run.
+  - `npm run build --workspace apps/web`: exit 0, built in 584 ms.
+  - `git status` after the build: clean.
+  - `openspec validate web-rider-tracking --strict`: "Change 'web-rider-tracking' is valid".
+- `npm run build --workspace packages/ui` run before the tests (ui build output only, no change).
 ## Requests
-- to web-P3-L1 (team lead): decide the link text spacing. Proposed: design.md's RiderCard gets `Open in Maps{' '}` and `<VisuallyHidden>(opens in a new tab)</VisuallyHidden>`; the accessible name then reads "Open in Maps (opens in a new tab)" as the scenario says. Also confirm that design.md Decision 3 (JSX) is amended the same way; no other change needed.
+- to web-P3-L1 (team lead): design.md Decision 3 RiderCard needs the same spacing change (docs only, being amended by you per the manager's note).
 ## Blockers
-- Design code yields the wrong accessible name for the Maps link (see Found). Waiting for the team lead's decision before commit 2.
+None.
