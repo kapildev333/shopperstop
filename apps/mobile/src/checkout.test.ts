@@ -148,7 +148,7 @@ test.each<[string, Parameters<typeof outcomeOf>[0], CartView | undefined, unknow
     { error: { code: 'out_of_stock', message: 'x', productIds: [taaza.id] } },
     undefined,
     {
-      refusal: { message: 'Some products are not available in the quantity you chose.' },
+      refusal: { message: 'Some products are not available in the quantity you chose.', detail: 'Remove them to place your order.' },
       productIds: [taaza.id],
     },
   ],
@@ -156,7 +156,7 @@ test.each<[string, Parameters<typeof outcomeOf>[0], CartView | undefined, unknow
     'out of stock with no ids names none',
     { error: { code: 'out_of_stock', message: 'x' } },
     undefined,
-    { refusal: { message: 'Some products are not available in the quantity you chose.' }, productIds: [] },
+    { refusal: { message: 'Some products are not available in the quantity you chose.', detail: 'Remove them to place your order.' }, productIds: [] },
   ],
   [
     'an address core does not serve is refused with the address',
@@ -178,7 +178,7 @@ test.each<[string, Parameters<typeof refusalOf>[0], unknown]>([
   [
     'out of stock',
     { code: 'out_of_stock', message: 'x' },
-    { message: 'Some products are not available in the quantity you chose.' },
+    { message: 'Some products are not available in the quantity you chose.', detail: 'Remove them to place your order.' },
   ],
   [
     'not served at the address',
