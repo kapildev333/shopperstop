@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { queryClient } from './api'
 import { clearCart, getCartSummary, setQuantity } from './cart'
 import { apiError, fakeCore, json } from './fake-core'
-import { getPincode, openPincodeSheet, pincodeKey, setPincode } from './pincode'
+import { closePincodeSheet, getPincode, openPincodeSheet, pincodeKey, setPincode } from './pincode'
 import { PincodeSheet } from './pincode-sheet'
 import { resolvePincode } from './serviceability'
 import { setToken } from './session'
@@ -138,4 +138,55 @@ test('store change kept', async () => {
   await waitFor(() => expect(screen.queryByRole('heading', { name: 'Switch to the Indiranagar store?' })).toBeNull())
   expect(getPincode()).toBe('560034')
   expect(getCartSummary().count).toBe(2)
+})
+
+// A lookup that waits until the test releases it, so the sheet can be closed or submitted while it is pending.
+function gatedServiceability() {
+  let release = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const calls = fakeCore({
+    'GET /serviceability': async (request) => {
+      await gate
+      const pincode = new URL(request.url).searchParams.get('pincode') ?? ''
+      const store = { '560034': koramangala, '560038': indiranagar }[pincode]
+      return store ? json(200, { store }) : apiError(404, 'not_serviceable')
+    },
+  })
+  // Releases the lookup and lets the sheet's continuation run.
+  async function open() {
+    await act(async () => {
+      release()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+  }
+  return { calls, release: open }
+}
+
+test('dismissed during the lookup saves nothing', async () => {
+  const lookup = gatedServiceability()
+  await openSheet()
+  await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
+  // Not awaited: the press resolves only when the gated lookup does.
+  void fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  await act(async () => {
+    closePincodeSheet()
+  })
+  await lookup.release()
+  expect(getPincode()).toBeUndefined()
+  expect(await AsyncStorage.getItem(pincodeKey)).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'Switch to the Indiranagar store?' })).toBeNull()
+})
+
+test('a second submit while the lookup is pending makes no second lookup', async () => {
+  const lookup = gatedServiceability()
+  await openSheet()
+  await fireEvent.changeText(screen.getByLabelText('Pincode'), '560034')
+  // Not awaited: each submit resolves only when the gated lookup does.
+  void fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
+  void fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
+  await lookup.release()
+  await waitFor(() => expect(getPincode()).toBe('560034'))
+  expect(lookup.calls.filter((request) => request.url.includes('/serviceability'))).toHaveLength(1)
 })
