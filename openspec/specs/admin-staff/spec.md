@@ -144,7 +144,7 @@ Creating a store-staff user whose `storeId` names no store SHALL answer 400 `val
 - **THEN** the response is 200 with `staff.role` `store_staff` and `staff.storeId` `00000000-0000-4000-8000-000000000401`
 
 ### Requirement: Staff dashboard
-`GET /api/core/v1/admin/dashboard` SHALL return `{items}`, one entry per store the staff user can see (all stores by name for an admin, their own for store staff), each with `storeId`, `storeName`, `ordersToday`, `lowStockCount` (active products below quantity 5, no stock row counting as 0) and `revenueTodayCents`.
+`GET /api/core/v1/admin/dashboard` SHALL return `{items}`, one entry per store the staff user can see (all stores by name for an admin, their own for store staff), each with `storeId`, `storeName`, `isOpen` (the store's open switch now), `ordersToday`, `lowStockCount` (active products below quantity 5, no stock row counting as 0) and `revenueTodayCents`.
 
 #### Scenario: Low stock follows stock
 - **WHEN** a product at the store goes from quantity 10 to 2
@@ -153,6 +153,10 @@ Creating a store-staff user whose `storeId` names no store SHALL answer 400 `val
 #### Scenario: Store staff see their store only
 - **WHEN** a store-staff user of store A requests the dashboard
 - **THEN** `items` holds exactly one entry, with `storeId` A
+
+#### Scenario: Open switch
+- **WHEN** an admin reads the dashboard for an open store, closes it with `PATCH /api/core/v1/admin/stores/{id}` `{"isOpen":false}` and reads it again
+- **THEN** the store's entry has `isOpen` true the first time and false the second
 
 ### Requirement: Dashboard counts orders by placement and revenue by delivery
 `ordersToday` SHALL hold, for each of the seven statuses, the number of the store's orders placed today that are in that status now, every status present. `revenueTodayCents` SHALL be the sum of `totalCents` of the store's `delivered` orders whose delivery time is today, whenever they were placed. An order placed before today SHALL be in no `ordersToday` count, also when it is delivered today.
