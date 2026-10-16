@@ -26,7 +26,7 @@ var next = map[db.OrderStatus][]db.OrderStatus{
 
 // allowed reports whether an actor of actorType may move an order from one
 // status to another: the table allows it, staff make every move, a customer
-// only cancels, and a rider only takes out for delivery and delivers.
+// and the system only cancel, and a rider only takes out for delivery and delivers.
 func allowed(from, to db.OrderStatus, actorType string) bool {
 	if !slices.Contains(next[from], to) {
 		return false
@@ -34,7 +34,7 @@ func allowed(from, to db.OrderStatus, actorType string) bool {
 	switch actorType {
 	case "staff":
 		return true
-	case "customer":
+	case "customer", "system":
 		return to == db.OrderStatusCancelled
 	case "rider":
 		return to == db.OrderStatusOutForDelivery || to == db.OrderStatusDelivered
@@ -45,7 +45,8 @@ func allowed(from, to db.OrderStatus, actorType string) bool {
 // Transition moves the order to status to, in one transaction under the order's
 // row lock, and records the event with note. A cancel also returns the order's
 // quantities to the store's stock. An order outside sc is "not found"; a move the
-// table does not allow is 409 conflict and changes nothing.
+// table does not allow is 409 conflict and changes nothing, and so is accepting
+// an order whose payment is pending (409 payment_pending).
 func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to db.OrderStatus, actor Actor, note string) error {
 	var row db.LockOrderRow
 	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
@@ -57,9 +58,15 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		if !allowed(row.Status, to, actor.Type) {
 			return &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "cannot move an order from " + string(row.Status) + " to " + string(to)}
 		}
-		var riderName, actorName *string
+		if to == db.OrderStatusAccepted && row.PaymentStatus != nil && *row.PaymentStatus == db.PaymentStatusPending {
+			return &httpx.Error{Status: http.StatusConflict, Code: "payment_pending", Message: "the order awaits payment"}
+		}
+		var riderName, actorName, actorID *string
 		if actor.Name != "" {
 			actorName = &actor.Name
+		}
+		if actor.ID != "" {
+			actorID = &actor.ID
 		}
 		if actor.Type == "rider" && to == db.OrderStatusOutForDelivery {
 			riderName = &actor.Name
@@ -82,7 +89,7 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		}
 		return q.AddEvent(ctx, db.AddEventParams{
 			OrderID: id, FromStatus: &row.Status, ToStatus: to,
-			ActorType: actor.Type, ActorID: &actor.ID, ActorName: actorName, Note: note,
+			ActorType: actor.Type, ActorID: actorID, ActorName: actorName, Note: note,
 		})
 	})
 	if err != nil {

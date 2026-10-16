@@ -25,7 +25,7 @@ where id = @id
   and (sqlc.narg(store_id)::uuid is null or store_id = sqlc.narg(store_id));
 
 -- name: LockOrder :one
-select id, number, status, store_id from orders
+select id, number, status, store_id, payment_status from orders
 where id = @id
   and (sqlc.narg(customer_id)::uuid is null or customer_id = sqlc.narg(customer_id))
   and (sqlc.narg(store_id)::uuid is null or store_id = sqlc.narg(store_id))
@@ -39,6 +39,9 @@ set status        = @status,
     cancel_reason = case when @status = 'cancelled'::order_status then @cancel_reason else cancel_reason end,
     rider_name    = coalesce(sqlc.narg(rider_name), rider_name)
 where id = @id;
+
+-- name: SetPayment :exec
+update orders set payment_status = @payment_status, payment_reference = @payment_reference where id = @id;
 
 -- name: CustomerOrders :many
 select * from orders where customer_id = @customer_id

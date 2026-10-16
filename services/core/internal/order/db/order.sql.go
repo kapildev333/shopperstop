@@ -293,7 +293,7 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 }
 
 const lockOrder = `-- name: LockOrder :one
-select id, number, status, store_id from orders
+select id, number, status, store_id, payment_status from orders
 where id = $1
   and ($2::uuid is null or customer_id = $2)
   and ($3::uuid is null or store_id = $3)
@@ -307,10 +307,11 @@ type LockOrderParams struct {
 }
 
 type LockOrderRow struct {
-	ID      string
-	Number  string
-	Status  OrderStatus
-	StoreID string
+	ID            string
+	Number        string
+	Status        OrderStatus
+	StoreID       string
+	PaymentStatus *PaymentStatus
 }
 
 func (q *Queries) LockOrder(ctx context.Context, arg LockOrderParams) (LockOrderRow, error) {
@@ -321,6 +322,7 @@ func (q *Queries) LockOrder(ctx context.Context, arg LockOrderParams) (LockOrder
 		&i.Number,
 		&i.Status,
 		&i.StoreID,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
@@ -425,6 +427,21 @@ func (q *Queries) RevenueToday(ctx context.Context, storeID string) (int64, erro
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const setPayment = `-- name: SetPayment :exec
+update orders set payment_status = $1, payment_reference = $2 where id = $3
+`
+
+type SetPaymentParams struct {
+	PaymentStatus    *PaymentStatus
+	PaymentReference string
+	ID               string
+}
+
+func (q *Queries) SetPayment(ctx context.Context, arg SetPaymentParams) error {
+	_, err := q.db.Exec(ctx, setPayment, arg.PaymentStatus, arg.PaymentReference, arg.ID)
+	return err
 }
 
 const setStatus = `-- name: SetStatus :exec

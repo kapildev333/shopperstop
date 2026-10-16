@@ -1,5 +1,5 @@
 # core-P5-L1-t2 - payment route, accept guard, service actor table, services per route (task 2 of core-payments)
-Status: ready
+Status: done (red 49ec29e; feat committed, gates green)
 ## Brief
 - LANE-ID: core-P5-L1 (task 2 of 4). Area: core. Role: worker. Starts after task 1 is committed on the branch.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L1. Branch: lane/core-P5-L1-payments. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
@@ -11,6 +11,10 @@ Status: ready
 - Gates (all pass before the feat commit): from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`: `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`. From the worktree root with `PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (`node_modules` installed; `npm ci` if missing): `make gen postman`, then `git status --short` clean after the commit; `make test-web`; `openspec validate --all --strict`.
 - Rules: tests only against the per-run schemas of `shopperstop_core_test`; no `docker`, no `make db`/`dev`/`seed`/`e2e`, no `core-admin migrate` or `seed-demo` against any database, and never run the archived Phase 3 `check-wiring.sh` (it starts a real rider on :8081 against the dev database). Run `openapi.json` scripts from a scratchpad file not named after a stdlib module; never commit them. Write your progress in this file only (not in `core-P5-L1.md`).
 ## Doing
+- Task 2 done: test commit 49ec29e (red as briefed), feat commit with the Task 2 diff, the openapi script, make gen and make gen postman. Gates green: gofmt empty, go vet, go test -race ./... (core), make test-web exit 0, openspec 20 passed.
 ## Found
+- Coordinator note applied after the script: two stray inner periods in openapi.json descriptions (subtotal, conflict; retry) fixed, make gen postman rerun.
+- First attempt used sed -i without a suffix (BSD sed), which failed harmlessly and was redone with perl; nothing else affected.
+- make test-web logs one jest-style "worker process has failed to exit gracefully" warning, exit 0; not from this change.
 ## Requests
 ## Blockers
