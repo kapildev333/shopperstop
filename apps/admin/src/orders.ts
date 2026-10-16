@@ -82,6 +82,8 @@ export const statusBadge = (status: OrderStatus) => (status === 'delivered' ? 's
 // carries the words; a pending payment is the one `warning`.
 export type Payment = NonNullable<Order['paymentStatus']> | 'cod'
 export const payment = (order: Order): Payment => order.paymentStatus ?? 'cod'
+// Core refuses to accept an online order until it is paid (409 payment_pending).
+export const awaitsPayment = (order: Order) => order.status === 'placed' && order.paymentStatus === 'pending'
 export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: string }> = {
   cod: { variant: 'neutral', label: 'Cash on delivery' },
   pending: { variant: 'warning', label: 'Awaiting payment' },
@@ -90,18 +92,20 @@ export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: strin
 }
 
 // A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
-// customer cancelled): the order is then read again, so the page can show where it stands and say so.
+// customer cancelled), or 409 payment_pending when its payment is still pending: the order is then read again, so the
+// page can show where it stands and say so.
 export function useSetStatus(storeId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (sent: { order: Order; status: OrderStatus; note?: string }) => {
       const params = { path: { id: sent.order.id } }
       const { data, error } = await api.POST('/admin/orders/{id}/status', { params, body: { status: sent.status, note: sent.note } })
-      if (!error) return { order: data, changedElsewhere: false }
-      if (error.error.code !== 'conflict') throw error.error
+      if (!error) return { order: data, changedElsewhere: false, awaitingPayment: false }
+      const code = error.error.code
+      if (code !== 'conflict' && code !== 'payment_pending') throw error.error
       const read = await api.GET('/admin/orders/{id}', { params })
       if (read.error) throw read.error.error
-      return { order: read.data, changedElsewhere: true }
+      return { order: read.data, changedElsewhere: code === 'conflict', awaitingPayment: code === 'payment_pending' }
     },
     onSuccess: async ({ order }) => {
       const board = boardQuery(storeId).queryKey

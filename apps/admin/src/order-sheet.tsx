@@ -9,9 +9,9 @@ const maxReason = 500
 const actor = { customer: 'the customer', staff: 'staff', system: 'the system', rider: 'the rider' }
 
 // The order's payment in words, on its card, its sheet and its History row.
-export function PaymentBadge({ order }: { order: Order }) {
+export function PaymentBadge({ order, id }: { order: Order; id?: string }) {
   const { variant, label } = paymentBadge[payment(order)]
-  return <Badge variant={variant}>{label}</Badge>
+  return <Badge id={id} variant={variant}>{label}</Badge>
 }
 
 function Details({ order }: { order: Order }) {

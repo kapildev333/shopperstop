@@ -11,8 +11,8 @@ Scope: `apps/admin/src/orders.ts`, `order-board.tsx`, `order-sheet.tsx`, `orders
 
 Scope: `apps/admin/src/orders.ts`, `order-board.tsx`, `order-sheet.tsx`, `orders-fake.ts`, `orders-status.test.tsx`. Scenarios: "Accept waits for the payment" > "Accept held until paid"; "Accept refused for a pending payment" > "Payment pending at core".
 
-- [ ] 2.1 `test:` apply `patches/2.1-accept-waits-tests.diff`: the fake status route answers 409 `payment_pending` on accepting a pending order; `orders-status.test.tsx` "Accept waits for the payment: aria-disabled and described by \"Awaiting payment\", a press sends nothing; once paid it accepts" and "a 409 payment_pending reads the order again, keeps it in Placed awaiting payment and says so, with no alert"; see 2 fail (332 total)
-- [ ] 2.2 `feat:` apply `patches/2.2-accept-waits.diff`: `awaitsPayment` and the `payment_pending` branch of `useSetStatus` in `orders.ts`; `aria-disabled`, `aria-describedby`, the `advance()` guard and the awaiting-payment message in `order-board.tsx`; `PaymentBadge` takes an `id`; 332 pass
+- [x] 2.1 `test:` apply `patches/2.1-accept-waits-tests.diff`: the fake status route answers 409 `payment_pending` on accepting a pending order; `orders-status.test.tsx` "Accept waits for the payment: aria-disabled and described by \"Awaiting payment\", a press sends nothing; once paid it accepts" and "a 409 payment_pending reads the order again, keeps it in Placed awaiting payment and says so, with no alert"; see 2 fail (332 total)
+- [x] 2.2 `feat:` apply `patches/2.2-accept-waits.diff`: `awaitsPayment` and the `payment_pending` branch of `useSetStatus` in `orders.ts`; `aria-disabled`, `aria-describedby`, the `advance()` guard and the awaiting-payment message in `order-board.tsx`; `PaymentBadge` takes an `id`; 332 pass
 
 ## 3. History payment column and filter, e2e (admin-P5-L1-T3)
 
