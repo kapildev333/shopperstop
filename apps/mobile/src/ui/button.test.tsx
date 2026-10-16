@@ -77,3 +77,26 @@ test('icon button needs a label', async () => {
   fireEvent.press(button)
   expect(onPress).toHaveBeenCalledTimes(1)
 })
+
+test('button accessible name overrides the visible text', async () => {
+  const onPress = jest.fn()
+  await render(
+    <Button accessibilityLabel="Edit profile" onPress={onPress}>
+      Edit
+    </Button>,
+  )
+  expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+  fireEvent.press(screen.getByRole('button', { name: 'Edit profile' }))
+  expect(onPress).toHaveBeenCalledTimes(1)
+})
+
+test('button icon is 16 px in the label tone', async () => {
+  await render(
+    <>
+      <Button icon={X}>Save</Button>
+      <Button variant="ghost" icon={X}>Add</Button>
+    </>,
+  )
+  expect(screen.UNSAFE_getAllByType(X)[0].props).toMatchObject({ size: 16, color: colors.onAccent })
+  expect(screen.UNSAFE_getAllByType(X)[1].props).toMatchObject({ size: 16, color: colors.accent })
+})
