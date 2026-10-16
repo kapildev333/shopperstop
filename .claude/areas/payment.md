@@ -3,7 +3,7 @@ Scope: `services/payment/` (D48: one service, no app; the checkout, tracking, bo
 Depends on: platform (payment databases, Makefile targets and e2e env, Caddy, CI, Postman: platform-P5-L1), core (`paymentMethod`, `paymentStatus`, `POST /admin/orders/{id}/payment`, the `payment` service actor row and `GET /admin/order-events`: core-P5-L1), ui (`packages/ui/src/api/payment.d.ts` from ui-P5-L1 for the apps)
 Spec: PLAN.md Phase 5 and D48 to D53; Spec 1 §4 (stack), §5 (OpenSpec, TDD), §11 (API documentation); Spec 2 §4 (placement and the status machine), §5 (bearer sessions, service tokens per D30), §6 (envelope, lists, errors), §9 (service layout), §10 (config), §12 (logging), §13 (testing), §14 ("online payment, order `payment_status`: payment service spec"). The work package below is the brainstorm input; the team leads turn it into OpenSpec changes that seed the capabilities `payment-service` and `payment-gateway-razorpay` (D4).
 ## Doing
-Planned 2026-10-16 (PLAN.md Phase 5). Nothing running; no worktree, branch or PR; no `make e2e`. Starts when platform-P5-L1 is on main (databases, ports, tokens). Start the manager with `claude --model claude-fable-5-1` at the repo root, then `/loop 5min /manage payment`; read `## Requests` first.
+Ready to start 2026-10-16: platform-P5-L1 is on main (#351): databases exist on the running container, Makefile targets and e2e env, Caddy route, Postman variables, CI job; core-P5-L1 (#335) gives the contract. Nothing running; no worktree, branch or PR; no `make e2e`. Start the manager with `claude --model claude-fable-5-1` at the repo root, then `/loop 5min /manage payment`; read `## Requests` first.
 
 ## Lanes
 | Lane | Task | Scope | Status |
