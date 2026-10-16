@@ -76,6 +76,6 @@ Commits: `test: delivered on another rider's delivery is not found; null lat ref
 
 ## 6. Verification (area manager)
 
-- [ ] 6.1 Re-run the gates on the lane head; `go test -race -count=1 ./...` in `services/rider`
-- [ ] 6.2 Against `make core` and `make rider` (dev env, demo seed): sign in as a demo store's staff in core and move a demo order to `ready`; as `rider1-koramangala` read `/me/ready-orders`, claim it, read it as the demo customer through `/orders/{id}/delivery`, put a location, see it, mark delivered; core's order shows `riderName` and the two rider events with `actorName`
-- [ ] 6.3 Team lead's `/opsx:verify` before the PR
+- [x] 6.1 Re-run the gates on the lane head; `go test -race -count=1 ./...` in `services/rider`
+- [x] 6.2 Against `make core` and `make rider` (dev env, demo seed): sign in as a demo store's staff in core and move a demo order to `ready`; as `rider1-koramangala` read `/me/ready-orders`, claim it, read it as the demo customer through `/orders/{id}/delivery`, put a location, see it, mark delivered; core's order shows `riderName` and the two rider events with `actorName`
+- [x] 6.3 Team lead's `/opsx:verify` before the PR
