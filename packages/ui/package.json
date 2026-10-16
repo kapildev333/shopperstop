@@ -15,11 +15,14 @@
     "./tokens.css": "./src/tokens.css",
     "./api": {
       "types": "./src/api/core.d.ts"
+    },
+    "./api/rider": {
+      "types": "./src/api/rider.d.ts"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "gen:api": "openapi-typescript ../../services/core/openapi.json -o src/api/core.d.ts",
+    "gen:api": "openapi-typescript ../../services/core/openapi.json -o src/api/core.d.ts && if test -f ../../services/rider/openapi.json; then openapi-typescript ../../services/rider/openapi.json -o src/api/rider.d.ts; else echo \"gen:api: services/rider/openapi.json absent, skipping\"; fi",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest"
