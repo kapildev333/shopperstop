@@ -10,12 +10,14 @@ const ID_VARS = {
   orders: 'orderId',
   riders: 'riderId',
   deliveries: 'deliveryId',
+  payments: 'paymentId',
 };
 
 // Per service: the environment variable holding its base URL, and the token its own /auth and /me routes read.
 const SERVICES = {
   core: { baseUrl: 'baseUrl', ownToken: 'customerToken' },
   rider: { baseUrl: 'riderBaseUrl', ownToken: 'riderToken' },
+  payment: { baseUrl: 'paymentBaseUrl', ownToken: 'customerToken' },
 };
 
 function tokenVar(path, svc) {
