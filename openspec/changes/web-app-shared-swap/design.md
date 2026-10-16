@@ -12,6 +12,8 @@ Goals: web uses the shared store and client; the 401 rule becomes the shared one
 5. **Stale-token test**: the fake `fetch` calls `setToken('t-new')` before answering 401 to a request sent with `t-old`. Red on today's code (`expected undefined to be 't-new'`, spiked), green after the swap.
 6. **`openapi-fetch` stays in `apps/web/package.json`**: web no longer imports it, but it is the install that satisfies `@shopperstop/ui`'s peer dependency; removing it would also churn the lockfile.
 
+Known difference, no caller: `createTokenStore` removes the key only for `undefined`, so `setToken('')` would now store `''` (web's old store removed the key on any falsy token). Nothing in web calls `setToken('')`; tokens come from core's sign-in and register answers. Fix in ui's store if a caller ever needs it.
+
 Simplifications and ceilings: none new. The existing ponytail note on `useToken` (no cross-tab `storage` listener) moves along unchanged.
 
 ## Files
