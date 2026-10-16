@@ -1,7 +1,7 @@
 # platform-P5-L1 - platform-payment-wiring (team lead)
-Status: started (change proposed; workers not started)
+Status: done (the orchestrator session finished the lane: acceptance passed 2026-10-16; 4.1 and 4.3 are the manager's gate, 4.4 open until phase close by design)
 ## Doing
-Change proposed and committed; waiting for the manager to launch T1, then T2 and T3. Acceptance (`/opsx:verify`) after 3.4.
+Acceptance done (acting team lead in the orchestrator session). Nothing left for the team lead.
 ## Found
 - Change: `openspec/changes/platform-payment-wiring/` (proposal, design, tasks, delta `specs/platform/spec.md`, `check-payment-wiring.sh`). `openspec validate platform-payment-wiring --strict` valid; `openspec validate --all --strict` Totals 20 passed, 0 failed.
 - Delta: 14 MODIFIED, 8 ADDED requirements in `platform`; bodies 222 to 482 characters. Scenario names of MODIFIED blocks are kept (validate refuses dropping one), so "Dry run shows five servers" now describes six.
@@ -45,3 +45,11 @@ Verdict: approve (commit ddf619c), with three optional nits. No blocking finding
 - Nit 2 (CLAUDE.md layout): `services/payment/` sits after `services/<name>/ every later service`, so the catch-all precedes the specific line. Move the `services/payment/` line to directly after the `services/rider/` line, before `services/<name>/`.
 - Nit 3 (README.md:122): "the ones the rider service calls" is no longer the whole set once payment calls core with its own token. Edit: "(the ones the rider and payment services call)".
 - Test-first: the check script is the test (design Decision 11); the red run is in the T3 log; single `feat:` commit as the brief says.
+## Acceptance (/opsx:verify)
+Verdict: pass. Acting team lead, orchestrator session, 2026-10-16, on 5d8da35 (cfdb599 merged with origin/main).
+- Tasks: 1.1 to 3.4 ticked and landed: 83fb0a7 (proposal and check script), f90534f (T1 feat), 490b4c7 then 6762af2 (T2 test, feat), ddf619c (T3 feat), review logs 5eeae78, 61aa1c5, cfdb599.
+- Scope: `git diff origin/main --stat` touches only platform files (deploy/, Makefile, scripts/, docs/postman/ environment, .github/workflows/ci.yml, README.md, CLAUDE.md, openspec/, .claude/commands/*.md, this lane's logs); nothing under services/, packages/ or apps/. No payment collection committed (no contract yet), as designed.
+- Re-ran: `check-payment-wiring.sh` (deploy make ci docs) `payment wiring check: ok`; `node --test scripts/postman.test.mjs` 27 pass, 0 fail; `openspec validate platform-payment-wiring --strict` valid; `openspec validate --all --strict` 20 passed, 0 failed.
+- Scenario coverage: Makefile, Caddy, initdb, CI shape, docs and area-list scenarios by `check-payment-wiring.sh` (real skip runs plus `make -n` and a scratch Makefile copy with every directory present, including the unformatted-Go gate); Postman and environment scenarios by `scripts/postman.test.mjs`; the pgx scenarios by the check below; "make gen leaves the tree clean" by 4.1 (manager); "Payment tests reach the CI database" only by CI once billing is fixed (4.4); "Relative links resolve" by the archived check-docs.sh (T3 review ok).
+- Task 4.2 evidence (pgx, read-only, from services/core): `select 1` as shopperstop_payment on shopperstop_payment_test prints `1`; owner query as shopperstop_core prints exactly `shopperstop_payment`, `shopperstop_payment_e2e`, `shopperstop_payment_test`. D33 is applied on shopperstop-postgres-1; 4.2 ticked.
+- Not applied (non-blocking, T3 nits): CLAUDE.md "Lanes run" list lacks `make test-payment`; CLAUDE.md layout puts `services/payment/` after `services/<name>/`; README "the ones the rider service calls". A later platform chore can take them.
