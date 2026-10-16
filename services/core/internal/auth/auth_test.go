@@ -494,3 +494,47 @@ func TestOrServiceKeepsStaffRules(t *testing.T) {
 		t.Fatalf("store staff through OrService(RequireAdmin): %d %s, want 403", rec.Code, rec.Body.String())
 	}
 }
+
+// TestStartSessionSweepsExpired: starting a session deletes every customer and
+// staff session at or past its expiry and keeps the live ones.
+func TestStartSessionSweepsExpired(t *testing.T) {
+	ctx := context.Background()
+	a := New(testPool, testPepper, nil, nil)
+	cust := newCustomer(t)
+	staff := newStaff(t, db.StaffRoleAdmin, nil)
+	var expired, live []string
+	for i, subject := range []struct{ typ, id string }{{"customer", cust.ID}, {"staff", staff.ID}, {"customer", cust.ID}, {"staff", staff.ID}} {
+		tok, err := a.startSession(ctx, subject.typ, subject.id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i < 2 {
+			if _, err := testPool.Exec(ctx, "update sessions set expires_at = now() - interval '1 second' where token_hash = $1", hashOf(tok)); err != nil {
+				t.Fatal(err)
+			}
+			expired = append(expired, tok)
+		} else {
+			live = append(live, tok)
+		}
+	}
+	if _, err := a.startSession(ctx, "customer", cust.ID); err != nil {
+		t.Fatal(err)
+	}
+	count := func(tok string) int {
+		var n int
+		if err := testPool.QueryRow(ctx, "select count(*) from sessions where token_hash = $1", hashOf(tok)).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	for _, tok := range expired {
+		if n := count(tok); n != 0 {
+			t.Fatalf("expired session still stored (%d rows), want swept", n)
+		}
+	}
+	for _, tok := range live {
+		if n := count(tok); n != 1 {
+			t.Fatalf("live session has %d rows, want kept", n)
+		}
+	}
+}

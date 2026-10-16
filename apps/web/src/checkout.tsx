@@ -4,7 +4,8 @@ import {
   Badge,
   Button,
   Card,
-  Chip,
+  Choice,
+  ChoiceGroup,
   EmptyState,
   ErrorBanner,
   PageHeader,
@@ -220,25 +221,25 @@ function AddressCard({
         <EmptyState title="No addresses yet" description="Add one to place the order." action={addButton} />
       ) : (
         <>
-          <ul className="flex flex-col">
-            {list.map((address) => (
-              <li key={address.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-3">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-h3 text-ink">{address.label}</h3>
-                    {address.isDefault && <Badge variant="accent">Default</Badge>}
-                    {address.id === refusedId && <Badge variant="warning">Not delivered here</Badge>}
+          <ChoiceGroup label="Deliver to" value={selected?.id} onChange={onChoose}>
+            <ul className="flex flex-col">
+              {list.map((address) => (
+                <li key={address.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-3">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-h3 text-ink">{address.label}</h3>
+                      {address.isDefault && <Badge variant="accent">Default</Badge>}
+                      {address.id === refusedId && <Badge variant="warning">Not delivered here</Badge>}
+                    </div>
+                    <p className="text-body text-ink">{address.line1}</p>
+                    {address.line2 && <p className="text-body text-ink">{address.line2}</p>}
+                    <p className="text-body text-ink-muted tabular-nums">{address.pincode}</p>
                   </div>
-                  <p className="text-body text-ink">{address.line1}</p>
-                  {address.line2 && <p className="text-body text-ink">{address.line2}</p>}
-                  <p className="text-body text-ink-muted tabular-nums">{address.pincode}</p>
-                </div>
-                <Chip selected={address.id === selected?.id} onClick={() => onChoose(address.id)}>
-                  Deliver to {address.label}
-                </Chip>
-              </li>
-            ))}
-          </ul>
+                  <Choice value={address.id}>Deliver to {address.label}</Choice>
+                </li>
+              ))}
+            </ul>
+          </ChoiceGroup>
           <div>{addButton}</div>
         </>
       )}

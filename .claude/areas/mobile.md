@@ -3,12 +3,12 @@ Scope: `apps/mobile/` (D36: one area, one manager, one e2e suite on the Expo web
 Depends on: core (`services/core/openapi.json`, complete on main since v0.2.0; Phase 3's `riderName` and `promisedMinutes` when they land), ui (`@shopperstop/ui/api` types; `@shopperstop/ui/tokens` TS export from ui-P4-L1), platform (Makefile origins and e2e port, platform-P4-L1), rider (optional: `GET /api/rider/v1/orders/{orderId}/delivery` for the tracking rider card, after rider-P3-L2)
 Spec: PLAN.md Phase 4 and D36 to D40; the design canvas "ShopperStop App Design" (https://claude.ai/artifact/75BFgGxUe3viRFjgvn8Ywy, 19 artboards at 390×844, same token names and values as `packages/ui/src/tokens.css`); `openspec/specs/web-app` (the customer behaviour the app mirrors: pincode and store, browsing, cart, accounts, checkout, tracking, history), `openspec/specs/{serviceability,catalog,stock,cart,accounts,orders}` (core's contract); Spec 1 §4 (stack), §5 (OpenSpec, TDD), §8 (tokens, type scale, radius, motion, tap targets), §10 (UI rules); Spec 2 §5 (bearer sessions, no cookies: "the mobile app is the same client with no new auth work"), §7 (customer pages). The work package below is the brainstorm input; team leads turn it into OpenSpec changes seeding the capability `mobile-app` (D4).
 ## Doing
-Nothing yet. Start once ui-P4-L1 (`@shopperstop/ui/tokens`) and platform-P4-L1 (origins, e2e port 15176) are on `origin/main`; L1's team lead may propose before that.
+mobile-P4-L1 building (2026-10-15): dependencies on main (platform-P4-L1 #212, ui-P4-L1 #220). Change `mobile-foundation-accounts` proposed (767d784 on `lane/mobile-P4-L1-foundation-accounts`, 19 requirements, 15 tasks; Expo SDK 58.0.11, RN 0.88.0, React 19.3.0); worker T1 (workspace scaffold) running. No `make e2e` here yet.
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
-| mobile-P4-L1 | `mobile-foundation-accounts` | `apps/mobile/`, `openspec/changes/mobile-foundation-accounts/` | not started |
+| mobile-P4-L1 | `mobile-foundation-accounts` | `apps/mobile/`, `openspec/changes/mobile-foundation-accounts/` | building: proposed 767d784, T1 of 15 running |
 | mobile-P4-L2 | `mobile-serviceability-catalog` | `apps/mobile/`, `openspec/changes/mobile-serviceability-catalog/` | waits on L1 |
 | mobile-P4-L3 | `mobile-cart` | `apps/mobile/`, `openspec/changes/mobile-cart/` | waits on L2 |
 | mobile-P4-L4 | `mobile-checkout-orders` | `apps/mobile/`, `openspec/changes/mobile-checkout-orders/` | waits on L3 |
@@ -21,6 +21,7 @@ Nothing yet. Start once ui-P4-L1 (`@shopperstop/ui/tokens`) and platform-P4-L1 (
 - to platform (standing): the Makefile's dev and e2e origins include the app's web export ports (5176 dev, 15176 preview, platform-P4-L1); `make e2e` runs the mobile workspace's `e2e` script like the other apps'.
 
 ## Found
+- 2026-10-15 (mobile-P4-L1): T1's `npm install` rewrites the root `package-lock.json` (mechanical, workspace lock); it lands in the L1 PR like apps/web's did. Deviations from this work package, accepted by the manager: `Stepper`, `Price`, `Dialog`, `StatusMessage` built in L2 to L4 when first used; no notice on a failed refetch (mirrors `web-app` "Customer pages keep data when a refetch fails"); register has no phone field (core's register takes none; phone set from an Edit profile sheet); the Hermes `formatInr` check moves to L2's device walk.
 
 ## Backlog
 - Ceilings named in D37: native device e2e (Maestro or Detox) once a device farm or simulator is in CI; push notifications (with the receipt service); deep links from SMS; store submission (EAS submit) after the owner's developer accounts exist; dark mode after this phase (Spec 1).

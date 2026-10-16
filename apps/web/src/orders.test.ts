@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 import type { BadgeVariant } from '@shopperstop/ui'
 import { order } from './test-data'
-import { orderOptions, pollInterval, statusName, statusVariant, type Order, type OrderStatus } from './orders'
+import { deliveryOptions, lastSeen, orderOptions, pollInterval, statusName, statusVariant, type Order, type OrderStatus } from './orders'
 
 const id = '00000000-0000-4000-8000-000000000703'
 
@@ -42,4 +42,31 @@ test('poll interval follows the status', () => {
   expect(poll({ state: { data: order({ status: 'delivered' }) } })).toBe(false)
   expect(poll({ state: { data: undefined } })).toBe(false)
   expect(options.refetchIntervalInBackground).not.toBe(true)
+})
+
+// Whole minutes rounded down, then whole hours; a clock ahead of ours is "just now".
+test('last seen wording', () => {
+  const now = Date.parse('2026-10-13T12:00:00.000Z')
+  const at = (seconds: number) => new Date(now - seconds * 1000).toISOString()
+  expect(lastSeen(at(30), now)).toBe('Last seen just now')
+  expect(lastSeen(at(60), now)).toBe('Last seen 1 minute ago')
+  expect(lastSeen(at(59 * 60), now)).toBe('Last seen 59 minutes ago')
+  expect(lastSeen(at(60 * 60), now)).toBe('Last seen 1 hour ago')
+  expect(lastSeen(at(150 * 60), now)).toBe('Last seen 2 hours ago')
+  expect(lastSeen(at(-120), now)).toBe('Last seen just now')
+})
+
+// Only from out for delivery on: polled every 10 s while out, read once when delivered, never before.
+test('rider read follows the status', () => {
+  for (const status of ['placed', 'accepted', 'packing', 'ready', 'cancelled'] as const) {
+    expect(deliveryOptions('t', order({ status })).enabled, status).toBe(false)
+  }
+  const out = deliveryOptions('t', order({ status: 'out_for_delivery' }))
+  expect(out.enabled).toBe(true)
+  expect(out.refetchInterval).toBe(10_000)
+  expect(out.refetchIntervalInBackground).not.toBe(true)
+  const delivered = deliveryOptions('t', order({ status: 'delivered' }))
+  expect(delivered.enabled).toBe(true)
+  expect(delivered.refetchInterval).toBe(false)
+  expect(deliveryOptions('', order({ status: 'out_for_delivery' })).enabled).toBe(false)
 })

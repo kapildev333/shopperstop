@@ -14,6 +14,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as StaffIndexRouteImport } from './routes/_staff/index'
 import { Route as StaffAdminRouteImport } from './routes/_staff/_admin'
 import { Route as StaffOrdersRouteImport } from './routes/_staff/orders'
+import { Route as StaffRidersRouteImport } from './routes/_staff/riders'
 import { Route as StaffStockRouteImport } from './routes/_staff/stock'
 import { Route as StaffAdminCategoriesRouteImport } from './routes/_staff/_admin/categories'
 import { Route as StaffAdminStaffRouteImport } from './routes/_staff/_admin/staff'
@@ -45,6 +46,11 @@ const StaffAdminRoute = StaffAdminRouteImport.update({
 const StaffOrdersRoute = StaffOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffRidersRoute = StaffRidersRouteImport.update({
+  id: '/riders',
+  path: '/riders',
   getParentRoute: () => StaffRoute,
 } as any)
 const StaffStockRoute = StaffStockRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/': typeof StaffIndexRoute
   '/sign-in': typeof SignInRoute
   '/orders': typeof StaffOrdersRoute
+  '/riders': typeof StaffRidersRoute
   '/stock': typeof StaffStockRoute
   '/categories': typeof StaffAdminCategoriesRoute
   '/staff': typeof StaffAdminStaffRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/': typeof StaffIndexRoute
   '/orders': typeof StaffOrdersRoute
+  '/riders': typeof StaffRidersRoute
   '/stock': typeof StaffStockRoute
   '/categories': typeof StaffAdminCategoriesRoute
   '/staff': typeof StaffAdminStaffRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/_staff/_admin': typeof StaffAdminRouteWithChildren
   '/_staff/orders': typeof StaffOrdersRoute
+  '/_staff/riders': typeof StaffRidersRoute
   '/_staff/stock': typeof StaffStockRoute
   '/_staff/': typeof StaffIndexRoute
   '/_staff/_admin/categories': typeof StaffAdminCategoriesRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/orders'
+    | '/riders'
     | '/stock'
     | '/categories'
     | '/staff'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/'
     | '/orders'
+    | '/riders'
     | '/stock'
     | '/categories'
     | '/staff'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/_staff/_admin'
     | '/_staff/orders'
+    | '/_staff/riders'
     | '/_staff/stock'
     | '/_staff/'
     | '/_staff/_admin/categories'
@@ -226,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof StaffOrdersRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/_staff/riders': {
+      id: '/_staff/riders'
+      path: '/riders'
+      fullPath: '/riders'
+      preLoaderRoute: typeof StaffRidersRouteImport
       parentRoute: typeof StaffRoute
     }
     '/_staff/stock': {
@@ -323,6 +342,7 @@ const StaffAdminRouteWithChildren = StaffAdminRoute._addFileChildren(
 interface StaffRouteChildren {
   StaffAdminRoute: typeof StaffAdminRouteWithChildren
   StaffOrdersRoute: typeof StaffOrdersRoute
+  StaffRidersRoute: typeof StaffRidersRoute
   StaffStockRoute: typeof StaffStockRoute
   StaffIndexRoute: typeof StaffIndexRoute
 }
@@ -330,6 +350,7 @@ interface StaffRouteChildren {
 const StaffRouteChildren: StaffRouteChildren = {
   StaffAdminRoute: StaffAdminRouteWithChildren,
   StaffOrdersRoute: StaffOrdersRoute,
+  StaffRidersRoute: StaffRidersRoute,
   StaffStockRoute: StaffStockRoute,
   StaffIndexRoute: StaffIndexRoute,
 }

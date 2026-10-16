@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   ErrorBanner,
+  ImageTile,
   PageHeader,
   Price,
   Skeleton,
@@ -14,7 +15,6 @@ import {
 } from '@shopperstop/ui'
 import { useCartQuantity } from '../cart'
 import { useProduct, type StoreProduct } from '../catalog'
-import { ImageTile } from '../product-card'
 import { StoreGate } from '../store-gate'
 
 function ProductPage() {
@@ -62,7 +62,7 @@ function ProductDetail({ product }: { product: StoreProduct }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="max-w-md">
-        <ImageTile src={product.imageUrl} />
+        <ImageTile src={product.imageUrl} alt="" className="w-full" />
       </div>
       <Card className="flex flex-col gap-3 p-6">
         <PageHeader title={product.name} description={product.unitLabel} />

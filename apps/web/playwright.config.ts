@@ -16,6 +16,13 @@ export default defineConfig({
       reuseExistingServer,
       timeout: 120_000,
     },
+    {
+      command: 'go run ./cmd/rider',
+      cwd: '../../services/rider',
+      url: 'http://localhost:18081/api/rider/v1/healthz',
+      reuseExistingServer,
+      timeout: 120_000,
+    },
     { command: 'vite preview', url: 'http://localhost:15173/', reuseExistingServer },
     // The cross-app flows (e2e/flows.spec.ts) drive the admin app too: its build, as `make e2e` made it, served as admin's own config does.
     // Serves apps/admin/dist, built by make e2e; a standalone web run needs `npm run build --workspace apps/admin` first.

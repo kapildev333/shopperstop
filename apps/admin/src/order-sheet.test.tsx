@@ -17,6 +17,9 @@ const placedAt = '2026-10-13T09:20:00Z'
 const first = order(1, 'placed', { placedAt, events: [{ toStatus: 'placed', actorType: 'customer', createdAt: placedAt }] })
 const orderRequests = (calls: Request[], id: string) => calls.filter((call) => call.method === 'GET' && call.url.endsWith(`/admin/orders/${id}`))
 
+// The cancel dialog, open over the sheet of SS-TEST0001.
+const cancelDialog = () => screen.getByRole('dialog', { name: 'Cancel order SS-TEST0001?' })
+
 // Opens the sheet of an order from its card.
 async function openSheet(number = 'SS-TEST0001') {
   await userEvent.click(await screen.findByRole('button', { name: number }))
@@ -139,9 +142,9 @@ test('a cancel needs a reason: without one nothing is sent, the field says so, a
   renderApp('/orders')
   await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
 
-  // One modal at a time: the sheet steps aside for its dialog.
-  const dialog = screen.getByRole('dialog')
-  expect(dialog).toHaveAccessibleName('Cancel order SS-TEST0001?')
+  // The dialog opens over the sheet, which stays open under it.
+  const dialog = cancelDialog()
+  expect(screen.getByRole('dialog', { name: 'Order SS-TEST0001' })).toBeInTheDocument()
   expect(within(dialog).getAllByRole('button').map((each) => each.textContent)).toEqual(['Keep order', 'Cancel order'])
   const reason = within(dialog).getByLabelText('Reason')
   expect(reason).toHaveFocus()
@@ -157,19 +160,22 @@ test('a cancel needs a reason: without one nothing is sent, the field says so, a
   expect(reason).toBeValid()
 })
 
-test('Keep order and Escape close the dialog without sending and bring the sheet back', async () => {
+test('Keep order and Escape close only the dialog, without sending, and the keyboard is back on the sheet', async () => {
   setToken('tok')
   const core = ordersCore(indiranagar.id, [first])
   fakeCore({ ...asAdmin, ...core.routes })
 
   renderApp('/orders')
-  await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Keep order' }))
-  expect(screen.getByRole('dialog')).toHaveAccessibleName('Order SS-TEST0001')
+  const sheet = await openSheet()
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Keep order' }))
+  expect(screen.getAllByRole('dialog')).toEqual([sheet])
+  expect(within(sheet).getByRole('button', { name: 'Cancel order' })).toHaveFocus()
 
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel order' }))
   await userEvent.keyboard('{Escape}')
-  expect(screen.getByRole('dialog')).toHaveAccessibleName('Order SS-TEST0001')
+  expect(screen.getAllByRole('dialog')).toEqual([sheet])
+  expect(within(sheet).getByRole('button', { name: 'Cancel order' })).toHaveFocus()
   expect(core.posts).toEqual([])
 })
 
@@ -181,10 +187,13 @@ test('a cancel sends the reason as the note once, takes the order off the board 
   renderApp('/orders')
   await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
   await userEvent.type(screen.getByLabelText('Reason'), ' Out of stock ')
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
 
   const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
   expect(within(sheet).getByText('Order cancelled.')).toHaveAttribute('role', 'status')
+  // The dialog is gone and the keyboard is on the result, inside the sheet.
+  expect(screen.getAllByRole('dialog')).toEqual([sheet])
+  expect(within(sheet).getByRole('group', { name: 'Cancel result' })).toHaveFocus()
   // D28: cancelled is neutral, never a danger or a warning colour.
   expect(within(sheet).getByText('Cancelled')).toHaveClass('bg-canvas')
   expect(within(sheet).getByText('Reason for cancelling: Out of stock')).toBeInTheDocument()
@@ -206,16 +215,16 @@ test('while a cancel runs the button reads Cancelling…, keeps focus and is nev
   await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
   await userEvent.type(screen.getByLabelText('Reason'), 'Out of stock')
   core.hold('status')
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
 
   const pressed = await screen.findByRole('button', { name: 'Cancelling…' })
   expect(pressed).toHaveFocus()
   expect(pressed).toBeEnabled()
   expect(pressed).toHaveAttribute('aria-disabled', 'true')
   await userEvent.click(pressed)
-  await userEvent.click(screen.getByRole('button', { name: 'Keep order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Keep order' }))
   await userEvent.keyboard('{Escape}')
-  expect(screen.getByRole('dialog')).toHaveAccessibleName('Cancel order SS-TEST0001?')
+  expect(cancelDialog()).toBeInTheDocument()
   expect(core.posts).toHaveLength(1)
 
   core.release('status')
@@ -232,14 +241,14 @@ test('a cancel that fails says so in the dialog, keeps the reason and can be tri
   await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
   await userEvent.type(screen.getByLabelText('Reason'), 'Out of stock')
   core.fail('status')
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
 
   const dialog = screen.getByRole('dialog', { name: 'Cancel order SS-TEST0001?' })
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('Could not cancel the order. Try again.')
   expect(screen.getByLabelText('Reason')).toHaveValue('Out of stock')
 
   core.fail('status', false)
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
   expect(await screen.findByText('Order cancelled.')).toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(core.posts).toHaveLength(2)
@@ -258,7 +267,7 @@ test('a cancel refused with 409 shows where the order stands instead, on the she
   await userEvent.type(screen.getByLabelText('Reason'), 'Out of stock')
   // Packing has started at the store meanwhile: staff can no longer cancel.
   orders[0] = { ...orders[0], status: 'packing' }
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel order' }))
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
 
   const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
   expect(within(sheet).getByText('Someone else changed this order first: it is now Packing.')).toHaveAttribute('role', 'status')
@@ -282,8 +291,8 @@ test('a poll answer read before a cancel never puts the order back on the board'
   // The poll leaves, and core reads the order as placed; its answer is still in the air when the cancel is answered.
   core.hold('lists')
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  expect(listRequests(calls)).toHaveLength(10)
-  await user.click(screen.getByRole('button', { name: 'Cancel order' }))
+  expect(listRequests(calls)).toHaveLength(2)
+  await user.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
   const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
   expect(within(sheet).getByText('Order cancelled.')).toBeInTheDocument()
 
@@ -292,4 +301,46 @@ test('a poll answer read before a cancel never puts the order back on the board'
   await user.click(within(sheet).getByRole('button', { name: 'Close' }))
   expect(screen.queryByText('SS-TEST0001')).not.toBeInTheDocument()
   expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+})
+
+test('the sheet names the order\'s rider, and the rider on the events the rider made', async () => {
+  setToken('tok')
+  const delivered = order(1, 'delivered', {
+    riderName: 'Arjun Rao',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T09:20:00Z' },
+      { fromStatus: 'placed', toStatus: 'accepted', actorType: 'staff', createdAt: '2026-10-13T09:21:00Z' },
+      { fromStatus: 'ready', toStatus: 'out_for_delivery', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:25:00Z' },
+      { fromStatus: 'out_for_delivery', toStatus: 'delivered', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:31:00Z' },
+    ],
+  })
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [delivered]).routes })
+
+  renderApp('/orders?tab=history')
+  await userEvent.click(await screen.findByRole('button', { name: 'SS-TEST0001' }))
+  const sheet = screen.getByRole('dialog', { name: 'Order SS-TEST0001' })
+
+  expect(await within(sheet).findByText('Rider: Arjun Rao')).toBeInTheDocument()
+  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
+    'Placed by the customer, 13 Oct 2026, 2:50 pm',
+    'Accepted by staff, 13 Oct 2026, 2:51 pm',
+    'Out for delivery by Arjun Rao, 13 Oct 2026, 2:55 pm',
+    'Delivered by Arjun Rao, 13 Oct 2026, 3:01 pm',
+  ])
+})
+
+test('a cancel that takes the order off the board takes its count with it: no note of orders not shown', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [first, order(2, 'placed')]).routes })
+
+  renderApp('/orders')
+  await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
+  await userEvent.type(screen.getByLabelText('Reason'), 'Out of stock')
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
+  const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
+  expect(await within(sheet).findByText('Order cancelled.')).toBeInTheDocument()
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+
+  expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+  expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
 })

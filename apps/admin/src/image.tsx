@@ -1,21 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
-import { ErrorBanner, FormField, StatusMessage, cn } from '@shopperstop/ui'
+import { ErrorBanner, FormField, ImageTile, StatusMessage } from '@shopperstop/ui'
 import { api, type ApiError } from './api'
-
-// A 1:1 image tile; the placeholder stands in until an image is uploaded.
-// ponytail: an app-level recipe with an empty placeholder (no icon: lucide-react is not an apps/admin dependency); replace with the packages/ui ImageTile when ui adds it.
-export function ImageTile({ src, alt = '', className }: { src?: string; alt?: string; className?: string }) {
-  return (
-    <div className={cn('aspect-square shrink-0 overflow-hidden rounded-control border border-line bg-surface', className)}>
-      {src ? (
-        <img src={src} alt={alt} className="size-full object-contain" />
-      ) : (
-        <div data-placeholder className="size-full bg-canvas" />
-      )}
-    </div>
-  )
-}
 
 const types = ['image/png', 'image/jpeg', 'image/webp']
 const maxBytes = 5 * 1024 * 1024
@@ -71,7 +57,7 @@ export function ImageUpload({ kind, id, name, imageUrl }: { kind: 'products' | '
   const rejected = (upload.error as Partial<ApiError> | null)?.field === 'file'
   return (
     <div className="flex flex-col gap-3">
-      <ImageTile src={url && (version ? `${url}?v=${version}` : url)} alt={`Image of ${name}`} className="w-32" />
+      <ImageTile src={url && (version ? `${url}?v=${version}` : url)} alt={`Image of ${name}`} className="w-32 border border-line" />
       <FormField label="Image" hint="PNG, JPEG or WebP, up to 5 MB. Saved as soon as you pick it." error={fileError ?? (rejected ? fileMessage : undefined)}>
         <input
           type="file"
