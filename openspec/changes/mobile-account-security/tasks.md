@@ -89,8 +89,8 @@ Starts from: `e2e/mail.ts` (`coreLog`, `mailedCode`, copied from `apps/web/e2e/m
 
 Commits: `test: verify and reset against core`, `feat: mobile e2e writes core's log to e2e/.tmp/core.log`.
 
-- [ ] 4.1 Write `e2e/mail.ts` and the two tests; with the slot, run `make e2e`; see both fail on the `mailedCode` timeout and every other test pass; commit.
-- [ ] 4.2 Change `playwright.config.ts` as Decision 5 says; with the slot, `make e2e` all green; run the gates; tick 4.1 and 4.2; commit.
+- [x] 4.1 Write `e2e/mail.ts` and the two tests; with the slot, run `make e2e`; see both fail on the `mailedCode` timeout and every other test pass; commit.
+- [x] 4.2 Change `playwright.config.ts` as Decision 5 says; with the slot, `make e2e` all green; run the gates; tick 4.1 and 4.2; commit.
 
 ## 5. e2e hygiene: picks read once, shared helpers (`mobile-P5-L1-T5`)
 
