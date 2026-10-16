@@ -56,3 +56,4 @@ Vitest with `renderAt` and a `vi.stubGlobal('fetch', ...)` that routes on `new U
 - `ponytail:` no code-entry field on either page; add one if core keeps mailing bare codes after a real transport lands.
 - `ponytail:` "Verification email sent" has no resend; a second send needs a reload. Add a "Send again" if customers ask.
 - `ponytail:` signed-out resend on `/verify-email` is a sign-in link, not a public resend route (core has none).
+- `ponytail:` `/verify-email`'s query has `staleTime: Infinity` and the default `gcTime` (5 minutes), so reopening the same link within about 5 minutes shows the cached outcome without posting again (a success stays a success; a failure is read again on mount because it holds no data). Set `gcTime: 0` if a re-post on every open is ever wanted.

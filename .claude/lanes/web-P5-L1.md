@@ -1,7 +1,7 @@
 # web-P5-L1 - web-account-security (team lead)
-Status: started
+Status: done
 ## Doing
-Task 3 built (commits 837ffba test, dc96f7d feat; tasks 3.1 and 3.2 ticked). Waiting on the web manager: `make e2e` with the e2e slot, to confirm the two scenarios green (the red run was not done here, see Found). Then the lane's acceptance.
+Acceptance done (team lead, `/opsx:verify` semantics): 19 of 19 Vitest scenarios have passing tests, tasks 1.1 to 3.2 ticked; the two e2e scenarios ("Customer account security end to end") are the manager's `make e2e` run, tracked as task 3.3. design.md ceilings gained the `gcTime` note (reviewer). Gates at 391d6a0 (lane head merged with origin/main): web lint 0, typecheck 0, Vitest 29 files / 183 tests, `vite build` 0, `openspec validate web-account-security --strict` valid, `--all --strict` 20 passed.
 ## Found
 - Change `openspec/changes/web-account-security/`: 11 ADDED `web-app` requirements (all under 500 characters, largest 486), no MODIFIED. No `docs/design/web-P5-L1.md`: design.md settles every choice.
 - Playwright starts core with `shell: true` and ignores its stdout in the runner process; tests cannot read it. Decision: core's webServer command becomes `go run ./cmd/core > <apps/web/e2e/.tmp/core.log>` (gitignored dir), `e2e/mail.ts` reads the `mail` JSON line (format specified by `accounts` "Mail is logged until a transport exists"). No core change needed.
