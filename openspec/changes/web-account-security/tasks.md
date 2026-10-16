@@ -15,8 +15,8 @@ Scope: `apps/web/src/verify-email-banner.tsx` (new), `apps/web/src/verify-email-
 
 Scope: `apps/web/src/auth-forms.tsx` (the `forgotPassword` slot only), `apps/web/src/routes/sign-in.tsx`, `apps/web/src/routes/forgot-password.tsx` (new), `apps/web/src/routes/reset-password.tsx` (new), `apps/web/src/password-reset.test.tsx` (new), `apps/web/src/routeTree.gen.ts` (regenerated), this file (ticks). Scenarios: "Customer forgot-password link", "Customer forgot-password page", "Customer forgot-password outcome" (all three), "Customer reset-password page", "Customer reset-password outcome" (both), "Customer reset-password bad code" (both). Starts from `src/password-reset.test.tsx` `forgot-password link on sign-in`, `empty email checked`, `reset link requested`, `malformed email from core`, `too many reset requests`, `reset form checks fields`, `password reset`, `password refused by core`, `expired reset code`, `missing reset code` (red: no "Forgot password?" link; `/forgot-password` and `/reset-password` render "Page not found"). Commits: `test: forgot and reset password pages`, `feat: forgot and reset password pages`.
 
-- [ ] 2.1 Write the ten tests, run `npm run test --workspace apps/web -- --run src/password-reset.test.tsx`, see them fail; commit.
-- [ ] 2.2 Build design.md decisions 3 and 4; run the gates (`src/auth-forms.test.tsx` must stay green unchanged); tick 2.1 and 2.2; commit.
+- [x] 2.1 Write the ten tests, run `npm run test --workspace apps/web -- --run src/password-reset.test.tsx`, see them fail; commit.
+- [x] 2.2 Build design.md decisions 3 and 4; run the gates (`src/auth-forms.test.tsx` must stay green unchanged); tick 2.1 and 2.2; commit.
 
 ## 3. End to end against core
 

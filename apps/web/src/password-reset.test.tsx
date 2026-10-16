@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { getToken, setToken } from './session'
@@ -112,7 +112,7 @@ test('password reset', async () => {
   expect(await screen.findByText('Your password is changed. Sign in with your new password.')).toBeInTheDocument()
   expect(posts).toEqual([{ token: 'r-1', password: 'newpass123' }])
   expect(getToken()).toBeUndefined()
-  expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in')
+  expect(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in')
 })
 
 test('password refused by core', async () => {
