@@ -1,5 +1,5 @@
 # core-P4-L1-t2 - store city (task 2 of core-catalog-filters-store-city)
-Status: done
+Status: done (5c3be9e test, 55895a3 feat; reviewed: approve)
 ## Brief
 - LANE-ID: core-P4-L1 (task 2 of 2, after task 1 is committed). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L1. Branch: lane/core-P4-L1-catalog-filters-store-city. Commit there; never push; never touch the root checkout.
