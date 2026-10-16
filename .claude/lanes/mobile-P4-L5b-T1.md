@@ -16,3 +16,12 @@ Done: test commit 3b63982 (`test: customer order to delivered against core`); ta
 none
 ## Blockers
 none
+
+## Review fixes (R1 #2 and #3, manager run)
+- Commit `a0c85a3` (`test: flow waits for category content and the raised cart before axe and sign-out`), `apps/mobile/e2e/flow.spec.ts` only. R1 #1 (index picks) skipped as the reviewer asked.
+- R1 #2: before axe on the category screen, waits for the h1 "Dairy, Bread & Eggs" and the first link (product card) to be visible.
+- R1 #3: after the "Add one" clicks, waits for the cart bar to read `${qa} items` before Close and sign-out.
+- Gates: `npm run lint --workspace apps/mobile` exit 0; `npm run typecheck --workspace apps/mobile` exit 0.
+- Flow spec alone, with the Makefile `E2E_ENV` and `npm run e2e --workspace apps/mobile -- e2e/flow.spec.ts`: run 1 passed (26.0 s), run 2 passed (25.4 s).
+- `make e2e` from the worktree root: exit 0. Summaries: admin 15 passed, mobile 26 passed, rider 7 passed, web 47 passed (no browse.spec flake this run).
+- Ports 18080, 18081, 15173-15176 free afterwards. Worktree clean.
