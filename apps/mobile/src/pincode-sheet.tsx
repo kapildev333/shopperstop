@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { Link } from 'expo-router'
 import { ShoppingBag } from 'lucide-react-native'
 import { useAddresses } from './addresses'
-import { clearCart, getCartSummary } from './cart'
+import { clearCart, loadCartSummary } from './cart'
 import { queryClient } from './api'
 import { closePincodeSheet, getPincode, isPincode, setPincode, usePincodeSheetOpen } from './pincode'
 import { resolvePincode, type Store } from './serviceability'
@@ -39,6 +39,7 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
   const addresses = useAddresses()
   const [value, setValue] = useState(getPincode() ?? '')
   const [pending, setPending] = useState(false)
+  const [unchecked, setUnchecked] = useState(false)
   // False once the sheet closes: a lookup that finishes after a dismissal saves nothing.
   const open = useRef(true)
   useEffect(() => {
@@ -50,14 +51,20 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
 
   async function next() {
     setPending(true)
-    // A failed lookup stores the pincode anyway: the header then shows the lookup's error with "Try again".
-    const store = await resolvePincode(value).then(
-      (answer) => answer.store,
-      () => undefined,
-    )
+    setUnchecked(false)
+    // The lookup and the cart read settle together; a failed lookup is no answer, so it is not a "not serviceable" pincode.
+    const [answer, cart] = await Promise.all([
+      resolvePincode(value).then(
+        (found) => found,
+        () => undefined,
+      ),
+      loadCartSummary(),
+    ])
     setPending(false)
     if (!open.current) return
-    const cart = getCartSummary()
+    // A cart that cannot be read, or one with lines whose lookup failed, keeps the pincode: the customer decides after a retry.
+    if (!cart || (cart.count > 0 && !answer)) return setUnchecked(true)
+    const store = answer?.store
     if (store && cart.count > 0 && cart.storeId && store.id !== cart.storeId) {
       const from = queryClient.getQueryData<{ store?: Store }>(['serviceability', getPincode()])?.store?.name ?? 'another store'
       closePincodeSheet()
@@ -81,11 +88,19 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
         returnKeyType="go"
         value={value}
         // Digits only, six at most: a pasted "560 034" or "56a00349" keeps what it can.
-        onChangeText={(text) => setValue(text.replace(/\D/g, '').slice(0, 6))}
+        onChangeText={(text) => {
+          setUnchecked(false)
+          setValue(text.replace(/\D/g, '').slice(0, 6))
+        }}
         onSubmitEditing={() => !pending && isPincode(value) && next()}
         hint="We currently deliver in parts of Bengaluru."
         error={invalid ? 'That is not a valid pincode.' : undefined}
       />
+      {unchecked ? (
+        <View accessibilityRole="alert" style={styles.alert}>
+          <Text tone="danger">Could not check this pincode. Try again.</Text>
+        </View>
+      ) : null}
       {token && addresses.data && addresses.data.length > 0 ? (
         <View style={styles.chips}>
           {addresses.data.map((address) => (
