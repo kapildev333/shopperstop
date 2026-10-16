@@ -136,3 +136,23 @@ test('Cancel is not sent twice when pressed twice in one tick', async () => {
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   expect(calls.filter((request) => request.method === 'POST')).toHaveLength(1)
 })
+
+test('Keep order is disabled while the cancel is in flight', async () => {
+  setToken('t-cancel')
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  fakeCore({
+    'POST /orders/order-1/cancel': async () => {
+      await gate
+      return json(200, order({ status: 'cancelled' }))
+    },
+  })
+  const onClose = jest.fn()
+  await renderDialog(order(), onClose)
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancel order' }))
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Keep order' }).props.accessibilityState).toMatchObject({ disabled: true }))
+  release()
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+})
