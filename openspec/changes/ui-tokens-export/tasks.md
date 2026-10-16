@@ -15,5 +15,5 @@ Scope: `packages/ui/src/format.ts`, `packages/ui/src/format.test.ts`, `packages/
 - [x] 2.3 Gates green; `dist/format.js` has no `import` line after the build
 
 ## 3. Acceptance (team lead) and verification (manager)
-- [ ] 3.1 Team lead `/opsx:verify`: every scenario in the delta has a passing same-named test, tasks 1 and 2 ticked, diff only in the files design.md lists plus this change and the ui-P4-L1 lane logs
+- [x] 3.1 Team lead `/opsx:verify`: every scenario in the delta has a passing same-named test, tasks 1 and 2 ticked, diff only in the files design.md lists plus this change and the ui-P4-L1 lane logs
 - [ ] 3.2 Manager: `make test-web` green (ui, web, admin, and any other workspace on main), `openspec validate --all --strict`; from a scratch directory outside the repo with `node_modules/@shopperstop/ui` symlinked to the worktree's `packages/ui`, `node --input-type=module -e "import { colors, type } from '@shopperstop/ui/tokens'; import { formatInr } from '@shopperstop/ui/format'; console.log(colors.accent, type.h1.size, formatInr(123450))"` prints `#0C831F 24 ₹1,234.50` with no DOM global defined
