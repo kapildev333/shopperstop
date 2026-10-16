@@ -139,9 +139,9 @@ Scope: `apps/mobile/src/app/(tabs)/{index.tsx,categories.tsx}`, `apps/mobile/src
 Scenarios: First visit opens the pincode sheet (moved from task 10), Home in the tabs, Header shows the delivery promise, Header control opens the sheet, No pincode notice, Home lists categories and picks, Home sections fail apart, Search field opens search, Categories tab lists parents; keeps Tab switch, Account button opens the account and Unknown path green.
 Starts from: `src/pincode-first-visit.test.tsx`: `first visit opens the pincode sheet` (already committed red by T10, 5058dea; Home's effect `if (loaded && !pincode) openPincodeSheet()` turns it green; change the test only if Home's heading or a wait needs it, and say why); `src/catalog-home.test.tsx` (`renderRouter(appDir, { initialUrl: '/' })` after `setPincode('560034')` and fake serviceability, categories, products): `home in the tabs`, `header shows the delivery promise`, `header control opens the sheet`, `no pincode notice`, `home lists categories and picks`, `home sections fail apart` (none of these navigates, so they share the file); navigating tests each in their own file: `src/catalog-home-search.test.tsx`: `search field opens search`; `src/catalog-categories-tab.test.tsx`: `categories tab lists parents`. L1 tests: set a pincode and fake an open store before rendering `/`, and look for the level-1 heading `/^ShopperStop/` instead of "Groceries in minutes" (`account-home.test.tsx` only needs the pincode setup so the sheet does not cover "Account"). Until task 14 lands, `catalog-home-search.test.tsx` passes a stub `search` screen to `renderRouter`'s route map.
 
-- [ ] 11.1 Red
-- [ ] 11.2 Home and Categories per design.md Decision 4 and the design file "1 · Home", "Categories tab"; Home opens the sheet once when `loaded && !pincode`
-- [ ] 11.3 Gates green (all L1 tests too)
+- [x] 11.1 Red
+- [x] 11.2 Home and Categories per design.md Decision 4 and the design file "1 · Home", "Categories tab"; Home opens the sheet once when `loaded && !pincode`
+- [x] 11.3 Gates green (all L1 tests too)
 
 ## 12. Category screen
 
