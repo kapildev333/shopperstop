@@ -86,8 +86,8 @@ Scope: `src/cart-bar.tsx`, `src/cart-bar.test.tsx`, `src/cart-bar-screens.test.t
 Scenarios: Bar follows the cart; Replaced notice names the old store (bar half); Bar on the browsing screens.
 Starts from: `src/cart-bar.test.tsx` test `bar follows the cart` (red: module missing): render `<CartBar />` in `QueryClientProvider` with an empty guest cart (no "View cart" button), then set a guest line of 2 × 2700 at Koramangala (fee 2500): "2 items" and "₹79" and a button whose name starts "View cart"; pressing it makes `useCartSheetOpen()` true (read it through a small `renderHook`, or render `<CartSheet />` if task 5 has landed and look for the "My cart" heading; say which in the log). `bar shows the replaced notice`. `src/cart-bar-screens.test.tsx` test `bar on the browsing screens`: with a guest line, render each of the Categories tab, `/category/dairy-bread-eggs`, `/search?q=milk` and `/product/amul-taaza` through map-based `renderRouter` (none navigates; fakes for the reads each needs, copy them from L2's tests) and assert the "View cart" button on the first three and not on the product screen.
 
-- [ ] 7.1 `test:` the scenarios, red
-- [ ] 7.2 `feat:` `CartBar` and the four mounts; gates green
+- [x] 7.1 `test:` the scenarios, red
+- [x] 7.2 `feat:` `CartBar` and the four mounts; gates green
 
 ## 8. A store change needs an answer (`src/pincode-sheet.tsx`) — group C, after 3
 

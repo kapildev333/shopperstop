@@ -1,3 +1,4 @@
+import { CartBar } from '../cart-bar'
 import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { ChevronLeft, Search as SearchIcon, SearchX, X } from 'lucide-react-native'
@@ -60,6 +61,7 @@ export default function SearchScreen() {
           </View>
         </SafeAreaView>
         <StoreGate>{(open) => <SearchBody storeId={open.id} q={q} />}</StoreGate>
+        <CartBar edge />
       </View>
     </>
   )
