@@ -110,6 +110,8 @@ export function SignInScreen() {
           secureTextEntry={!shown}
           autoComplete="current-password"
           textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={submit}
           error={errors.fields.password}
           trailing={
             <IconButton
@@ -207,6 +209,8 @@ export function RegisterScreen() {
           secureTextEntry={!shown}
           autoComplete="new-password"
           textContentType="newPassword"
+          returnKeyType="go"
+          onSubmitEditing={submit}
           error={errors.fields.password}
           trailing={
             <IconButton
