@@ -1,5 +1,5 @@
 # rider-P5-L1-T1 - rider service passes core's payment through (task 1 of rider-collect-cash)
-Status: not started
+Status: test commit in progress (red confirmed)
 
 ## Brief
 - LANE-ID: rider-P5-L1 (task T1). Area: `rider`.
@@ -17,6 +17,15 @@ Status: not started
 If a diff does not apply, the red differs, a generated file outside the list changes or a gate fails, stop and write it under Blockers; do not improvise. Never edit `apps/`, other services, `packages/ui` by hand, or the lane log `rider-P5-L1.md`.
 
 ## Red run
+`go vet ./internal/app/` (services/rider):
+```
+vet: internal/app/deliveries_test.go:56:21: o.PaymentStatus undefined (type core.Order has no field or method PaymentStatus)
+```
+`go test -count=1 -run TestEmbeddedMigrationsApplyOnce ./internal/migrate/` (shopperstop_rider_test):
+```
+--- FAIL: TestEmbeddedMigrationsApplyOnce (0.04s)
+    migrate_test.go:220: applied [0001_init 0002_riders 0003_deliveries], want [0001_init 0002_riders 0003_deliveries 0004_delivery_payment_status]
+```
 ## Green run
 ## Gates
 ## Found

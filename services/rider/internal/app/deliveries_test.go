@@ -44,8 +44,24 @@ func addOrder(t *testing.T, store, status string, placed time.Time) core.Order {
 // addOrderFor is addOrder with customerToken as the bearer that reads the order as its customer.
 func addOrderFor(t *testing.T, store, status string, placed time.Time, customerToken string) core.Order {
 	t.Helper()
+	o := newOrder(store, status, placed)
+	coreFake.AddOrder(o, customerToken)
+	return o
+}
+
+// addOnlineOrder is addOrder for an order paid online, whose payment core holds as paymentStatus.
+func addOnlineOrder(t *testing.T, store, status string, placed time.Time, paymentStatus string) core.Order {
+	t.Helper()
+	o := newOrder(store, status, placed)
+	o.PaymentMethod, o.PaymentStatus = "online", paymentStatus
+	coreFake.AddOrder(o, "")
+	return o
+}
+
+// newOrder is a cash order of store in status, placed at placed, with two lines.
+func newOrder(store, status string, placed time.Time) core.Order {
 	id := newID()
-	o := core.Order{
+	return core.Order{
 		ID: id, Number: "SS-" + strings.ToUpper(id[len(id)-6:]), StoreID: store, Status: status,
 		CustomerName: "Demo Customer", CustomerPhone: "+919800000000",
 		Address:    core.OrderAddress{Line1: "12 80 Feet Rd, Koramangala", Pincode: "560034"},
@@ -55,8 +71,6 @@ func addOrderFor(t *testing.T, store, status string, placed time.Time, customerT
 			{Name: "Shimla Apple", UnitLabel: "1 kg", Quantity: 1},
 		},
 	}
-	coreFake.AddOrder(o, customerToken)
-	return o
 }
 
 // readyJSON is one ready order as the list answers it.
@@ -189,6 +203,32 @@ func TestReadyOrdersOwnStoreOnly(t *testing.T) {
 	}
 }
 
+func TestReadyOrdersPassPaymentThrough(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	t0 := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	cash := addOrder(t, store, "ready", t0)
+	online := addOnlineOrder(t, store, "ready", t0.Add(time.Minute), "paid")
+
+	status, body := callAt(t, srv.URL, http.MethodGet, readyPath, token, nil)
+	var list struct {
+		Items []map[string]any `json:"items"`
+	}
+	if status != http.StatusOK || json.Unmarshal(body, &list) != nil || len(list.Items) != 2 {
+		t.Fatalf("ready orders: got %d %s, want 200 with two orders", status, body)
+	}
+	got, paid := list.Items[0], list.Items[1]
+	if got["orderId"] != cash.ID || got["paymentMethod"] != "cod" {
+		t.Fatalf("cash order %v: want %s with paymentMethod cod", got, cash.ID)
+	}
+	if _, ok := got["paymentStatus"]; ok {
+		t.Fatalf("cash order %v: want no paymentStatus member", got)
+	}
+	if paid["orderId"] != online.ID || paid["paymentMethod"] != "online" || paid["paymentStatus"] != "paid" {
+		t.Fatalf("online order %v: want %s with paymentMethod online and paymentStatus paid", paid, online.ID)
+	}
+}
+
 func TestReadyOrdersDropClaimed(t *testing.T) {
 	store := newID()
 	riderID, token := riderAt(t, store)
@@ -251,6 +291,40 @@ func TestClaim(t *testing.T) {
 	}
 	if n := countDeliveries(t, o.ID); n != 1 {
 		t.Fatalf("deliveries for the order: %d, want 1", n)
+	}
+}
+
+func TestClaimKeepsPayment(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	t0 := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	online := addOnlineOrder(t, store, "ready", t0, "paid")
+	cash := addOrder(t, store, "ready", t0)
+
+	// The claim's answer and a later read both carry the payment core held at the claim.
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": online.ID})
+	var claimed map[string]any
+	if status != http.StatusCreated || json.Unmarshal(body, &claimed) != nil {
+		t.Fatalf("claim: got %d %s, want 201", status, body)
+	}
+	status, body = callAt(t, srv.URL, http.MethodGet, claimPath+"/"+claimed["id"].(string), token, nil)
+	var read map[string]any
+	if status != http.StatusOK || json.Unmarshal(body, &read) != nil {
+		t.Fatalf("read: got %d %s, want 200", status, body)
+	}
+	for name, d := range map[string]map[string]any{"claim": claimed, "read": read} {
+		if d["paymentMethod"] != "online" || d["paymentStatus"] != "paid" {
+			t.Fatalf("%s %v: want paymentMethod online and paymentStatus paid", name, d)
+		}
+	}
+
+	status, body = callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": cash.ID})
+	var cod map[string]any
+	if status != http.StatusCreated || json.Unmarshal(body, &cod) != nil {
+		t.Fatalf("cash claim: got %d %s, want 201", status, body)
+	}
+	if _, ok := cod["paymentStatus"]; ok || cod["paymentMethod"] != "cod" {
+		t.Fatalf("cash claim %v: want paymentMethod cod and no paymentStatus member", cod)
 	}
 }
 
