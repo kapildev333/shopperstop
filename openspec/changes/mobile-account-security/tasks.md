@@ -41,8 +41,8 @@ Red: no card text on either screen (four fail; "verified customer sees no card" 
 
 Commits: `test: verification card on the account and checkout`, `feat: verification card on the account and checkout`.
 
-- [ ] 1.1 Write the five tests; run `npx jest --ci src/verify-email-card.test.tsx`; see them fail as above; commit.
-- [ ] 1.2 Build Decision 1; `src/account.test.tsx`, `src/checkout-screen.test.tsx` and every other test pass unchanged; run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 Write the five tests; run `npx jest --ci src/verify-email-card.test.tsx`; see them fail as above; commit.
+- [x] 1.2 Build Decision 1; `src/account.test.tsx`, `src/checkout-screen.test.tsx` and every other test pass unchanged; run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. Verify-email screen (`mobile-P5-L1-T2`)
 

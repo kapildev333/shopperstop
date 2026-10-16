@@ -15,6 +15,7 @@ import { Card } from '../ui/card'
 import { ErrorBanner } from '../ui/error-banner'
 import { Skeleton } from '../ui/skeleton'
 import { Text } from '../ui/text'
+import { VerifyEmailCard } from '../verify-email-card'
 import { useToken } from '../session'
 import { colors, fontFamily, radius, shadows, spacing } from '../ui/tokens'
 
@@ -50,6 +51,7 @@ function AccountContent({ onSignOut }: { onSignOut: () => void }) {
         </Text>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
+        <VerifyEmailCard />
         <ProfileCard />
         <Link href="/orders" asChild>
           <Pressable accessibilityRole="link" style={styles.orders}>

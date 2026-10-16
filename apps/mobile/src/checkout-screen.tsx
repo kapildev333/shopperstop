@@ -22,6 +22,7 @@ import { ErrorBanner } from './ui/error-banner'
 import { ImageTile } from './ui/image-tile'
 import { Skeleton } from './ui/skeleton'
 import { Text } from './ui/text'
+import { VerifyEmailCard } from './verify-email-card'
 import { colors, fontFamily, radius, shadows, spacing } from './ui/tokens'
 
 // Signed out, the screen asks to sign in and comes back to checkout.
@@ -199,6 +200,7 @@ function Checkout() {
           </Text>
         </View>
       </SafeAreaView>
+      <VerifyEmailCard style={styles.cardPad} />
       {body}
     </View>
   )
@@ -315,6 +317,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   pad: { padding: spacing.unit * 3, gap: spacing.unit * 3 },
+  cardPad: { paddingHorizontal: spacing.unit * 3, paddingTop: spacing.unit * 3 },
   alert: {
     borderRadius: radius.card,
     backgroundColor: colors.dangerSoft,
