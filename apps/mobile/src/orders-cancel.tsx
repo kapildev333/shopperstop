@@ -60,7 +60,7 @@ export function CancelOrderDialog({ order, open, onClose }: { order: Order; open
         ) : null}
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Button variant="secondary" size="lg" onPress={close}>
+            <Button variant="secondary" size="lg" disabled={busy} onPress={close}>
               Keep order
             </Button>
           </View>
