@@ -141,3 +141,29 @@ func sortedCopy(keys []string) []string {
 	sort.Strings(out)
 	return out
 }
+
+func TestPublicStoreCity(t *testing.T) {
+	id := insertStore(t, true, "561104")
+	if _, err := testPool.Exec(context.Background(), "update stores set city = 'Bengaluru' where id = $1", id); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Join(sortedCopy(append([]string{"city"}, publicStoreKeys...)), ",")
+	for _, path := range []string{"/api/core/v1/stores/" + id, "/api/core/v1/serviceability?pincode=561104"} {
+		status, body := call(t, http.MethodGet, path, "", nil)
+		var wrapper struct {
+			Store json.RawMessage `json:"store"`
+		}
+		if status != http.StatusOK || json.Unmarshal(body, &wrapper) != nil {
+			t.Fatalf("GET %s: got %d %s, want 200", path, status, body)
+		}
+		if wrapper.Store != nil {
+			body = wrapper.Store
+		}
+		var s struct {
+			City string `json:"city"`
+		}
+		if got := strings.Join(keysOf(t, body), ","); got != want || json.Unmarshal(body, &s) != nil || s.City != "Bengaluru" {
+			t.Fatalf("GET %s: got %s, want keys %s and city Bengaluru", path, body, want)
+		}
+	}
+}
