@@ -144,9 +144,9 @@ Scope: `apps/mobile/src/app/category/[slug].tsx`, `apps/mobile/src/{catalog-cate
 Scenarios: Category tabs, Unknown category.
 Starts from: `src/catalog-category-tabs.test.tsx`: `category tabs` (`renderRouter({ 'category/[slug]': Category }, { initialUrl: '/category/dairy-bread-eggs' })`; tabs by `getByRole('tab', { name, selected })`; after pressing "Milk", `toHavePathname('/category/milk')` and a products request with Milk's `categoryId`); `src/catalog-category.test.tsx`: `unknown category`.
 
-- [ ] 12.1 Red
-- [ ] 12.2 The screen per design.md Decision 7 and the design file "2 · Category"
-- [ ] 12.3 Gates green
+- [x] 12.1 Red
+- [x] 12.2 The screen per design.md Decision 7 and the design file "2 · Category"
+- [x] 12.3 Gates green
 
 ## 13. Product screen
 
