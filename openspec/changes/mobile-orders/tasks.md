@@ -42,8 +42,8 @@ LANE-ID `mobile-P4-L4a-T4`. Scope: `src/app/orders/[id].tsx`, `src/orders-tracki
 
 LANE-ID `mobile-P4-L4a-T5`. Scope: `src/rider-card.tsx`, `src/rider-card.test.tsx`. Scenarios: Rider on the way with a position; Rider without a position; No rider card before a rider; Delivered order names the rider from the rider read; Failed rider read keeps the card. Start from `src/rider-card.test.tsx` test `Rider on the way with a position` (red). Render `<RiderCard order={…} />` in `QueryClientProvider`; the rider fake key is the full path (§6); "carried the customer's bearer" reads the `Authorization` header of the recorded request; "Open in Maps" uses the `Linking.openURL` spy (§6); "Failed rider read keeps the card" swaps fetch to reject, then `refetchQueries` on `deliveryKey`. Drawing: §3.
 
-- [ ] 5.1 `test:` the five scenarios, red
-- [ ] 5.2 `feat:` `RiderCard`; gates green
+- [x] 5.1 `test:` the five scenarios, red
+- [x] 5.2 `feat:` `RiderCard`; gates green
 
 ## 6. Cancel dialog (`src/orders-cancel.tsx`) — group B, after 1
 
