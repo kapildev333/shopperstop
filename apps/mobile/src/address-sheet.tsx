@@ -85,6 +85,7 @@ function AddressForm({ address, onClose }: { address?: Address; onClose: () => v
       />
       <FormField
         label="Pincode"
+        tabular
         keyboardType="number-pad"
         maxLength={6}
         value={pincode}

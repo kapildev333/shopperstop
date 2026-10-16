@@ -3,12 +3,9 @@ import { View } from 'react-native'
 import { cancelOrder, type Order } from './orders'
 import { Button } from './ui/button'
 import { Chip } from './ui/chip'
-import { Sheet as Dialog } from './ui/sheet'
+import { Dialog, DialogFooter } from './ui/dialog'
 import { Text } from './ui/text'
 import { fontFamily } from './ui/tokens'
-
-// Fallback: Dialog (src/ui/dialog.tsx, L2) is not on this branch yet, so the Sheet stands in. When it lands, the swap is this
-// one import: `import { Dialog } from './ui/dialog'`. Same props (`open`, `title`, `onClose`, children).
 
 const reasons = ['Ordered by mistake', 'Want to change items', 'Delivery is taking too long', 'Other']
 
@@ -58,18 +55,14 @@ export function CancelOrderDialog({ order, open, onClose }: { order: Order; open
             {refusal}
           </Text>
         ) : null}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Button variant="secondary" size="lg" disabled={busy} onPress={close}>
-              Keep order
-            </Button>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button variant="danger" size="lg" loading={busy} onPress={() => void confirm()}>
-              Cancel order
-            </Button>
-          </View>
-        </View>
+        <DialogFooter>
+          <Button variant="secondary" size="lg" disabled={busy} onPress={close}>
+            Keep order
+          </Button>
+          <Button variant="danger" size="lg" loading={busy} onPress={() => void confirm()}>
+            Cancel order
+          </Button>
+        </DialogFooter>
       </View>
     </Dialog>
   )
