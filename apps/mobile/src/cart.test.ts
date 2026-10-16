@@ -1,7 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { createElement, type ReactNode } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { queryClient } from './api'
-import { cartKey, clearCart, closeCartSheet, getCartSummary, loadCartSummary, openCartSheet, setQuantity, useCartSheetOpen, useStoreName } from './cart'
+import {
+  cartKey,
+  clearCart,
+  closeCartSheet,
+  getCartSummary,
+  loadCartSummary,
+  openCartSheet,
+  queued,
+  setQuantity,
+  storeOptions,
+  useCartSheetOpen,
+  useStoreName,
+} from './cart'
 import { guestCartKey } from './cart-guest'
 import { apiError, fakeCore, json } from './fake-core'
 import { setPincode } from './pincode'
@@ -105,9 +119,39 @@ test('loadCartSummary resolves undefined when the server cart cannot be read', a
 test('store name from core', async () => {
   fakeCore({ [`GET /stores/${storeId}`]: () => json(200, store) })
 
-  const hook = await renderHook(() => useStoreName(storeId))
+  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children)
+  const hook = await renderHook(() => useStoreName(storeId), { wrapper })
 
   await waitFor(() => expect(hook.result.current).toBe('Koramangala'))
+  expect(storeOptions(storeId).queryKey).toEqual(['store', storeId])
+  expect(queryClient.getQueryData(['store', storeId])).toEqual(store)
+})
+
+// The first work is held until the test settles it; the second must not start before that.
+async function holdFirst(succeed: boolean) {
+  const order: string[] = []
+  let settle: (ok: boolean) => void = () => {}
+  const first = queued(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        order.push('first')
+        settle = (ok) => (ok ? resolve() : reject(new Error('refused')))
+      }),
+  )
+  const second = queued(async () => {
+    order.push('second')
+  })
+  await new Promise((wake) => setTimeout(wake, 0))
+  expect(order).toEqual(['first'])
+  settle(succeed)
+  await first.catch(() => undefined)
+  await second
+  expect(order).toEqual(['first', 'second'])
+}
+
+test('queued runs work in order', async () => {
+  await holdFirst(true)
+  await holdFirst(false)
 })
 
 test('sheet open state', async () => {
