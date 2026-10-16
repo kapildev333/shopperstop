@@ -67,7 +67,7 @@ test('admin edits a store and meets the pincode conflict', async ({ page }) => {
 
 test('store staff open the stores page', async ({ page }) => {
   await signIn(page, 'koramangala@shopperstop.local', 'staff12345')
-  await expect(page.getByRole('navigation', { name: 'Admin' }).getByRole('link')).toHaveText(['Dashboard', 'Orders', 'Stock'])
+  await expect(page.getByRole('navigation', { name: 'Admin' }).getByRole('link')).toHaveText(['Dashboard', 'Orders', 'Stock', 'Riders'])
   await page.goto('./stores')
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible()
   await expect(page).toHaveURL(/\/admin\/stores$/)
