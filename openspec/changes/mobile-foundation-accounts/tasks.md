@@ -100,9 +100,9 @@ Scope: `apps/mobile/src/ui/{empty-state.tsx,error-banner.tsx,skeleton.tsx,states
 Supports: Mobile screens keep data when a refetch fails.
 Starts from: `src/ui/states.test.tsx`: `empty state` (title as header, description, action), `offline error` (`new TypeError('Network request failed')`: alert with "You're offline" and "Check your connection and try again."), `server error` (`{ code: 'internal', message: 'x' }`: "Something went wrong on our side" and "Please try again in a moment."), `try again` (choosing "Try again" calls `onRetry`), `skeleton labelled loading` (`getByLabelText('Loading')`, `count` blocks).
 
-- [ ] 9.1 Red
-- [ ] 9.2 The three components and `errorKind` per `docs/design/mobile-P4-L1.md`
-- [ ] 9.3 Gates green
+- [x] 9.1 Red
+- [x] 9.2 The three components and `errorKind` per `docs/design/mobile-P4-L1.md`
+- [x] 9.3 Gates green
 
 ## 10. Shell: root layout, tabs, Home, not found
 
