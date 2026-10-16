@@ -54,9 +54,9 @@ Scenarios: "Delivery history" (both, plus the "Showing the latest 50 of <total>.
 Starts from: `apps/rider/src/history.test.tsx` `delivered deliveries listed`, `no history`, `more than one page` (total 51, 50 rows: the line shows; the request carried `status=delivered` and `pageSize=50`).
 Commits: `test: delivery history`, then `feat: delivery history`.
 
-- [ ] 5.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 5.2 The history page (Decision 13) in the route file
-- [ ] 5.3 Gates green; commit `feat: ...`
+- [x] 5.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 5.2 The history page (Decision 13) in the route file
+- [x] 5.3 Gates green; commit `feat: ...`
 
 ## 6. Verification (manager)
 
