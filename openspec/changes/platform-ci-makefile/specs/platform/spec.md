@@ -82,7 +82,7 @@ The apps import the `packages/ui` build output, so `make web`, `make admin`, `ma
 
 ### Requirement: CI runs five jobs
 
-`.github/workflows/ci.yml` SHALL define workflow `ci`, triggered by every pull request and every push to `main`, with read-only repository permissions and exactly the jobs `core`, `rider`, `web`, `e2e` and `spec` on `ubuntu-latest`, using actions pinned to major versions, Go from `services/core/go.mod` and Node 22.
+`.github/workflows/ci.yml` SHALL define workflow `ci`, triggered by every pull request and every push to `main`, with read-only repository permissions and exactly the jobs `core`, `rider`, `web`, `e2e` and `spec` on `ubuntu-latest`, using actions pinned to major versions, Go from the service's own `go.mod` (`services/core/go.mod` in `core` and `e2e`, `services/rider/go.mod` in `rider`) and Node 22.
 
 #### Scenario: Workflow shape
 - **WHEN** `.github/workflows/ci.yml` is parsed as YAML
