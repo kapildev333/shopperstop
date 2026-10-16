@@ -10,8 +10,8 @@ Gates, from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://
 
 Scope: `services/core/migrations/0011_payments.sql` (new), `services/core/queries/order.sql` (`CreateOrder`), sqlc output (every `services/core/internal/*/db/models.go`, `services/core/internal/order/db/order.sql.go`; regenerated only), `services/core/internal/order/{order.go,place.go,handlers.go,schema_test.go}`, `services/core/internal/app/{orders_test.go,orders_payment_test.go}`, `services/core/openapi.json` (Task 1 script), generated `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json`, this file (ticks). Scenarios: orders "Customers pay cash or online" (all three), "Paying online needs a verified email"; platform "Error envelope" / The contract lists every code (`email_unverified`). Starts from `internal/app/orders_payment_test.go` `TestPlaceOnline` (red: `paymentMethod` `cod`), `TestPlaceCash` (stays green: pins today's cash answer), `TestPlaceOnlineUnverified` (red: 201), `TestPlacePaymentMethodInvalid` (red: 201) and `internal/order/schema_test.go` `TestPaymentStatusMatchesMethod` (red: no `payment_status` column). Commits: `test: cash or online placement and the verified-email rule`, `feat: payment method and status on orders (migration 0011)`.
 
-- [ ] 1.1 `git apply --include='*_test.go'` the Task 1 block; run `go test -race -count=1 -run 'TestPlace|TestPaymentStatusMatchesMethod' ./internal/app ./internal/order` and see the four failures above; commit.
-- [ ] 1.2 `git apply --exclude='*_test.go'` the Task 1 block; `make gen`; run the Task 1 `openapi.json` script; `make gen postman`; run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 `git apply --include='*_test.go'` the Task 1 block; run `go test -race -count=1 -run 'TestPlace|TestPaymentStatusMatchesMethod' ./internal/app ./internal/order` and see the four failures above; commit.
+- [x] 1.2 `git apply --exclude='*_test.go'` the Task 1 block; `make gen`; run the Task 1 `openapi.json` script; `make gen postman`; run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. Payment route, accept guard, service actor table, services per route
 

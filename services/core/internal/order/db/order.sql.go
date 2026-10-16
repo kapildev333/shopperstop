@@ -135,10 +135,10 @@ func (q *Queries) CountsToday(ctx context.Context, storeID string) ([]CountsToda
 const createOrder = `-- name: CreateOrder :one
 insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, customer_phone,
                     address_label, address_line1, address_line2, address_pincode,
-                    subtotal_cents, delivery_fee_cents, total_cents)
+                    subtotal_cents, delivery_fee_cents, total_cents, payment_method, payment_status)
 values ($1, $2, $3, $4, $5, $6, $7,
         $8, $9, $10, $11,
-        $12, $13, $14)
+        $12, $13, $14, $15, $16)
 returning id
 `
 
@@ -157,6 +157,8 @@ type CreateOrderParams struct {
 	SubtotalCents    int64
 	DeliveryFeeCents int64
 	TotalCents       int64
+	PaymentMethod    string
+	PaymentStatus    *PaymentStatus
 }
 
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (string, error) {
@@ -175,6 +177,8 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (strin
 		arg.SubtotalCents,
 		arg.DeliveryFeeCents,
 		arg.TotalCents,
+		arg.PaymentMethod,
+		arg.PaymentStatus,
 	)
 	var id string
 	err := row.Scan(&id)
@@ -182,7 +186,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (strin
 }
 
 const customerOrders = `-- name: CustomerOrders :many
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes from orders where customer_id = $1
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes, payment_status, payment_reference from orders where customer_id = $1
 order by placed_at desc, id desc
 limit $3 offset $2
 `
@@ -227,6 +231,8 @@ func (q *Queries) CustomerOrders(ctx context.Context, arg CustomerOrdersParams) 
 			&i.RiderName,
 			&i.StoreName,
 			&i.PromisedMinutes,
+			&i.PaymentStatus,
+			&i.PaymentReference,
 		); err != nil {
 			return nil, err
 		}
@@ -239,7 +245,7 @@ func (q *Queries) CustomerOrders(ctx context.Context, arg CustomerOrdersParams) 
 }
 
 const getOrder = `-- name: GetOrder :one
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes from orders
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes, payment_status, payment_reference from orders
 where id = $1
   and ($2::uuid is null or customer_id = $2)
   and ($3::uuid is null or store_id = $3)
@@ -280,6 +286,8 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 		&i.RiderName,
 		&i.StoreName,
 		&i.PromisedMinutes,
+		&i.PaymentStatus,
+		&i.PaymentReference,
 	)
 	return i, err
 }
@@ -447,7 +455,7 @@ func (q *Queries) SetStatus(ctx context.Context, arg SetStatusParams) error {
 }
 
 const storeOrders = `-- name: StoreOrders :many
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes from orders
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes, payment_status, payment_reference from orders
 where store_id = $1 and ($2::order_status is null or status = $2)
   and (not $3::boolean or status not in ('delivered', 'cancelled'))
 order by placed_at desc, id desc
@@ -503,6 +511,8 @@ func (q *Queries) StoreOrders(ctx context.Context, arg StoreOrdersParams) ([]Ord
 			&i.RiderName,
 			&i.StoreName,
 			&i.PromisedMinutes,
+			&i.PaymentStatus,
+			&i.PaymentReference,
 		); err != nil {
 			return nil, err
 		}

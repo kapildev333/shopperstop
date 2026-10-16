@@ -21,11 +21,26 @@ import (
 	"github.com/kapildev333/shopperstop/services/core/internal/store"
 )
 
-// Place turns the customer's whole cart into one placed order, in one
-// transaction, and answers the order's id. Any failure rolls everything back.
-func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string) (id string, err error) {
+// Place turns the customer's whole cart into one placed order paid by method
+// ("cod" or "online"), in one transaction, and answers the order's id. An online
+// order needs a verified email and starts with payment status pending. Any
+// failure rolls everything back.
+func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID, method string) (id string, err error) {
 	var number string
 	err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		c, err := auth.CustomerByID(ctx, tx, customerID)
+		if err != nil {
+			return err
+		}
+		var payment *db.PaymentStatus
+		if method == "online" {
+			if !c.EmailVerified {
+				return &httpx.Error{Status: http.StatusConflict, Code: "email_unverified", Message: "verify your email to pay online"}
+			}
+			pending := db.PaymentStatusPending
+			payment = &pending
+		}
+
 		storeID, lines, err := cart.Lines(ctx, tx, customerID)
 		if err != nil {
 			return err
@@ -81,10 +96,6 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string
 			fee = 0
 		}
 
-		c, err := auth.CustomerByID(ctx, tx, customerID)
-		if err != nil {
-			return err
-		}
 		number, err = newNumber()
 		if err != nil {
 			return err
@@ -95,6 +106,7 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID string
 			CustomerName: c.Name, CustomerPhone: c.Phone,
 			AddressLabel: addr.Label, AddressLine1: addr.Line1, AddressLine2: addr.Line2, AddressPincode: addr.Pincode,
 			SubtotalCents: subtotal, DeliveryFeeCents: fee, TotalCents: subtotal + fee,
+			PaymentMethod: method, PaymentStatus: payment,
 		})
 		if err != nil {
 			return err

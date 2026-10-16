@@ -44,7 +44,8 @@ func staffScope(ctx context.Context) scope {
 
 // createRequest is the POST /orders body.
 type createRequest struct {
-	AddressID string `json:"addressId"`
+	AddressID     string `json:"addressId"`
+	PaymentMethod string `json:"paymentMethod"`
 }
 
 // Create answers 201 with the order placed from the signed-in customer's cart.
@@ -64,8 +65,16 @@ func Create(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, invalid("addressId", "must be a uuid"))
 			return
 		}
+		switch in.PaymentMethod {
+		case "":
+			in.PaymentMethod = "cod"
+		case "cod", "online":
+		default:
+			httpx.WriteError(w, r, invalid("paymentMethod", "must be cod or online"))
+			return
+		}
 		ctx := r.Context()
-		id, err := Place(ctx, pool, auth.CustomerID(ctx), in.AddressID)
+		id, err := Place(ctx, pool, auth.CustomerID(ctx), in.AddressID, in.PaymentMethod)
 		if err != nil {
 			httpx.WriteError(w, r, err)
 			return

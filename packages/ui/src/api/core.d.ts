@@ -315,7 +315,7 @@ export interface paths {
         put?: never;
         /**
          * Place an order from the cart
-         * @description Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 conflict when the order number collides, which is rare, and the client may retry.
+         * @description Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. paymentMethod is cod (the default) or online; an online order is placed the same way, with paymentStatus pending, and needs a verified email. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 400 naming paymentMethod when it is neither cod nor online; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 email_unverified when paymentMethod is online and the customer's email is not verified, checked first; 409 conflict when the order number collides, which is rare, and the client may retry.
          */
         post: operations["placeOrder"];
         delete?: never;
@@ -957,7 +957,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "method_not_allowed" | "internal";
+                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "method_not_allowed" | "email_unverified" | "internal";
                 message: string;
                 field?: string;
                 /** @description Only with out_of_stock: every product that is inactive, has no stock row at the store or has less stock than the line asks for. */
@@ -1496,8 +1496,18 @@ export interface components {
             deliveryFeeCents: number;
             /** @description subtotalCents plus deliveryFeeCents. */
             totalCents: number;
-            /** @enum {string} */
-            paymentMethod: "cod";
+            /**
+             * @description cod: cash on delivery. online: paid through the payment service; the order carries paymentStatus.
+             * @enum {string}
+             */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, omitted for cash: pending until the payment service marks it paid, refunded after a paid order is refunded. Staff cannot accept an order whose payment is pending.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @description The payment service's reference for the last payment change. Omitted until there is one. */
+            paymentReference?: string;
             /** Format: date-time */
             placedAt: string;
             /**
@@ -1524,6 +1534,11 @@ export interface components {
              * @description One of the customer's own addresses.
              */
             addressId: string;
+            /**
+             * @description How the customer pays. Optional, cod when absent. online needs a verified email (409 email_unverified) and places the order with paymentStatus pending.
+             * @enum {string}
+             */
+            paymentMethod?: "cod" | "online";
         };
         /** @description The customer's optional reason for cancelling. */
         OrderCancel: {
@@ -2868,11 +2883,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "addressId": "00000000-0000-4000-8000-000000000301"
-                 *     }
-                 */
                 "application/json": components["schemas"]["OrderCreate"];
             };
         };
@@ -2901,7 +2911,8 @@ export interface operations {
                      *       "subtotalCents": 103000,
                      *       "deliveryFeeCents": 0,
                      *       "totalCents": 103000,
-                     *       "paymentMethod": "cod",
+                     *       "paymentMethod": "online",
+                     *       "paymentStatus": "pending",
                      *       "placedAt": "2026-10-13T09:20:00Z",
                      *       "items": [
                      *         {
@@ -2935,7 +2946,7 @@ export interface operations {
                     "application/json": components["schemas"]["Order"];
                 };
             };
-            /** @description The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal). Nothing changes. */
+            /** @description The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal)., or paymentMethod is neither cod nor online (field paymentMethod). Nothing changes. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2970,7 +2981,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry). Nothing changes. */
+            /** @description The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry)., or paymentMethod is online and the customer's email is not verified (email_unverified). Nothing changes. */
             409: {
                 headers: {
                     [name: string]: unknown;
