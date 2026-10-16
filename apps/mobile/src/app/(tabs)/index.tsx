@@ -1,3 +1,4 @@
+import { CartBar } from '../../cart-bar'
 import { ChevronDown, Search, User } from 'lucide-react-native'
 import { useRouter } from 'expo-router'
 import Head from 'expo-router/head'
@@ -78,6 +79,7 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.body}>
         <StoreGate>{(store) => <Sections storeId={store.id} />}</StoreGate>
       </ScrollView>
+      <CartBar />
     </View>
   )
 }
