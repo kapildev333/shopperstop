@@ -14,8 +14,8 @@ Parallel groups (tasks in one group touch disjoint files and may run at once; a 
 
 LANE-ID `mobile-P4-L4a-T1`. Scope: `src/orders.ts`, `src/orders.test.ts`. Scenarios: Placed time wording; Status names and badges; Headline wording; Poll interval follows the status. Start from `src/orders.test.ts` test `Headline wording` (red: module missing). Then copy web's helpers and queries per `docs/design/mobile-P4-L4a.md` §5, with `postCancel(id, reason?)` sending `{ reason }` or `{}` and `cancelOrder(id, reason?)` passing it on. Add one unit test each for `timeline` (packing order; cancelled order; rider actor lines), `itemCountLabel`, `productCountLabel` and `clockTime`, under their scenario-named tests or as `timeline steps of a packing order` etc.
 
-- [ ] 1.1 `test:` the four scenarios plus the `timeline`, label and `clockTime` unit tests, red
-- [ ] 1.2 `feat:` `src/orders.ts` per §5; gates green
+- [x] 1.1 `test:` the four scenarios plus the `timeline`, label and `clockTime` unit tests, red
+- [x] 1.2 `feat:` `src/orders.ts` per §5; gates green
 
 ## 2. Rider read (`src/rider.ts`) — group A
 
