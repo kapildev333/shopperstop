@@ -3,7 +3,7 @@ Scope: `packages/ui/`
 Depends on: platform (root `package.json` workspaces, landed)
 Spec: Spec 1 §8, §10; plan task 9
 ## Doing
-ui-P3-L1 done (#199, archive and this plan in the next PR). ui-P3-L2 waits on rider-P3-L1 (`services/rider/openapi.json` on main). No `make e2e` here.
+Idle 2026-10-16: every Phase 3 and Phase 4 ui lane is done (L1 #199, L2 #218, P4-L1 #220, all archived); no open request to ui in any area plan. A `/manage ui` session is on the loop again and takes new requests from `## Requests` in the other area plans. No `make e2e` here.
 
 ## Lanes
 | Lane | Task | Scope | Status |
