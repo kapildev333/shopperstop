@@ -44,6 +44,9 @@ delete from sessions where expires_at <= now();
 -- name: DeleteSession :exec
 delete from sessions where id = $1;
 
+-- name: DeleteCustomerSessions :exec
+delete from sessions where subject_type = 'customer' and subject_id = $1;
+
 -- name: IssueCustomerToken :exec
 -- A customer holds one token per purpose: a new token replaces the earlier one.
 insert into customer_tokens (token_hash, customer_id, purpose, expires_at)
@@ -60,6 +63,10 @@ returning customer_id;
 
 -- name: VerifyCustomerEmail :exec
 update customers set email_verified = true where id = $1;
+
+-- name: ResetCustomerPassword :exec
+-- The mailed token proved the customer reads this address, so it is verified too.
+update customers set password_hash = $2, email_verified = true where id = $1;
 
 -- name: CreateStaff :one
 insert into staff_users (email, password_hash, name, role, store_id)

@@ -27,6 +27,15 @@ type tokenRequest struct {
 	Token string `json:"token"`
 }
 
+type passwordResetRequest struct {
+	Email string `json:"email"`
+}
+
+type passwordResetConfirm struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
 // mailToken issues a 24-hour token for the customer and purpose, replacing any
 // earlier one of that purpose, and mails it as the last word of the body.
 func (a *Auth) mailToken(ctx context.Context, customerID, email, purpose, subject, text string) error {
@@ -92,6 +101,75 @@ func (a *Auth) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		return q.VerifyCustomerEmail(ctx, id)
+	})
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RequestPasswordReset mails a reset token when the email is a customer's and
+// answers 202 either way, so the answer never says whether it is registered.
+// Attempts count against the sign-in limiter like a sign-in.
+// ponytail: an unknown email answers sooner (no insert, no mail); a queued
+// mailer that sends after the answer closes the gap.
+func (a *Auth) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var in passwordResetRequest
+	if err := httpx.ReadJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if a.refused(w, r, in.Email) {
+		return
+	}
+	email, err := checkEmail(in.Email)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	ctx := r.Context()
+	row, err := a.q.CustomerByEmail(ctx, email)
+	if err == nil {
+		err = a.mailToken(ctx, row.ID, row.Email, purposeResetPassword,
+			"Reset your ShopperStop password", "Use this code within 24 hours to set a new password:")
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// ConfirmPasswordReset spends a reset token, sets the new password (the
+// register rules), marks the email verified, ends every session of the
+// customer, and answers 204, all in one transaction. A bad password is
+// refused before the token is spent; the hash runs only for a live token.
+func (a *Auth) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var in passwordResetConfirm
+	if err := httpx.ReadJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if err := checkPasswordLength(in.Password); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	ctx := r.Context()
+	err := pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
+		q := a.q.WithTx(tx)
+		id, err := a.consumeToken(ctx, q, in.Token, purposeResetPassword)
+		if err != nil {
+			return err
+		}
+		hash, err := HashPassword(in.Password)
+		if err != nil {
+			return err
+		}
+		if err := q.ResetCustomerPassword(ctx, db.ResetCustomerPasswordParams{ID: id, PasswordHash: hash}); err != nil {
+			return err
+		}
+		return q.DeleteCustomerSessions(ctx, id)
 	})
 	if err != nil {
 		httpx.WriteError(w, r, err)

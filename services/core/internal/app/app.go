@@ -38,6 +38,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.Post("/api/core/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireCustomer).Post("/api/core/v1/auth/sign-out", a.SignOut)
 	r.Post("/api/core/v1/auth/verify-email", a.VerifyEmail)
+	r.Post("/api/core/v1/auth/password-reset", a.RequestPasswordReset)
+	r.Post("/api/core/v1/auth/password-reset/confirm", a.ConfirmPasswordReset)
 	r.With(a.RequireCustomer).Get("/api/core/v1/me", a.Me)
 	r.With(a.RequireCustomer).Patch("/api/core/v1/me", a.UpdateMe)
 	r.With(a.RequireCustomer).Post("/api/core/v1/me/email-verification", a.SendEmailVerification)

@@ -391,6 +391,113 @@
         }
       }
     },
+    "/auth/password-reset": {
+      "post": {
+        "operationId": "postAuthPasswordReset",
+        "summary": "Ask for a password reset",
+        "description": "When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Every attempt counts against its email and client IP with sign-in and registration: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429. In development the mail is written to core's log, not sent.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              },
+              "example": {
+                "email": "demo@shopperstop.local"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted, registered or not. No body."
+          },
+          "400": {
+            "description": "The email is missing or not one valid address; field email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this email or from this IP within the hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password-reset/confirm": {
+      "post": {
+        "operationId": "postAuthPasswordResetConfirm",
+        "summary": "Set a new password",
+        "description": "Spends the code from the reset mail, sets the new password (8 to 72 bytes, bcrypt cost 12), marks the email verified and signs the customer out everywhere: every session of the customer ends. Sign in again with the new password. A code works once, for 24 hours, and only the newest one a customer was sent. A bad password is refused before the code is spent.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirm"
+              },
+              "example": {
+                "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k",
+                "password": "newpass123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The password is set and every session ended. No body."
+          },
+          "400": {
+            "description": "The password is not 8 to 72 bytes (field password; the code stays usable), or the token is empty, unknown, already used, expired or for another purpose (field token). Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "invalid or expired token",
+                    "field": "token"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "operationId": "getMe",
@@ -7793,6 +7900,38 @@
           "token": {
             "type": "string",
             "description": "The code from the mail, exactly as sent."
+          }
+        }
+      },
+      "PasswordResetRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The email the customer registered with, in any case."
+          }
+        }
+      },
+      "PasswordResetConfirm": {
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The code from the reset mail, exactly as sent."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "The new password: 8 to 72 bytes, not trimmed, as on registration."
           }
         }
       }

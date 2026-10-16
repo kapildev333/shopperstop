@@ -941,6 +941,327 @@
           }
         },
         {
+          "name": "Ask for a password reset",
+          "request": {
+            "name": "Ask for a password reset",
+            "description": {
+              "content": "When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Every attempt counts against its email and client IP with sign-in and registration: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429. In development the mail is written to core's log, not sent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "password-reset"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@shopperstop.local\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "Accepted, registered or not. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "password-reset"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"demo@shopperstop.local\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The email is missing or not one valid address; field email.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "password-reset"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"demo@shopperstop.local\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be a valid email address\",\n    \"field\": \"email\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Too many attempts for this email or from this IP within the hour.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "password-reset"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"demo@shopperstop.local\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"rate_limited\",\n    \"message\": \"too many attempts, try again later\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Set a new password",
+          "request": {
+            "name": "Set a new password",
+            "description": {
+              "content": "Spends the code from the reset mail, sets the new password (8 to 72 bytes, bcrypt cost 12), marks the email verified and signs the customer out everywhere: every session of the customer ends. Sign in again with the new password. A code works once, for 24 hours, and only the newest one a customer was sent. A bad password is refused before the code is spent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "password-reset",
+                "confirm"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\",\n  \"password\": \"newpass123\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The password is set and every session ended. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "password-reset",
+                    "confirm"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\",\n  \"password\": \"newpass123\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The password is not 8 to 72 bytes (field password; the code stays usable), or the token is empty, unknown, already used, expired or for another purpose (field token). Nothing changes.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "password-reset",
+                    "confirm"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\",\n  \"password\": \"newpass123\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"invalid or expired token\",\n    \"field\": \"token\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Get the signed-in customer",
           "request": {
             "name": "Get the signed-in customer",

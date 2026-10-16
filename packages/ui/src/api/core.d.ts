@@ -124,6 +124,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a password reset
+         * @description When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Every attempt counts against its email and client IP with sign-in and registration: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429. In development the mail is written to core's log, not sent.
+         */
+        post: operations["postAuthPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password
+         * @description Spends the code from the reset mail, sets the new password (8 to 72 bytes, bcrypt cost 12), marks the email verified and signs the customer out everywhere: every session of the customer ends. Sign in again with the new password. A code works once, for 24 hours, and only the newest one a customer was sent. A bad password is refused before the code is spent.
+         */
+        post: operations["postAuthPasswordResetConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -1547,6 +1587,19 @@ export interface components {
             /** @description The code from the mail, exactly as sent. */
             token: string;
         };
+        PasswordResetRequest: {
+            /**
+             * Format: email
+             * @description The email the customer registered with, in any case.
+             */
+            email: string;
+        };
+        PasswordResetConfirm: {
+            /** @description The code from the reset mail, exactly as sent. */
+            token: string;
+            /** @description The new password: 8 to 72 bytes, not trimmed, as on registration. */
+            password: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1873,6 +1926,114 @@ export interface operations {
                 content?: never;
             };
             /** @description The token is empty, unknown, already used, expired (24 hours) or for another purpose; field token. Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "invalid or expired token",
+                     *         "field": "token"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "demo@shopperstop.local"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted, registered or not. No body. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The email is missing or not one valid address; field email. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a valid email address",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts for this email or from this IP within the hour. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "too many attempts, try again later"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthPasswordResetConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k",
+                 *       "password": "newpass123"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PasswordResetConfirm"];
+            };
+        };
+        responses: {
+            /** @description The password is set and every session ended. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The password is not 8 to 72 bytes (field password; the code stays usable), or the token is empty, unknown, already used, expired or for another purpose (field token). Nothing changes. */
             400: {
                 headers: {
                     [name: string]: unknown;

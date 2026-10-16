@@ -215,6 +215,15 @@ func (q *Queries) CustomerSession(ctx context.Context, tokenHash []byte) (Custom
 	return i, err
 }
 
+const deleteCustomerSessions = `-- name: DeleteCustomerSessions :exec
+delete from sessions where subject_type = 'customer' and subject_id = $1
+`
+
+func (q *Queries) DeleteCustomerSessions(ctx context.Context, subjectID string) error {
+	_, err := q.db.Exec(ctx, deleteCustomerSessions, subjectID)
+	return err
+}
+
 const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
 delete from sessions where expires_at <= now()
 `
@@ -323,6 +332,21 @@ func (q *Queries) LockActiveAdmins(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const resetCustomerPassword = `-- name: ResetCustomerPassword :exec
+update customers set password_hash = $2, email_verified = true where id = $1
+`
+
+type ResetCustomerPasswordParams struct {
+	ID           string
+	PasswordHash string
+}
+
+// The mailed token proved the customer reads this address, so it is verified too.
+func (q *Queries) ResetCustomerPassword(ctx context.Context, arg ResetCustomerPasswordParams) error {
+	_, err := q.db.Exec(ctx, resetCustomerPassword, arg.ID, arg.PasswordHash)
+	return err
 }
 
 const staffByEmail = `-- name: StaffByEmail :one

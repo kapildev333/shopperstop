@@ -19,8 +19,8 @@ Scope: `services/core/migrations/0010_customer_tokens.sql` (new), `services/core
 
 Scope: `services/core/queries/auth.sql`, sqlc output (`services/core/internal/auth/db/auth.sql.go`, regenerated only), `services/core/internal/auth/account.go`, `services/core/internal/app/{app.go,password_reset_test.go}`, `services/core/openapi.json`, generated `core.d.ts` and the Postman collection, this file (ticks). Scenarios: accounts "Customers reset a forgotten password" (all five); "Sign-in and registration are rate limited" / Eleventh reset request for one email. Starts from `internal/app/password_reset_test.go` `TestPasswordReset`, `TestPasswordResetUnknownEmail`, `TestPasswordResetBadInput`, `TestPasswordResetTokenExpires`, `TestPasswordResetRateLimited` (red: 404 on both routes). Commits: `test: password reset`, `feat: password reset ends every session`.
 
-- [ ] 2.1 `git apply --include='*_test.go'` the Task 2 block; run `go test -race -count=1 -run TestPasswordReset ./internal/app` and see the five fail; commit.
-- [ ] 2.2 `git apply --exclude='*_test.go'` the Task 2 block; `make gen`; run the Task 2 `openapi.json` script; `make gen postman`; run the gates; tick 2.1 and 2.2; commit.
+- [x] 2.1 `git apply --include='*_test.go'` the Task 2 block; run `go test -race -count=1 -run TestPasswordReset ./internal/app` and see the five fail; commit.
+- [x] 2.2 `git apply --exclude='*_test.go'` the Task 2 block; `make gen`; run the Task 2 `openapi.json` script; `make gen postman`; run the gates; tick 2.1 and 2.2; commit.
 
 ## 3. Seed-demo guard
 
