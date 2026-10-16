@@ -80,13 +80,13 @@ The apps import the `packages/ui` build output, so `make web`, `make admin`, `ma
 - **WHEN** `make -n prod-local` runs with `services/core`, `apps/web` and `apps/admin` present
 - **THEN** it prints `npm run build --workspaces --if-present`, `docker compose -f <repo>/deploy/docker-compose.yml --profile prod up -d --wait`, `go run ./cmd/core-admin migrate` and `go run ./cmd/core`, in that order
 
-### Requirement: CI runs four jobs
+### Requirement: CI runs five jobs
 
-`.github/workflows/ci.yml` SHALL define workflow `ci`, triggered by every pull request and every push to `main`, with read-only repository permissions and exactly the jobs `core`, `web`, `e2e` and `spec` on `ubuntu-latest`, using actions pinned to major versions, Go from `services/core/go.mod` and Node 22.
+`.github/workflows/ci.yml` SHALL define workflow `ci`, triggered by every pull request and every push to `main`, with read-only repository permissions and exactly the jobs `core`, `rider`, `web`, `e2e` and `spec` on `ubuntu-latest`, using actions pinned to major versions, Go from the service's own `go.mod` (`services/core/go.mod` in `core` and `e2e`, `services/rider/go.mod` in `rider`) and Node 22.
 
 #### Scenario: Workflow shape
 - **WHEN** `.github/workflows/ci.yml` is parsed as YAML
-- **THEN** its name is `ci`, its triggers are `pull_request` and `push` to `main`, and its jobs are exactly `core`, `web`, `e2e` and `spec`
+- **THEN** its name is `ci`, its triggers are `pull_request` and `push` to `main`, and its jobs are exactly `core`, `rider`, `web`, `e2e` and `spec`
 
 ### Requirement: CI jobs skip absent directories
 
@@ -94,7 +94,7 @@ The `core`, `web` and `e2e` jobs SHALL each print one skip line naming the absen
 
 #### Scenario: Foundation tree is green
 - **WHEN** CI runs on a pull request whose tree has no `services/core`, `packages/ui` or `apps/*`
-- **THEN** all four jobs succeed, and the `core`, `web` and `e2e` logs each show their skip line
+- **THEN** all five jobs succeed, and the `core`, `web` and `e2e` logs each show their skip line
 
 ### Requirement: CI core job gates core and generated files
 

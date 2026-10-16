@@ -12,7 +12,7 @@ Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.
 - `packages/ui`: design tokens, the shared components and the generated API types.
 - `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`; the `Makefile`, the CI workflow, the Postman collection and environment under `docs/postman/`, and the living specs under [openspec/specs/](openspec/specs/).
 
-Phase 3 (the rider service and rider app) is being planned in `PLAN.md`. `core-admin seed-demo --reset` loads the demo data and prints the demo sign-ins.
+Phase 3 (the rider service and rider app) is in progress; `services/rider` and `apps/rider` are not on `main` yet, and their targets skip until they land. `core-admin seed-demo --reset` loads the demo data and prints the demo sign-ins.
 
 ## Quick start
 
@@ -29,6 +29,10 @@ make dev
 ```
 
 `make dev` starts Postgres 16 as `shopperstop-postgres-1` with the roles and databases from `deploy/initdb.sql`, applies the migrations, runs `seed-demo --reset`, and then runs core on <http://localhost:8080>, the customer web on <http://localhost:5173> and the admin panel on <http://localhost:5174/admin/>, until Ctrl-C. Check core with `curl http://localhost:8080/api/core/v1/healthz`. Each target prints a skip line while its directory is absent. Postgres keeps running after Ctrl-C; stop it with `docker compose -f deploy/docker-compose.yml stop`.
+
+Phase 3 adds the rider service on <http://localhost:8081> and the rider app on <http://localhost:5175/rider/> to `make dev` once they land.
+
+**Cloned before Phase 3?** `deploy/initdb.sql` runs only when the Postgres volume is first created, so an existing volume lacks the rider role and databases. Apply the rider lines once with `grep shopperstop_rider deploy/initdb.sql | docker exec -i shopperstop-postgres-1 psql -v ON_ERROR_STOP=1 -U postgres` (the `psql` inside the container; none is needed on the host).
 
 <details>
 <summary><b>Step by step, without make dev</b></summary>
@@ -62,28 +66,35 @@ Local databases only. `core-admin seed-demo --reset` loads these accounts and pr
 | Admin panel (`localhost:5174/admin/`) | Store staff, Koramangala | `koramangala@shopperstop.local` | `staff12345` |
 | Admin panel (`localhost:5174/admin/`) | Store staff, Indiranagar | `indiranagar@shopperstop.local` | `staff12345` |
 | Customer web (`localhost:5173/`) | Customer | `demo@shopperstop.local` | `demo12345` |
+| Rider app (`localhost:5175/rider/`) | Rider, Koramangala | `rider1-koramangala@shopperstop.local` | `rider12345` |
+| Rider app (`localhost:5175/rider/`) | Rider, Koramangala | `rider2-koramangala@shopperstop.local` | `rider12345` |
+| Rider app (`localhost:5175/rider/`) | Rider, Indiranagar | `rider1-indiranagar@shopperstop.local` | `rider12345` |
+| Rider app (`localhost:5175/rider/`) | Rider, Indiranagar | `rider2-indiranagar@shopperstop.local` | `rider12345` |
 
-The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008).
+The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008). The four rider rows are from Phase 3: `rider-admin seed-demo --reset` loads them once the rider service lands, and they are not on `main` yet.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `make db` | Starts the Postgres container and waits until it is healthy. |
-| `make dev` | `db`, then the seed, then core, web and admin together. |
-| `make test` | `test-core`, then `test-web`. |
+| `make dev` | `db`, then the seed, then core, rider, web, admin and the rider app together. |
+| `make test` | `test-core`, `test-rider`, then `test-web`. |
 | `make test-core` | gofmt, `go vet`, and `go test -race` on `shopperstop_core_test`. |
+| `make test-rider` | gofmt, `go vet`, and `go test -race` on `shopperstop_rider_test`. |
+| `make rider` | The rider service alone, on :8081. |
+| `make rider-app` | The rider app's dev server alone, on :5175 under /rider/. |
 | `make test-web` | Builds `packages/ui`, then lint, typecheck, test and build for every workspace. |
-| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e`, core on :18080, web and admin previews on :15173 and :15174 (admin under /admin/). |
-| `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists) and `packages/ui/src/api/core.d.ts` from `openapi.json`. |
-| `make postman` | Regenerates the Postman collection and environment under `docs/postman/`. |
+| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/). |
+| `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists), `packages/ui/src/api/core.d.ts` from `openapi.json`, and the rider sqlc code and `packages/ui/src/api/rider.d.ts` once the rider contract exists. |
+| `make postman` | Regenerates one Postman collection per service and the shared environment under `docs/postman/`. |
 | `make prod-local` | Builds the apps and serves them through Caddy on <http://localhost>. |
 
 Each target prints `<target>: <path> absent, skipping` while its part of the tree is not there yet.
 
 ## API
 
-The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The Postman collection and environment generated from it live under `docs/postman/`; `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`.
+The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The rider contract, `services/rider/openapi.json`, follows the same rules once the rider service lands. The Postman collections generated from the contracts live under `docs/postman/`, one per service (the rider's from Phase 3 on), with the shared environment (`riderBaseUrl`, `riderToken`, `riderId` and `deliveryId` included); `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`.
 
 ## Design
 
@@ -103,4 +114,4 @@ Filled by the first phase that has screens.
 
 ## How it is built
 
-The repository is split into areas with disjoint scopes (`platform`, `core`, `ui`, `web`, `admin`). Each area has a manager session that runs team-lead, worker and reviewer lanes for one OpenSpec change at a time: the change is specified, the test is written first, and the work lands through a pull request. [CLAUDE.md](CLAUDE.md) holds the conventions and the rules the agents follow, [openspec/](openspec/) the specs and changes, and [PLAN.md](PLAN.md) the plan and its decisions.
+The repository is split into areas with disjoint scopes (`platform`, `core`, `ui`, `web`, `admin`, and `rider` from Phase 3). Each area has a manager session that runs team-lead, worker and reviewer lanes for one OpenSpec change at a time: the change is specified, the test is written first, and the work lands through a pull request. [CLAUDE.md](CLAUDE.md) holds the conventions and the rules the agents follow, [openspec/](openspec/) the specs and changes, and [PLAN.md](PLAN.md) the plan and its decisions.

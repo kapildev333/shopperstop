@@ -19,7 +19,6 @@ services:
     ports: ["80:80"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../apps/web/dist:/srv/web:ro
-      - ../apps/admin/dist:/srv/admin:ro
+      - ../apps:/srv/apps:ro
 volumes:
   pgdata:
