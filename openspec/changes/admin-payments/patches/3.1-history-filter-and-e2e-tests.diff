@@ -1,0 +1,111 @@
+diff --git a/apps/admin/e2e/orders.spec.ts b/apps/admin/e2e/orders.spec.ts
+index 4f2b6ec..d56001e 100644
+--- a/apps/admin/e2e/orders.spec.ts
++++ b/apps/admin/e2e/orders.spec.ts
+@@ -108,3 +108,50 @@ test('an admin sees the dashboard cards and opens a store\'s orders from one', a
+   await expect(sheet).toContainText('Delivered by Arjun Rao')
+   await expectNoAxeViolations(page)
+ })
++
++// SS-DEMOAAAE (...0704) is seeded placed at Koramangala and paid online. The test places one more Koramangala order
++// online through core as the demo customer (verified email in the seed); no payment service marks it, so it waits.
++const core = 'http://localhost:18080/api/core/v1/'
++const pomegranate = '00000000-0000-4000-8000-000000000604'
++
++test('the board shows each order\'s payment: the seeded order paid, an online order awaiting payment with Accept held', async ({ page, request }) => {
++  const session = await request.post(`${core}auth/sign-in`, { data: { email: 'demo@shopperstop.local', password: 'demo12345' } })
++  expect(session.status()).toBe(200)
++  const headers = { Authorization: `Bearer ${(await session.json()).token}` }
++  const addresses = await (await request.get(`${core}me/addresses`, { headers })).json()
++  const home = addresses.items.find((address: { label: string }) => address.label === 'Home')
++  expect((await request.delete(`${core}me/cart`, { headers })).ok()).toBe(true)
++  expect((await request.put(`${core}me/cart/items`, { headers, data: { storeId: koramangala, productId: pomegranate, quantity: 1 } })).ok()).toBe(true)
++  const placed = await request.post(`${core}orders`, { headers, data: { addressId: home.id, paymentMethod: 'online' } })
++  expect(placed.status()).toBe(201)
++  const { number } = await placed.json()
++
++  // Store staff, not the admin: the admin's sign-ins are the ones near core's limit of 10 an hour per email.
++  await signIn(page, 'koramangala@shopperstop.local', 'staff12345')
++  await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Orders' }).click()
++  const column = page.getByRole('region', { name: /^Placed/ })
++  const paid = column.getByRole('listitem').filter({ hasText: 'SS-DEMOAAAE' })
++  await expect(paid).toContainText('Paid')
++  await expect(page.getByRole('button', { name: 'Accept SS-DEMOAAAE' })).not.toHaveAttribute('aria-disabled', 'true')
++  const waiting = column.getByRole('listitem').filter({ hasText: number })
++  await expect(waiting).toContainText('Awaiting payment')
++  const accept = page.getByRole('button', { name: `Accept ${number}` })
++  await expect(accept).toHaveAttribute('aria-disabled', 'true')
++  await expect(accept).toHaveAccessibleDescription('Awaiting payment')
++  await expectNoAxeViolations(page)
++
++  // The seeded order's sheet: the payment, its reference and the payment event by its note.
++  await paid.getByRole('button', { name: 'SS-DEMOAAAE', exact: true }).click()
++  const sheet = page.getByRole('dialog', { name: 'Order SS-DEMOAAAE' })
++  await expect(sheet).toContainText('Payment reference: fake_demo_0a01')
++  await expect(sheet).toContainText('Payment paid, reference fake_demo_0a01, by payment')
++  await expectNoAxeViolations(page)
++  await sheet.getByRole('button', { name: 'Close' }).click()
++
++  // History carries the payment filter.
++  await page.getByRole('navigation', { name: 'Orders' }).getByRole('link', { name: 'History' }).click()
++  await expect(page.getByRole('table', { name: 'Order history' })).toBeVisible()
++  await page.getByLabel('Payment').selectOption({ label: 'Cash on delivery' })
++  await expect(page.getByRole('table', { name: 'Order history' }).getByRole('button', { name: 'SS-DEMOAAAB' })).toBeVisible()
++  await expectNoAxeViolations(page)
++})
+diff --git a/apps/admin/src/orders-history.test.tsx b/apps/admin/src/orders-history.test.tsx
+index 44ba533..1abe4c6 100644
+--- a/apps/admin/src/orders-history.test.tsx
++++ b/apps/admin/src/orders-history.test.tsx
+@@ -28,15 +28,16 @@ test('the History tab lists delivered orders, newest first, with number, placed,
+   renderApp('/orders?tab=history')
+ 
+   const table = await screen.findByRole('table', { name: 'Order history' })
+-  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Order', 'Placed', 'Customer', 'Items', 'Total', 'Delivered'])
++  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Order', 'Placed', 'Customer', 'Items', 'Total', 'Payment', 'Delivered'])
+   const rows = within(table).getAllByRole('row').slice(1)
+   expect(numbers()).toEqual(['SS-TEST0002', 'SS-TEST0001'])
+-  expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent?.replace(/^(Order|Placed|Customer|Items|Total|Delivered)/, ''))).toEqual([
++  expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent?.replace(/^(Order|Placed|Customer|Items|Total|Payment|Delivered)/, ''))).toEqual([
+     'SS-TEST0001',
+     '13 Oct 2026, 2:31 pm',
+     'Demo Customer',
+     '4 items',
+     '₹1,030',
++    'Cash on delivery',
+     '13 Oct 2026, 3:31 pm',
+   ])
+   expect(screen.getByText('Page 1 of 1, 2 orders')).toBeInTheDocument()
+@@ -304,3 +305,32 @@ test('a page past the end shows a skeleton, never the empty state, until the las
+   await screen.findByText('Page 2 of 2, 30 orders')
+   expect(router.state.location.search).toEqual({ tab: 'history', page: 2 })
+ })
++
++test('the Payment filter keeps the loaded page\'s orders of one payment, asks core nothing, and says when none on the page match', async () => {
++  setToken('tok')
++  const online = { paymentMethod: 'online' as const, paymentReference: 'pay_123' }
++  const calls = fakeCore({
++    ...asAdmin,
++    ...ordersCore(indiranagar.id, [delivered(1), { ...delivered(2), ...online, paymentStatus: 'paid' }, { ...delivered(3), ...online, paymentStatus: 'paid' }]).routes,
++  })
++
++  renderApp('/orders?tab=history')
++  await screen.findByRole('table', { name: 'Order history' })
++  const filter = screen.getByLabelText('Payment')
++  expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual(['Any', 'Cash on delivery', 'Awaiting payment', 'Paid', 'Refunded'])
++  expect(filter).toHaveValue('')
++
++  await userEvent.selectOptions(filter, 'Paid')
++  expect(numbers()).toEqual(['SS-TEST0003', 'SS-TEST0002'])
++  await userEvent.selectOptions(filter, 'Cash on delivery')
++  expect(numbers()).toEqual(['SS-TEST0001'])
++  // The filter looks at this page only: the pager still counts every order of the list.
++  await userEvent.selectOptions(filter, 'Refunded')
++  expect(screen.queryByRole('table', { name: 'Order history' })).not.toBeInTheDocument()
++  expect(screen.getByText('No orders on this page match')).toBeInTheDocument()
++  expect(screen.getByText('Page 1 of 1, 3 orders')).toBeInTheDocument()
++  await userEvent.selectOptions(filter, 'Any')
++  expect(numbers()).toEqual(['SS-TEST0003', 'SS-TEST0002', 'SS-TEST0001'])
++  expect(filter).toHaveFocus()
++  expect(listRequests(calls)).toHaveLength(1)
++})
