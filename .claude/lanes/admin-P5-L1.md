@@ -1,6 +1,12 @@
 # admin-P5-L1 - admin payments: payment badge, Accept waits for payment, payment events, History payment filter (OpenSpec change admin-payments)
-Status: started (change proposed; tasks 1 to 3 ready for workers, one after another; task 4 is the manager's e2e run)
+Status: done (acceptance passed; task 4.1, the `make e2e` run of "Payments against core", is the manager's with the slot)
 ## Doing
+2026-10-16: acceptance (`/opsx:verify` semantics) at 365a84e (branch on 503715e): PASS except task 4.1, the manager's `make e2e`.
+- Scenarios: all 10 delta scenarios map to tests (design.md "Tests"); the 9 Vitest ones exist by name in `orders-board.test.tsx`, `orders-status.test.tsx`, `order-sheet.test.tsx`, `orders-history.test.tsx` and pass (R2: 27 files / 334 passed; my run below); "Paid and awaiting payment on the board" is `e2e/orders.spec.ts` "the board shows each order's payment: ...", unrun until 4.1. No `.only`/`.skip` under `apps/admin/src` or `e2e`.
+- Tasks: 1.1 to 3b.2 ticked by the workers; 4.1 open, marked as the manager's.
+- Nothing extra: `git diff --stat $(merge-base origin/main) HEAD` holds only the 10 `apps/admin` files of design.md "Files", the change folder and this log. The 8 patches applied in order with `git apply --cached` onto 2fb56ed give a tree equal to HEAD under `apps/admin` (0 diff lines).
+- `openspec validate admin-payments --strict` valid.
+2026-10-16: task 3b (R1 finding, manager's decision): a cancelled order with `paymentStatus` `pending` reads `neutral` "Not paid"; the sheet guards a missing payment-event note. Spiked on 101878f: 3b.1 red 2 / 334, 3b.2 334; lint, typecheck, build clean; patches `3b.1-not-paid-tests.diff`, `3b.2-not-paid.diff` checked with `git apply --check` in order on 101878f; tree restored. Delta: scenario "Cancelled before it was paid" under "Orders payment badge" (now 421 characters), "Not paid" in the History `Select`. Validate strict valid, `--all` 20 passed. Then acceptance.
 2026-10-16: change `openspec/changes/admin-payments/` committed; `openspec validate admin-payments --strict` valid, `--all --strict` 20 passed. Waiting for workers T1, T2, T3 (in that order: they share `orders.ts`, `order-board.tsx`, `order-sheet.tsx`), then acceptance with `/opsx:verify`.
 ## Found
 - Change: proposal.md; `specs/admin-app/spec.md` with 6 ADDED requirements (largest 390 characters), no MODIFIED (each existing requirement stays true for cash orders); design.md (9 decisions, ceilings, scenario-to-test map, gates, risks); tasks.md (3 worker tasks + the manager's e2e run); `patches/` (6 patches, applied in order with `git apply`). No `docs/design/admin-P5-L1.md`: design.md settles every choice.
