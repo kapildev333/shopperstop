@@ -104,7 +104,20 @@ func probeRouter(a *Auth) http.Handler {
 	r.With(a.RequireAdmin).Get("/probe/admin", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, CurrentStaff(r.Context()).ID)
 	})
+	serviceOrStaff := func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, Service(r.Context())+"|"+CurrentStaff(r.Context()).ID)
+	}
+	r.With(a.OrService(a.RequireStaff)).Get("/probe/service", serviceOrStaff)
+	r.With(a.OrService(a.RequireAdmin)).Get("/probe/service-admin", serviceOrStaff)
 	return r
+}
+
+// serviceToken is the rider's token in the auth tests.
+const serviceToken = "test-rider-service-token-test-rider-00"
+
+// withService is the auth service with one service, rider.
+func withService() *Auth {
+	return New(testPool, testPepper, nil, map[string]string{"rider": serviceToken})
 }
 
 func get(h http.Handler, path, authorization string) *httptest.ResponseRecorder {
@@ -133,7 +146,7 @@ func errCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 
 func TestRequireCustomerRejects(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	h := probeRouter(a)
 	cust := newCustomer(t)
 	staff := newStaff(t, db.StaffRoleAdmin, nil)
@@ -158,7 +171,7 @@ func TestRequireCustomerRejects(t *testing.T) {
 
 func TestTokenStoredAsPepperedHash(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -185,7 +198,7 @@ func TestTokenStoredAsPepperedHash(t *testing.T) {
 
 func TestCustomerSessionExpired(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -201,7 +214,7 @@ func TestCustomerSessionExpired(t *testing.T) {
 
 func TestCustomerSessionSlides(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -227,7 +240,7 @@ func TestCustomerSessionSlides(t *testing.T) {
 
 func TestCustomerSessionWithinHourUnchanged(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -254,7 +267,7 @@ func TestCustomerSessionWithinHourUnchanged(t *testing.T) {
 
 func TestStaffSessionFixed(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	staff := newStaff(t, db.StaffRoleAdmin, nil)
 	tok, err := a.startSession(ctx, "staff", staff.ID)
 	if err != nil {
@@ -281,7 +294,7 @@ func TestStaffSessionFixed(t *testing.T) {
 
 func TestStaffSessionExpired(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	staff := newStaff(t, db.StaffRoleAdmin, nil)
 	tok, err := a.startSession(ctx, "staff", staff.ID)
 	if err != nil {
@@ -297,7 +310,7 @@ func TestStaffSessionExpired(t *testing.T) {
 
 func TestRequireStaffRejectsCustomerToken(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -311,7 +324,7 @@ func TestRequireStaffRejectsCustomerToken(t *testing.T) {
 
 func TestInactiveStaffRejected(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	staff := newStaff(t, db.StaffRoleAdmin, nil)
 	tok, err := a.startSession(ctx, "staff", staff.ID)
 	if err != nil {
@@ -327,7 +340,7 @@ func TestInactiveStaffRejected(t *testing.T) {
 
 func TestRequireAdminForbidsStoreStaff(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	h := probeRouter(a)
 	store := testStoreID
 	clerk := newStaff(t, db.StaffRoleStoreStaff, &store)
@@ -377,7 +390,7 @@ func captureRequestLog(t *testing.T) func() map[string]any {
 
 func TestRequireCustomerLogsSubject(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	cust := newCustomer(t)
 	tok, err := a.startSession(ctx, "customer", cust.ID)
 	if err != nil {
@@ -395,7 +408,7 @@ func TestRequireCustomerLogsSubject(t *testing.T) {
 
 func TestRequireStaffLogsSubject(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	store := testStoreID
 	clerk := newStaff(t, db.StaffRoleStoreStaff, &store)
 	tok, err := a.startSession(ctx, "staff", clerk.ID)
@@ -409,5 +422,75 @@ func TestRequireStaffLogsSubject(t *testing.T) {
 	line := lastLine()
 	if line["subjectType"] != "staff" || line["subjectId"] != clerk.ID {
 		t.Fatalf("request line subject %v %v, want staff %s", line["subjectType"], line["subjectId"], clerk.ID)
+	}
+}
+
+// TestServiceTokenAdmitted: the service token passes OrService over staff and over
+// admins as service rider with no staff user, and the request line names it.
+func TestServiceTokenAdmitted(t *testing.T) {
+	h := probeRouter(withService())
+	lastLine := captureRequestLog(t)
+	for _, path := range []string{"/probe/service", "/probe/service-admin"} {
+		rec := get(h, path, "Bearer "+serviceToken)
+		if rec.Code != http.StatusOK || rec.Body.String() != "rider|" {
+			t.Fatalf("%s: %d %q, want 200 rider|", path, rec.Code, rec.Body.String())
+		}
+		line := lastLine()
+		if line["subjectType"] != "service" || line["subjectId"] != "rider" {
+			t.Fatalf("%s: request line subject %v %v, want service rider", path, line["subjectType"], line["subjectId"])
+		}
+	}
+}
+
+// TestServiceTokenRefusedElsewhere: the service token is 403 forbidden behind
+// RequireStaff and RequireAdmin (logged as the service) and 401 behind
+// RequireCustomer; a token one character longer is 401 behind OrService.
+func TestServiceTokenRefusedElsewhere(t *testing.T) {
+	h := probeRouter(withService())
+	lastLine := captureRequestLog(t)
+	for _, path := range []string{"/probe/staff", "/probe/admin"} {
+		rec := get(h, path, "Bearer "+serviceToken)
+		if rec.Code != http.StatusForbidden || errCode(t, rec) != "forbidden" {
+			t.Fatalf("%s: %d %s, want 403 forbidden", path, rec.Code, rec.Body.String())
+		}
+		if line := lastLine(); line["subjectType"] != "service" || line["subjectId"] != "rider" {
+			t.Fatalf("%s: request line subject %v %v, want service rider", path, line["subjectType"], line["subjectId"])
+		}
+	}
+	if rec := get(h, "/probe/customer", "Bearer "+serviceToken); rec.Code != http.StatusUnauthorized || errCode(t, rec) != "unauthorized" {
+		t.Fatalf("customer probe: %d %s, want 401 unauthorized", rec.Code, rec.Body.String())
+	}
+	if rec := get(h, "/probe/service", "Bearer "+serviceToken+"x"); rec.Code != http.StatusUnauthorized || errCode(t, rec) != "unauthorized" {
+		t.Fatalf("wrong token: %d %s, want 401 unauthorized", rec.Code, rec.Body.String())
+	}
+}
+
+// TestNoServiceTokens: with none configured, the token is just an unknown token.
+func TestNoServiceTokens(t *testing.T) {
+	h := probeRouter(New(testPool, testPepper, nil, nil))
+	for _, path := range []string{"/probe/service", "/probe/staff"} {
+		if rec := get(h, path, "Bearer "+serviceToken); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%s: %d, want 401", path, rec.Code)
+		}
+	}
+}
+
+// TestOrServiceKeepsStaffRules: staff pass OrService(RequireStaff) as themselves,
+// and store staff stay 403 behind OrService(RequireAdmin).
+func TestOrServiceKeepsStaffRules(t *testing.T) {
+	ctx := context.Background()
+	a := withService()
+	store := testStoreID
+	clerk := newStaff(t, db.StaffRoleStoreStaff, &store)
+	tok, err := a.startSession(ctx, "staff", clerk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := probeRouter(a)
+	if rec := get(h, "/probe/service", "Bearer "+tok); rec.Code != http.StatusOK || rec.Body.String() != "|"+clerk.ID {
+		t.Fatalf("staff through OrService: %d %q, want 200 |%s", rec.Code, rec.Body.String(), clerk.ID)
+	}
+	if rec := get(h, "/probe/service-admin", "Bearer "+tok); rec.Code != http.StatusForbidden || errCode(t, rec) != "forbidden" {
+		t.Fatalf("store staff through OrService(RequireAdmin): %d %s, want 403", rec.Code, rec.Body.String())
 	}
 }

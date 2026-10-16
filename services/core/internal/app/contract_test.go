@@ -140,7 +140,7 @@ func TestContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if problems := contractProblems(New(nil, nil, auth.New(nil, testPepper, nil), nil), doc); len(problems) > 0 {
+	if problems := contractProblems(New(nil, nil, auth.New(nil, testPepper, nil, nil), nil), doc); len(problems) > 0 {
 		t.Fatalf("contract problems:\n%s", strings.Join(problems, "\n"))
 	}
 }
@@ -225,7 +225,7 @@ var pathParam = regexp.MustCompile(`\{[^}]+\}`)
 // securityProblems sends one anonymous request to every documented operation
 // and checks the operation's security declaration against the router's answer:
 // a 401 must match declared security, and declared security must document a 401.
-func securityProblems(baseURL string, doc []byte) []string {
+func securityProblems(baseURL, serviceToken string, doc []byte) []string {
 	var spec struct {
 		Servers []struct {
 			URL string `json:"url"`
@@ -259,8 +259,9 @@ func securityProblems(baseURL string, doc []byte) []string {
 			}
 			key := strings.ToUpper(method) + " " + base + path
 			var op struct {
-				Security  []map[string][]string      `json:"security"`
-				Responses map[string]json.RawMessage `json:"responses"`
+				Security     []map[string][]string      `json:"security"`
+				ServiceToken bool                       `json:"x-service-token"`
+				Responses    map[string]json.RawMessage `json:"responses"`
 			}
 			if err := json.Unmarshal(raw, &op); err != nil {
 				problems = append(problems, key+": operation does not parse: "+err.Error())
@@ -292,6 +293,32 @@ func securityProblems(baseURL string, doc []byte) []string {
 			case !declared && resp.StatusCode == http.StatusUnauthorized:
 				problems = append(problems, key+": answers 401 without a token but declares no security")
 			}
+			if op.ServiceToken && !declared {
+				problems = append(problems, key+": x-service-token without security")
+			}
+			if !declared || serviceToken == "" {
+				continue
+			}
+			req.Header.Set("Authorization", "Bearer "+serviceToken)
+			resp, err = http.DefaultClient.Do(req)
+			if err != nil {
+				problems = append(problems, key+": request failed: "+err.Error())
+				continue
+			}
+			resp.Body.Close()
+			want := http.StatusUnauthorized
+			if strings.HasPrefix(path, "/admin/") {
+				want = http.StatusForbidden
+			}
+			refused := resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden
+			switch {
+			case op.ServiceToken && refused:
+				problems = append(problems, fmt.Sprintf("%s: declares x-service-token but answers %d to the service token", key, resp.StatusCode))
+			case !op.ServiceToken && resp.StatusCode != want:
+				problems = append(problems, fmt.Sprintf("%s: answers %d to the service token, want %d or x-service-token", key, resp.StatusCode, want))
+			case !op.ServiceToken && want == http.StatusForbidden && op.Responses["403"] == nil:
+				problems = append(problems, key+": refuses the service token with 403 but documents no 403")
+			}
 		}
 	}
 	sort.Strings(problems)
@@ -304,7 +331,7 @@ func TestContractSecurity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if problems := securityProblems(srv.URL, doc); len(problems) > 0 {
+	if problems := securityProblems(srv.URL, testServiceToken, doc); len(problems) > 0 {
 		t.Fatalf("security problems:\n%s", strings.Join(problems, "\n"))
 	}
 }
@@ -329,7 +356,7 @@ func toySecurityProblems(t *testing.T, status int, doc string) []string {
 	r.Get("/api/core/v1/extra", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })
 	ts := httptest.NewServer(r)
 	t.Cleanup(ts.Close)
-	return securityProblems(ts.URL, []byte(doc))
+	return securityProblems(ts.URL, "", []byte(doc))
 }
 
 // TestContractNamesMissingSecurity: a route that answers 401 must declare security.
@@ -354,5 +381,50 @@ func TestContractNamesSecurityWithout401(t *testing.T) {
 	problems := toySecurityProblems(t, http.StatusUnauthorized, doc)
 	if !containsProblem(problems, "documents no 401") {
 		t.Fatalf("want a problem saying the 401 is undocumented, got %q", problems)
+	}
+}
+
+// toyServiceProblems serves GET /api/core/v1/admin/extra answering 401 without a
+// token and status with one, documented as secured, with x-service-token when
+// declared, and probes it with the token "svc".
+func toyServiceProblems(t *testing.T, status int, declared bool) []string {
+	t.Helper()
+	r := chi.NewRouter()
+	r.Get("/api/core/v1/admin/extra", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(status)
+	})
+	ts := httptest.NewServer(r)
+	t.Cleanup(ts.Close)
+	ext := ""
+	if declared {
+		ext = `"x-service-token":true,`
+	}
+	doc := `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],
+  "components":{"securitySchemes":{"bearer":{"type":"http","scheme":"bearer"}}},
+  "paths":{"/admin/extra":{"get":{"summary":"s","description":"d","tags":["orders"],"security":[{"bearer":[]}],` + ext + `
+  "responses":{"200":{"description":"ok"},"401":{"description":"no token"},"403":{"description":"no"}}}}}}`
+	return securityProblems(ts.URL, "svc", []byte(doc))
+}
+
+// TestContractNamesUndeclaredServiceRoute: a route that admits the service token must say so.
+func TestContractNamesUndeclaredServiceRoute(t *testing.T) {
+	problems := toyServiceProblems(t, http.StatusOK, false)
+	if !containsProblem(problems, "GET /api/core/v1/admin/extra") || !containsProblem(problems, "x-service-token") {
+		t.Fatalf("want a problem naming GET /api/core/v1/admin/extra and x-service-token, got %q", problems)
+	}
+}
+
+// TestContractNamesRefusedServiceRoute: a route declared for services must admit the token.
+func TestContractNamesRefusedServiceRoute(t *testing.T) {
+	problems := toyServiceProblems(t, http.StatusForbidden, true)
+	if !containsProblem(problems, "GET /api/core/v1/admin/extra") || !containsProblem(problems, "answers 403") {
+		t.Fatalf("want a problem naming GET /api/core/v1/admin/extra and answers 403, got %q", problems)
+	}
+	if p := toyServiceProblems(t, http.StatusForbidden, false); len(p) != 0 {
+		t.Fatalf("a refused, undeclared route with a 403 documented: want no problems, got %q", p)
 	}
 }

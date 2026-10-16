@@ -293,7 +293,7 @@ export interface paths {
         };
         /**
          * Read one order of a store
-         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token.
+         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["getAdminOrder"];
         put?: never;
@@ -315,7 +315,7 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token.
+         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted and must name the rider in actor; it may move an order only to out_for_delivery or delivered, and anything else answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.
          */
         post: operations["setOrderStatus"];
         delete?: never;
@@ -457,7 +457,7 @@ export interface paths {
         };
         /**
          * List stores
-         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page.
+         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["listStores"];
         put?: never;
@@ -481,7 +481,7 @@ export interface paths {
         };
         /**
          * Get a store, admin view
-         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found.
+         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["getAdminStore"];
         put?: never;
@@ -557,7 +557,7 @@ export interface paths {
         };
         /**
          * List a store's orders
-         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["listStoreOrders"];
         put?: never;
@@ -1370,7 +1370,9 @@ export interface components {
             /** @enum {string} */
             toStatus: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             /** @enum {string} */
-            actorType: "customer" | "staff" | "system";
+            actorType: "customer" | "staff" | "system" | "rider";
+            /** @description The rider's name on an event a rider made. Omitted otherwise. */
+            actorName?: string;
             /** @description Omitted when empty. */
             note?: string;
             /** Format: date-time */
@@ -1410,6 +1412,8 @@ export interface components {
             cancelledAt?: string;
             /** @description Omitted when empty. */
             cancelReason?: string;
+            /** @description The rider who took the order out for delivery. Omitted until a rider does; staff moves never set it. */
+            riderName?: string;
             items: components["schemas"]["OrderItem"][];
             events: components["schemas"]["OrderEvent"][];
         };
@@ -1426,7 +1430,7 @@ export interface components {
             /** @description Why the order is cancelled. Optional; at most 500 characters. */
             reason?: string;
         };
-        /** @description A staff status change. note is kept on the event; on a cancel it is the order's cancelReason. */
+        /** @description A status change by staff or by a service. note is kept on the event; on a cancel it is the order's cancelReason. A service names the rider in actor; staff name no actor. */
         OrderStatusChange: {
             /**
              * @description The status to move the order to.
@@ -1435,6 +1439,14 @@ export interface components {
             status: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             /** @description Why the status changes. Optional; at most 500 characters. */
             note?: string;
+            /** @description Required from a service, refused from staff (400 field actor). The rider making the move. */
+            actor?: {
+                /** @enum {string} */
+                type: "rider";
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
         };
         OrderList: {
             items: components["schemas"]["Order"][];
@@ -3026,12 +3038,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "status": "accepted",
-                 *       "note": "Packing now"
-                 *     }
-                 */
                 "application/json": components["schemas"]["OrderStatusChange"];
             };
         };
@@ -3042,64 +3048,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "id": "00000000-0000-4000-8000-000000000703",
-                     *       "number": "SS-DEMOAAAD",
-                     *       "storeId": "00000000-0000-4000-8000-000000000401",
-                     *       "status": "accepted",
-                     *       "customerName": "Demo Customer",
-                     *       "customerPhone": "+919800000000",
-                     *       "address": {
-                     *         "label": "Home",
-                     *         "line1": "12 80 Feet Rd, Koramangala",
-                     *         "pincode": "560034"
-                     *       },
-                     *       "subtotalCents": 103000,
-                     *       "deliveryFeeCents": 0,
-                     *       "totalCents": 103000,
-                     *       "paymentMethod": "cod",
-                     *       "placedAt": "2026-10-13T09:20:00Z",
-                     *       "items": [
-                     *         {
-                     *           "productId": "00000000-0000-4000-8000-000000000601",
-                     *           "name": "Banana Robusta",
-                     *           "unitLabel": "1 kg",
-                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
-                     *           "priceCents": 7000,
-                     *           "mrpCents": 7000,
-                     *           "quantity": 1
-                     *         },
-                     *         {
-                     *           "productId": "00000000-0000-4000-8000-000000000604",
-                     *           "name": "Pomegranate Bhagwa",
-                     *           "unitLabel": "1 kg",
-                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
-                     *           "priceCents": 32000,
-                     *           "mrpCents": 32000,
-                     *           "quantity": 3
-                     *         }
-                     *       ],
-                     *       "events": [
-                     *         {
-                     *           "toStatus": "placed",
-                     *           "actorType": "customer",
-                     *           "createdAt": "2026-10-13T09:20:00Z"
-                     *         },
-                     *         {
-                     *           "fromStatus": "placed",
-                     *           "toStatus": "accepted",
-                     *           "actorType": "staff",
-                     *           "note": "Packing now",
-                     *           "createdAt": "2026-10-13T09:21:00Z"
-                     *         }
-                     *       ]
-                     *     }
-                     */
                     "application/json": components["schemas"]["Order"];
                 };
             };
-            /** @description The status is not one of the seven (field status), the note is longer than 500 characters (field note), or the body is not JSON (no field). Nothing changes. */
+            /** @description The status is not one of the seven (field status), the note is longer than 500 characters (field note), an actor is missing from a service, refused from staff, or not a rider, a uuid or a name of 1 to 80 characters (field actor), or the body is not JSON (no field). Nothing changes. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3128,6 +3080,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service moving the order to any status but out_for_delivery or delivered. Nothing changes. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "a service may only move an order to out_for_delivery or delivered"
                      *       }
                      *     }
                      */
@@ -3220,6 +3189,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
                      *       }
                      *     }
                      */
@@ -3355,6 +3341,23 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getAdminMe: {
@@ -3395,6 +3398,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
                      *       }
                      *     }
                      */
@@ -3491,7 +3511,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3586,7 +3606,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3700,7 +3720,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3949,7 +3969,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4097,7 +4117,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4231,7 +4251,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4316,7 +4336,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4431,7 +4451,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4584,6 +4604,23 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
             404: {
                 headers: {
@@ -4668,6 +4705,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
                      *       }
                      *     }
                      */
@@ -5254,7 +5308,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5346,7 +5400,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5421,7 +5475,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5552,7 +5606,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5687,7 +5741,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5786,7 +5840,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5876,7 +5930,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5951,7 +6005,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6086,7 +6140,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6194,7 +6248,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6307,7 +6361,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;

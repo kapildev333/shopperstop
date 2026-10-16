@@ -87,6 +87,7 @@ type orderView struct {
 	DeliveredAt      *time.Time       `json:"deliveredAt"`
 	CancelledAt      *time.Time       `json:"cancelledAt"`
 	CancelReason     string           `json:"cancelReason"`
+	RiderName        string           `json:"riderName"`
 	Items            []orderItemView  `json:"items"`
 	Events           []orderEventView `json:"events"`
 }
@@ -105,6 +106,7 @@ type orderEventView struct {
 	FromStatus string    `json:"fromStatus"`
 	ToStatus   string    `json:"toStatus"`
 	ActorType  string    `json:"actorType"`
+	ActorName  string    `json:"actorName"`
 	Note       string    `json:"note"`
 	CreatedAt  time.Time `json:"createdAt"`
 }

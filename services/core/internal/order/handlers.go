@@ -36,7 +36,7 @@ func customerScope(ctx context.Context) scope {
 // store. Any other role is scoped to its store, so a future role fails closed.
 func staffScope(ctx context.Context) scope {
 	s := auth.CurrentStaff(ctx)
-	if s.Role == "admin" {
+	if s.Role == "admin" || auth.Service(ctx) != "" {
 		return scope{}
 	}
 	return scope{storeID: &s.StoreID}
@@ -231,13 +231,50 @@ func AdminGet(pool *pgxpool.Pool) http.HandlerFunc {
 
 // statusRequest is the POST /admin/orders/{id}/status body.
 type statusRequest struct {
-	Status string `json:"status"`
-	Note   string `json:"note"`
+	Status string        `json:"status"`
+	Note   string        `json:"note"`
+	Actor  *actorRequest `json:"actor"`
 }
 
-// SetStatus answers 200 with the order after a staff status change. A move the
-// table does not allow is 409 conflict and changes nothing. A cancel records the
-// note as cancelReason and returns the order's quantities to stock.
+// actorRequest is the rider a service names as the actor of a status change.
+type actorRequest struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// errRiderMoves refuses a service's move to any status but the rider's two.
+var errRiderMoves = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "a service may only move an order to out_for_delivery or delivered"}
+
+// actorOf returns who makes the status change: the signed-in staff user, who
+// names no actor, or the rider a service names, which it must.
+func actorOf(ctx context.Context, in *actorRequest) (Actor, error) {
+	if auth.Service(ctx) == "" {
+		if in != nil {
+			return Actor{}, invalid("actor", "only a service names an actor")
+		}
+		return Actor{Type: "staff", ID: auth.CurrentStaff(ctx).ID}, nil
+	}
+	if in == nil {
+		return Actor{}, invalid("actor", "required")
+	}
+	name := strings.TrimSpace(in.Name)
+	switch {
+	case in.Type != "rider":
+		return Actor{}, invalid("actor", "type must be rider")
+	case !httpx.IsUUID(in.ID):
+		return Actor{}, invalid("actor", "id must be a uuid")
+	case name == "" || utf8.RuneCountInString(name) > 80:
+		return Actor{}, invalid("actor", "name must be 1 to 80 characters")
+	}
+	return Actor{Type: "rider", ID: in.ID, Name: name}, nil
+}
+
+// SetStatus answers 200 with the order after a status change by staff or by a
+// service. Staff make any move and name no actor; a service must name the rider
+// making a move to out_for_delivery or delivered, and any other target is 403.
+// A move the table does not allow is 409 conflict and changes nothing. A cancel
+// records the note as cancelReason and returns the order's quantities to stock.
 func SetStatus(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := httpx.PathID(r, "id")
@@ -260,9 +297,18 @@ func SetStatus(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
+		actor, err := actorOf(ctx, in.Actor)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		to := db.OrderStatus(in.Status)
+		if actor.Type == "rider" && to != db.OrderStatusOutForDelivery && to != db.OrderStatusDelivered {
+			httpx.WriteError(w, r, errRiderMoves)
+			return
+		}
 		sc := staffScope(ctx)
-		actor := Actor{Type: "staff", ID: auth.CurrentStaff(ctx).ID}
-		if err := Transition(ctx, pool, id, sc, db.OrderStatus(in.Status), actor, note); err != nil {
+		if err := Transition(ctx, pool, id, sc, to, actor, note); err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}

@@ -24,11 +24,22 @@ var next = map[db.OrderStatus][]db.OrderStatus{
 	db.OrderStatusOutForDelivery: {db.OrderStatusDelivered},
 }
 
-// allowed reports whether an actor of actorType ("customer" or "staff") may move
-// an order from one status to another: the table allows it, and a customer may
-// only cancel.
+// allowed reports whether an actor of actorType may move an order from one
+// status to another: the table allows it, staff make every move, a customer
+// only cancels, and a rider only takes out for delivery and delivers.
 func allowed(from, to db.OrderStatus, actorType string) bool {
-	return slices.Contains(next[from], to) && (actorType == "staff" || to == db.OrderStatusCancelled)
+	if !slices.Contains(next[from], to) {
+		return false
+	}
+	switch actorType {
+	case "staff":
+		return true
+	case "customer":
+		return to == db.OrderStatusCancelled
+	case "rider":
+		return to == db.OrderStatusOutForDelivery || to == db.OrderStatusDelivered
+	}
+	return false
 }
 
 // Transition moves the order to status to, in one transaction under the order's
@@ -46,7 +57,14 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		if !allowed(row.Status, to, actor.Type) {
 			return &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "cannot move an order from " + string(row.Status) + " to " + string(to)}
 		}
-		if err := q.SetStatus(ctx, db.SetStatusParams{Status: to, CancelReason: note, ID: id}); err != nil {
+		var riderName, actorName *string
+		if actor.Name != "" {
+			actorName = &actor.Name
+		}
+		if actor.Type == "rider" && to == db.OrderStatusOutForDelivery {
+			riderName = &actor.Name
+		}
+		if err := q.SetStatus(ctx, db.SetStatusParams{Status: to, CancelReason: note, RiderName: riderName, ID: id}); err != nil {
 			return err
 		}
 		if to == db.OrderStatusCancelled {
@@ -64,7 +82,7 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		}
 		return q.AddEvent(ctx, db.AddEventParams{
 			OrderID: id, FromStatus: &row.Status, ToStatus: to,
-			ActorType: actor.Type, ActorID: &actor.ID, Note: note,
+			ActorType: actor.Type, ActorID: &actor.ID, ActorName: actorName, Note: note,
 		})
 	})
 	if err != nil {

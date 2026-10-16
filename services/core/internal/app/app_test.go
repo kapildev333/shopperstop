@@ -22,6 +22,9 @@ import (
 
 const testPepper = "test-pepper-test-pepper-test-pepper-00"
 
+// testServiceToken is the rider service's token on the shared test server.
+const testServiceToken = "test-rider-service-token-test-rider-00"
+
 // srv is the shared test server every route test in this package uses. Its
 // limiter is too large to trip, so only the rate-limit test sees a 429.
 var (
@@ -44,7 +47,7 @@ func TestMain(m *testing.M) {
 		testStoreID); err != nil {
 		panic(err)
 	}
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken})
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
 	srv.Close()
@@ -171,7 +174,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil), blob.Disk{Dir: filesDir}))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil), blob.Disk{Dir: filesDir}))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.

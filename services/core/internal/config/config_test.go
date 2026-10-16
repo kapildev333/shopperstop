@@ -116,3 +116,55 @@ func TestLoadLogLevel(t *testing.T) {
 		t.Errorf("loud: want error naming SHOPPERSTOP_CORE_LOG_LEVEL, got %v", err)
 	}
 }
+
+// TestLoadServiceTokens: the Makefile's dev and e2e values load as service rider;
+// unset, empty or only separators load none.
+func TestLoadServiceTokens(t *testing.T) {
+	for _, token := range []string{"dev-rider-service-token-dev-rider-00", "e2e-rider-service-token-e2e-rider-00"} {
+		vars := valid()
+		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = "rider:" + token
+		cfg, err := config.Load(env(vars))
+		if err != nil {
+			t.Fatalf("Load with rider:%s: %v", token, err)
+		}
+		if len(cfg.ServiceTokens) != 1 || cfg.ServiceTokens["rider"] != token {
+			t.Fatalf("ServiceTokens %v, want only rider:%s", cfg.ServiceTokens, token)
+		}
+	}
+	for _, v := range []string{"", " , "} {
+		vars := valid()
+		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = v
+		cfg, err := config.Load(env(vars))
+		if err != nil || len(cfg.ServiceTokens) != 0 {
+			t.Fatalf("Load with %q: %v %v, want no tokens and no error", v, cfg.ServiceTokens, err)
+		}
+	}
+	cfg, err := config.Load(env(valid()))
+	if err != nil || cfg.ServiceTokens != nil {
+		t.Fatalf("Load unset: %v %v, want nil tokens and no error", cfg.ServiceTokens, err)
+	}
+}
+
+// TestLoadRefusesBadServiceTokens: each bad value fails naming the variable and
+// the rule, and the error never contains the token.
+func TestLoadRefusesBadServiceTokens(t *testing.T) {
+	const tok = "0123456789abcdef0123456789abcdef"
+	for _, row := range []struct{ value, secret, want string }{
+		{"rider:abc123", "abc123", "at least 32 bytes"},
+		{"rider" + tok, tok, "name:token"},
+		{":" + tok, tok, "name:token"},
+		{"rider:" + tok + ",rider:" + tok + "x", tok, "twice"},
+		{"rider:" + tok + ",payment:" + tok, tok, "another service"},
+		{"rider :" + tok, tok, "name:token"},
+		{"rider: " + tok, tok, "name:token"},
+		{"rider:" + tok[:16] + " " + tok[16:], tok[:16], "name:token"},
+	} {
+		vars := valid()
+		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = row.value
+		_, err := config.Load(env(vars))
+		if err == nil || !strings.Contains(err.Error(), "SHOPPERSTOP_CORE_SERVICE_TOKENS") ||
+			!strings.Contains(err.Error(), row.want) || strings.Contains(err.Error(), row.secret) {
+			t.Fatalf("Load with %q: %v, want an error naming the variable and %q, without the token", row.value, err, row.want)
+		}
+	}
+}

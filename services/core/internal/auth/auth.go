@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -21,15 +22,41 @@ import (
 
 // Auth holds what the handlers and middleware need.
 type Auth struct {
-	pool   *pgxpool.Pool
-	q      *db.Queries
-	pepper []byte
-	limit  *Limiter
+	pool     *pgxpool.Pool
+	q        *db.Queries
+	pepper   []byte
+	limit    *Limiter
+	services []service
+}
+
+// service is one configured service: its name and the sha256 of its token.
+type service struct {
+	name string
+	hash [32]byte
 }
 
 // New returns the auth service over pool. pepper is mixed into every token hash.
-func New(pool *pgxpool.Pool, pepper string, limit *Limiter) *Auth {
-	return &Auth{pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit}
+// services maps a service name to its token (config.ServiceTokens); nil admits none.
+func New(pool *pgxpool.Pool, pepper string, limit *Limiter, services map[string]string) *Auth {
+	a := &Auth{pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit}
+	for name, token := range services {
+		a.services = append(a.services, service{name: name, hash: sha256.Sum256([]byte(token))})
+	}
+	return a
+}
+
+// serviceName returns the name of the service whose token is token, or "".
+// Every configured token is compared, in constant time, over sha256 digests so
+// neither the length nor the content of a token leaks through timing.
+func (a *Auth) serviceName(token string) string {
+	h := sha256.Sum256([]byte(token))
+	name := ""
+	for _, s := range a.services {
+		if subtle.ConstantTimeCompare(h[:], s.hash[:]) == 1 {
+			name = s.name
+		}
+	}
+	return name
 }
 
 // Staff is the signed-in staff user, as the context and the staff routes see it.
@@ -44,10 +71,12 @@ type Staff struct {
 
 type customerKey struct{}
 type staffKey struct{}
+type serviceKey struct{}
 
 var (
 	errUnauthorized = &httpx.Error{Status: http.StatusUnauthorized, Code: "unauthorized", Message: "sign in required"}
 	errAdminsOnly   = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "admins only"}
+	errStaffOnly    = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "staff only"}
 )
 
 // CustomerID returns the signed-in customer's id, or "" outside RequireCustomer.
@@ -60,6 +89,30 @@ func CustomerID(ctx context.Context) string {
 func CurrentStaff(ctx context.Context) Staff {
 	s, _ := ctx.Value(staffKey{}).(Staff)
 	return s
+}
+
+// Service returns the name of the calling service, or "" outside OrService.
+func Service(ctx context.Context) string {
+	name, _ := ctx.Value(serviceKey{}).(string)
+	return name
+}
+
+// OrService admits a service token as a service subject and hands every other
+// request to staff (RequireStaff or RequireAdmin), which then decides.
+func (a *Auth) OrService(staff func(http.Handler) http.Handler) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		guarded := staff(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			name := a.serviceName(bearer(r))
+			if name == "" {
+				guarded.ServeHTTP(w, r)
+				return
+			}
+			ctx := r.Context()
+			httpx.SetSubject(ctx, "service", name)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, serviceKey{}, name)))
+		})
+	}
 }
 
 // newToken returns 32 random bytes as unpadded base64url (43 characters).
@@ -137,12 +190,18 @@ func (a *Auth) RequireCustomer(next http.Handler) http.Handler {
 
 // RequireStaff admits a session of an active staff user. Staff sessions are
 // fixed: use never moves their expiry, and deactivation ends them at once.
+// A service token is 403: services reach only the routes wrapped in OrService.
 func (a *Auth) RequireStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		token := bearer(r)
 		if token == "" {
 			httpx.WriteError(w, r, errUnauthorized)
+			return
+		}
+		if name := a.serviceName(token); name != "" {
+			httpx.SetSubject(ctx, "service", name)
+			httpx.WriteError(w, r, errStaffOnly)
 			return
 		}
 		s, err := a.q.StaffSession(ctx, a.tokenHash(token))

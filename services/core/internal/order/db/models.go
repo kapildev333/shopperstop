@@ -213,6 +213,7 @@ type Order struct {
 	CancelReason     string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	RiderName        *string
 }
 
 type OrderEvent struct {
@@ -225,6 +226,7 @@ type OrderEvent struct {
 	Note       string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	ActorName  *string
 }
 
 type OrderItem struct {

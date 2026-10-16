@@ -145,7 +145,7 @@ func TestStaffSignInCustomerCredentials(t *testing.T) {
 // wrong passwords count against the same email as right ones.
 func TestStaffSignInRateLimited(t *testing.T) {
 	seedStaff(t)
-	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	for i := range 10 {
@@ -467,7 +467,7 @@ func TestStaffSignOutEndsOnlyThatSession(t *testing.T) {
 // both is 429 and the staff route pays no compare.
 func TestSharedLimiterCountsStaffAndCustomer(t *testing.T) {
 	email := uniqueEmail(t)
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1, 100, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1, 100, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/sign-in", "",

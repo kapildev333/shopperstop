@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"unicode"
 )
 
-const minPepperBytes = 32
+const (
+	minPepperBytes       = 32
+	minServiceTokenBytes = 32
+)
 
 // Config is the core service's configuration after Load has checked it.
 type Config struct {
@@ -18,6 +22,9 @@ type Config struct {
 	WebOrigins    []string   // SHOPPERSTOP_CORE_WEB_ORIGINS, required, trimmed, empties dropped
 	FilesDir      string     // SHOPPERSTOP_CORE_FILES_DIR, required, trimmed
 	LogLevel      slog.Level // SHOPPERSTOP_CORE_LOG_LEVEL, optional, default info
+	// ServiceTokens maps a service name to its token, from
+	// SHOPPERSTOP_CORE_SERVICE_TOKENS ("name:token,..."), optional; nil when unset.
+	ServiceTokens map[string]string
 }
 
 // Load reads the configuration through getenv and reports every problem
@@ -77,8 +84,42 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 	}
 
+	cfg.ServiceTokens, problems = serviceTokens(getenv("SHOPPERSTOP_CORE_SERVICE_TOKENS"), problems)
+
 	if len(problems) > 0 {
 		return Config{}, errors.Join(problems...)
 	}
 	return cfg, nil
+}
+
+// serviceTokens parses "name:token,..." into a map and appends one problem per
+// bad entry: no colon, an empty name, whitespace inside the name or the token, a
+// token under 32 bytes, a repeated name or a repeated token. The token itself never appears in a problem.
+func serviceTokens(v string, problems []error) (map[string]string, []error) {
+	const name = "SHOPPERSTOP_CORE_SERVICE_TOKENS"
+	var tokens map[string]string
+	seen := map[string]bool{}
+	for _, entry := range strings.Split(v, ",") {
+		if entry = strings.TrimSpace(entry); entry == "" {
+			continue
+		}
+		service, token, ok := strings.Cut(entry, ":")
+		switch {
+		case !ok || service == "" || strings.ContainsFunc(entry, unicode.IsSpace):
+			problems = append(problems, fmt.Errorf("%s entries must be name:token with no spaces", name))
+		case len(token) < minServiceTokenBytes:
+			problems = append(problems, fmt.Errorf("%s token for %q must be at least %d bytes", name, service, minServiceTokenBytes))
+		case tokens[service] != "":
+			problems = append(problems, fmt.Errorf("%s names %q twice", name, service))
+		case seen[token]:
+			problems = append(problems, fmt.Errorf("%s gives %q the token of another service", name, service))
+		default:
+			if tokens == nil {
+				tokens = map[string]string{}
+			}
+			tokens[service] = token
+			seen[token] = true
+		}
+	}
+	return tokens, problems
 }
