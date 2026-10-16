@@ -197,7 +197,7 @@ describe('failed order reads', () => {
     setToken(token)
     fakeCore({ 'GET /orders': () => apiError(500, 'internal', 'Something went wrong') })
     const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children)
-    const { result } = renderHook(() => useOrders(), { wrapper })
+    const { result } = await renderHook(() => useOrders(), { wrapper })
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toMatchObject({ code: 'internal', message: 'Something went wrong' })
   })
