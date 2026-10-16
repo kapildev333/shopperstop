@@ -61,9 +61,9 @@ Scope: `apps/mobile/src/ui/{status-message.tsx,status-message.test.tsx,image-til
 Behaviour: design file "StatusMessage" and "ImageTile" (L4a uses both; L2's cards use `ImageTile`).
 Starts from: `src/ui/status-message.test.tsx`: `status message is a polite status`, `tones use tokens`; `src/ui/image-tile.test.tsx`: `image from uri`, `placeholder without uri`.
 
-- [ ] 4.1 Red
-- [ ] 4.2 Both components
-- [ ] 4.3 Gates green
+- [x] 4.1 Red
+- [x] 4.2 Both components
+- [x] 4.3 Gates green
 
 ## 5. L1 primitive leftovers
 
