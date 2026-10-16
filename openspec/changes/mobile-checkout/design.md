@@ -14,7 +14,7 @@ Workers cannot open the canvas: `docs/design/mobile-P4-L4b.md` carries artboard 
 | Mobile checkout screen | Customer checkout page | canvas: "Back to cart" instead of "Edit cart"; one column; line shows "<qty> × <unit>" |
 | Mobile checkout payment and bill | Customer checkout page (totals, "Cash on delivery") | canvas copy: "Pay the rider in cash", the payment-service note, "Items total", "FREE", "To pay" |
 | Mobile checkout states | Customer checkout states | "Start shopping" / "Your orders" buttons; L1's error state |
-| Mobile checkout address card | Customer checkout address choice (chosen = default, else first; no address) | a card with "Change" instead of an inline radio list |
+| Mobile checkout address card | Customer checkout address choice (chosen = default, else first; no address) | a card with "Change" (named "Change address") instead of an inline radio list |
 | Mobile checkout address choice | Customer checkout address choice (radio group "Deliver to") | in a sheet "Choose address"; choosing closes it |
 | Mobile checkout address added | Customer checkout address choice ("Address added at checkout") | one sheet at a time |
 | Mobile checkout place order bar | Customer checkout minimum order; Customer checkout address choice (no address disables) | a block in the bar instead of a disabled button (L3's sheet pattern); marked lines block too (canvas) |
@@ -43,7 +43,7 @@ Artboard 5: white header, scrolling cards (alert, address, lines, payment, bill)
 
 ### 3. Address: a card, a choice sheet, one sheet at a time
 
-The canvas shows one address with "Change". "Change" opens a `Sheet` "Choose address" holding a radio group "Deliver to" (rows are `Pressable` with `accessibilityRole="radio"` and `accessibilityState.checked` inside a `View` with `accessibilityRole="radiogroup"`; the app has no radio primitive and needs one only here). Choosing closes the sheet. "Add address" closes the choice sheet before L1's `AddressSheet` opens: two stacked `Modal`s are unreliable on iOS. The new address is chosen by difference: the card records the ids it lists when the address sheet opens, and on close chooses the one id now listed that was not (L1's `saveAddress` awaits the address list's refetch before the sheet closes). No L1 file changes. Ceiling: first page of addresses (24, L1's ceiling); an address added on another device at the same moment could be the one picked.
+The canvas shows one address with "Change"; the button reads "Change" and is named "Change address" for assistive technology (reviewer R1 finding 3; the spec says so). It opens a `Sheet` "Choose address" holding a radio group "Deliver to" (rows are `Pressable` with `accessibilityRole="radio"` and `accessibilityState.checked` inside a `View` with `accessibilityRole="radiogroup"`; the app has no radio primitive and needs one only here). Choosing closes the sheet. "Add address" closes the choice sheet before L1's `AddressSheet` opens: two stacked `Modal`s are unreliable on iOS. The new address is chosen by difference: the card records the ids it lists when the address sheet opens, and on close chooses the one id now listed that was not (L1's `saveAddress` awaits the address list's refetch before the sheet closes). No L1 file changes. Ceiling: first page of addresses (24, L1's ceiling); an address added on another device at the same moment could be the one picked.
 
 ### 4. Placing runs in L3's write queue
 
@@ -106,7 +106,7 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L4b.md` and t
 | Out-of-stock lines marked; Marked line removed; Failed removal at checkout | `src/checkout-out-of-stock.test.tsx`: the scenario names | 5 |
 | Address added at checkout against core; Order placed against core; Out of stock at checkout against core; Address not served against core | `e2e/checkout.spec.ts`: the scenario names | 6 |
 
-Task 1's unit tests of `outcomeOf`, `refusalOf`, `shortText` and `blockReason` cover no scenario on their own; tasks 3 to 5 cover the same rules on the screen.
+"Placement fails" is three tests, `Placement fails (subtotal)`, `(address)` and `(conflict)` (tasks.md allows it). Extra tests with no scenario of their own: `refused address badge` (task 2), `Place order sends nothing while the address list is unread` (task 4), the outcome, refusal, mark and block tables (task 1). Task 1's unit tests of `outcomeOf`, `refusalOf`, `shortText` and `blockReason` cover no scenario on their own; tasks 3 to 5 cover the same rules on the screen.
 
 ## Risks / Trade-offs
 
@@ -117,3 +117,19 @@ Task 1's unit tests of `outcomeOf`, `refusalOf`, `shortText` and `blockReason` c
 - [`replace` to a tab route] `/orders` is the Orders tab inside `(tabs)`; `router.replace('/orders')` from a stack screen is what L4a's "Your orders" does with `navigate`. Task 4's router test asserts the path.
 - [axe on the alert and blocks] Alert text is `ink` on `dangerSoft`; block text `ink` on `canvas`; mark text `danger` on `surface` (the cart sheet's alert pair). An axe failure on markup the app does not control stops the worker (no rule switched off).
 - [Parallel workers] Group A's two tasks touch disjoint files; later tasks are serial on `src/checkout-screen.tsx`.
+
+## Acceptance record (task 7)
+
+Verified on the branch at a32a2c1 (L3 #300 and core-P4-L2 #314 merged in): `packages/ui` build, mobile lint and typecheck exit 0; `npm run test --workspace apps/mobile -- --run` 90 suites, 355 tests, node tests 7 of 7; mobile build exit 0; `openspec validate --all --strict` 20 passed. `make e2e` exit 0 per T6 (admin 15, mobile 25 with the four checkout scenarios, rider 7, web 45). Every one of the 35 scenarios maps to a test of the same name in the table above (all passing); tasks 0 to 6 ticked.
+
+Landed outside the task scopes, accepted by the manager:
+- F1 (8f9de62, test 16b6624): `src/cart.ts` `cartOptions` throws `error.error`, so the error state tells a server failure from an unreachable core (found at task 0); `src/cart.test.ts` covers it.
+- F2 (e886eee): `src/account.test.tsx` "Profile shown" waits for the profile (`findByText`), a race under parallel load seen by T1 and T2. Labelled `fix:` though it changes only a test (reviewer R1 finding 4); not rewritten.
+
+Test-first deviations, for the record: T1 corrected its red test to the design's `detail` field before the feat (253ecde); T2 changed its group selector to `getByLabelText` after the red commit (0fec71d, RNTL finds no non-accessible `radiogroup` View by role); T3 rewrote its loading test after the feat (9236076: an unmount and second render in one test left the next test's render empty); T4 awaited its presses after the feat (803c450: unawaited presses overlapped `act()`; the press handler returns at once, the held answers sit inside `place()`), so the feat commit alone was red; T6's three of four scenarios were green on the first run (the screens existed; the fourth was a wrong test expectation, c864556).
+
+Decisions workers made where the spec is silent (kept): the bar does not block on the address while the address list is unread (no "Add an address" flash); the new address is read from the query cache at close; the out-of-stock alert stays after a removal until the next press or address choice; axe does not run on the search screen in this suite (L2's suite covers it).
+
+Deferred (ceilings, not gaps): web's 390 px layout check (Decision 10); the city in the address line (core's `Address` has none); payment methods other than cash on delivery (payment service); shared e2e helpers (Decision 11, L5b); native device e2e (D37).
+
+Reviewer R1 (approve): finding 3 taken here (spec wording); findings 1 (unused `send` parameter), 2 (sent-once and address-unread tests no longer exercise the same tick, and the count needs a flush) and 5 (Place order shown while the address list is unread) are being fixed by a worker; acceptance is re-checked when they land.

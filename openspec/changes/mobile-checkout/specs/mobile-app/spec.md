@@ -45,7 +45,7 @@ In place of its cards the checkout screen SHALL show: for an empty cart, the emp
 - **THEN** an element named "Loading" is shown; then the alert "You're offline" with "Try again", and after the choice the cart's lines
 
 ### Requirement: Mobile checkout address card
-The address card SHALL show the chosen address, which is the one chosen on this screen, else the default, else the first of `GET /me/addresses`: "Delivering to <label>" over `line1`, `line2` when present and `pincode` joined by ", ", and a "Change" button. With no address it SHALL show "No addresses yet" and an "Add address" button.
+The address card SHALL show the chosen address, which is the one chosen on this screen, else the default, else the first of `GET /me/addresses`: "Delivering to <label>" over `line1`, `line2` when present and `pincode` joined by ", ", and a "Change" button named "Change address". With no address it SHALL show "No addresses yet" and an "Add address" button.
 
 #### Scenario: Default address shown
 - **WHEN** the customer's addresses are "Work" (`1 Park St`, `560038`) and "Home" (`12 80 Feet Rd`, `Koramangala`, `560034`), "Home" the default
@@ -56,10 +56,10 @@ The address card SHALL show the chosen address, which is the one chosen on this 
 - **THEN** the card shows "No addresses yet" and an "Add address" button
 
 ### Requirement: Mobile checkout address choice
-"Change" SHALL open a sheet titled "Choose address" listing every address with its label, lines and a "Default" badge on the default, each a radio "Deliver to <label>" in one group "Deliver to", checked on the chosen address, and an "Add address" button. Choosing a radio SHALL make that address the chosen one and close the sheet.
+"Change address" SHALL open a sheet titled "Choose address" listing every address with its label, lines and a "Default" badge on the default, each a radio "Deliver to <label>" in one group "Deliver to", checked on the chosen address, and an "Add address" button. Choosing a radio SHALL make that address the chosen one and close the sheet.
 
 #### Scenario: Choice sheet lists the addresses
-- **WHEN** the card shows "Home" of "Default address shown" and "Change" is chosen
+- **WHEN** the card shows "Home" of "Default address shown" and "Change address" is chosen
 - **THEN** the sheet "Choose address" holds the group "Deliver to" with the radios "Deliver to Work", not checked, and "Deliver to Home", checked
 
 #### Scenario: Another address chosen
@@ -70,7 +70,7 @@ The address card SHALL show the chosen address, which is the one chosen on this 
 "Add address", on the card or in the "Choose address" sheet, SHALL open L1's address sheet "Add address" (closing the "Choose address" sheet first, so one sheet shows at a time); an address saved there SHALL become the chosen address.
 
 #### Scenario: Address added at checkout
-- **WHEN** a customer with only "Home" opens "Change", chooses "Add address", and saves "Work" with `1 Park St` and `560038`, and core answers 201 and then lists "Home" and "Work"
+- **WHEN** a customer with only "Home" chooses "Change address", then "Add address",, and saves "Work" with `1 Park St` and `560038`, and core answers 201 and then lists "Home" and "Work"
 - **THEN** the address sheet is closed and the card shows "Delivering to Work"
 
 ### Requirement: Mobile checkout place order bar
