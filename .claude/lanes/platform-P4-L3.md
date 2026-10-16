@@ -26,3 +26,11 @@ Verdict: approve. No findings.
 - Regenerated docs diff holds only: five core routes staffToken to serviceToken, literal seed ids to {{storeId}}/{{orderId}}/{{productId}}/{{riderId}}/{{deliveryId}}/{{addressId}} in saved-response originalRequest, and the twelfth environment variable (secret, Makefile dev token).
 - Gates I ran: `node --test scripts/postman.test.mjs` 22 pass 0 fail; `make postman` twice, both exit 0, `git status --porcelain` empty; `openspec validate --all --strict` 20 passed 0 failed. test-core/test-rider and e2e not re-run (environment file only gains a key at the end).
 - Nits (no action): none needed.
+
+## T2 review
+Verdict: approve. No findings.
+- Scope: a1517ad touches Makefile (one line), README.md, tasks.md, lane log; 473d77b ticks 2.3 and the T2 log. No test: commit is expected (check-tooling.sh came with the proposal; red recorded in the T2 log with 10 FAIL lines).
+- Makefile: `gen:api && gen:tokens`, same `test -d packages/ui` guard and `--if-present`; sits after both sqlc steps, matching "Rider sqlc between core sqlc and the API types". Idempotent: make gen leaves the tree clean.
+- README: Troubleshooting only restates rider-P3-L3-T1 and areas/rider.md (crash text, npm 10.9.9, vitest 5.0.4, optional peer, legacy-peer-deps and npm 11 rewrite other entries, admin-seeded lock, package-lock-only, ci --dry-run); the closing `npm ci` claim holds (Quick start line 29, ci.yml). make gen row and API sentence correct (x-service-token exists in core openapi.json). All four scenarios covered by check-tooling.sh.
+- Complexity: none.
+- Gates I ran: check-tooling.sh `tooling check: ok`; check-docs.sh `docs check: ok`; check-readme-mobile.sh `readme mobile check: ok`; `make gen` exit 0 then `git status --porcelain` empty; `openspec validate --all --strict` 20 passed, 0 failed. No containers, no e2e.
