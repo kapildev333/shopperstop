@@ -1,5 +1,5 @@
 import { QueryClient, useQuery } from '@tanstack/react-query'
-import createClient, { type Middleware } from 'openapi-fetch'
+import { createApiClient } from '@shopperstop/ui/app'
 import type { components, paths } from '@shopperstop/ui/api'
 import type { paths as RiderPaths } from '@shopperstop/ui/api/rider'
 import { getToken, setToken, useToken } from './session'
@@ -8,43 +8,21 @@ export type ApiError = components['schemas']['Error']['error']
 
 export const unreachable: ApiError = { code: 'internal', message: 'Could not reach ShopperStop. Try again.' }
 
-function isEnvelope(body: unknown): boolean {
-  const error = (body as { error?: { code?: unknown; message?: unknown } } | null)?.error
-  return typeof error?.code === 'string' && typeof error?.message === 'string'
-}
+const session = { get: getToken, set: setToken }
 
-export const authMiddleware: Middleware = {
-  onRequest({ request }) {
-    const token = getToken()
-    if (token) request.headers.set('Authorization', `Bearer ${token}`)
-    return request
-  },
-  async onResponse({ response }) {
-    if (response.status === 401) setToken(undefined)
-    if (response.ok) return response
-    const body: unknown = await response.clone().json().catch(() => undefined)
-    if (isEnvelope(body)) return response
-    // Only Content-Type is set: copying Content-Length: 0 would make openapi-fetch drop the error again.
-    return new Response(JSON.stringify({ error: unreachable }), {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  },
-}
-
-// Absolute same-origin URL: jsdom's Request rejects a relative one. fetch is looked up per call so tests can stub it.
-export const api = createClient<paths>({
+// Absolute same-origin URL: jsdom's Request rejects a relative one. The shared client looks fetch up per call so tests can stub it.
+export const api = createApiClient<paths>({
   baseUrl: `${location.origin}/api/core/v1`,
-  fetch: (request) => globalThis.fetch(request),
+  session,
+  failureMessage: unreachable.message,
 })
-api.use(authMiddleware)
 
-// The rider service, same origin (/api/rider is proxied like /api/core), with the customer's core token and the same middleware.
-export const riderApi = createClient<RiderPaths>({
+// The rider service, same origin (/api/rider is proxied like /api/core), with the customer's core token.
+export const riderApi = createApiClient<RiderPaths>({
   baseUrl: `${location.origin}/api/rider/v1`,
-  fetch: (request) => globalThis.fetch(request),
+  session,
+  failureMessage: unreachable.message,
 })
-riderApi.use(authMiddleware)
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
