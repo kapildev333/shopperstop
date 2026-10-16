@@ -293,6 +293,33 @@ func TestRegisterRateLimitedPerEmail(t *testing.T) {
 	}
 }
 
+// signInFrom signs email in at base with testPassword over a new connection
+// (so a new client port) carrying forwardedFor as X-Forwarded-For.
+func signInFrom(t *testing.T, base, email, forwardedFor string) (int, []byte) {
+	t.Helper()
+	b, err := json.Marshal(map[string]string{"email": email, "password": testPassword})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := http.NewRequest(http.MethodPost, base+"/api/core/v1/auth/sign-in", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-For", forwardedFor)
+	req.Close = true
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var out bytes.Buffer
+	if _, err := out.ReadFrom(resp.Body); err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out.Bytes()
+}
+
 // TestSignInRateLimitedPerIP: two sign-ins from one client IP pass and the
 // third is refused, though every attempt names a different email and sends a
 // different X-Forwarded-For. Each request opens a new connection, so a new
@@ -301,40 +328,40 @@ func TestSignInRateLimitedPerIP(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
-	signIn := func(email, forwardedFor string) (int, []byte) {
-		t.Helper()
-		b, err := json.Marshal(map[string]string{"email": email, "password": testPassword})
-		if err != nil {
-			t.Fatal(err)
-		}
-		req, err := http.NewRequest(http.MethodPost, limited.URL+"/api/core/v1/auth/sign-in", bytes.NewReader(b))
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Forwarded-For", forwardedFor)
-		req.Close = true
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-		var out bytes.Buffer
-		if _, err := out.ReadFrom(resp.Body); err != nil {
-			t.Fatal(err)
-		}
-		return resp.StatusCode, out.Bytes()
-	}
 	for i, forwarded := range []string{"203.0.113.1", "203.0.113.2"} {
 		email := seedCustomer(t).Customer.Email
-		if status, body := signIn(email, forwarded); status != http.StatusOK {
+		if status, body := signInFrom(t, limited.URL, email, forwarded); status != http.StatusOK {
 			t.Fatalf("attempt %d: got %d %s, want 200", i+1, status, body)
 		}
 	}
 	email := seedCustomer(t).Customer.Email
-	status, body := signIn(email, "203.0.113.3")
+	status, body := signInFrom(t, limited.URL, email, "203.0.113.3")
 	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
 		t.Fatalf("third attempt from one IP: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
+// TestSignInRateLimitedPerForwardedIP: behind a trusted proxy the per-IP count
+// keys on the first X-Forwarded-For address, so a third sign-in from one
+// forwarded client is refused while another client behind the same proxy passes.
+func TestSignInRateLimitedPerForwardedIP(t *testing.T) {
+	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+	limit.TrustProxy = true
+	a := auth.New(testPool, testPepper, limit, nil)
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
+	t.Cleanup(limited.Close)
+	for i, forwarded := range []string{"203.0.113.7", " 203.0.113.7 , 10.0.0.1"} {
+		email := seedCustomer(t).Customer.Email
+		if status, body := signInFrom(t, limited.URL, email, forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d from 203.0.113.7: got %d %s, want 200", i+1, status, body)
+		}
+	}
+	status, body := signInFrom(t, limited.URL, seedCustomer(t).Customer.Email, "203.0.113.7, 10.0.0.1")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt from 203.0.113.7: got %d %s, want 429 rate_limited", status, body)
+	}
+	if status, body := signInFrom(t, limited.URL, seedCustomer(t).Customer.Email, "203.0.113.8, 10.0.0.1"); status != http.StatusOK {
+		t.Fatalf("first attempt from 203.0.113.8 behind the same proxy: got %d %s, want 200", status, body)
 	}
 }
 
