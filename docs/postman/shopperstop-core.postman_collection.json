@@ -4176,7 +4176,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"store\": {\n    \"id\": \"00000000-0000-4000-8000-000000000401\",\n    \"name\": \"Koramangala\",\n    \"isOpen\": true,\n    \"deliveryFeeCents\": 2500,\n    \"freeDeliveryAboveCents\": 19900,\n    \"minOrderCents\": 9900,\n    \"promisedMinutes\": 10\n  }\n}",
+              "body": "{\n  \"store\": {\n    \"id\": \"00000000-0000-4000-8000-000000000401\",\n    \"name\": \"Koramangala\",\n    \"city\": \"Bengaluru\",\n    \"isOpen\": true,\n    \"deliveryFeeCents\": 2500,\n    \"freeDeliveryAboveCents\": 19900,\n    \"minOrderCents\": 9900,\n    \"promisedMinutes\": 10\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -4357,7 +4357,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"city\": \"Bengaluru\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -4535,7 +4535,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000401\",\n      \"name\": \"Koramangala\",\n      \"addressLine\": \"80 Feet Rd, Koramangala\",\n      \"pincode\": \"560034\",\n      \"isOpen\": true,\n      \"deliveryFeeCents\": 2500,\n      \"freeDeliveryAboveCents\": 19900,\n      \"minOrderCents\": 9900,\n      \"promisedMinutes\": 10\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000402\",\n      \"name\": \"Indiranagar\",\n      \"addressLine\": \"100 Feet Rd, Indiranagar\",\n      \"pincode\": \"560038\",\n      \"isOpen\": true,\n      \"deliveryFeeCents\": 2500,\n      \"freeDeliveryAboveCents\": 19900,\n      \"minOrderCents\": 9900,\n      \"promisedMinutes\": 12\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 2\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000401\",\n      \"name\": \"Koramangala\",\n      \"city\": \"Bengaluru\",\n      \"addressLine\": \"80 Feet Rd, Koramangala\",\n      \"pincode\": \"560034\",\n      \"isOpen\": true,\n      \"deliveryFeeCents\": 2500,\n      \"freeDeliveryAboveCents\": 19900,\n      \"minOrderCents\": 9900,\n      \"promisedMinutes\": 10\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000402\",\n      \"name\": \"Indiranagar\",\n      \"city\": \"Bengaluru\",\n      \"addressLine\": \"100 Feet Rd, Indiranagar\",\n      \"pincode\": \"560038\",\n      \"isOpen\": true,\n      \"deliveryFeeCents\": 2500,\n      \"freeDeliveryAboveCents\": 19900,\n      \"minOrderCents\": 9900,\n      \"promisedMinutes\": 12\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 2\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -4736,7 +4736,7 @@
           "request": {
             "name": "Create a store",
             "description": {
-              "content": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.",
+              "content": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city means none. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.",
               "type": "text/plain"
             },
             "url": {
@@ -4763,7 +4763,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"HSR Layout\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
+              "raw": "{\n  \"name\": \"HSR Layout\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -4818,7 +4818,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
+                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -4835,7 +4835,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -4874,7 +4874,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
+                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -4930,7 +4930,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
+                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -4986,7 +4986,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
+                  "raw": "{\n  \"name\": \"HSR Layout\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"27th Main, HSR Layout\",\n  \"pincode\": \"560102\",\n  \"promisedMinutes\": 12,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -5115,7 +5115,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -5295,7 +5295,7 @@
           "request": {
             "name": "Change a store",
             "description": {
-              "content": "Admins only. Changes only the fields present: name, addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.",
+              "content": "Admins only. Changes only the fields present: name, city (empty clears it), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.",
               "type": "text/plain"
             },
             "url": {
@@ -5418,7 +5418,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000401\",\n  \"name\": \"Koramangala\",\n  \"city\": \"Bengaluru\",\n  \"addressLine\": \"80 Feet Rd, Koramangala\",\n  \"pincode\": \"560034\",\n  \"isOpen\": true,\n  \"deliveryFeeCents\": 2500,\n  \"freeDeliveryAboveCents\": 19900,\n  \"minOrderCents\": 9900,\n  \"promisedMinutes\": 10\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
