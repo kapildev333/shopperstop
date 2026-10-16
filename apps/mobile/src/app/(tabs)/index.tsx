@@ -21,6 +21,8 @@ export default function Home() {
   const { pincode, loaded } = usePincode()
   const state = useStore()
   const open = state.kind === 'open' ? state.store : undefined
+  // The resolved store, open or closed, names the city in the pincode button.
+  const resolved = state.kind === 'open' || state.kind === 'closed' ? state.store : undefined
 
   // The sheet opens once on the first visit: a pincode read that found none, and nothing chosen since.
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function Home() {
             </Text>
             <Pressable accessibilityRole="button" onPress={openPincodeSheet} style={styles.pincodeButton}>
               <Text variant="body" tone="onBrand" style={styles.pincodeText}>
-                {pincode ? `Delivering to ${pincode}` : 'Choose pincode'}
+                {pincode ? `Delivering to ${pincode}${resolved?.city ? `, ${resolved.city}` : ''}` : 'Choose pincode'}
               </Text>
               <ChevronDown size={16} color={colors.onBrand} aria-hidden />
             </Pressable>
