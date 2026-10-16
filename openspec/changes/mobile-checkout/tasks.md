@@ -87,4 +87,4 @@ Run (with the manager's e2e slot only; ask in your log): `export PATH="$HOME/.lo
 
 ## 7. Acceptance (team lead)
 
-- [ ] 7.1 `/opsx:verify` on `mobile-checkout`: every scenario maps to a passing test of the same name (design.md "Scenario to test"), every task ticked, nothing landed outside the scope lists; gaps reported with the exact test or file
+- [x] 7.1 `/opsx:verify` on `mobile-checkout`: every scenario maps to a passing test of the same name (design.md "Scenario to test"), every task ticked, nothing landed outside the scope lists; gaps reported with the exact test or file
