@@ -4,7 +4,7 @@ ShopperStop is a quick-commerce product in the shape of Blinkit. A customer orde
 
 ## Status
 
-Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.2.0`. On `main`:
+Phase 1 (foundation) is tagged `v0.1.0`, Phase 2 (core service and apps) `v0.2.0` and Phase 3 (rider) `v0.3.0`. On `main`:
 
 - `services/core`: accounts and bearer sessions for customers and staff, stores and pincode serviceability, categories and products with images, per-store stock, carts, orders with a status machine and events, the staff dashboard; `cmd/core-admin` with `migrate`, `seed-demo --reset` and `create-admin`; `openapi.json` with an example on every route.
 - `apps/web` (customer site at `/`): pincode and store, home, categories, search and product pages, guest and server cart, sign-in and register, addresses, checkout with cash on delivery, order tracking and history.
@@ -12,9 +12,9 @@ Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.
 - `packages/ui`: design tokens, the shared components and the generated API types.
 - `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`; the `Makefile`, the CI workflow, the Postman collection and environment under `docs/postman/`, and the living specs under [openspec/specs/](openspec/specs/).
 
-Phase 3 (the rider service and rider app) is on `main`: `services/rider` on :8081 with riders, deliveries, pick-up and location, and `apps/rider` under `/rider/`; the customer tracking page shows the rider, and the admin panel manages riders. `core-admin seed-demo --reset` and `rider-admin seed-demo --reset` load the demo data and print the demo sign-ins. Of the servers below, only `apps/mobile` is not on `main` yet.
+Phase 3 (the rider service and rider app) is on `main`: `services/rider` on :8081 with riders, deliveries, pick-up and location, and `apps/rider` under `/rider/`; the customer tracking page shows the rider, and the admin panel manages riders. `core-admin seed-demo --reset` and `rider-admin seed-demo --reset` load the demo data and print the demo sign-ins.
 
-Phase 4 (the customer mobile app, `apps/mobile`, built with Expo) runs alongside Phase 3's tail; see [Mobile app](#mobile-app).
+Phase 4 (the customer mobile app, `apps/mobile`, built with Expo) is in progress on `main`: the app shell, sign-in, register, account and addresses; see [Mobile app](#mobile-app).
 
 ## Quick start
 
@@ -77,7 +77,7 @@ The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pin
 
 ## Mobile app
 
-The customer mobile app is an Expo (React Native) app in `apps/mobile`, from Phase 4; `apps/mobile` is not on `main` yet. It uses the same core service as the customer web, so start the stack with `make dev` first, then in another terminal:
+The customer mobile app is an Expo (React Native) app in `apps/mobile`, from Phase 4; device runs and release builds are covered in `apps/mobile/README.md`. It uses the same core service as the customer web, so start the stack with `make dev` first, then in another terminal:
 
 ```sh
 cd apps/mobile && npx expo start --port 5176
@@ -100,7 +100,7 @@ cd apps/mobile && npx expo start --port 5176
 | `make rider` | The rider service alone, on :8081. |
 | `make rider-app` | The rider app's dev server alone, on :5175 under /rider/. |
 | `make test-web` | Builds `packages/ui`, then lint, typecheck, test and build for every workspace. |
-| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/), mobile web export preview on :15176 once `apps/mobile` lands. |
+| `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/), mobile web export preview on :15176. |
 | `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists), `packages/ui/src/api/core.d.ts` from `openapi.json`, and the rider sqlc code and `packages/ui/src/api/rider.d.ts` once the rider contract exists. |
 | `make postman` | Regenerates one Postman collection per service and the shared environment under `docs/postman/`. |
 | `make prod-local` | Builds the apps and serves them through Caddy on <http://localhost>. |
