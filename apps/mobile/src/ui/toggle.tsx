@@ -9,6 +9,8 @@ export function Toggle({ label, checked, onChange }: { label: string; checked: b
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked }}
+      // react-native-web reads aria-checked for a switch; accessibilityState alone leaves the web markup without it.
+      aria-checked={checked}
       onPress={() => onChange(!checked)}
       style={styles.row}
     >
