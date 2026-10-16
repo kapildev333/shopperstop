@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Button, Card, EmptyState, ErrorBanner, PageHeader, Skeleton, Table, cn, type Column } from '@shopperstop/ui'
+import { Button, Card, EmptyState, ErrorBanner, ImageTile, PageHeader, Skeleton, Table, cn, type Column } from '@shopperstop/ui'
 import { CategoryDialog, DeleteCategory } from '../../../categories'
 import { categoriesQuery, type Category } from '../../../catalog'
-import { ImageTile } from '../../../image'
 
 type Row = Category & { parentName?: string }
 
@@ -17,7 +16,7 @@ function Categories() {
   const rows: Row[] = parents.flatMap(({ children, ...parent }) => [parent, ...children.map((child) => ({ ...child, parentName: parent.name }))])
 
   const columns: Column<Row>[] = [
-    { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} className="w-10" /> },
+    { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} alt="" className="w-10 border border-line" /> },
     {
       key: 'name',
       header: 'Name',

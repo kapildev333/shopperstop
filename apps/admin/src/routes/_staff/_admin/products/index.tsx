@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
-import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, Table, buttonClass, type Column } from '@shopperstop/ui'
+import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, ImageTile, Input, PageHeader, Price, Select, Skeleton, Table, buttonClass, type Column } from '@shopperstop/ui'
 import { categoriesQuery, categoryOptions, pageSize, productsQuery, type Product, type ProductFilters } from '../../../../catalog'
-import { ImageTile } from '../../../../image'
 
 const first: ProductFilters = { q: '', categoryId: '', isActive: '', page: 1 }
 
@@ -23,7 +22,7 @@ function Products() {
   }
 
   const columns: Column<Product>[] = [
-    { key: 'image', header: 'Image', cell: (product) => <ImageTile src={product.imageUrl} className="w-10" /> },
+    { key: 'image', header: 'Image', cell: (product) => <ImageTile src={product.imageUrl} alt="" className="w-10 border border-line" /> },
     {
       key: 'name',
       header: 'Name',

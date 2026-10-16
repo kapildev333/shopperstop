@@ -1,0 +1,55 @@
+diff --git a/apps/admin/src/order-sheet.test.tsx b/apps/admin/src/order-sheet.test.tsx
+index e982ebe..26a849d 100644
+--- a/apps/admin/src/order-sheet.test.tsx
++++ b/apps/admin/src/order-sheet.test.tsx
+@@ -302,3 +302,29 @@ test('a poll answer read before a cancel never puts the order back on the board'
+   expect(screen.queryByText('SS-TEST0001')).not.toBeInTheDocument()
+   expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+ })
++
++test('the sheet names the order\'s rider, and the rider on the events the rider made', async () => {
++  setToken('tok')
++  const delivered = order(1, 'delivered', {
++    riderName: 'Arjun Rao',
++    events: [
++      { toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T09:20:00Z' },
++      { fromStatus: 'placed', toStatus: 'accepted', actorType: 'staff', createdAt: '2026-10-13T09:21:00Z' },
++      { fromStatus: 'ready', toStatus: 'out_for_delivery', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:25:00Z' },
++      { fromStatus: 'out_for_delivery', toStatus: 'delivered', actorType: 'rider', actorName: 'Arjun Rao', createdAt: '2026-10-13T09:31:00Z' },
++    ],
++  })
++  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [delivered]).routes })
++
++  renderApp('/orders?tab=history')
++  await userEvent.click(await screen.findByRole('button', { name: 'SS-TEST0001' }))
++  const sheet = screen.getByRole('dialog', { name: 'Order SS-TEST0001' })
++
++  expect(await within(sheet).findByText('Rider: Arjun Rao')).toBeInTheDocument()
++  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
++    'Placed by the customer, 13 Oct 2026, 2:50 pm',
++    'Accepted by staff, 13 Oct 2026, 2:51 pm',
++    'Out for delivery by Arjun Rao, 13 Oct 2026, 2:55 pm',
++    'Delivered by Arjun Rao, 13 Oct 2026, 3:01 pm',
++  ])
++})
+diff --git a/apps/admin/src/orders-board.test.tsx b/apps/admin/src/orders-board.test.tsx
+index f3b3aa7..9021f07 100644
+--- a/apps/admin/src/orders-board.test.tsx
++++ b/apps/admin/src/orders-board.test.tsx
+@@ -475,3 +475,16 @@ test('the poll stops when the board is left', async () => {
+ 
+   expect(listRequests(calls)).toHaveLength(10)
+ })
++
++test('a card taken out by a rider names the rider; a card without one does not', async () => {
++  setToken('tok')
++  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'ready'), order(2, 'out_for_delivery', { riderName: 'Arjun Rao' }), order(3, 'out_for_delivery')]).routes })
++
++  renderApp('/orders')
++
++  const out = within(await screen.findByRole('region', { name: /^Out for delivery/ })).getAllByRole('listitem')
++  expect(out[0]).toHaveTextContent('SS-TEST0003')
++  expect(out[0]).not.toHaveTextContent('Rider')
++  expect(out[1]).toHaveTextContent('Rider: Arjun Rao')
++  expect(within(column('Ready')).getByRole('listitem')).not.toHaveTextContent('Rider')
++})

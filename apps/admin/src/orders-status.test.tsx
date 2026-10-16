@@ -42,7 +42,7 @@ test('a press sends the next status once, moves the card with core\'s answer and
   expect(within(column('Accepted')).getByRole('button', { name: 'Start packing SS-TEST0001' })).toBeInTheDocument()
   expect(within(column('Placed')).getAllByRole('listitem')).toHaveLength(1)
   expect(core.posts).toEqual([{ id: order(1, 'placed').id, body: { status: 'accepted' } }])
-  expect(listRequests(calls)).toHaveLength(5)
+  expect(listRequests(calls)).toHaveLength(1)
 })
 
 test('while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card\'s button send nothing', async () => {
@@ -179,7 +179,7 @@ test('a poll answer read before a status change never moves the card back', asyn
   // The poll leaves, and core reads the order as placed; its answer is still in the air when the press is answered.
   core.hold('lists')
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
   await user.click(button('Accept SS-TEST0001'))
   expect(await screen.findByText('SS-TEST0001 is now Accepted.')).toBeInTheDocument()
 
@@ -190,7 +190,7 @@ test('a poll answer read before a status change never moves the card back', asyn
 
   // The poll goes on afterwards.
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  await waitFor(() => expect(listRequests(calls)).toHaveLength(15))
+  await waitFor(() => expect(listRequests(calls)).toHaveLength(3))
 })
 
 test('the keyboard after a delivery is on a result named for what it holds', async () => {
@@ -206,4 +206,18 @@ test('the keyboard after a delivery is on a result named for what it holds', asy
   const result = await screen.findByRole('group', { name: 'Status change' })
   await waitFor(() => expect(result).toHaveFocus())
   expect(result).toHaveTextContent('SS-TEST0001 is now Delivered.')
+})
+
+test('an order that leaves the board takes its count with it: no note of orders not shown', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'out_for_delivery'), order(2, 'placed')]).routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await userEvent.click(button('Mark delivered SS-TEST0001'))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark delivered' }))
+
+  expect(await screen.findByText('SS-TEST0001 is now Delivered.')).toBeInTheDocument()
+  expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+  expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
 })

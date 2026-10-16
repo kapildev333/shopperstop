@@ -18,9 +18,6 @@ const messages: Record<Field, string> = {
 }
 const taken = 'A staff user with this email already exists.'
 
-// A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
-const idle = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
-
 // Create (no user) or change a staff user in a dialog. Core changes only the name, the password and the status; `self`
 // is the signed-in admin's own row, which cannot be deactivated here. The password lives in this component only: it is
 // never shown, and it is gone when the dialog closes.
@@ -138,7 +135,7 @@ export function StaffDialog({ user, self, stores, onClose }: { user?: Staff; sel
         )}
         {self && <p className="text-small text-ink-muted">You cannot deactivate your own account.</p>}
         <DialogFooter onCancel={close} className="mt-2">
-          <Button type="submit" aria-disabled={save.isPending} className={idle}>
+          <Button type="submit" aria-disabled={save.isPending}>
             {save.isPending ? 'Saving…' : user ? 'Save changes' : 'Create staff user'}
           </Button>
         </DialogFooter>

@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage } from '@shopperstop/ui'
-import { idle } from './idle'
+import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
 import { OrderSheet } from './order-sheet'
 import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, useSince, type Order } from './orders'
 
@@ -19,16 +18,17 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
   return (
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <Button variant="ghost" id={`number-${order.id}`} className="tabular-nums" onClick={onOpen}>{order.number}</Button>
+        <Button variant="ghost" size="compact" id={`number-${order.id}`} className="tabular-nums" onClick={onOpen}>{order.number}</Button>
         <Since at={order.placedAt} />
       </div>
       <p className="text-small text-ink">
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
+      {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
       <Price cents={order.totalCents} />
       {isActive(order.status) && (
         // Named by its own text and the order's number: "Accept SS-…".
-        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} className={idle} onClick={onNext}>
+        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} onClick={onNext}>
           {saving ? 'Saving…' : nextLabel[order.status]}
         </Button>
       )}
@@ -44,12 +44,13 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
   // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
   const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
-  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
+  const answer = board.data?.items
+  if (answer && board.isFetchedAfterMount && !board.isError && heard?.from !== answer) {
     const known = new Set(heard?.from.map((order) => order.id))
     // The first answer is what the store already had: nothing in it is new.
-    const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
+    const fresh = heard ? answer.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
     const numbers = fresh.map((order) => order.number).join(', ')
-    setHeard({ from: board.data, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
+    setHeard({ from: answer, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
   }
 
   // One status change at a time on a board: while one runs, every card's button waits.
@@ -83,10 +84,11 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   if (board.data === undefined) {
     return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
   }
-  const orders = board.data
+  const orders = board.data.items
+  const total = board.data.total
   return (
     <>
-      <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
+      <VisuallyHidden live role="status" aria-label="New orders">{heard?.news}</VisuallyHidden>
       <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
@@ -100,6 +102,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
             </StatusMessage>
           ))}
       </div>
+      {total > orders.length && <StatusMessage>Showing the newest {orders.length} of {total} active orders.</StatusMessage>}
       {orders.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No active orders" description="New orders show here within 10 seconds." />

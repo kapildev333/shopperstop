@@ -51,7 +51,7 @@ test('admin creates store staff, who see their store only until the admin deacti
   const theirs = await context.newPage()
   await signIn(theirs, created.email, created.password)
   await expect(theirs.getByRole('banner')).toContainText(created.name)
-  await expect(theirs.getByRole('navigation', { name: 'Admin' }).getByRole('link')).toHaveText(['Dashboard', 'Orders', 'Stock'])
+  await expect(theirs.getByRole('navigation', { name: 'Admin' }).getByRole('link')).toHaveText(['Dashboard', 'Orders', 'Stock', 'Riders'])
   await theirs.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Stock' }).click()
   await expect(theirs.getByRole('table', { name: 'Stock' })).toBeVisible()
   await expect(theirs.getByText('Store: Indiranagar')).toBeVisible()

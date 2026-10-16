@@ -1,0 +1,55 @@
+diff --git a/apps/admin/e2e/global-setup.ts b/apps/admin/e2e/global-setup.ts
+index 0c576a2..ce6d61f 100644
+--- a/apps/admin/e2e/global-setup.ts
++++ b/apps/admin/e2e/global-setup.ts
+@@ -2,10 +2,14 @@ import { execFileSync } from 'node:child_process'
+ import { fileURLToPath } from 'node:url'
+ 
+ const core = fileURLToPath(new URL('../../../services/core', import.meta.url))
++const rider = fileURLToPath(new URL('../../../services/rider', import.meta.url))
+ 
+-// Self-contained suite (D22): migrate and reset the demo seed with the environment Playwright was given.
++// Self-contained suite (D22): migrate and reset both demo seeds with the environment Playwright was given. The rider
++// seed calls no core, so the order does not matter.
+ export default function globalSetup() {
+-  for (const args of [['migrate'], ['seed-demo', '--reset']]) {
+-    execFileSync('go', ['run', './cmd/core-admin', ...args], { cwd: core, stdio: 'inherit' })
++  for (const [cwd, command] of [[core, './cmd/core-admin'], [rider, './cmd/rider-admin']]) {
++    for (const args of [['migrate'], ['seed-demo', '--reset']]) {
++      execFileSync('go', ['run', command, ...args], { cwd, stdio: 'inherit' })
++    }
+   }
+ }
+diff --git a/apps/admin/playwright.config.ts b/apps/admin/playwright.config.ts
+index e78520a..8771449 100644
+--- a/apps/admin/playwright.config.ts
++++ b/apps/admin/playwright.config.ts
+@@ -16,6 +16,13 @@ export default defineConfig({
+       reuseExistingServer,
+       timeout: 120_000,
+     },
++    {
++      command: 'go run ./cmd/rider',
++      cwd: '../../services/rider',
++      url: 'http://localhost:18081/api/rider/v1/healthz',
++      reuseExistingServer,
++      timeout: 120_000,
++    },
+     { command: 'vite preview', url: 'http://localhost:15174/admin/', reuseExistingServer },
+   ],
+ })
+diff --git a/apps/admin/vite.config.ts b/apps/admin/vite.config.ts
+index 9c83c46..bb65695 100644
+--- a/apps/admin/vite.config.ts
++++ b/apps/admin/vite.config.ts
+@@ -7,7 +7,8 @@ import { defineConfig } from 'vite'
+ export default defineConfig({
+   base: '/admin/',
+   plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), tailwindcss()],
+-  server: { port: 5174, strictPort: true, proxy: { '/api': 'http://localhost:8080' } },
+-  preview: { port: 15174, strictPort: true, proxy: { '/api': 'http://localhost:18080' } },
++  // The rider service first: Vite proxies with the first key that matches.
++  server: { port: 5174, strictPort: true, proxy: { '/api/rider': 'http://localhost:8081', '/api': 'http://localhost:8080' } },
++  preview: { port: 15174, strictPort: true, proxy: { '/api/rider': 'http://localhost:18081', '/api': 'http://localhost:18080' } },
+   test: { environment: 'jsdom', setupFiles: ['./src/test-setup.ts'], include: ['src/**/*.test.{ts,tsx}'] },
+ })

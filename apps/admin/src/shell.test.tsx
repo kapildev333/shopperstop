@@ -45,7 +45,7 @@ test('admin sees every section', async () => {
 
   const nav = await screen.findByRole('navigation', { name: 'Admin' })
   const links = within(nav).getAllByRole('link').map((link) => link.textContent)
-  expect(links).toEqual(['Dashboard', 'Orders', 'Stock', 'Stores', 'Categories', 'Products', 'Staff'])
+  expect(links).toEqual(['Dashboard', 'Orders', 'Stock', 'Riders', 'Stores', 'Categories', 'Products', 'Staff'])
 })
 
 test('store staff see dashboard, orders and stock', async () => {
@@ -56,7 +56,7 @@ test('store staff see dashboard, orders and stock', async () => {
 
   const nav = await screen.findByRole('navigation', { name: 'Admin' })
   const links = within(nav).getAllByRole('link').map((link) => link.textContent)
-  expect(links).toEqual(['Dashboard', 'Orders', 'Stock'])
+  expect(links).toEqual(['Dashboard', 'Orders', 'Stock', 'Riders'])
 })
 
 test('signed-out deep link goes to sign-in with the path', async () => {

@@ -145,3 +145,14 @@ test('an admin with no stores is told to create one', async () => {
   expect(await screen.findByRole('heading', { level: 2, name: 'No stores yet' })).toBeInTheDocument()
   expect(screen.queryByRole('region')).not.toBeInTheDocument()
 })
+
+test('each card says whether its store is open', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, 'GET /admin/dashboard': () => json(200, { items: [{ ...atIndiranagar, isOpen: false }, atKoramangala] }) })
+
+  renderApp('/')
+
+  expect(within(await card('Indiranagar')).getByText('Closed')).toHaveClass('bg-canvas')
+  expect(within(await card('Koramangala')).getByText('Open')).toHaveClass('bg-success-soft')
+  expect(within(await card('Koramangala')).queryByText('Closed')).not.toBeInTheDocument()
+})
