@@ -11,6 +11,7 @@ Status: done
 - Port check before the runs: 18080, 18081, 15173, 15174 free; Postgres on 5432 is the local container, not touched.
 - Gates on commit 2: `npm run lint --workspace apps/web` exit 0; `npm run typecheck --workspace apps/web` exit 0; `npm run test --workspace apps/web -- --run` 26 files, 163 tests passed; `npm run build --workspace apps/web` exit 0; `git status` clean after the build; `openspec validate web-rider-tracking --strict`: "Change 'web-rider-tracking' is valid"; `npx playwright test --list` shows the three new tests (45 tests in 9 files).
 - Prettier was not applied to the two spec files: the repo's files are not stdin-prettier clean with the default config, and a full reformat would rewrite every line. Edits follow the file's own style by hand.
+- Coordinator note (core-P3-L3, main aecc9e7 / #228): the seeded-order test asserts only the text "Arjun Rao" in the Rider region, "Delivered" and no Maps link. Both sources give the name (`Order.riderName` on the new seed, the rider read on the old one), and the rider seed still has no position, so no test change. Not merged main here; the manager's re-run after merging main is the check.
 ## Requests
 None.
 ## Blockers
