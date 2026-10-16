@@ -18,6 +18,12 @@ const withStore = {
   [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
 }
 
+// Answers PATCH requests in turn with the given stores.
+function queuedPatches(stores: object[]) {
+  const queue = [...stores]
+  return () => json(200, queue.shift())
+}
+
 async function replace(label: string, value: string) {
   const field = await screen.findByLabelText(label)
   await userEvent.clear(field)
@@ -39,6 +45,7 @@ test('create a store and open it', async () => {
   expect(screen.getByLabelText('Status')).toHaveValue('closed')
   await replace('Name', 'HSR Layout')
   await replace('Address', '27th Main, HSR Layout')
+  await replace('City', 'Bengaluru')
   await replace('Pincode', '560102')
   await replace('Delivery fee (₹)', '25')
   await replace('Free delivery above (₹)', '199.50')
@@ -50,6 +57,7 @@ test('create a store and open it', async () => {
   const post = calls.find((call) => call.method === 'POST')!
   expect(await post.json()).toEqual({
     name: 'HSR Layout',
+    city: 'Bengaluru',
     addressLine: '27th Main, HSR Layout',
     pincode: '560102',
     isOpen: false,
@@ -71,6 +79,7 @@ test('edit sends only the changed fields and confirms', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Koramangala' })).toBeInTheDocument()
   expect(screen.getByLabelText('Delivery fee (₹)')).toHaveValue('25')
   expect(screen.getByLabelText('Free delivery above (₹)')).toHaveValue('199')
+  expect(screen.getByLabelText('City')).toHaveValue('')
   await replace('Promised minutes', '11')
   await userEvent.selectOptions(screen.getByLabelText('Status'), 'closed')
   await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -79,6 +88,41 @@ test('edit sends only the changed fields and confirms', async () => {
   const patch = calls.find((call) => call.method === 'PATCH')!
   expect(await patch.json()).toEqual({ promisedMinutes: 11, isOpen: false })
   expect(screen.getByLabelText('Promised minutes')).toHaveValue('11')
+})
+
+test('edit sets and clears the city', async () => {
+  setToken('tok')
+  const calls = fakeCore({
+    ...signedIn,
+    [`GET ${storePath}`]: () => json(200, { ...koramangala, city: 'Bengaluru' }),
+    [`GET ${storePath}/service-areas`]: () => json(200, { pincodes: ['560034', '560095'] }),
+    [`PATCH ${storePath}`]: queuedPatches([{ ...koramangala }, { ...koramangala, city: 'Bangalore' }]),
+  })
+
+  renderApp(`/stores/${koramangala.id}`)
+  expect(await screen.findByLabelText('City')).toHaveValue('Bengaluru')
+  await replace('City', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await replace('City', 'Bangalore')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(2))
+
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(await patches[0].json()).toEqual({ city: '' })
+  expect(await patches[1].json()).toEqual({ city: 'Bangalore' })
+})
+
+test('a city error from core is shown on its field', async () => {
+  setToken('tok')
+  fakeCore({ ...withStore, [`PATCH ${storePath}`]: () => apiError(400, 'validation', 'city must be at most 100 characters', 'city') })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('City', 'a'.repeat(101))
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.getByLabelText('City')).toHaveAccessibleDescription('Enter at most 100 characters.'))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
 test('a validation error from core is shown on its field', async () => {
