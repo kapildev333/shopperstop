@@ -1,4 +1,3 @@
-import { ScrollView } from 'react-native'
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { Text } from './text'
 import { Sheet } from './sheet'
@@ -45,9 +44,9 @@ test('sheet content scrolls', async () => {
       <Text>Name field</Text>
     </Sheet>,
   )
-  // Walk up from the content to the nearest scroll view; the content must sit inside it.
+  // Walk up from the content to the nearest scroll view (the jest mock renders it as the host RCTScrollView).
   let scroll = screen.getByText('Name field')
-  while ((scroll.type as unknown) !== ScrollView && scroll.parent) scroll = scroll.parent
-  expect(scroll.type as unknown).toBe(ScrollView)
+  while (scroll.type !== 'RCTScrollView' && scroll.parent) scroll = scroll.parent
+  expect(scroll.type).toBe('RCTScrollView')
   expect(scroll.props.keyboardShouldPersistTaps).toBe('handled')
 })
