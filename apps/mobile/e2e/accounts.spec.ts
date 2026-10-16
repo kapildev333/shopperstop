@@ -93,6 +93,8 @@ test('addresses against core', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Add address', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toBeVisible()
+  // react-native-web's Modal gives the sheet its dialog role and Escape handler only when the slide-in ends.
+  await expect(page.getByRole('dialog')).toBeVisible()
   await expectNoViolations(page)
 
   // Escape closes the sheet (the modal's close request on the web export).
