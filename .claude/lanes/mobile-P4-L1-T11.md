@@ -33,3 +33,28 @@ Not run past the red step. Blocked on the config above.
 
 ## Blockers
 - `jest.config.js` `transformIgnorePatterns` (see Requests). Blocks the red commit and every mobile test gate.
+
+## Update (after the config fix, 2b5838e)
+- Red test committed as `39515b7 test: sign in and register screens follow the spec scenarios`. Failure at that point: `Cannot find module './app/sign-in'`.
+- Written, uncommitted: `src/auth-forms.tsx` (`SignInScreen`, `RegisterScreen`, exported `splitError(error, fields)` for T13 to fold in), `src/app/sign-in.tsx` and `src/app/register.tsx` (re-exports).
+- Current run: the first test (`sign-in screen`, which navigates) passes; every later test fails to find its heading. The manager reports expo-router keeps its navigation store at module level, so a later `renderRouter` in the same file ignores `initialUrl`. Waiting for T10's `chore: reset the expo-router store between tests`; not worked around in this file.
+
+## Update 2 (one navigating test per file, manager decision)
+T10's fix for the navigation store is not coming (no reset without patching node_modules). Rule: one navigating test per file. Test names unchanged, so the design.md map holds.
+
+| Test | File |
+|---|---|
+| sign-in screen (navigates, Link to /register) | `src/auth-forms-sign-in-screen.test.tsx` |
+| register lands on Home (navigates to /) | `src/auth-forms-register-home.test.tsx` |
+| password shown on request, required fields checked, required fields checked on register, short password on register, field error from the envelope, non-field error in an alert (no navigation) | `src/auth-forms.test.tsx` |
+
+Red on the committed tests (screen files held aside, then restored; output in `/private/tmp/claude-501/-Users-kapilsoni-KapilProjects-ShopperStop/dee63189-8ed7-4dcc-8d08-f93f0a2019f8/scratchpad/t11-red-split.txt`):
+```
+FAIL src/auth-forms-sign-in-screen.test.tsx
+  Cannot find module './app/sign-in' from 'src/auth-forms-sign-in-screen.test.tsx'
+FAIL src/auth-forms.test.tsx
+  Cannot find module './app/sign-in' from 'src/auth-forms.test.tsx'
+FAIL src/auth-forms-register-home.test.tsx
+  Cannot find module './app/sign-in' from 'src/auth-forms-register-home.test.tsx'
+Test Suites: 3 failed, 3 total
+```
