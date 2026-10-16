@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react-native'
 import type { ReactNode } from 'react'
 import { colors, radius } from './tokens'
@@ -20,20 +20,26 @@ export function StatusMessage({ tone = 'neutral', children }: { tone?: StatusTon
       accessible
       role="status"
       accessibilityLiveRegion="polite"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: radius.control,
-        backgroundColor: background,
-      }}
+      style={[styles.row, { backgroundColor: background }]}
     >
       <View testID="status-icon" aria-hidden>
         <Icon size={16} color={iconColor} />
       </View>
-      <Text style={{ flex: 1 }}>{children}</Text>
+      <Text style={styles.label}>{children}</Text>
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.control,
+  },
+  label: {
+    flex: 1,
+  },
+})
