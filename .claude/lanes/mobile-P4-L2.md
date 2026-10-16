@@ -10,6 +10,7 @@ Proposal committed; waiting for the manager to launch group A (tasks 1 to 7).
 - My MODIFIED "Mobile bottom tabs" drops "Categories and Orders SHALL show an empty state", so L4a need not modify it; L4a's e2e scenarios should go in a new requirement, not a MODIFIED "Mobile end-to-end suite with axe" (L2 modifies it).
 - For L5a: L2 touches package.json only in task 6 (async-storage 2.2.0, rider URL in e2e); the test script and expo-splash-screen stay L5a's.
 - 2026-10-16 manager FYI taken: dynamic routes 404 on direct load of the static export, so task 15 reaches them in-app only (design.md Decision 7, ceiling); L4a's "Main" tab-bar landmark lands first and L2 does not edit `(tabs)/_layout.tsx`.
+- 2026-10-16 T10 blockers decided (tasks.md task 10, design.md Decision 6): (1) first visit moves to task 11 with `src/pincode-first-visit.test.tsx`; the sheet stays passive. (2) sign-in link becomes an expo-router `Link` (onPress closes the sheet), mount stays in the root layout; ordered fallback: wait for Home's first render in the test; else stop, the manager checks on the iOS simulator, and the team lead moves the test to e2e (harness ceiling) or moves the mount.
 ## Requests
 - to mobile manager: contract gaps (optional, non-blocking) in design.md "Contract audit": core `inStock`/`sort` on `GET /stores/{id}/products`; `city` on `Store`.
 - to mobile manager: archive order: L2's change archives after a rebase onto main (L1's spec on main).

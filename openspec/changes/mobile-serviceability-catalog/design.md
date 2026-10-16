@@ -62,7 +62,7 @@ No cart bar in L2: the area plan gives "the sticky cart bar on every browsing sc
 
 ### 6. Store change confirm
 
-`PincodeSheet` (`src/pincode-sheet.tsx`) on Continue: `resolvePincode(value)`; when the answer has a store whose `id` differs from `getCartSummary().storeId` and `count > 0`, it closes the sheet and opens the `Dialog`; otherwise (same store, no counts, not serviceable, failed lookup) it stores the pincode and closes. The old store's name is the one the current pincode resolves to in the query cache, else "another store". "Switch store" shows `loading` and the dialog ignores close while `clearCart()` is pending (a ref guards a second press); it awaits `clearCart()`; a returned error shows the alert "Could not empty your cart." in the dialog and keeps the pincode. The failure branch cannot be exercised before L3 (the stub never fails), so it is built but left untested here; L3 adds its test with `DELETE /me/cart` (Risks).
+`PincodeSheet` (`src/pincode-sheet.tsx`) on Continue: `resolvePincode(value)`; when the answer has a store whose `id` differs from `getCartSummary().storeId` and `count > 0`, it closes the sheet and opens the `Dialog`; otherwise (same store, no counts, not serviceable, failed lookup) it stores the pincode and closes. The sheet is passive: Home opens it on first visit (task 11); the sheet never opens itself. Its sign-in link is an expo-router `Link` whose press also closes the sheet; the mount stays in the root layout beside the `Stack`, so the sheet covers stack screens (Category, Product, Search) as well as the tabs (task 10's ordered fallback if Jest cannot see the navigation). The old store's name is the one the current pincode resolves to in the query cache, else "another store". "Switch store" shows `loading` and the dialog ignores close while `clearCart()` is pending (a ref guards a second press); it awaits `clearCart()`; a returned error shows the alert "Could not empty your cart." in the dialog and keeps the pincode. The failure branch cannot be exercised before L3 (the stub never fails), so it is built but left untested here; L3 adds its test with `DELETE /me/cart` (Risks).
 
 ### 7. Routes
 
@@ -128,7 +128,7 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L2.md`, the l
 | Not serviceable notice; Closed store notice; Store lookup fails; No pincode notice (notice half) | `src/serviceability-gate.test.tsx`: the scenario names | 8 |
 | Card links and prices; Add shows the count; Out-of-stock card | `src/catalog-card.test.tsx`: the scenario names | 9 |
 | Load more while pages remain; End of the list loads the next page | `src/catalog-grid.test.tsx`: the scenario names | 9 |
-| First visit opens the pincode sheet | `src/pincode-first-visit.test.tsx`: `first visit opens the pincode sheet` | 10 |
+| First visit opens the pincode sheet | `src/pincode-first-visit.test.tsx`: `first visit opens the pincode sheet` | 11 |
 | Only digits, six at most; Invalid pincode refused; Pincode saved from the sheet; Saved address fills the pincode; Same store or empty cart; Store change confirmed; Store change kept | `src/pincode-sheet.test.tsx`: the scenario names | 10 |
 | Sign-in link when signed out | `src/pincode-sign-in.test.tsx`: `sign-in link when signed out` | 10 |
 | Home in the tabs; Header shows the delivery promise; Header control opens the sheet; No pincode notice; Home lists categories and picks; Home sections fail apart | `src/catalog-home.test.tsx`: the scenario names | 11 |
