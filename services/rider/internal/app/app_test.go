@@ -31,8 +31,10 @@ func TestMain(m *testing.M) {
 	testPool, cleanup = testdb.Migrated("app")
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a))
+	stopCore := startCore()
 	code := m.Run()
 	srv.Close()
+	stopCore()
 	cleanup()
 	os.Exit(code)
 }
