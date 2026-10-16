@@ -31,9 +31,9 @@ Scope: `apps/mobile/src/ui/{price.tsx,price.test.tsx}`.
 Behaviour: `docs/design/mobile-P4-L2.md` "Price"; used by the product card and screen (Mobile product card, Mobile product screen) and by L4a.
 Starts from: `src/ui/price.test.tsx`: `price in rupees`, `mrp struck through when higher`, `no mrp when equal`, `paise shown`, `large size`.
 
-- [ ] 1.1 Red: the test file fails (module absent)
-- [ ] 1.2 `Price` per the design file, `formatInr` from `@shopperstop/ui/format`
-- [ ] 1.3 Gates green
+- [x] 1.1 Red: the test file fails (module absent)
+- [x] 1.2 `Price` per the design file, `formatInr` from `@shopperstop/ui/format`
+- [x] 1.3 Gates green
 
 ## 2. Stepper
 
