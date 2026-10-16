@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Link, Redirect, useRouter } from 'expo-router'
+import Head from 'expo-router/head'
 import { ChevronLeft, ChevronRight, Plus, ReceiptText } from 'lucide-react-native'
 import { deleteAddress, setDefaultAddress, useAddresses, type Address } from '../addresses'
 import { useBack } from '../auth-forms'
@@ -20,8 +21,14 @@ import { colors, fontFamily, radius, shadows, spacing } from '../ui/tokens'
 // Signed out, the screen asks to sign in and comes back here.
 export default function Account() {
   const token = useToken()
-  if (!token) return <Redirect href="/sign-in?returnTo=%2Faccount" />
-  return <AccountContent />
+  return (
+    <>
+      <Head>
+        <title>My account · ShopperStop</title>
+      </Head>
+      {token ? <AccountContent /> : <Redirect href="/sign-in?returnTo=%2Faccount" />}
+    </>
+  )
 }
 
 function AccountContent() {

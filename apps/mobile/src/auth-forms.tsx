@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Link, useLocalSearchParams, useRouter } from 'expo-router'
+import Head from 'expo-router/head'
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native'
 import { Button, IconButton } from './ui/button'
 import { FormField } from './ui/form-field'
@@ -77,6 +78,9 @@ export function SignInScreen() {
 
   return (
     <View role="main" style={styles.screen}>
+      <Head>
+        <title>Sign in · ShopperStop</title>
+      </Head>
       <View style={styles.brand}>
         <Back label="Back" onBack={back} />
         <View style={styles.titleBlock}>
@@ -163,6 +167,9 @@ export function RegisterScreen() {
 
   return (
     <View role="main" style={styles.screen}>
+      <Head>
+        <title>Create account · ShopperStop</title>
+      </Head>
       <View style={[styles.brand, styles.brandRegister]}>
         <Back label="Back to sign in" onBack={back} />
         <View style={styles.titleBlock}>
