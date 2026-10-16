@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -92,8 +93,8 @@ func Load(getenv func(string) string) (Config, error) {
 }
 
 // serviceTokens parses "name:token,..." into a map and appends one problem per
-// bad entry: no colon, an empty name, a token under 32 bytes, a repeated name
-// or a repeated token. The token itself never appears in a problem.
+// bad entry: no colon, an empty name, whitespace inside the name or the token, a
+// token under 32 bytes, a repeated name or a repeated token. The token itself never appears in a problem.
 func serviceTokens(v string, problems []error) (map[string]string, []error) {
 	const name = "SHOPPERSTOP_CORE_SERVICE_TOKENS"
 	var tokens map[string]string
@@ -104,8 +105,8 @@ func serviceTokens(v string, problems []error) (map[string]string, []error) {
 		}
 		service, token, ok := strings.Cut(entry, ":")
 		switch {
-		case !ok || service == "":
-			problems = append(problems, fmt.Errorf("%s entries must be name:token", name))
+		case !ok || service == "" || strings.ContainsFunc(entry, unicode.IsSpace):
+			problems = append(problems, fmt.Errorf("%s entries must be name:token with no spaces", name))
 		case len(token) < minServiceTokenBytes:
 			problems = append(problems, fmt.Errorf("%s token for %q must be at least %d bytes", name, service, minServiceTokenBytes))
 		case tokens[service] != "":
