@@ -1,7 +1,7 @@
 # rider-P3-L1 - rider service foundation (OpenSpec change rider-service-foundation)
-Status: acceptance pending fix 4b
+Status: done (acceptance pass on cbac655; task 6 is the manager's)
 ## Doing
-Team lead: /opsx:verify done on 10cac32; one fix task 4b cut (design.md and tasks.md updated); re-verify after 4b lands and task 6 is ticked.
+Team lead: /opsx:verify re-run on cbac655 after 4b: pass. Uncached `go test -race -count=1 ./...` 10 packages ok; `TestCreateRiderChecksFieldsBeforeCore` passes (400 on `email`, no store call); request schemas without `additionalProperties`, response schemas keep it; `make gen` and `make postman` (17 pass) clean; strict 15 passed; tasks 1 to 5 and 4b ticked; 4b diff only in its scope.
 ## Found
 - Change `openspec/changes/rider-service-foundation/`: proposal, `specs/rider-service/spec.md` (16 ADDED requirements, all under 500 characters, each with WHEN/THEN scenarios), design.md (14 decisions, data model, interfaces, test strategy; no `docs/design/rider-P3-L1.md` needed), tasks.md (5 worker tasks, 1 manager task).
 - Copies from core are from `services/core` at `5335efcec70b770ffca2b13b62fca855ce5aaa0b` (design Decision 1). `internal/pg` lands with task 2 because its tests need tables.
