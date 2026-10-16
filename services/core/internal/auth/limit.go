@@ -18,8 +18,14 @@ type bucket struct {
 // Limiter counts attempts in fixed windows per key, in memory and per process.
 // ponytail: per process; memory is bounded only per window: above pruneAt keys
 // the ended ones are dropped at most once per window, so a flood of distinct
-// keys can hold up to a window's worth of buckets. A proxy shares one IP bucket.
+// keys can hold up to a window's worth of buckets. Behind a proxy every client
+// shares the proxy's IP bucket unless TrustProxy is set.
 type Limiter struct {
+	// TrustProxy keys the per-IP count on the first X-Forwarded-For address.
+	// Set it before serving, and only when every request comes through a proxy
+	// that overwrites the header: otherwise a client picks its own key.
+	TrustProxy bool
+
 	mu        sync.Mutex
 	perEmail  int
 	perIP     int

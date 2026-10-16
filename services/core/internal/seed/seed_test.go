@@ -598,11 +598,16 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 3)
 	assertSQL(t, "orders with the Koramangala snapshot", "select count(*) from orders where store_name = 'Koramangala' and promised_minutes = 10", 3)
 	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
+	assertSQL(t, "orders with a rider", "select count(*) from orders where rider_name is not null", 1)
+	assertSQL(t, "SS-DEMOAAAB delivered by Arjun Rao", "select count(*) from orders where id = '00000000-0000-4000-8000-000000000701' and rider_name = 'Arjun Rao'", 1)
+	assertSQL(t, "rider events", "select count(*) from order_events where actor_type = 'rider'", 2)
+	assertSQL(t, "SS-DEMOAAAB rider events by rider ...0801", "select count(*) from order_events where order_id = '00000000-0000-4000-8000-000000000701' and to_status in ('out_for_delivery', 'delivered') and actor_type = 'rider' and actor_id = '00000000-0000-4000-8000-000000000801' and actor_name = 'Arjun Rao'", 2)
 }
 
 // TestDemoOrdersThroughTheRouter: the demo customer lists the three demo
 // orders newest first, the admin cannot delete the ordered demo product, and
-// the demo customer cancels the placed order.
+// the demo customer cancels the placed order. The delivered order's rider reads
+// back on the customer and the staff side.
 func TestDemoOrdersThroughTheRouter(t *testing.T) {
 	ctx := context.Background()
 	if err := seed.Reset(ctx, testPool); err != nil {
@@ -638,6 +643,44 @@ func TestDemoOrdersThroughTheRouter(t *testing.T) {
 		t.Fatalf("DELETE ordered product: got %d %s, want 409 conflict", status, body)
 	}
 	assertSQL(t, "ordered product still there", "select count(*) from products where id = '"+productBanana+"'", 1)
+
+	// The rider of SS-DEMOAAAB reads back on both sides; only the two rider events name him.
+	type rider struct {
+		RiderName string `json:"riderName"`
+		Events    []struct {
+			ToStatus  string `json:"toStatus"`
+			ActorType string `json:"actorType"`
+			ActorName string `json:"actorName"`
+		} `json:"events"`
+	}
+	for _, read := range []struct{ path, bearer string }{{"/api/core/v1/orders/", customer}, {"/api/core/v1/admin/orders/", admin}} {
+		status, body = request(t, base, http.MethodGet, read.path+orderDelivered, read.bearer, nil)
+		var o rider
+		if status != http.StatusOK || json.Unmarshal(body, &o) != nil || o.RiderName != "Arjun Rao" {
+			t.Fatalf("GET %s: got %d %s, want 200 with riderName Arjun Rao", read.path, status, body)
+		}
+		riders := 0
+		for _, e := range o.Events {
+			byRider := e.ToStatus == "out_for_delivery" || e.ToStatus == "delivered"
+			wantName := ""
+			if byRider {
+				riders++
+				wantName = "Arjun Rao"
+			}
+			if (e.ActorType == "rider") != byRider || e.ActorName != wantName {
+				t.Fatalf("GET %s event %+v: want actorType rider and actorName Arjun Rao only on out_for_delivery and delivered", read.path, e)
+			}
+		}
+		if riders != 2 {
+			t.Fatalf("GET %s: %d rider events, want 2", read.path, riders)
+		}
+	}
+	for _, id := range []string{orderPlaced, orderCancelled} {
+		status, body = request(t, base, http.MethodGet, "/api/core/v1/orders/"+id, customer, nil)
+		if status != http.StatusOK || bytes.Contains(body, []byte("riderName")) || bytes.Contains(body, []byte("actorName")) {
+			t.Fatalf("GET %s: got %d %s, want 200 with no rider fields", id, status, body)
+		}
+	}
 
 	status, body = request(t, base, http.MethodPost, "/api/core/v1/orders/"+orderPlaced+"/cancel", customer, map[string]string{})
 	var cancelled struct {

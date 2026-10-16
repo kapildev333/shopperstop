@@ -875,7 +875,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "internal";
+                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "method_not_allowed" | "internal";
                 message: string;
                 field?: string;
                 /** @description Only with out_of_stock: every product that is inactive, has no stock row at the store or has less stock than the line asks for. */
