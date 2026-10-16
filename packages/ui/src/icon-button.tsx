@@ -14,8 +14,8 @@ export function IconButton({ icon: Icon, variant = 'ghost', className, ...rest }
   const variantClass = variant === 'ghost' ? 'text-ink hover:bg-canvas' : buttonVariantClass.secondary
   return (
     <button
-      {...rest}
       type="button"
+      {...rest}
       className={cn('inline-flex size-11 items-center justify-center rounded-control sm:size-10', variantClass, className)}
     >
       <Icon size={20} aria-hidden />
