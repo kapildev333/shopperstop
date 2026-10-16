@@ -26,5 +26,5 @@ Scope: `services/core/queries/auth.sql`, sqlc output (`services/core/internal/au
 
 Scope: `services/core/cmd/core-admin/main.go`, `services/core/cmd/core-admin/main_test.go`, this file (ticks). Scenarios: platform "Seed-demo refuses a database on another machine" (all four); `TestSeedDemoExitCodes` stays green. Starts from `cmd/core-admin/main_test.go` `TestLocalDatabase`, `TestSeedDemoRefusesRemoteDatabase`, `TestSeedDemoForceSkipsTheGuard`, `TestRunRefusesBadArguments` (red: does not compile, `localDatabase` undefined). Commits: `test: seed-demo refuses a remote database`, `feat: seed-demo guard with --force`.
 
-- [ ] 3.1 `git apply --include='*_test.go'` the Task 3 block; run `go test -race -count=1 ./cmd/core-admin` and see it fail; commit.
+- [x] 3.1 `git apply --include='*_test.go'` the Task 3 block; run `go test -race -count=1 ./cmd/core-admin` and see it fail; commit.
 - [ ] 3.2 `git apply --exclude='*_test.go'` the Task 3 block; run the gates (no `openapi.json` change); tick 3.1 and 3.2; commit.

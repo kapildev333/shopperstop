@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 
 // The argument refusals return before any config load or database call.
 func TestRunRefusesBadArguments(t *testing.T) {
-	for _, args := range [][]string{{"create-admin"}, {"bogus"}} {
+	for _, args := range [][]string{{"create-admin"}, {"bogus"}, {"seed-demo", "--reset", "--reset"}, {"seed-demo", "--yes"}} {
 		var stderr strings.Builder
 		if code := run(args, io.Discard, &stderr); code != 2 || !strings.Contains(stderr.String(), "usage: core-admin") {
 			t.Fatalf("run %v: exit %d stderr %q, want exit 2 with the usage line", args, code, stderr.String())
@@ -151,5 +151,61 @@ func TestSeedDemoExitCodes(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "seed-demo: insert demo admin") || !strings.Contains(stderr.String(), "duplicate key") {
 		t.Fatalf("second seed-demo stderr %q, want the duplicate key reason", stderr.String())
+	}
+}
+
+// seedEnv sets the full core environment with the given database URL.
+func seedEnv(t *testing.T, databaseURL string) {
+	t.Helper()
+	t.Setenv("SHOPPERSTOP_CORE_DATABASE_URL", databaseURL)
+	t.Setenv("SHOPPERSTOP_CORE_ADDR", ":8080")
+	t.Setenv("SHOPPERSTOP_CORE_SESSION_PEPPER", "test-pepper-test-pepper-test-pepper-00")
+	t.Setenv("SHOPPERSTOP_CORE_WEB_ORIGINS", "http://localhost:5173")
+	t.Setenv("SHOPPERSTOP_CORE_FILES_DIR", t.TempDir())
+}
+
+func TestLocalDatabase(t *testing.T) {
+	for _, u := range []string{
+		"postgres://u:p@localhost:5432/db",
+		"postgres://u:p@127.0.0.1/db",
+		"postgres://u:p@[::1]:5432/db",
+		"postgres:///db?host=/tmp",
+	} {
+		if err := localDatabase(u); err != nil {
+			t.Errorf("%s: got %v, want accepted", u, err)
+		}
+	}
+	for _, u := range []string{
+		"postgres://u:p@db.example.com:5432/db",
+		"postgres://u:p@10.0.0.5/db",
+		"postgres://u:p@localhost,db.example.com/db",
+	} {
+		if err := localDatabase(u); err == nil || !strings.Contains(err.Error(), "--force") {
+			t.Errorf("%s: got %v, want a refusal naming --force", u, err)
+		}
+	}
+}
+
+// TestSeedDemoRefusesRemoteDatabase: with or without --reset, a remote host is
+// refused before any connection; nothing is printed on stdout.
+func TestSeedDemoRefusesRemoteDatabase(t *testing.T) {
+	seedEnv(t, "postgres://u:p@db.example.com:5432/shopperstop_core?connect_timeout=2")
+	for _, args := range [][]string{{"seed-demo", "--reset"}, {"seed-demo"}} {
+		var stdout, stderr strings.Builder
+		code := run(args, &stdout, &stderr)
+		if code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "refusing to load demo data into a database on db.example.com") {
+			t.Fatalf("%v: exit %d stdout %q stderr %q, want exit 1 and the refusal", args, code, stdout.String(), stderr.String())
+		}
+	}
+}
+
+// TestSeedDemoForceSkipsTheGuard: --force goes past the guard to the
+// connection, which fails on the unresolvable host.
+func TestSeedDemoForceSkipsTheGuard(t *testing.T) {
+	seedEnv(t, "postgres://u:p@db.invalid:5432/shopperstop_core?connect_timeout=2")
+	var stdout, stderr strings.Builder
+	code := run([]string{"seed-demo", "--force", "--reset"}, &stdout, &stderr)
+	if code != 1 || strings.Contains(stderr.String(), "refusing") || !strings.Contains(stderr.String(), "seed-demo:") {
+		t.Fatalf("exit %d stderr %q, want exit 1 from the connection, not the guard", code, stderr.String())
 	}
 }
