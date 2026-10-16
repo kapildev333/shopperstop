@@ -18,6 +18,8 @@ test('counts belong to one store', async () => {
   expect(hook.result.current.a).toBe(0)
   expect(hook.result.current.b).toBe(1)
   expect(hook.result.current.summary).toEqual({ count: 1, storeId: 'store-2' })
+  // The setup resets the cart after this test, before the renderer's own cleanup unmounts the hook.
+  hook.unmount()
 })
 
 test('clear empties the counts', async () => {
