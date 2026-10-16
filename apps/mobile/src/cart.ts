@@ -35,7 +35,7 @@ export function cartOptions(token: string) {
     staleTime: 60_000,
     queryFn: async (): Promise<CartView> => {
       const { data, error } = await api.GET('/me/cart')
-      if (error) throw error
+      if (error) throw error.error
       return data
     },
   })
