@@ -120,7 +120,7 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 // up again because the middleware keeps only the rider in the context.
 func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	s, err := a.q.RiderSession(ctx, a.tokenHash(bearer(r)))
+	s, err := a.q.RiderSession(ctx, a.tokenHash(Bearer(r)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.WriteError(w, r, errUnauthorized)
 		return

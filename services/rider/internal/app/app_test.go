@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
 	"github.com/kapildev333/shopperstop/services/rider/internal/testdb"
 )
 
@@ -31,7 +32,7 @@ func TestMain(m *testing.M) {
 	testPool, cleanup = testdb.Migrated("app")
 	stopCore := startCore()
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), coreClient)
-	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a))
+	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a, delivery.New(testPool, coreClient)))
 	code := m.Run()
 	srv.Close()
 	stopCore()
@@ -117,7 +118,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil)))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil), nil))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.

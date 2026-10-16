@@ -19,12 +19,16 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"sessions", "riders"}
+var truncateTables = []string{"rider_locations", "deliveries", "sessions", "riders"}
 
 const (
 	storeKoramangala = "00000000-0000-4000-8000-000000000401"
 	storeIndiranagar = "00000000-0000-4000-8000-000000000402"
 	demoPassword     = "rider12345"
+	// demoDeliveryID is the delivered history row of the first demo rider, for core's
+	// delivered demo order (design.md Data model); Summary prints it.
+	demoDeliveryID = "00000000-0000-4000-8000-000000000901"
+	demoOrderID    = "00000000-0000-4000-8000-000000000701"
 )
 
 type demoRider struct{ id, email, name, phone, store string }
@@ -48,7 +52,7 @@ var hashDemo = sync.OnceValues(func() (string, error) {
 })
 
 // Reset empties the rider tables (sessions go with their riders) and loads the
-// demo riders, in one transaction.
+// demo riders and delivery, in one transaction.
 func Reset(ctx context.Context, pool *pgxpool.Pool) error {
 	hash, err := hashDemo()
 	if err != nil {
@@ -81,6 +85,17 @@ func load(ctx context.Context, tx pgx.Tx, hash string) error {
 			r.id, r.store, r.email, r.name, r.phone, hash); err != nil {
 			return fmt.Errorf("insert demo rider %s: %w", r.email, err)
 		}
+	}
+	// The delivered demo order of core's seed (SS-DEMOAAAB, 33900 cents), carried by the first demo rider.
+	if _, err := tx.Exec(ctx, `insert into deliveries (id, order_id, order_number, store_id, rider_id, status,
+		customer_name, customer_phone, address_line1, address_pincode, total_cents, payment_method, item_count, items,
+		assigned_at, delivered_at)
+		values ($1, $2, 'SS-DEMOAAAB', $3, $4, 'delivered', 'Demo Customer', '+919800000000',
+		'12 80 Feet Rd, Koramangala', '560034', 33900, 'cod', 3,
+		'[{"name":"Banana Robusta","unitLabel":"1 kg","quantity":2},{"name":"Shimla Apple","unitLabel":"1 kg","quantity":1}]',
+		now() - interval '2 days' + interval '6 minutes', now() - interval '2 days' + interval '11 minutes')`,
+		demoDeliveryID, demoOrderID, storeKoramangala, demoRiders[0].id); err != nil {
+		return fmt.Errorf("insert demo delivery %s: %w", demoDeliveryID, err)
 	}
 	return nil
 }

@@ -1,11 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
+import { formatInr as formatInrFromEntry } from './index'
+import { formatInr as formatInrFromModule } from './format'
 import { Price, formatInr } from './price'
 
 test('price formatting', () => {
   expect(formatInr(123400)).toBe('₹1,234')
   expect(formatInr(123450)).toBe('₹1,234.50')
   expect(formatInr(12345600)).toBe('₹1,23,456')
+})
+
+test('the entry still exports formatInr', () => {
+  expect(formatInrFromEntry).toBe(formatInrFromModule)
 })
 
 test('zero rupees', () => {

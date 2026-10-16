@@ -201,14 +201,14 @@ func TestApplyRejectsDuplicateVersion(t *testing.T) {
 }
 
 // TestEmbeddedMigrationsApplyOnce applies the rider's embedded files: the first
-// run records 0001_init and 0002_riders, the second applies nothing.
+// run records 0001_init, 0002_riders and 0003_deliveries, the second applies nothing.
 func TestEmbeddedMigrationsApplyOnce(t *testing.T) {
 	reset(t, "riders", "sessions")
 	ctx := context.Background()
 	if _, err := pool.Exec(ctx, "drop function if exists set_updated_at() cascade"); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"0001_init", "0002_riders"}
+	want := []string{"0001_init", "0002_riders", "0003_deliveries"}
 
 	got, err := migrate.Apply(ctx, pool, migrations.FS)
 	if err != nil {
