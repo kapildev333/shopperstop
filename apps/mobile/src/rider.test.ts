@@ -51,3 +51,13 @@ test('a 404 from the rider read is no rider', async () => {
 
   expect(delivery).toBeNull()
 })
+
+// As the order reads do: a failed read rejects with core's inner error (code and message), not the whole envelope.
+test('a 500 on the delivery read rejects with the inner error', async () => {
+  fakeCore({ 'GET /api/rider/v1/orders/o-1/delivery': () => apiError(500, 'internal', 'Something went wrong') })
+
+  await expect(queryClient.fetchQuery(deliveryOptions('t-1', 'o-1', 'out_for_delivery'))).rejects.toMatchObject({
+    code: 'internal',
+    message: 'Something went wrong',
+  })
+})
