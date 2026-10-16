@@ -73,7 +73,7 @@ Starts from: `src/ui/states.test.tsx`: `skeleton tiles` (`variant="tiles" column
 
 - [x] 5.1 Red: the four new tests
 - [x] 5.2 `feat:` the props and `Button` reuse; `refactor:` `StyleSheet.create` in `error-banner.tsx`, `chip.tsx`, `skeleton.tsx`; `jest.config.js` maps `^lucide-react-native$` to `require.resolve('lucide-react-native/dist/cjs/lucide-react-native.js')`
-- [ ] 5.3 Gates green (every L1 test still passes)
+- [x] 5.3 Gates green (every L1 test still passes)
 
 ## 6. Pincode store
 

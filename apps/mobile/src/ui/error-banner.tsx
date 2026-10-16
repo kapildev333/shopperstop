@@ -1,8 +1,8 @@
 import { CircleAlert } from 'lucide-react-native'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button } from './button'
 import { Text } from './text'
-import { colors, fontFamily, radius } from './tokens'
+import { colors, fontFamily, radius, spacing } from './tokens'
 
 // A thrown read (the network refused) is an Error; core's answers are envelopes with a string code.
 export function errorKind(error: unknown): 'offline' | 'server' {
@@ -21,21 +21,13 @@ type Props = { error: unknown; onRetry: () => void }
 export function ErrorBanner({ error, onRetry }: Props) {
   const text = copy[errorKind(error)]
   return (
-    <View accessible accessibilityRole="alert" style={{ gap: 8 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 10,
-          padding: 12,
-          borderRadius: radius.control,
-          backgroundColor: colors.dangerSoft,
-        }}
-      >
+    <View accessible accessibilityRole="alert" style={styles.stack}>
+      <View style={styles.banner}>
         <View aria-hidden>
           <CircleAlert size={20} color={colors.danger} />
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="body" style={{ fontFamily: fontFamily(600) }}>
+        <View style={styles.text}>
+          <Text variant="body" style={styles.title}>
             {text.title}
           </Text>
           <Text>{text.body}</Text>
@@ -47,3 +39,16 @@ export function ErrorBanner({ error, onRetry }: Props) {
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  stack: { gap: spacing.unit * 2 },
+  banner: {
+    flexDirection: 'row',
+    gap: spacing.gridGap,
+    padding: spacing.unit * 3,
+    borderRadius: radius.control,
+    backgroundColor: colors.dangerSoft,
+  },
+  text: { flex: 1, gap: spacing.unit },
+  title: { fontFamily: fontFamily(600) },
+})
