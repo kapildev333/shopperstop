@@ -3,6 +3,7 @@ Status: started
 ## Doing
 2026-10-15: change `core-hygiene` written and validated (`--strict`, `--all --strict` 16 passed); four worker briefs in the report; waiting for the manager to launch Task 1.
 Worker: 2026-10-15 Task 1: test commit 68e7fe7 red (SQLSTATE 42P07 and 23505, 3 of 3 runs); feat commit applies migrate.go and testdb.go diffs, gates run.
+Worker: 2026-10-15 Task 2: test commit d01cded red (TestStartSessionSweepsExpired keeps an expired row; config and app do not compile); feat commit applies the queries, make gen (only auth.sql.go changed), auth, customer, limit, config and main diffs; gofmt, vet and go test -race ./... green.
 
 ## Found
 - Change `openspec/changes/core-hygiene/`: proposal; deltas `platform` (MODIFIED "Error envelope" + scenario "The contract lists every code"; ADDED "A wrong method on a known route answers 405", "Migration runs do not interleave"), `accounts` (ADDED "Expired sessions are deleted", "The rate limiter trusts a proxy only when told"), `orders` (ADDED "The delivered demo order names its rider"); every requirement body under 500 characters. design.md carries every change as a verbatim diff (`git apply --check` clean on bcbb9c9) plus the Python `openapi.json` script; tasks.md four sequential worker tasks. No `docs/design/core-P3-L3.md`: design.md is enough.

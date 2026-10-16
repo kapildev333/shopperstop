@@ -17,8 +17,8 @@ Scope: `services/core/internal/migrate/` (`migrate.go`, `migrate_test.go`), `ser
 
 Scope: `services/core/queries/auth.sql`, `services/core/internal/auth/db/auth.sql.go` (sqlc output, regenerated only), `services/core/internal/auth/` (`auth.go`, `customer.go`, `limit.go`, `auth_test.go`), `services/core/internal/config/` (`config.go`, `config_test.go`), `services/core/cmd/core/main.go`, `services/core/internal/app/accounts_test.go`, this file (ticks). Scenarios: accounts "Expired sessions are deleted" / Sign-in sweeps expired sessions; "The rate limiter trusts a proxy only when told" (all three; Proxy not trusted is the existing `TestSignInRateLimitedPerIP`). Starts from `internal/auth/auth_test.go` `TestStartSessionSweepsExpired` (fails: expired session still stored), `internal/config/config_test.go` `TestLoadTrustProxy` and `internal/app/accounts_test.go` `TestSignInRateLimitedPerForwardedIP` (both fail to compile: no `TrustProxy`). Commits: `test: sign-in sweeps expired sessions; limiter keys on a trusted proxy's client`, `feat: sweep expired sessions on sign-in; SHOPPERSTOP_CORE_TRUST_PROXY`.
 
-- [ ] 2.1 Apply the Task 2 test diffs; run the auth, config and app packages and see the three fail; commit.
-- [ ] 2.2 Apply the `queries/auth.sql` diff, run `make gen` (sqlc writes `auth.sql.go`); apply the `auth.go`, `customer.go`, `limit.go`, `config.go` and `main.go` diffs; run the gates; tick 2.1 and 2.2; commit.
+- [x] 2.1 Apply the Task 2 test diffs; run the auth, config and app packages and see the three fail; commit.
+- [x] 2.2 Apply the `queries/auth.sql` diff, run `make gen` (sqlc writes `auth.sql.go`); apply the `auth.go`, `customer.go`, `limit.go`, `config.go` and `main.go` diffs; run the gates; tick 2.1 and 2.2; commit.
 
 ## 3. The delivered demo order names its rider
 
