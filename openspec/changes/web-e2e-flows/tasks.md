@@ -22,5 +22,5 @@ Failing tests (`e2e/flows.spec.ts`): "customer order to delivered across both ap
 - [x] 1.2 The admin preview `webServer` (`feat: serve the admin preview in the web suite`); gates green; manager's `make e2e` admin 14, web 42
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-e2e-flows` after 1.2 lands and the manager's green run is recorded.
+- [x] Team lead runs `/opsx:verify web-e2e-flows` after 1.2 lands and the manager's green run is recorded.
 - Area manager archives the change by PR after the feature PR merges.
