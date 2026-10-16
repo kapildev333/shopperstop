@@ -112,6 +112,10 @@ When a rider service request that carried the current token is answered 401, the
 - **WHEN** the app opens `/history` with a stored token and the service answers `GET /me` with 401
 - **THEN** the sign-in page shows with `redirect` `/history` and the token is gone
 
+#### Scenario: 401 mid-session returns to sign-in
+- **WHEN** a signed-in rider opens `/history`, `GET /me` succeeds and the service answers the history read with 401
+- **THEN** the sign-in page shows with `redirect` `/history` and the token is gone from memory and storage
+
 #### Scenario: 401 to a replaced token keeps the new session
 - **WHEN** a request sent with token `old` is answered 401 after token `new` was stored meanwhile
 - **THEN** the token is still `new` in memory and storage
@@ -293,3 +297,10 @@ At a 390 by 844 viewport every rider page SHALL fit the width with no horizontal
 #### Scenario: Pages fit a phone
 - **WHEN** the e2e suite opens the sign-in page, the Pick up page with a ready order, a delivery page and History at 390 by 844
 - **THEN** on each page the document's scroll width is at most 390 and every visible button and button-styled link is at least 44 px tall
+
+### Requirement: Rider failure answers without an error envelope
+A not-ok answer to a rider service or core request whose JSON body lacks a string `error.code` and a string `error.message` (an empty or plain-text proxy 502, for example) SHALL reach the page as the error `{ code: "internal", message: "The server did not answer as expected." }` with the answer's status kept, and SHALL leave the token unchanged unless it is a 401 to the current token.
+
+#### Scenario: A failure answer without an envelope reaches the caller as internal
+- **WHEN** the rider service answers `GET /me` with 502 and no body, a plain-text body, or a JSON body `{"error":{"code":"bad_gateway"}}` while token `tok` is stored
+- **THEN** the caller gets no data, the error `{ error: { code: "internal", message: "The server did not answer as expected." } }` and status 502, and the token is still `tok`

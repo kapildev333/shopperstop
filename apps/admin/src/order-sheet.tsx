@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Badge, Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Price, Sheet, StatusMessage } from '@shopperstop/ui'
-import { orderQuery, statusBadge, statusLabel, useSetStatus, when, type Order } from './orders'
+import { when } from '@shopperstop/ui/app'
+import { orderQuery, statusBadge, statusLabel, useSetStatus, type Order } from './orders'
 
 // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
 const maxReason = 500

@@ -155,7 +155,8 @@
                   "customer": {
                     "id": "6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13",
                     "email": "new@example.com",
-                    "name": "Asha"
+                    "name": "Asha",
+                    "emailVerified": false
                   }
                 }
               }
@@ -250,7 +251,8 @@
                     "id": "00000000-0000-4000-8000-000000000201",
                     "email": "demo@shopperstop.local",
                     "name": "Demo Customer",
-                    "phone": "+919800000000"
+                    "phone": "+919800000000",
+                    "emailVerified": true
                   }
                 }
               }
@@ -344,6 +346,158 @@
         }
       }
     },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "postAuthVerifyEmail",
+        "summary": "Verify a customer's email",
+        "description": "Spends the code from the verification mail (POST /me/email-verification) and marks its customer's email verified. Public: the code is the proof, so it works from any device. A code works once, for 24 hours, and only the newest one a customer was sent.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              },
+              "example": {
+                "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The email is verified. No body."
+          },
+          "400": {
+            "description": "The token is empty, unknown, already used, expired (24 hours) or for another purpose; field token. Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "invalid or expired token",
+                    "field": "token"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password-reset": {
+      "post": {
+        "operationId": "postAuthPasswordReset",
+        "summary": "Ask for a password reset",
+        "description": "When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Reset requests have their own budget, the same numbers as sign-in and registration but not shared with them: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429, and a reset never uses up sign-in attempts. A failure to mail the code still answers 202. In development the mail is written to core's log, not sent.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              },
+              "example": {
+                "email": "demo@shopperstop.local"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted, registered or not. No body."
+          },
+          "400": {
+            "description": "The email is missing or not one valid address; field email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this email or from this IP within the hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password-reset/confirm": {
+      "post": {
+        "operationId": "postAuthPasswordResetConfirm",
+        "summary": "Set a new password",
+        "description": "Spends the code from the reset mail, sets the new password (8 to 72 bytes, bcrypt cost 12), marks the email verified and signs the customer out everywhere: every session of the customer ends. Sign in again with the new password. A code works once, for 24 hours, and only the newest one a customer was sent. A bad password is refused before the code is spent.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirm"
+              },
+              "example": {
+                "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k",
+                "password": "newpass123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The password is set and every session ended. No body."
+          },
+          "400": {
+            "description": "The password is not 8 to 72 bytes (field password; the code stays usable), or the token is empty, unknown, already used, expired or for another purpose (field token). Nothing changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "invalid or expired token",
+                    "field": "token"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "operationId": "getMe",
@@ -369,7 +523,8 @@
                   "id": "00000000-0000-4000-8000-000000000201",
                   "email": "demo@shopperstop.local",
                   "name": "Demo Customer",
-                  "phone": "+919800000000"
+                  "phone": "+919800000000",
+                  "emailVerified": true
                 }
               }
             }
@@ -430,7 +585,8 @@
                   "id": "00000000-0000-4000-8000-000000000201",
                   "email": "demo@shopperstop.local",
                   "name": "Asha R",
-                  "phone": "+919800000001"
+                  "phone": "+919800000001",
+                  "emailVerified": true
                 }
               }
             }
@@ -463,6 +619,58 @@
                   "error": {
                     "code": "unauthorized",
                     "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/email-verification": {
+      "post": {
+        "operationId": "postMeEmailVerification",
+        "summary": "Mail a verification code",
+        "description": "Mails the signed-in customer a code for POST /auth/verify-email, valid for 24 hours; a new code replaces any earlier one. No body. In development the mail is written to core's log, not sent.",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The mail is on its way. No body."
+          },
+          "401": {
+            "description": "The token is missing, unknown, expired or a staff token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The customer's email is already verified. No mail is sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "email already verified"
                   }
                 }
               }
@@ -1785,12 +1993,6 @@
                 "$ref": "#/components/schemas/OrderStatusChange"
               },
               "examples": {
-                "staff": {
-                  "value": {
-                    "status": "accepted",
-                    "note": "Packing now"
-                  }
-                },
                 "rider": {
                   "value": {
                     "status": "out_for_delivery",
@@ -1799,6 +2001,12 @@
                       "id": "00000000-0000-4000-8000-000000000801",
                       "name": "Demo Rider"
                     }
+                  }
+                },
+                "staff": {
+                  "value": {
+                    "status": "accepted",
+                    "note": "Packing now"
                   }
                 }
               }
@@ -5805,7 +6013,8 @@
         "required": [
           "id",
           "email",
-          "name"
+          "name",
+          "emailVerified"
         ],
         "properties": {
           "id": {
@@ -5822,6 +6031,10 @@
           "phone": {
             "type": "string",
             "description": "Omitted when the customer has no phone."
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "Whether the customer has proved they read this email: false on registration, true after POST /auth/verify-email or a password reset."
           }
         },
         "additionalProperties": false
@@ -7675,6 +7888,50 @@
             "items": {
               "$ref": "#/components/schemas/DashboardStore"
             }
+          }
+        }
+      },
+      "TokenRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The code from the mail, exactly as sent."
+          }
+        }
+      },
+      "PasswordResetRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The email the customer registered with, in any case."
+          }
+        }
+      },
+      "PasswordResetConfirm": {
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The code from the reset mail, exactly as sent."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "The new password: 8 to 72 bytes, not trimmed, as on registration."
           }
         }
       }

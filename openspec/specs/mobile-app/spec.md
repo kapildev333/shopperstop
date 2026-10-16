@@ -730,17 +730,6 @@ A `Stepper` with a count of 0 SHALL be an outlined "ADD" button named "Add <name
 - **WHEN** a Stepper for "Toned milk" with maximum 2 is at 0, and "Add Toned milk", then "Add one Toned milk" are chosen
 - **THEN** the group "Quantity of Toned milk" shows 2 and "Add one Toned milk" is disabled; choosing "Remove one Toned milk" twice shows "Add Toned milk" again
 
-### Requirement: Mobile cart counts before the cart
-Until the cart change replaces it, the count a `Stepper` shows SHALL be held in memory for the session, per product, so the same product shows the same count on every screen; the counts SHALL belong to one store, and a count set at another store SHALL first drop the counts of the previous store. The cart's clear SHALL empty the counts.
-
-#### Scenario: Count follows the product across screens
-- **WHEN** "Add Banana Robusta" is chosen on Home and the product screen of `banana-robusta` is opened
-- **THEN** the product screen's group "Quantity of Banana Robusta" shows 1
-
-#### Scenario: Counts belong to one store
-- **WHEN** product A is set to 2 at store S1 and then product B to 1 at store S2
-- **THEN** A shows 0, B shows 1, and the cart counts 1 product at S2
-
 ### Requirement: Mobile home
 For an open store Home SHALL show, below its header, a "Shop by category" section of parent tiles from `GET /stores/{id}/categories` (square image and name, four to a row) each opening `/category/<slug>`, and a "Picked for you" row of product cards: in core's order, the first 12 in-stock products of page one of `GET /stores/{id}/products`. Each section SHALL follow the loading and error pattern on its own. The header's search field SHALL be a button "Search products" that opens `/search`.
 
@@ -887,3 +876,421 @@ A dialog SHALL open as a modal centred on a dimmed backdrop that does not close 
 #### Scenario: Footer keeps the order
 - **WHEN** a dialog footer holds "Keep cart" and then "Switch store"
 - **THEN** both buttons have the same width and "Keep cart" comes first
+
+### Requirement: Mobile guest cart lines
+While no customer token is held, setting a line of the guest cart SHALL set it to exactly the given quantity, clamped to the product's maximum (its `quantity` while in stock, at most 20; 0 when out of stock); 0 SHALL remove the line, and a cart whose last line goes SHALL have no store. At another store, a quantity above 0 after the clamp SHALL replace the cart with that one line; 0 SHALL leave it unchanged.
+
+#### Scenario: Guest line set and removed
+- **WHEN** an empty guest cart sets product P to 1 at store A, then P to 3, then product Q to 1, then P to 0
+- **THEN** the cart is at store A holding only Q with quantity 1, and after Q is set to 0 the cart has no store and no lines
+
+#### Scenario: Guest line clamped
+- **WHEN** product P has `quantity` 4 and `inStock` true and is set to 6, and product R has `inStock` false and `quantity` 0 and is set to 1
+- **THEN** P's line has quantity 4 and there is no line of R
+
+#### Scenario: Another store replaces the guest cart
+- **WHEN** a guest cart at store A holds P and Q, then R is set to 0 at store B, then R is set to 1 at store B
+- **THEN** after the first set the cart is still at A with P and Q, and after the second it is at B holding only R
+
+#### Scenario: Out of stock at another store keeps the guest cart
+- **WHEN** a guest cart at store A holds P and Q, and R, which has `inStock` false and `quantity` 0, is set to 1 at store B
+- **THEN** the cart is still at A with P and Q
+
+### Requirement: Mobile guest cart storage
+The app SHALL keep the guest cart `{storeId, items: [{product, quantity}]}` in memory and in async storage under `shopperstop:cart`, read once and asynchronously after launch; a change made before that read settles SHALL win over it. A stored value that does not parse as that shape SHALL read as an empty cart, and failing storage SHALL leave the cart in memory without an error.
+
+#### Scenario: Guest cart persisted and restored
+- **WHEN** a guest cart sets P to 2 at store A, and the cart module is loaded again; and in a third load async storage `shopperstop:cart` holds `{"items":5}`
+- **THEN** async storage `shopperstop:cart` holds store A and P with quantity 2, the second load reads the same cart, and the third load reads the empty cart
+
+#### Scenario: Guest change wins over a late read
+- **WHEN** the stored cart holds P at store A, the read is still pending, and Q is set to 1 at store A
+- **THEN** after the read settles the cart holds only Q, and async storage holds only Q
+
+#### Scenario: Guest cart with blocked storage
+- **WHEN** every async storage call rejects, the cart module loads and P is set to 1 at store A
+- **THEN** nothing throws and the cart holds P with quantity 1
+
+### Requirement: Mobile cart totals
+The guest cart SHALL show the totals core computes for a server cart, from the resolved store's fees: `subtotalCents` the sum of price times quantity, `deliveryFeeCents` the store's fee or 0 at or above its free-delivery threshold, `totalCents` subtotal plus fee, `minOrderCents` the store's minimum, and `shortfallCents` what is missing to free delivery, never below 0. An empty cart SHALL have every amount 0.
+
+#### Scenario: Guest totals follow the store's fees
+- **WHEN** the store's fee is 2500, free delivery starts at 19900 and the minimum order is 9900, and the guest cart holds 2 of a product priced 4500
+- **THEN** the cart shows `subtotalCents` 9000, `deliveryFeeCents` 2500, `totalCents` 11500, `minOrderCents` 9900 and `shortfallCents` 10900; with 5 of it, `deliveryFeeCents` 0, `totalCents` 22500 and `shortfallCents` 0
+
+### Requirement: Mobile cart behind every Stepper
+Every product `Stepper` (card, product screen, cart sheet line) SHALL show the product's quantity in the cart while the cart is at the resolved store, and 0 while the cart is empty or at another store, and SHALL set that line at the resolved store through the cart: the guest cart while no token is held, the server cart while one is.
+
+#### Scenario: Card adds to the guest cart
+- **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza" is chosen on its card
+- **THEN** the group "Quantity of Amul Taaza" shows 1 and async storage `shopperstop:cart` holds the store's id and the product with quantity 1
+
+#### Scenario: Card shows the server cart
+- **WHEN** a token is held and the customer's cart from `GET /me/cart` holds 3 of Amul Taaza at the resolved store
+- **THEN** its card's group "Quantity of Amul Taaza" shows 3
+
+#### Scenario: Card ignores a cart at another store
+- **WHEN** a token is held, Koramangala is the resolved store, and the cart from `GET /me/cart` holds 3 of Amul Taaza at Indiranagar
+- **THEN** its card shows the "Add Amul Taaza" button and no group "Quantity of Amul Taaza"
+
+#### Scenario: Guest taps each count
+- **WHEN** no token is held, an open store is resolved, and "Add Amul Taaza", "Add one Amul Taaza" and "Add one Amul Taaza" are chosen one straight after the other
+- **THEN** the group "Quantity of Amul Taaza" shows 3 and async storage holds it with quantity 3
+
+### Requirement: Mobile cart quick taps
+While a token is held and a change to a line is still being written, that line's `Stepper` SHALL show the last quantity asked for, so every tap counts from the one before. The app SHALL send cart changes to core one at a time in the order made, MAY skip a change a later one for the same line has overtaken, and SHALL end showing core's latest answer. When a write fails, the `Stepper` SHALL return to the cart's count.
+
+#### Scenario: Quick taps each count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, and "Add one Amul Taaza", "Add one Amul Taaza" and "Remove one Amul Taaza" are chosen before any answer arrives
+- **THEN** the group "Quantity of Amul Taaza" shows 2, then 3, then 2, and the writes reach core one at a time
+
+#### Scenario: Failed write returns to the cart's count
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, core cannot be reached, and "Add one Amul Taaza" is chosen
+- **THEN** the group shows 2 at once and 1 again once the write has failed
+
+### Requirement: Mobile server cart
+While a token is held, the app SHALL read the cart from `GET /me/cart` and change a line with `PUT /me/cart/items` `{storeId, productId, quantity}`, showing the lines and store that answer holds, never the ones it sent. While the last answer says `clamped: true`, the cart sheet SHALL show "Some quantities were lowered to what the store has." until the cart is next changed or read again.
+
+#### Scenario: Answer wins over what was sent
+- **WHEN** a token is held, "Add one Amul Taaza" sends quantity 4, and core answers the line with quantity 2 and `clamped: true`
+- **THEN** the group "Quantity of Amul Taaza" shows 2 and the open cart sheet shows "Some quantities were lowered to what the store has."
+
+#### Scenario: Line clamped away
+- **WHEN** a token is held, the last `PUT /me/cart/items` answered an empty cart with `clamped: true`, and the cart sheet opens
+- **THEN** it shows "Some quantities were lowered to what the store has." and "Your cart is empty"
+
+### Requirement: Mobile cart write failure
+While a token is held, a failed change to a line SHALL show a one-line alert under the control it was made from (product card, product screen bar, cart sheet line) with the answer's error message, or "Could not reach ShopperStop. Try again." when core was not reached. The alert SHALL go when that control is used again or leaves the screen; an overtaken change SHALL show none.
+
+#### Scenario: Failed write tells the customer
+- **WHEN** a token is held, the cart holds 1 of Amul Taaza at the resolved store, core cannot be reached, and "Add one Amul Taaza" is chosen on its card
+- **THEN** the card shows an alert "Could not reach ShopperStop. Try again." and its group shows 1
+
+#### Scenario: Core's refusal is shown
+- **WHEN** core answers `PUT /me/cart/items` with 400 `validation` "product not available" and "Add one Amul Taaza" is chosen on the product screen
+- **THEN** the product screen's bar shows an alert "product not available"
+
+#### Scenario: Next tap clears the failure
+- **WHEN** the card shows a failed write's alert and "Add one Amul Taaza" is chosen again
+- **THEN** the alert is gone at once, and shows again when that write fails too
+
+#### Scenario: Overtaken change shows no failure
+- **WHEN** core cannot be reached and "Add one Amul Taaza" is chosen twice on the card before any answer arrives
+- **THEN** once the writes have settled the card shows exactly one alert
+
+### Requirement: Mobile cart merge at sign-in
+When sign-in or register succeeds and the guest cart has lines, the app SHALL send `PUT /me/cart/items` for each guest line in the guest cart's order, with its store and quantity, before leaving the form, and then SHALL empty the guest cart, also when a request fails, and show core's cart as answered. A merge still queued when the session changes SHALL send nothing and keep the guest cart.
+
+#### Scenario: Merge bodies in guest order
+- **WHEN** the guest cart at store A holds P with 2 and then Q with 1, and sign-in succeeds
+- **THEN** the app sends `{storeId: A, productId: P, quantity: 2}` and then `{storeId: A, productId: Q, quantity: 1}`, and P shows 2 from core's answer
+
+#### Scenario: Guest cart discarded after merge
+- **WHEN** the guest cart holds a line and the merge runs while core cannot be reached
+- **THEN** afterwards async storage has no `shopperstop:cart` and the guest cart is empty
+
+#### Scenario: Merge dropped when the session changed
+- **WHEN** the guest cart holds a line, the merge waits behind another cart write, and the token has changed before its turn
+- **THEN** no merge request is sent and the guest cart still holds its line
+
+### Requirement: Mobile cart sheet
+The cart SHALL open as a sheet titled "My cart" with: the delivery promise "Delivery in <N> minutes" and "Shipment of <count> items"; each line's image, name, unit, line price and a `Stepper` labelled with its name (out of stock: "Out of stock" and "Remove <name>"); "Add ₹<shortfall> more for free delivery." while above 0; "Bill details" with "Items total" (MRP total struck when higher), "Delivery fee" ("FREE" at 0) and "Grand total".
+
+#### Scenario: Sheet lines and bill
+- **WHEN** the sheet opens on a cart holding 2 of "Amul Taaza" (`500 ml`, 2700, MRP 2900) and 1 of "Amul Butter" (`100 g`, 5600) with fee 2500, free delivery from 19900, minimum 9900 and a 10-minute store
+- **THEN** it shows "Delivery in 10 minutes", "Shipment of 3 items", both lines with their unit, "₹54" and "₹56" and a quantity group each, "Add ₹89 more for free delivery.", "Items total" ₹110 with the struck MRP total ₹114, "Delivery fee" ₹25 and "Grand total" ₹135
+
+#### Scenario: Free delivery
+- **WHEN** the cart's `deliveryFeeCents` and `shortfallCents` are 0
+- **THEN** "Delivery fee" reads "FREE" and no "more for free delivery" text is shown
+
+#### Scenario: Out-of-stock line
+- **WHEN** the server cart holds a line of "Amul Butter" whose product has `inStock` false, and "Remove Amul Butter" is chosen
+- **THEN** the line shows a disabled "Out of stock" button, and the choice sends quantity 0 for Amul Butter
+
+### Requirement: Mobile cart checkout and minimum order
+Below the sheet's scrolling content, at or above `minOrderCents` the sheet SHALL show a "Proceed to checkout" link with the grand total, to `/checkout`, or to `/sign-in?returnTo=%2Fcheckout` with no token, closing the sheet; below it, the block "Minimum order is ₹<min>. Add ₹<missing> more to check out." and no link. The sheet SHALL end its content with "Orders cannot be cancelled once packing starts."
+
+#### Scenario: Below the minimum order
+- **WHEN** the cart's subtotal is 5400 and `minOrderCents` 9900
+- **THEN** "Minimum order is ₹99. Add ₹45 more to check out." is shown and there is no "Proceed to checkout" link
+
+#### Scenario: Proceed signed out
+- **WHEN** the sheet is open on a guest cart above the minimum and "Proceed to checkout" is chosen
+- **THEN** the sheet closes and the app is at `/sign-in` with `returnTo` `/checkout`
+
+#### Scenario: Proceed signed in
+- **WHEN** a token is held, the sheet is open on a cart above the minimum, and "Proceed to checkout" is chosen
+- **THEN** the sheet closes and the app is at `/checkout`
+
+### Requirement: Mobile cart sheet states
+The sheet SHALL show, for an empty cart, the empty state "Your cart is empty" with "Milk, bread, snacks and more, delivered from the store near you in minutes." and a "Start shopping" button that closes the sheet; a loading state while the server cart loads; and the error state with "Try again" when it fails to load and nothing is held.
+
+#### Scenario: Empty cart
+- **WHEN** the sheet opens on an empty guest cart and "Start shopping" is chosen
+- **THEN** "Your cart is empty" is shown, and the choice closes the sheet
+
+#### Scenario: Loading and failed cart
+- **WHEN** the sheet opens signed in before `GET /me/cart` answers; and separately signed in with core unreachable
+- **THEN** the label "Loading" is shown; then "You're offline" with a "Try again" button that reads the cart again
+
+### Requirement: Mobile cart bar
+While the cart has lines, Home, the Categories tab, the category screen and search SHALL show at their foot a bar with the item count ("1 item", "N items", the sum of quantities) and the total as `Price`, the whole bar one button named "View cart, <count>, <total>" that opens the cart sheet. The bar SHALL be absent while the cart is empty, and on every other screen.
+
+#### Scenario: Bar follows the cart
+- **WHEN** Home renders with an empty cart, and then with a cart of 2 of a product priced 2700 (fee 2500)
+- **THEN** first no "View cart" button is shown; then the bar shows "2 items" and ₹79, and choosing it opens the sheet "My cart"
+
+#### Scenario: Bar on the browsing screens
+- **WHEN** the cart holds a line and the Categories tab, a category screen, search and a product screen render
+- **THEN** the first three show the "View cart" button and the product screen does not
+
+### Requirement: Mobile store change empties the server cart
+While a token is held, "Switch store" in the store change dialog SHALL send `DELETE /me/cart` and show the empty cart once it answers; when the request fails the dialog SHALL stay open with "Could not empty your cart." and the pincode SHALL not change.
+
+#### Scenario: Server cart emptied on a store change
+- **WHEN** a signed-in customer's cart at Koramangala holds a line, `560038` is continued in the pincode sheet, and "Switch store" is chosen
+- **THEN** `DELETE /me/cart` is sent, the stored pincode is `560038`, and the cart counts nothing
+
+#### Scenario: Emptying the server cart fails
+- **WHEN** the same switch is chosen while core cannot be reached
+- **THEN** the dialog stays open with an alert "Could not empty your cart." and the stored pincode is still `560034`
+
+### Requirement: Mobile store change needs an answer
+"Continue" in the pincode sheet SHALL compare stores against the cart as known after its read settles (the stored guest cart, or `GET /me/cart` while a token is held). When the cart has lines, or cannot be read, and the pincode lookup fails or the cart read fails, the sheet SHALL stay open, store nothing and show the alert "Could not check this pincode. Try again."; with an empty cart a failed lookup SHALL store the pincode as before.
+
+#### Scenario: Failed lookup keeps the cart's pincode
+- **WHEN** the cart holds a line at Koramangala with `560034` stored, and `560038` is continued while `GET /serviceability` cannot be reached
+- **THEN** no dialog opens, the sheet stays open with the alert "Could not check this pincode. Try again.", and the stored pincode is still `560034`
+
+#### Scenario: Unread server cart is fetched before comparing
+- **WHEN** a token is held, the cart is not yet read, `GET /me/cart` answers a line at Koramangala, and `560038` (Indiranagar) is continued
+- **THEN** the dialog "Switch to the Indiranagar store?" opens
+
+#### Scenario: Failed lookup with an empty cart
+- **WHEN** the cart is empty and `560038` is continued while `GET /serviceability` cannot be reached
+- **THEN** the pincode `560038` is stored and the sheet closes
+
+### Requirement: Mobile cart replaced notice
+When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or the merge, the app SHALL open the cart sheet once, and the sheet and the cart bar SHALL show, until the cart is next changed or read again, a status "Your cart from <store> was replaced. A cart holds products from one store.", <store> being the name `GET /stores/{id}` gives for the cart's previous store, or "another store" while it is not known.
+
+#### Scenario: Replaced notice names the old store
+- **WHEN** a token is held, the cart was at Koramangala, and the last `PUT /me/cart/items` answered one line at Indiranagar with `replaced: true`
+- **THEN** the cart sheet has opened, and it and the cart bar each show a status "Your cart from Koramangala was replaced. A cart holds products from one store."
+
+#### Scenario: Replace opens the sheet once
+- **WHEN** an answer with `replaced: true` arrives; then the customer closes the sheet; then an answer with `replaced: false` arrives
+- **THEN** the sheet "My cart" opens on the first answer, stays closed after it is closed, and does not open on the second
+
+#### Scenario: Replaced notice without the old store
+- **WHEN** the same answer arrives while the previous store is not known
+- **THEN** the status reads "Your cart from another store was replaced. A cart holds products from one store."
+
+### Requirement: Mobile cart end-to-end suite
+`e2e/cart.spec.ts` SHALL run the cart against core on the web export at 390×844 with axe on every screen and open sheet or dialog it visits.
+
+#### Scenario: Guest cart against core
+- **WHEN** a guest with `560034` chosen adds two products on Home, adds one more of the first, opens "View cart", removes both lines in the sheet and closes it, after a reload in between
+- **THEN** the bar reads "3 items" before and after the reload, the sheet lists two lines with a "Proceed to checkout" link, then shows "Your cart is empty", and axe reports no violations with the bar, the sheet and the empty sheet
+
+#### Scenario: Quick taps against core
+- **WHEN** a signed-in customer with an empty cart chooses "Add" on a Home card and then "Add one", "Add one" and "Remove one" while core's first answer is held back
+- **THEN** the card shows 2 and `GET /me/cart` answers that product with quantity 2
+
+#### Scenario: Merge at sign-in against core
+- **WHEN** a guest with `560034` chosen adds two products on Home, sets the first to 2, and signs in through the sheet's "Have an account?" link as a customer with an empty cart
+- **THEN** on Home the first shows 2 and the second 1, and local storage has no `shopperstop:cart`
+
+#### Scenario: Clamp against core
+- **WHEN** a signed-in customer has 2 of a product, the store's stock of it drops to 1, and "Add one" is chosen on its product screen
+- **THEN** its quantity shows 1 and the opened cart sheet shows "Some quantities were lowered to what the store has."
+
+#### Scenario: Server store change against core
+- **WHEN** a signed-in customer with `560034` chosen adds a product, continues with `560038` in the pincode sheet and chooses "Switch store"
+- **THEN** no "View cart" button is shown, `GET /me/cart` answers the empty cart, and axe reports no violations with the dialog open
+
+#### Scenario: Replaced notice against core
+- **WHEN** a signed-in customer whose cart holds a product at Koramangala opens Home with `560038` chosen and chooses "Add" on a card
+- **THEN** the sheet opens with "Your cart from Koramangala was replaced. A cart holds products from one store.", after closing it the bar reads "1 item" with the same status, and axe reports no violations with the sheet open and closed
+
+### Requirement: Mobile checkout requires sign-in
+With no token held, `/checkout` SHALL replace itself with `/sign-in?returnTo=%2Fcheckout`, on first render and when the token is dropped while it shows, so the customer comes back to checkout after signing in.
+
+#### Scenario: Signed-out checkout redirect
+- **WHEN** the app opens `/checkout` with no token
+- **THEN** the "Sign in" screen is shown, the path is `/sign-in` and `returnTo` is `/checkout`
+
+### Requirement: Mobile checkout screen
+`/checkout` SHALL show a header with a "Back to cart" button and the level-1 heading "Checkout", set the document title "Checkout · ShopperStop", and for the server cart a lines card headed "Delivery in <N> minutes" with "From <store>", both from `GET /stores/{id}` for the cart's `storeId` (never the pincode's store), and per line its image, name, "<quantity> × <unit>" and line total. "Back to cart" SHALL go back and open the cart sheet.
+
+#### Scenario: Checkout summary from the cart
+- **WHEN** a token is held, the default address is "Home", the cart at Koramangala (10 minutes) holds 2 of "Amul Taaza" (`500 ml`, 2700) and 1 of "Amul Butter" (`100 g`, 5600) with fee 2500, and `/checkout` is shown
+- **THEN** the level-1 heading is "Checkout", "Delivery in 10 minutes" and "From Koramangala" are shown, "Amul Taaza" with "2 × 500 ml" and ₹54, and "Amul Butter" with "1 × 100 g" and ₹56
+
+#### Scenario: Summary names the cart's store
+- **WHEN** `560038` is stored and resolves to Indiranagar, the cart is at Koramangala whose `promisedMinutes` is 10, and `/checkout` is shown
+- **THEN** "From Koramangala" and "Delivery in 10 minutes" are shown and "Indiranagar" is not
+
+#### Scenario: Back to cart opens the cart sheet
+- **WHEN** the checkout screen is shown with a cart and the customer chooses "Back to cart"
+- **THEN** the checkout screen is gone and the sheet "My cart" is open
+
+### Requirement: Mobile checkout payment and bill
+The checkout screen SHALL show a "Payment" card with the one method "Cash on delivery", "Pay the rider in cash" and the note "UPI and cards come with the payment service.", and a bill with "Items total" (the subtotal), "Delivery fee" ("FREE" at 0) and "To pay" (the total), every amount in tabular numerals.
+
+#### Scenario: Cash on delivery and bill
+- **WHEN** the checkout screen shows the cart of "Checkout summary from the cart"
+- **THEN** "Payment", "Cash on delivery", "Pay the rider in cash" and "UPI and cards come with the payment service." are shown, and "Items total" ₹110, "Delivery fee" ₹25 and "To pay" ₹135
+
+#### Scenario: Free delivery at checkout
+- **WHEN** the cart's `deliveryFeeCents` is 0
+- **THEN** "Delivery fee" reads "FREE"
+
+### Requirement: Mobile checkout states
+In place of its cards the checkout screen SHALL show: for an empty cart, the empty state "Your cart is empty" with a "Start shopping" button to Home and a "Your orders" button to `/orders`, and no "Place order"; while the cart loads, a skeleton named "Loading"; when the cart fails to load and none is held, the error state with "Try again", which reads the cart again.
+
+#### Scenario: Empty checkout
+- **WHEN** a token is held, `GET /me/cart` answers the empty cart, and `/checkout` is shown
+- **THEN** "Your cart is empty", a "Start shopping" button and a "Your orders" button are shown, and no "Place order" button
+
+#### Scenario: Loading and failed checkout
+- **WHEN** `/checkout` is shown before `GET /me/cart` answers; and separately while core cannot be reached, after which core answers a cart and "Try again" is chosen
+- **THEN** an element named "Loading" is shown; then the alert "You're offline" with "Try again", and after the choice the cart's lines
+
+### Requirement: Mobile checkout address card
+The address card SHALL show the chosen address, which is the one chosen on this screen, else the default, else the first of `GET /me/addresses`: "Delivering to <label>" over `line1`, `line2` when present and `pincode` joined by ", ", and a "Change" button named "Change address". With no address it SHALL show "No addresses yet" and an "Add address" button.
+
+#### Scenario: Default address shown
+- **WHEN** the customer's addresses are "Work" (`1 Park St`, `560038`) and "Home" (`12 80 Feet Rd`, `Koramangala`, `560034`), "Home" the default
+- **THEN** the card shows "Delivering to Home" and "12 80 Feet Rd, Koramangala, 560034"
+
+#### Scenario: No address yet
+- **WHEN** `GET /me/addresses` answers no address
+- **THEN** the card shows "No addresses yet" and an "Add address" button
+
+### Requirement: Mobile checkout address choice
+"Change address" SHALL open a sheet titled "Choose address" listing every address with its label, lines and a "Default" badge on the default, each a radio "Deliver to <label>" in one group "Deliver to", checked on the chosen address, and an "Add address" button. Choosing a radio SHALL make that address the chosen one and close the sheet.
+
+#### Scenario: Choice sheet lists the addresses
+- **WHEN** the card shows "Home" of "Default address shown" and "Change address" is chosen
+- **THEN** the sheet "Choose address" holds the group "Deliver to" with the radios "Deliver to Work", not checked, and "Deliver to Home", checked
+
+#### Scenario: Another address chosen
+- **WHEN** "Deliver to Work" is chosen in that sheet
+- **THEN** the sheet is closed and the card shows "Delivering to Work"
+
+### Requirement: Mobile checkout address added
+"Add address", on the card or in the "Choose address" sheet, SHALL open L1's address sheet "Add address" (closing the "Choose address" sheet first, so one sheet shows at a time); an address saved there SHALL become the chosen address.
+
+#### Scenario: Address added at checkout
+- **WHEN** a customer with only "Home" chooses "Change address", then "Add address",, and saves "Work" with `1 Park St` and `560038`, and core answers 201 and then lists "Home" and "Work"
+- **THEN** the address sheet is closed and the card shows "Delivering to Work"
+
+### Requirement: Mobile checkout place order bar
+Below its scrolling content the checkout screen SHALL show a "Place order" button with the amount to pay or, in its place, a block naming why the order cannot be placed: "Remove the marked products to continue." while a line is marked, else "Minimum order is ₹<min>. Add ₹<missing> more to place the order." while the server cart's subtotal is below its `minOrderCents`, else "Add an address to place the order." while there is no address.
+
+#### Scenario: Checkout below the minimum
+- **WHEN** the cart's subtotal is 5400, `minOrderCents` 9900, and the customer has a default address
+- **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
+
+#### Scenario: Minimum from the cart when the pincode is not served
+- **WHEN** the stored pincode resolves to no store, and the server cart at Koramangala has subtotal 5400 with `minOrderCents` 9900
+- **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
+
+#### Scenario: No address blocks placing
+- **WHEN** the cart is above the minimum and `GET /me/addresses` answers no address
+- **THEN** "Add an address to place the order." is shown and no "Place order" button
+
+#### Scenario: Place order shows the amount
+- **WHEN** the cart of "Checkout summary from the cart" is shown with "Home" chosen
+- **THEN** the "Place order" button shows ₹135
+
+### Requirement: Mobile places an order
+"Place order" SHALL send `POST /orders` with the chosen address's id after any cart change still being written, show busy meanwhile, and send nothing on a second press while busy. A 409 `conflict` SHALL be sent once more before it counts as a failure. On 201 the app SHALL hold the answered order, hold the cart as empty and replace the screen with `/orders/<id>`. A 400 `validation` without a field SHALL hold the cart as empty and replace the screen with `/orders`.
+
+#### Scenario: Order placed
+- **WHEN** a customer with "Home" chosen chooses "Place order" and core answers 201 with order `SS-ABCDEFGH`
+- **THEN** one `POST /orders` carried Home's id, the path is `/orders/<that order's id>`, the heading "Order SS-ABCDEFGH" is shown, and the cart counts nothing
+
+#### Scenario: Order placed after a pending cart change
+- **WHEN** a cart write's answer is held back and placing is asked for
+- **THEN** no `POST /orders` is sent until the write has answered, and then one is
+
+#### Scenario: Order number collision retried once
+- **WHEN** the first answer is 409 `conflict` and the second 201; and separately both answers are 409 `conflict`
+- **THEN** each time exactly two `POST /orders` are sent; the first time placing ends with the order, the second with the `conflict` error
+
+#### Scenario: Place order sent once
+- **WHEN** "Place order" is pressed twice before core answers
+- **THEN** one `POST /orders` was sent and the button is busy
+
+#### Scenario: Cart already empty goes to orders
+- **WHEN** placing is answered 400 `validation` "cart is empty" with no field
+- **THEN** the path is `/orders` and the cart counts nothing
+
+### Requirement: Mobile checkout out of stock
+On 409 `out_of_stock` the screen SHALL stay, read the cart again and show an alert "Some products are not available in the quantity you chose." with "Remove them to place your order.". Each line named in `productIds` SHALL show, until its quantity changes, "Out of stock" (not in stock), "Only N left" (stock below its quantity) or "Not enough stock" in place of its unit, and a "Remove <name>" button in place of its price that sets the line to 0 through the cart.
+
+#### Scenario: Out-of-stock lines marked
+- **WHEN** the cart holds 3 of "Amul Taaza" whose product shows `quantity` 2, 1 of "Amul Butter" not in stock and 1 of "Amul Curd", and placing answers 409 `out_of_stock` naming Amul Taaza and Amul Butter
+- **THEN** the alert is shown, Amul Taaza shows "Only 2 left" and "Remove Amul Taaza", Amul Butter "Out of stock" and "Remove Amul Butter", Amul Curd neither, "Remove the marked products to continue." is shown, and the screen is still Checkout
+
+#### Scenario: Marked line removed
+- **WHEN** only Amul Butter is marked, "Remove Amul Butter" is chosen, and core answers the cart without it
+- **THEN** `PUT /me/cart/items` carried quantity 0 for Amul Butter, its line is gone, and the "Place order" button is shown
+
+#### Scenario: Failed removal at checkout
+- **WHEN** Amul Butter is marked, core cannot be reached, and "Remove Amul Butter" is chosen
+- **THEN** the line shows an alert "Could not reach ShopperStop. Try again." and still shows "Out of stock" and "Remove Amul Butter"
+
+### Requirement: Mobile checkout refusals
+A refusal other than `out_of_stock` and `internal` SHALL keep the screen and the cart, end the busy state and show an alert: 409 `not_serviceable` with field `addressId`, "<store> does not deliver to this address. Choose another address or add one." and a `warning` badge "Not delivered here" on that address; without a field, "<store> is closed right now."; 400 with field `subtotal`, "Your cart is below the store's minimum order."; else "Could not place your order. Try again.".
+
+#### Scenario: Address not served
+- **WHEN** the cart is at Koramangala, "Work" is chosen, and placing answers 409 `not_serviceable` with field `addressId`
+- **THEN** an alert reads "Koramangala does not deliver to this address. Choose another address or add one.", the card shows "Not delivered here", and the cart's lines are still shown
+
+#### Scenario: Store closed at placement
+- **WHEN** placing answers 409 `not_serviceable` without a field
+- **THEN** an alert reads "Koramangala is closed right now." and no "Not delivered here" is shown
+
+#### Scenario: Placement fails
+- **WHEN** placing answers 400 `validation` with field `subtotal`; separately 400 `validation` with field `addressId`; separately 409 `conflict` twice
+- **THEN** the alert reads "Your cart is below the store's minimum order." the first time and "Could not place your order. Try again." the other two, and each time "Place order" is not busy
+
+### Requirement: Mobile checkout refusal cleared
+Choosing another address after an address was refused SHALL remove that alert; the "Not delivered here" badge SHALL stay on the refused address until "Place order" is next pressed or the addresses are read again.
+
+#### Scenario: Choosing another address clears the alert
+- **WHEN** placing with "Work" chosen answered 409 `not_serviceable` with field `addressId`, and "Deliver to Home" is then chosen in "Choose address"
+- **THEN** no alert is shown, the card shows "Delivering to Home" without "Not delivered here", and reopening "Choose address" shows "Not delivered here" on "Work" only
+
+### Requirement: Mobile checkout unconfirmed placement
+When placing answers `internal` (core not reached, a 5xx or a failure without the envelope, or a 2xx without an order), the screen SHALL keep the cart, end the busy state and show an alert "We could not confirm your order. It may have been placed, so check Your orders before you place it again." with a "Your orders" button to `/orders`. When the cart read again after that answer is empty, the app SHALL replace the screen with `/orders`.
+
+#### Scenario: Core cannot be reached at placement
+- **WHEN** a customer with Amul Taaza in the cart chooses "Place order" and core cannot be reached
+- **THEN** the alert reads "We could not confirm your order. It may have been placed, so check Your orders before you place it again.", a "Your orders" button is shown, the Amul Taaza line is still shown, and "Place order" is not busy
+
+#### Scenario: Unconfirmed placement that emptied the cart
+- **WHEN** placing answers 502 with no body and core then answers `GET /me/cart` with the empty cart
+- **THEN** the path is `/orders`
+
+### Requirement: Mobile checkout end-to-end suite
+`e2e/checkout.spec.ts` SHALL run checkout against core on the web export at 390×844, each test with a customer registered for the run and its own in-stock product, reaching `/checkout` in-app through the cart sheet's "Proceed to checkout", and SHALL run axe on every screen, sheet and alert state it visits, with no violation allowed.
+
+#### Scenario: Address added at checkout against core
+- **WHEN** a customer with no address and a cart above the minimum opens checkout from the cart sheet, sees "No addresses yet", chooses "Add address" and saves "Home" with pincode `560034`
+- **THEN** the card shows "Delivering to Home", the "Place order" button is shown, and axe reports no violations with the address sheet open and closed
+
+#### Scenario: Order placed against core
+- **WHEN** a guest with `560034` chosen adds a product above the store's minimum, chooses "Proceed to checkout" in the cart sheet, signs in as a customer with one address, and chooses "Place order"
+- **THEN** the tracking screen's level-1 heading is "Order SS-" and eight more characters, the status reads "Order placed. Waiting for the store to accept it.", the product is listed, `GET /me/cart` answers the empty cart, and axe reports no violations on checkout and tracking
+
+#### Scenario: Out of stock at checkout against core
+- **WHEN** a customer's cart holds a product above the minimum, the store's stock of it is set to 0, and the customer chooses "Place order" and then "Remove <name>"
+- **THEN** after placing the alert and "Out of stock" on that line are shown and `GET /orders` lists no order; after the removal "Your cart is empty" is shown; axe reports no violations with the alert showing
+
+#### Scenario: Address not served against core
+- **WHEN** a customer whose only address has pincode `560038` and whose cart is at Koramangala above the minimum chooses "Place order"
+- **THEN** the alert names Koramangala, the card shows "Not delivered here", `GET /me/cart` still answers the line, and axe reports no violations

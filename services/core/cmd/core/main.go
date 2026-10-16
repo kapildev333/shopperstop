@@ -53,10 +53,14 @@ func run(cfg config.Config) error {
 		return fmt.Errorf("listen on %s: %w", cfg.Addr, err)
 	}
 	slog.Info("core listening", "addr", ln.Addr().String())
-	// Sign-in and registration share one limiter: 10 attempts per email and 100 per IP per hour.
+	// Sign-in, registration and staff sign-in share one limiter: 10 attempts per email and 100 per IP per hour.
 	limit := auth.NewLimiter(10, 100, time.Hour, time.Now)
 	limit.TrustProxy = cfg.TrustProxy
 	a := auth.New(pool, cfg.SessionPepper, limit, cfg.ServiceTokens)
+	// Password reset requests have their own budget, with the same numbers.
+	resetLimit := auth.NewLimiter(10, 100, time.Hour, time.Now)
+	resetLimit.TrustProxy = cfg.TrustProxy
+	a.ResetLimit = resetLimit
 	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, blob.Disk{Dir: cfg.FilesDir}))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err

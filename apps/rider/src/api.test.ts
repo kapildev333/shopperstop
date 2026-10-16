@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { core, onUnauthorized, rider } from './api'
 import { clearToken, getToken, setToken } from './session'
-import { apiError, arjun, fakeApi, json, koramangala } from './fake-api'
+import { apiError, arjun, fakeApi, json, koramangala, signedInRoutes } from './fake-api'
 import { renderApp } from './render-app'
 
 const storePath = `/api/core/v1/stores/${koramangala.id}`
@@ -53,6 +53,7 @@ test('a 401 to a replaced token keeps the new session', async () => {
 test.each([
   ['no body', () => new Response(null, { status: 502 })],
   ['a plain-text body', () => new Response('Bad Gateway', { status: 502, headers: { 'Content-Type': 'text/plain' } })],
+  ['an error envelope without a message', () => json(502, { error: { code: 'bad_gateway' } })],
 ])('a failure answer with %s reaches the caller as an internal error with its status', async (_, answer) => {
   setToken('tok')
   fakeApi({ 'GET /api/rider/v1/me': answer })
@@ -73,7 +74,19 @@ test('expired session on load returns to sign-in', async () => {
 
   await waitFor(() => expect(router.state.location.pathname).toBe('/sign-in'))
   expect(router.state.location.search).toEqual({ redirect: '/history' })
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
+  expect(localStorage.getItem('shopperstop:rider-token')).toBeNull()
+})
+
+test('a 401 mid-session returns to sign-in', async () => {
+  setToken('tok')
+  fakeApi({ ...signedInRoutes(), 'GET /api/rider/v1/me/deliveries': () => apiError(401, 'unauthorized') })
+
+  const router = renderApp('/history')
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/sign-in'))
+  expect(router.state.location.search).toEqual({ redirect: '/history' })
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:rider-token')).toBeNull()
 })
 

@@ -182,13 +182,24 @@ type Category struct {
 }
 
 type Customer struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	Name         string
-	Phone        string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            string
+	Email         string
+	PasswordHash  string
+	Name          string
+	Phone         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	EmailVerified bool
+}
+
+type CustomerToken struct {
+	ID         string
+	TokenHash  []byte
+	CustomerID string
+	Purpose    string
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type Order struct {

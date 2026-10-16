@@ -1,3 +1,4 @@
+import { CartBar } from '../../cart-bar'
 import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { ChevronLeft, Search } from 'lucide-react-native'
@@ -42,6 +43,7 @@ export default function Category() {
           <IconButton label="Search" icon={Search} onPress={() => router.push('/search')} />
         </SafeAreaView>
         <StoreGate>{(open) => <CategoryBody storeId={open.id} slug={slug} />}</StoreGate>
+        <CartBar edge />
       </View>
     </>
   )
