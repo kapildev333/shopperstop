@@ -137,7 +137,7 @@ function StoreChangeDialog({ change, onClose }: { change?: Change; onClose: () =
 
   const items = change?.count === 1 ? '1 item' : `${change?.count} items`
   return (
-    <Dialog open={!!change} title={`Switch to the ${change?.store.name} store?`} onClose={keep}>
+    <Dialog open={!!change} title={`Switch to the ${change?.store.name ?? ''} store?`} onClose={keep}>
       <View style={styles.icon} aria-hidden>
         <ShoppingBag size={24} color={colors.ink} />
       </View>
