@@ -95,7 +95,8 @@ test('sending fails', async () => {
   })
   renderAt('/account')
   await userEvent.click(await screen.findByRole('button', { name: send }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
+  // The addresses card also shows an alert here, so the banner's is found by its text.
+  expect(await screen.findByText('Could not reach ShopperStop. Try again.')).toHaveAttribute('role', 'alert')
   const button = screen.getByRole('button', { name: send })
   expect(button).toBeEnabled()
   expect(button).not.toHaveAttribute('aria-busy')
