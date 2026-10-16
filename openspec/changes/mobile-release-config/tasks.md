@@ -51,4 +51,4 @@ Starts from: `apps/mobile/scripts/icons.test.mjs` `splash uses the brand surface
 
 ## 4. Acceptance (team lead)
 
-- [ ] 4.1 `/opsx:verify mobile-release-config`: every scenario has a passing test (design.md "Scenario to test"), every task ticked, nothing outside design.md "Files" landed besides lane logs; gates re-run
+- [x] 4.1 `/opsx:verify mobile-release-config`: every scenario has a passing test (design.md "Scenario to test"), every task ticked, nothing outside design.md "Files" landed besides lane logs; gates re-run

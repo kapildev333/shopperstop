@@ -88,7 +88,7 @@ Ceiling: until `apps/mobile/package.json`'s `test` script runs them, `make test-
 
 ## Risks / Trade-offs
 
-- [`expo-splash-screen` is a new dependency] -> task 3 waits on the orchestrator's decision (D37 lists the runtime dependencies) and on L2 adding `"expo-splash-screen": "58.0.10"` to `package.json` with the lockfile; listing the plugin before the package is installed breaks `expo export` (config plugin resolution), so task 3 never lands first. If the decision is no, task 3 and the splash requirement are dropped and the app shows the platform default splash.
+- [`expo-splash-screen` is a new dependency] -> settled by D43 (orchestrator approved `expo-splash-screen` 58.0.10); by the manager's decision the pin landed in this lane, task 3 commit 22122c3 (`apps/mobile/package.json` one line, root `package-lock.json` +15 lines, mechanical), instead of through L2. Listing the plugin without the package breaks `expo export`, so the pin precedes the plugin entry.
 - [Release builds cannot reach an `http` core on the LAN] -> Android blocks cleartext traffic outside Expo Go; enabling it needs `expo-build-properties` (another dependency). Ceiling: preview builds need an `https` core URL (a deployed core or a tunnel); the LAN loop is Expo Go. Named in the README.
 - [Rendering takes about 1 s per image] -> the icons check renders three 1024 images, about 3 s; acceptable for `node --test`.
 - [Icon and splash are not visible in Expo Go or the web export] -> no walk can show them before an EAS build; the manager inspects the PNGs directly and runs `npx expo config --type public` to see the resolved keys.
@@ -106,4 +106,4 @@ Ceiling: until `apps/mobile/package.json`'s `test` script runs them, `make test-
 
 ## Files
 
-`apps/mobile/eas.json`, `apps/mobile/README.md`, `apps/mobile/app.json` (`icon`, `android.adaptiveIcon`, the `expo-splash-screen` plugin entry), `apps/mobile/assets/{icon,adaptive-icon,splash-icon}.png`, `apps/mobile/scripts/{icons.mjs,icons.test.mjs,release-config.test.mjs}`, `openspec/changes/mobile-release-config/`. All in the mobile area.
+`apps/mobile/package.json` (the `expo-splash-screen` pin only, D43) and the root `package-lock.json` (mechanical), `apps/mobile/eas.json`, `apps/mobile/README.md`, `apps/mobile/app.json` (`icon`, `android.adaptiveIcon`, the `expo-splash-screen` plugin entry), `apps/mobile/assets/{icon,adaptive-icon,splash-icon}.png`, `apps/mobile/scripts/{icons.mjs,icons.test.mjs,release-config.test.mjs}`, `openspec/changes/mobile-release-config/`. All in the mobile area.
