@@ -1,3 +1,4 @@
+import { ScrollView } from 'react-native'
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { Text } from './text'
 import { Sheet } from './sheet'
@@ -35,4 +36,18 @@ test('sheet closed title is hidden', async () => {
     </Sheet>,
   )
   expect(screen.queryByText('Edit profile')).toBeNull()
+})
+
+// A tall form (the address sheet) must scroll inside the panel instead of running off a small screen.
+test('sheet content scrolls', async () => {
+  await render(
+    <Sheet open title="Add address" onClose={() => {}}>
+      <Text>Name field</Text>
+    </Sheet>,
+  )
+  // Walk up from the content to the nearest scroll view; the content must sit inside it.
+  let scroll = screen.getByText('Name field')
+  while ((scroll.type as unknown) !== ScrollView && scroll.parent) scroll = scroll.parent
+  expect(scroll.type as unknown).toBe(ScrollView)
+  expect(scroll.props.keyboardShouldPersistTaps).toBe('handled')
 })
