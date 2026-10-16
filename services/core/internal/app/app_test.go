@@ -11,6 +11,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -208,13 +209,11 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 	}
 }
 
-// TestWrongMethod: a served path asked with a method it does not serve answers
-// 405 method_not_allowed with Allow naming the path's methods, and the code is
-// one the contract's Error schema lists.
-func TestWrongMethod(t *testing.T) {
+// errorCodes answers the code enum of openapi.json's Error schema, read once.
+var errorCodes = sync.OnceValues(func() ([]string, error) {
 	doc, err := os.ReadFile("../../openapi.json")
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	var spec struct {
 		Components struct {
@@ -234,9 +233,19 @@ func TestWrongMethod(t *testing.T) {
 		} `json:"components"`
 	}
 	if err := json.Unmarshal(doc, &spec); err != nil {
+		return nil, err
+	}
+	return spec.Components.Schemas.Error.Properties.Error.Properties.Code.Enum, nil
+})
+
+// TestWrongMethod: a served path asked with a method it does not serve answers
+// 405 method_not_allowed with Allow naming the path's methods, and the code is
+// one the contract's Error schema lists.
+func TestWrongMethod(t *testing.T) {
+	codes, err := errorCodes()
+	if err != nil {
 		t.Fatal(err)
 	}
-	codes := spec.Components.Schemas.Error.Properties.Error.Properties.Code.Enum
 
 	for _, row := range []struct{ method, path, allow string }{
 		{http.MethodDelete, "/api/core/v1/healthz", "GET"},

@@ -1,5 +1,5 @@
 # core-P5-L1 - core payments: payment method and status, payment route, events feed (OpenSpec change core-payments)
-Status: acceptance done, one gap: task 6 (test-only) open; re-verify after it lands
+Status: accepted (2026-10-16). The one gap is closed by task 6: `payment_pending` and `email_unverified` are now asserted against the Error code enum through `expectError`, and the red was shown by mutation (core-P5-L1-t6.md).
 ## Doing
 2026-10-16: acceptance (/opsx:verify) at d088fce. Tasks 1-5 landed and reviewed approve (`core-P5-L1-review-t1.md` to `-t5.md`; I reviewed t5 myself). One gap: platform "The contract lists every code" has no test for `email_unverified`/`payment_pending`. Task 6 is briefed in `core-P5-L1-t6.md` and added to tasks.md. I re-verify when it lands.
 ## Found

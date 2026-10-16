@@ -372,8 +372,8 @@ func TestSystemCancelNeedsPendingPayment(t *testing.T) {
 	}
 	status, body = setStatus(t, testPaymentToken, cash.ID, system)
 	expectError(t, "system cancels a cash order", status, body, http.StatusConflict, "conflict", "", "")
-	if got := orderStatus(t, cash.ID); got != "placed" {
-		t.Fatalf("cash order after the refused cancel: status %s, want placed", got)
+	if got, n := orderStatus(t, cash.ID), eventCount(t, cash.ID); got != "placed" || n != 1 {
+		t.Fatalf("cash order after the refused cancel: status %s with %d events, want placed with 1", got, n)
 	}
 	if got := quantityAt(t, c.ID, p); got != 3 {
 		t.Fatalf("stock after the refused cash cancel %d, want 3", got)

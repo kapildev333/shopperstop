@@ -1,5 +1,5 @@
 # core-P5-L1-t6 - test: every error code a test expects is in the contract (task 6 of core-payments)
-Status: not started
+Status: done (red seen, gates green; committed as "test: every error code a test expects is in the contract")
 ## Brief
 - LANE-ID: core-P5-L1 (task 6). Area: core. Role: worker. Worktree `.worktrees/core-P5-L1`, branch `lane/core-P5-L1-payments`. Starts after the acceptance commit.
 - Scope: `services/core/internal/app/app_test.go`, `services/core/internal/app/catalog_categories_test.go`, `services/core/internal/app/orders_payment_test.go`, `openspec/changes/core-payments/tasks.md` (tick 6.1), this file. Nothing else. No product code changes.
@@ -37,6 +37,11 @@ Status: not started
 - Gates (from `services/core`, `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`): `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`; from the worktree root `openspec validate --all --strict`; `git status --short` clean after the commit. No `make gen postman` needed (no openapi.json change), no docker, no e2e.
 - Stop and report if any existing `expectError` call names a code outside the enum (none at acceptance: conflict, email_unverified, forbidden, not_found, not_serviceable, out_of_stock, payment_pending, unauthorized, validation).
 ## Doing
+2026-10-16: task 6 done. Red by mutation: removed "payment_pending" from the Error code enum in openapi.json; restored with git checkout.
 ## Found
+- Red (enum mutated, `go test -race -count=1 -run TestAcceptAwaitsPayment ./internal/app`): `orders_payment_test.go:146: accept pending: code payment_pending is not in openapi.json's Error code enum [validation unauthorized forbidden not_found conflict out_of_stock not_serviceable rate_limited method_not_allowed email_unverified internal]`. Restored.
+- Note: the BSD sed used to drop the enum line failed ('-i' took the script as a suffix); the mutation was made with perl and the restore was a checkout. No make gen run.
+- Gates green: gofmt empty; go vet clean; go test -race -count=1 ./... all packages ok (app 90s); openspec validate --all --strict 20 of 20 passed.
+- The cash-order check in TestSystemCancelNeedsPendingPayment asserts status placed and 1 event in one line (eventCount == 1 folded with the status check).
 ## Requests
 ## Blockers
