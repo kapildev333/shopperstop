@@ -11,7 +11,9 @@ jest.mock('@expo-google-fonts/inter', () => ({
 test('tab bar in a navigation landmark', async () => {
   await renderRouter(`${__dirname}/app`, { initialUrl: '/' })
 
-  const landmark = await screen.findByRole('navigation', { name: 'Main' })
+  // The landmark View is not an accessibility element (that would merge the tabs), so RNTL's role query skips it: query by label, check the role prop.
+  const landmark = await screen.findByLabelText('Main')
+  expect(landmark.props.role).toBe('navigation')
   expect(within(landmark).getByRole('button', { name: 'Home' })).toBeTruthy()
   expect(within(landmark).getByRole('button', { name: 'Categories' })).toBeTruthy()
   expect(within(landmark).getByRole('button', { name: 'Orders' })).toBeTruthy()
