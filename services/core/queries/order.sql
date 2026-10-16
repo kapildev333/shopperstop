@@ -1,10 +1,10 @@
 -- name: CreateOrder :one
 insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, customer_phone,
                     address_label, address_line1, address_line2, address_pincode,
-                    subtotal_cents, delivery_fee_cents, total_cents)
+                    subtotal_cents, delivery_fee_cents, total_cents, payment_method, payment_status)
 values (@number, @customer_id, @store_id, @store_name, @promised_minutes, @customer_name, @customer_phone,
         @address_label, @address_line1, @address_line2, @address_pincode,
-        @subtotal_cents, @delivery_fee_cents, @total_cents)
+        @subtotal_cents, @delivery_fee_cents, @total_cents, @payment_method, sqlc.narg(payment_status))
 returning id;
 
 -- name: AddItems :exec
@@ -12,6 +12,13 @@ returning id;
 insert into order_items (order_id, product_id, name, unit_label, image_url, price_cents, mrp_cents, quantity)
 select @order_id::uuid, unnest(@product_ids::uuid[]), unnest(@names::text[]), unnest(@unit_labels::text[]),
        unnest(@image_urls::text[]), unnest(@price_cents::bigint[]), unnest(@mrp_cents::bigint[]), unnest(@quantities::integer[]);
+
+-- name: LockEvents :exec
+-- Every event insert takes this lock first and holds it to commit, so seq is
+-- handed out in commit order and a reader of the feed never sees seq n+1
+-- committed while n is still in flight.
+-- ponytail: one lock serialises every event write; per-store streams if order volume needs it.
+select pg_advisory_xact_lock(hashtext('order_events'));
 
 -- name: AddEvent :exec
 insert into order_events (order_id, from_status, to_status, actor_type, actor_id, actor_name, note)
@@ -25,7 +32,7 @@ where id = @id
   and (sqlc.narg(store_id)::uuid is null or store_id = sqlc.narg(store_id));
 
 -- name: LockOrder :one
-select id, number, status, store_id from orders
+select id, number, status, store_id, payment_status from orders
 where id = @id
   and (sqlc.narg(customer_id)::uuid is null or customer_id = sqlc.narg(customer_id))
   and (sqlc.narg(store_id)::uuid is null or store_id = sqlc.narg(store_id))
@@ -39,6 +46,9 @@ set status        = @status,
     cancel_reason = case when @status = 'cancelled'::order_status then @cancel_reason else cancel_reason end,
     rider_name    = coalesce(sqlc.narg(rider_name), rider_name)
 where id = @id;
+
+-- name: SetPayment :exec
+update orders set payment_status = @payment_status, payment_reference = @payment_reference where id = @id;
 
 -- name: CustomerOrders :many
 select * from orders where customer_id = @customer_id
@@ -70,6 +80,15 @@ order by order_id, name, product_id;
 select order_id, from_status, to_status, actor_type, actor_name, note, created_at
 from order_events where order_id = any(@order_ids::uuid[])
 order by order_id, created_at, id;
+
+-- name: EventFeed :many
+-- The events after seq @after, ascending, with the order's current payment state.
+select e.seq, e.order_id, o.number, o.store_id, o.customer_id, e.from_status, e.to_status,
+       o.payment_method, o.payment_status, e.actor_type, e.created_at
+from order_events e join orders o on o.id = e.order_id
+where e.seq > @after
+order by e.seq
+limit @lim;
 
 -- name: CountsToday :many
 -- Orders placed since midnight in Bengaluru, by current status.

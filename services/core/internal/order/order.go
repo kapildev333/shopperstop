@@ -53,10 +53,12 @@ type Order struct {
 	SubtotalCents    int64      `json:"subtotalCents"`
 	DeliveryFeeCents int64      `json:"deliveryFeeCents"`
 	TotalCents       int64      `json:"totalCents"`
-	PaymentMethod    string     `json:"paymentMethod"`         // "cod"
-	PlacedAt         time.Time  `json:"placedAt"`              // UTC
-	DeliveredAt      *time.Time `json:"deliveredAt,omitempty"` // UTC when set
-	CancelledAt      *time.Time `json:"cancelledAt,omitempty"` // UTC when set
+	PaymentMethod    string     `json:"paymentMethod"`              // "cod" or "online"
+	PaymentStatus    string     `json:"paymentStatus,omitempty"`    // online orders only: pending, paid or refunded
+	PaymentReference string     `json:"paymentReference,omitempty"` // the payment service's reference, once paid
+	PlacedAt         time.Time  `json:"placedAt"`                   // UTC
+	DeliveredAt      *time.Time `json:"deliveredAt,omitempty"`      // UTC when set
+	CancelledAt      *time.Time `json:"cancelledAt,omitempty"`      // UTC when set
 	CancelReason     string     `json:"cancelReason,omitempty"`
 	RiderName        string     `json:"riderName,omitempty"`
 	Items            []Item     `json:"items"`  // never nil
@@ -126,6 +128,10 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 		if r.RiderName != nil {
 			o.RiderName = *r.RiderName
 		}
+		if r.PaymentStatus != nil {
+			o.PaymentStatus = string(*r.PaymentStatus)
+		}
+		o.PaymentReference = r.PaymentReference
 		if r.DeliveredAt != nil {
 			t := r.DeliveredAt.UTC()
 			o.DeliveredAt = &t
@@ -137,6 +143,16 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 		out = append(out, o)
 	}
 	return out, nil
+}
+
+// addEvent appends one order event under the events lock (queries/order.sql
+// LockEvents), held to the end of the caller's transaction, so events are
+// numbered (seq) in the order they commit.
+func addEvent(ctx context.Context, q *db.Queries, arg db.AddEventParams) error {
+	if err := q.LockEvents(ctx); err != nil {
+		return err
+	}
+	return q.AddEvent(ctx, arg)
 }
 
 // newNumber is "SS-" and the 8 characters of base32 of 5 random bytes: A-Z and 2-7, no padding.

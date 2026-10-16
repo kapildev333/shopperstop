@@ -26,4 +26,5 @@ fixed ids (id, table, what)
   00000000-0000-4000-8000-000000000701  orders       SS-DEMOAAAB, delivered
   00000000-0000-4000-8000-000000000702  orders       SS-DEMOAAAC, cancelled
   00000000-0000-4000-8000-000000000703  orders       SS-DEMOAAAD, placed (Postman orderId)
+  00000000-0000-4000-8000-000000000704  orders       SS-DEMOAAAE, placed, paid online (reference fake_demo_0a01)
 `

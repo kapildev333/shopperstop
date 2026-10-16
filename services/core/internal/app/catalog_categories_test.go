@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -71,6 +72,13 @@ func expectError(t *testing.T, what string, status int, body []byte, wantStatus 
 	e := decodeError(t, body)
 	if status != wantStatus || e.Error.Code != code || e.Error.Field != field || (message != "" && e.Error.Message != message) {
 		t.Fatalf("%s: got %d %s, want %d %s field %q message %q", what, status, body, wantStatus, code, field, message)
+	}
+	codes, err := errorCodes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(codes, code) {
+		t.Fatalf("%s: code %s is not in openapi.json's Error code enum %v", what, code, codes)
 	}
 }
 

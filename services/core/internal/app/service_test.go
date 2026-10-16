@@ -51,3 +51,21 @@ func TestServiceOnStoreAdministration(t *testing.T) {
 	status, raw = call(t, http.MethodGet, path+"/service-areas", testServiceToken, nil)
 	expectError(t, "GET service areas", status, raw, http.StatusForbidden, "forbidden", "", "staff only")
 }
+
+// TestServiceRoutesByName: each service reaches exactly its own routes; the
+// payment service reads an order but no store, and the rider service cannot
+// change a payment.
+func TestServiceRoutesByName(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 1000)
+	id := orderIn(t, s.ID, newCustomer(t).Customer.ID, p, "placed")
+	if status, raw := call(t, http.MethodGet, adminOrderPath(id), testPaymentToken, nil); status != http.StatusOK {
+		t.Fatalf("payment reads the order: got %d %s, want 200", status, raw)
+	}
+	for _, path := range []string{adminStoresPath, adminStoresPath + "/" + s.ID, storeOrdersPath(s.ID)} {
+		status, raw := call(t, http.MethodGet, path, testPaymentToken, nil)
+		expectError(t, "payment GET "+path, status, raw, http.StatusForbidden, "forbidden", "", "staff only")
+	}
+	status, raw := call(t, http.MethodPost, adminOrderPath(id)+"/payment", testServiceToken, map[string]string{"status": "paid", "reference": "r"})
+	expectError(t, "rider pays", status, raw, http.StatusForbidden, "forbidden", "", "")
+}

@@ -489,6 +489,7 @@ const (
 	orderDelivered = "00000000-0000-4000-8000-000000000701"
 	orderCancelled = "00000000-0000-4000-8000-000000000702"
 	orderPlaced    = "00000000-0000-4000-8000-000000000703"
+	orderPaid      = "00000000-0000-4000-8000-000000000704"
 	productBanana  = "00000000-0000-4000-8000-000000000601"
 )
 
@@ -565,9 +566,9 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 		}
 	}
 
-	assertCount(t, "orders", 3)
-	assertCount(t, "order_items", 5)
-	assertCount(t, "order_events", 9)
+	assertCount(t, "orders", 4)
+	assertCount(t, "order_items", 7)
+	assertCount(t, "order_events", 11)
 
 	rows, err := testPool.Query(ctx, "select id::text, number, status::text, customer_id::text, store_id::text from orders order by id")
 	if err != nil {
@@ -578,6 +579,7 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 		{orderDelivered, "SS-DEMOAAAB", "delivered"},
 		{orderCancelled, "SS-DEMOAAAC", "cancelled"},
 		{orderPlaced, "SS-DEMOAAAD", "placed"},
+		{orderPaid, "SS-DEMOAAAE", "placed"},
 	}
 	for i := 0; rows.Next(); i++ {
 		var id, number, status, customer, store string
@@ -596,15 +598,19 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	assertSQL(t, "orders below the store minimum", "select count(*) from orders where subtotal_cents < 9900", 0)
 	assertSQL(t, "banana robusta lines in delivered and placed", "select count(*) from order_items where product_id = '00000000-0000-4000-8000-000000000601' and order_id in ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000703')", 2)
 	assertSQL(t, "orders whose status is not the latest event", "select count(*) from orders o where o.status::text <> (select e.to_status::text from order_events e where e.order_id = o.id order by e.created_at desc, e.id desc limit 1)", 0)
-	assertSQL(t, "placed events with no previous status", "select count(*) from order_events where from_status is null and to_status = 'placed'", 3)
-	assertSQL(t, "events with no actor", "select count(*) from order_events where actor_id is null", 0)
+	assertSQL(t, "placed events with no previous status", "select count(*) from order_events where from_status is null and to_status = 'placed'", 4)
+	assertSQL(t, "events with no actor", "select count(*) from order_events where actor_id is null and actor_type <> 'system'", 0)
 	assertSQL(t, "delivered orders with a delivery time", "select count(*) from orders where status = 'delivered' and delivered_at is not null", 1)
-	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 3)
-	assertSQL(t, "orders with the Koramangala snapshot", "select count(*) from orders where store_name = 'Koramangala' and promised_minutes = 10", 3)
+	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 4)
+	assertSQL(t, "orders with the Koramangala snapshot", "select count(*) from orders where store_name = 'Koramangala' and promised_minutes = 10", 4)
 	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
 	assertSQL(t, "orders with a rider", "select count(*) from orders where rider_name is not null", 1)
 	assertSQL(t, "SS-DEMOAAAB delivered by Arjun Rao", "select count(*) from orders where id = '00000000-0000-4000-8000-000000000701' and rider_name = 'Arjun Rao'", 1)
 	assertSQL(t, "rider events", "select count(*) from order_events where actor_type = 'rider'", 2)
+	assertSQL(t, "cash orders", "select count(*) from orders where payment_method = 'cod' and payment_status is null and payment_reference = ''", 3)
+	assertSQL(t, "SS-DEMOAAAE paid online", "select count(*) from orders where id = '00000000-0000-4000-8000-000000000704' and payment_method = 'online' and payment_status = 'paid' and payment_reference = 'fake_demo_0a01'", 1)
+	assertSQL(t, "SS-DEMOAAAE payment event", "select count(*) from order_events where order_id = '00000000-0000-4000-8000-000000000704' and from_status = 'placed' and to_status = 'placed' and actor_type = 'system' and actor_id is null and actor_name = 'payment' and note = 'Payment paid, reference fake_demo_0a01'", 1)
+	assertSQL(t, "system events", "select count(*) from order_events where actor_type = 'system'", 1)
 	assertSQL(t, "SS-DEMOAAAB rider events by rider ...0801", "select count(*) from order_events where order_id = '00000000-0000-4000-8000-000000000701' and to_status in ('out_for_delivery', 'delivered') and actor_type = 'rider' and actor_id = '00000000-0000-4000-8000-000000000801' and actor_name = 'Arjun Rao'", 2)
 }
 
@@ -628,12 +634,32 @@ func TestDemoOrdersThroughTheRouter(t *testing.T) {
 		} `json:"items"`
 		Total int `json:"total"`
 	}
-	if status != http.StatusOK || json.Unmarshal(body, &list) != nil || list.Total != 3 {
-		t.Fatalf("GET /orders: got %d %s, want 200 with total 3", status, body)
+	if status != http.StatusOK || json.Unmarshal(body, &list) != nil || list.Total != 4 {
+		t.Fatalf("GET /orders: got %d %s, want 200 with total 4", status, body)
 	}
-	for i, id := range []string{orderPlaced, orderCancelled, orderDelivered} {
+	for i, id := range []string{orderPlaced, orderCancelled, orderDelivered, orderPaid} {
 		if i >= len(list.Items) || list.Items[i].ID != id {
-			t.Fatalf("GET /orders: got %s, want %s, %s, %s newest first", body, orderPlaced, orderCancelled, orderDelivered)
+			t.Fatalf("GET /orders: got %s, want %s, %s, %s, %s newest first", body, orderPlaced, orderCancelled, orderDelivered, orderPaid)
+		}
+	}
+
+	// SS-DEMOAAAE reads back paid online on both sides, with its payment event by the system.
+	for _, read := range []struct{ path, bearer string }{{"/api/core/v1/orders/", customer}, {"/api/core/v1/admin/orders/", admin}} {
+		status, body = request(t, base, http.MethodGet, read.path+orderPaid, read.bearer, nil)
+		var o struct {
+			PaymentMethod    string `json:"paymentMethod"`
+			PaymentStatus    string `json:"paymentStatus"`
+			PaymentReference string `json:"paymentReference"`
+			Events           []struct {
+				FromStatus string `json:"fromStatus"`
+				ToStatus   string `json:"toStatus"`
+				ActorType  string `json:"actorType"`
+				ActorName  string `json:"actorName"`
+			} `json:"events"`
+		}
+		if status != http.StatusOK || json.Unmarshal(body, &o) != nil || o.PaymentMethod != "online" || o.PaymentStatus != "paid" || o.PaymentReference != "fake_demo_0a01" ||
+			len(o.Events) != 2 || o.Events[1].FromStatus != "placed" || o.Events[1].ToStatus != "placed" || o.Events[1].ActorType != "system" || o.Events[1].ActorName != "payment" {
+			t.Fatalf("GET %s%s: got %d %s, want 200 paid online with reference fake_demo_0a01 and a payment event by the system", read.path, orderPaid, status, body)
 		}
 	}
 
@@ -757,8 +783,8 @@ func TestSummaryMatchesSeed(t *testing.T) {
 			}
 		}
 	}
-	if signIns != 4 || ids != 12 {
-		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 12", signIns, ids)
+	if signIns != 4 || ids != 13 {
+		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 13", signIns, ids)
 	}
 	// The fixed ids of PLAN.md D20 that Postman uses, and the table each marked line names.
 	wantPostman := map[string]string{"storeId": storeKoramangala, "productId": productBanana, "addressId": homeID, "orderId": orderPlaced}

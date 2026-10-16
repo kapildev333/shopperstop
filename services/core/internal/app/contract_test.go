@@ -225,7 +225,9 @@ var pathParam = regexp.MustCompile(`\{[^}]+\}`)
 // securityProblems sends one anonymous request to every documented operation
 // and checks the operation's security declaration against the router's answer:
 // a 401 must match declared security, and declared security must document a 401.
-func securityProblems(baseURL, serviceToken string, doc []byte) []string {
+// Each secured operation is then probed with every service token: one with
+// x-service-token must admit at least one of them, any other must refuse each.
+func securityProblems(baseURL string, serviceTokens []string, doc []byte) []string {
 	var spec struct {
 		Servers []struct {
 			URL string `json:"url"`
@@ -296,26 +298,33 @@ func securityProblems(baseURL, serviceToken string, doc []byte) []string {
 			if op.ServiceToken && !declared {
 				problems = append(problems, key+": x-service-token without security")
 			}
-			if !declared || serviceToken == "" {
+			if !declared || len(serviceTokens) == 0 {
 				continue
 			}
-			req.Header.Set("Authorization", "Bearer "+serviceToken)
-			resp, err = http.DefaultClient.Do(req)
-			if err != nil {
-				problems = append(problems, key+": request failed: "+err.Error())
-				continue
-			}
-			resp.Body.Close()
 			want := http.StatusUnauthorized
 			if strings.HasPrefix(path, "/admin/") {
 				want = http.StatusForbidden
 			}
-			refused := resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden
+			admitted, last := false, 0
+			for _, token := range serviceTokens {
+				req.Header.Set("Authorization", "Bearer "+token)
+				resp, err = http.DefaultClient.Do(req)
+				if err != nil {
+					problems = append(problems, key+": request failed: "+err.Error())
+					break
+				}
+				resp.Body.Close()
+				last = resp.StatusCode
+				if last != http.StatusUnauthorized && last != http.StatusForbidden {
+					admitted = true
+				}
+				if !op.ServiceToken && last != want {
+					problems = append(problems, fmt.Sprintf("%s: answers %d to a service token, want %d or x-service-token", key, last, want))
+				}
+			}
 			switch {
-			case op.ServiceToken && refused:
-				problems = append(problems, fmt.Sprintf("%s: declares x-service-token but answers %d to the service token", key, resp.StatusCode))
-			case !op.ServiceToken && resp.StatusCode != want:
-				problems = append(problems, fmt.Sprintf("%s: answers %d to the service token, want %d or x-service-token", key, resp.StatusCode, want))
+			case op.ServiceToken && !admitted:
+				problems = append(problems, fmt.Sprintf("%s: declares x-service-token but answers %d to every service token", key, last))
 			case !op.ServiceToken && want == http.StatusForbidden && op.Responses["403"] == nil:
 				problems = append(problems, key+": refuses the service token with 403 but documents no 403")
 			}
@@ -331,7 +340,7 @@ func TestContractSecurity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if problems := securityProblems(srv.URL, testServiceToken, doc); len(problems) > 0 {
+	if problems := securityProblems(srv.URL, []string{testServiceToken, testPaymentToken}, doc); len(problems) > 0 {
 		t.Fatalf("security problems:\n%s", strings.Join(problems, "\n"))
 	}
 }
@@ -356,7 +365,7 @@ func toySecurityProblems(t *testing.T, status int, doc string) []string {
 	r.Get("/api/core/v1/extra", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })
 	ts := httptest.NewServer(r)
 	t.Cleanup(ts.Close)
-	return securityProblems(ts.URL, "", []byte(doc))
+	return securityProblems(ts.URL, nil, []byte(doc))
 }
 
 // TestContractNamesMissingSecurity: a route that answers 401 must declare security.
@@ -407,7 +416,7 @@ func toyServiceProblems(t *testing.T, status int, declared bool) []string {
   "components":{"securitySchemes":{"bearer":{"type":"http","scheme":"bearer"}}},
   "paths":{"/admin/extra":{"get":{"summary":"s","description":"d","tags":["orders"],"security":[{"bearer":[]}],` + ext + `
   "responses":{"200":{"description":"ok"},"401":{"description":"no token"},"403":{"description":"no"}}}}}}`
-	return securityProblems(ts.URL, "svc", []byte(doc))
+	return securityProblems(ts.URL, []string{"svc"}, []byte(doc))
 }
 
 // TestContractNamesUndeclaredServiceRoute: a route that admits the service token must say so.

@@ -5044,7 +5044,7 @@
           "request": {
             "name": "List stores",
             "description": {
-              "content": "Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
+              "content": "Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.",
               "type": "text/plain"
             },
             "url": {
@@ -5638,7 +5638,7 @@
           "request": {
             "name": "Get a store, admin view",
             "description": {
-              "content": "Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
+              "content": "Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.",
               "type": "text/plain"
             },
             "url": {
@@ -13987,7 +13987,7 @@
           "request": {
             "name": "Place an order from the cart",
             "description": {
-              "content": "Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 conflict when the order number collides, which is rare, and the client may retry.",
+              "content": "Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. paymentMethod is cod (the default) or online; an online order is placed the same way, with paymentStatus pending, and needs a verified email. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 400 naming paymentMethod when it is neither cod nor online; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 email_unverified when paymentMethod is online and the customer's email is not verified, checked first; 409 conflict when the order number collides, which is rare, and the client may retry.",
               "type": "text/plain"
             },
             "url": {
@@ -14084,12 +14084,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"online\",\n  \"paymentStatus\": \"pending\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal). Nothing changes.",
+              "name": "The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal), or paymentMethod is neither cod nor online (field paymentMethod). Nothing changes.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -14199,7 +14199,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry). Nothing changes.",
+              "name": "The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry), or paymentMethod is online and the customer's email is not verified (email_unverified). Nothing changes.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -14892,7 +14892,7 @@
           "request": {
             "name": "Read one order of a store",
             "description": {
-              "content": "Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
+              "content": "Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. The rider and payment services' tokens (SHOPPERSTOP_CORE_SERVICE_TOKENS) are admitted as unscoped readers, like an admin; another service's token answers 403.",
               "type": "text/plain"
             },
             "url": {
@@ -15114,7 +15114,7 @@
           "request": {
             "name": "Move an order to another status",
             "description": {
-              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted and must name the rider in actor; it may move an order only to out_for_delivery or delivered, and anything else answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.",
+              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict, and accepting an order whose paymentStatus is pending answers 409 payment_pending. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted by the service actor table: the rider service names the rider in actor and may move an order only to out_for_delivery or delivered; the payment service names the system ({type: system, name}, no id) and may only cancel, which returns the stock like any cancel; another target answers 403 before the actor or the order is read, and another service's token answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.",
               "type": "text/plain"
             },
             "url": {
@@ -15382,7 +15382,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "A service moving the order to any status but out_for_delivery or delivered. Nothing changes.",
+              "name": "A service moving the order to a status its row of the service actor table does not allow (the rider service: anything but out_for_delivery or delivered; the payment service: anything but cancelled), or another service's token. Nothing changes.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -15446,7 +15446,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"a service may only move an order to out_for_delivery or delivered\"\n  }\n}",
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"this service may not move an order to cancelled\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -15520,7 +15520,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled. Nothing changes.",
+              "name": "The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled (conflict); or staff accept an online order whose payment is still pending (payment_pending); the payment service's system cancel of an order not awaiting payment (paid or cash) is conflict too. Nothing changes.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -15595,11 +15595,808 @@
           }
         },
         {
+          "name": "Mark an order's payment paid or refunded",
+          "request": {
+            "name": "Mark an order's payment paid or refunded",
+            "description": {
+              "content": "The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): marks an online order's payment paid, only while it is pending, or refunded, only while it is paid, in one transaction. The order's status does not change; one event by the system is appended (fromStatus and toStatus both the order's status, actorName payment, note \"Payment <status>, reference <reference>\") and the reference becomes paymentReference. Staff can accept the order once it is paid. The body is checked before the order is read: a status other than paid or refunded is 400 field status, a reference that is empty after trimming or longer than 100 characters 400 field reference. A cash order, or a payment not in the status the change comes from (paying twice, refunding a pending payment), answers 409 conflict and changes nothing: a caller retrying after a lost answer reads the order to see whether its change landed. An unknown order is 404. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":id",
+                "payment"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{orderId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The order id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{serviceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The order with its new payment status, reference and event.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000703\",\n  \"number\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"storeName\": \"Koramangala\",\n  \"promisedMinutes\": 10,\n  \"status\": \"placed\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"label\": \"Home\",\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"subtotalCents\": 103000,\n  \"deliveryFeeCents\": 0,\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"online\",\n  \"paymentStatus\": \"paid\",\n  \"paymentReference\": \"plink_Demo0001\",\n  \"placedAt\": \"2026-10-13T09:20:00Z\",\n  \"items\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 7000,\n      \"mrpCents\": 7000,\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000604\",\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"imageUrl\": \"/api/core/v1/files/products/seed-fruits-vegetables.png\",\n      \"priceCents\": 32000,\n      \"mrpCents\": 32000,\n      \"quantity\": 3\n    }\n  ],\n  \"events\": [\n    {\n      \"toStatus\": \"placed\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"placed\",\n      \"actorType\": \"system\",\n      \"actorName\": \"payment\",\n      \"note\": \"Payment paid, reference plink_Demo0001\",\n      \"createdAt\": \"2026-10-13T09:21:00Z\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "status is neither paid nor refunded (field status), the reference is empty or longer than 100 characters (field reference), or the body is not JSON. Nothing changes.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be paid or refunded\",\n    \"field\": \"status\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, an unknown token or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A staff session or a service other than payment.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"services only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No order has this id, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The order is paid in cash, or its payment is not pending (for paid) or not paid (for refunded). Nothing changes.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "payment"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"paid\",\n  \"reference\": \"plink_Demo0001\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"the payment is not pending\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Tail order events",
+          "request": {
+            "name": "Tail order events",
+            "description": {
+              "content": "The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): every order event with seq above after, ascending by seq, at most limit of them, each with its order's id, number, store, customer and current payment state. Services learn about orders by polling this feed with the last seq they handled (D51); core never calls out. seq follows commit order, so a caller that moves its cursor to the last seq it read never skips an event. A cursor list, not a page: the answer is {items} with no page, pageSize or total. after (default 0) must be a whole number at least 0 and limit (default 100) a whole number from 1 to 500, else 400 naming the parameter. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "order-events"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                    "type": "text/plain"
+                  },
+                  "key": "after",
+                  "value": "40"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "At most this many events. Default 100.",
+                    "type": "text/plain"
+                  },
+                  "key": "limit",
+                  "value": "100"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{serviceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The next events, ascending by seq; empty when there are none.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"seq\": 41,\n      \"orderId\": \"00000000-0000-4000-8000-000000000704\",\n      \"orderNumber\": \"SS-DEMOAAAE\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"toStatus\": \"placed\",\n      \"paymentMethod\": \"online\",\n      \"paymentStatus\": \"paid\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"seq\": 42,\n      \"orderId\": \"00000000-0000-4000-8000-000000000704\",\n      \"orderNumber\": \"SS-DEMOAAAE\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"placed\",\n      \"paymentMethod\": \"online\",\n      \"paymentStatus\": \"paid\",\n      \"actorType\": \"system\",\n      \"createdAt\": \"2026-10-13T09:21:00Z\"\n    },\n    {\n      \"seq\": 43,\n      \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n      \"orderNumber\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"cancelled\",\n      \"paymentMethod\": \"cod\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:25:00Z\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "after or limit is not a whole number in its range (field after or limit).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be a whole number from 1 to 500\",\n    \"field\": \"limit\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, an unknown token or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A staff session or a service other than payment.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"services only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "List a store's orders",
           "request": {
             "name": "List a store's orders",
             "description": {
-              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
+              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.",
               "type": "text/plain"
             },
             "url": {
