@@ -1,5 +1,5 @@
 # rider-P4-L3-T1 - rider on the shared client and token store (task 1 of rider-app-shared-swap)
-Status: blocked
+Status: done
 
 ## Brief
 - LANE-ID: rider-P4-L3 (task T1). Area: `rider`.
