@@ -5,6 +5,7 @@ Status: started
 Worker: 2026-10-15 Task 1: test commit 68e7fe7 red (SQLSTATE 42P07 and 23505, 3 of 3 runs); feat commit applies migrate.go and testdb.go diffs, gates run.
 Worker: 2026-10-15 Task 2: test commit d01cded red (TestStartSessionSweepsExpired keeps an expired row; config and app do not compile); feat commit applies the queries, make gen (only auth.sql.go changed), auth, customer, limit, config and main diffs; gofmt, vet and go test -race ./... green.
 Worker: 2026-10-15 Task 3: test commit 37217ad red ("orders with a rider: 0, want 1"); feat commit applies the seed.go diff, seed package green under -race; gates run.
+Worker: 2026-10-15 Task 3 review gap: test commit (demo rider read back through the router, both reads and the event actors) green on first run by design; seed code unchanged; gofmt, vet and seed -race green.
 Worker: 2026-10-15 Task 4: Part 0 test commit 96a07a3 green on first run (empty and blank X-Forwarded-For keyed on the connection address); test commit 05b3f66 red (both 404); feat commit applies the router diff, the openapi.json script (one line), make gen (only core.d.ts), gofmt, vet, go test -race ./... green, make test-web green, openspec --all --strict 17 passed.
 
 ## Found
