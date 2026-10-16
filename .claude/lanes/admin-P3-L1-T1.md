@@ -34,3 +34,16 @@ Order cancel with a reason › Order cancelled, Reason missing, Keep order. The 
 - Keep your log in this file below `# Worker log` (format in `.claude/lanes/README.md`). Report the commit hashes, every Vitest summary, the `make test-web` exit code and `git status --short`.
 
 # Worker log
+
+## Log
+- Base (0): `Tests  295 passed (295)`, `Test Files  25 passed (25)`; `npm run build --workspace packages/ui` exit 0.
+- 1.1 applied; lint exit 0, typecheck exit 0; specs not run. Ticked 1.1. Commit `05e2eecc58aff343d21a8e7f9f148161e0966525` `test: riders, the seeded order's rider and the dashboard's Open against the services`.
+- 1.2 applied; red: `Tests  3 failed | 292 passed (295)`, `Test Files  1 failed | 24 passed (25)`; the three named tests failed. Ticked 1.2. Commit `23b0a46a6fd46b9e2ca7b850fd8df7cfd125415d` `test: the cancel dialog opens over the order sheet`.
+- 1.3 applied; green: `Tests  295 passed (295)`, `Test Files  25 passed (25)`. Ticked 1.3. Gates: `make test-web` exit 0; `openspec validate admin-riders --strict` valid ("Change 'admin-riders' is valid"). Commit `3c8fe94f711e0004bb4e7b9bdc333380e31df336` `feat: the cancel dialog stacks over the order sheet; the keyboard lands on the result`.
+- 1.4 applied (`git apply` clean); Vitest `Tests  295 passed (295)`, `Test Files  25 passed (25)`; lint exit 0; typecheck exit 0 (before the decision below).
+- 1.4 blocker resolved by the admin manager's decision: `git rm apps/admin/src/idle.ts` as part of 1.4 (nothing imports it; the applied patch kept as it is). After the removal: Vitest `Tests  295 passed (295)`, `Test Files  25 passed (25)`; `make test-web` exit 0; `openspec validate admin-riders --strict` valid. Ticked 1.4. Committed as one commit with the 1.4 patch, the removal, the tick and this log.
+- From now on, logs go in the scratchpad, not /tmp.
+
+## Blockers
+- Resolved (see the log entry above). Patch `openspec/changes/admin-riders/patches/1.4-ui-swaps.diff` does not delete `apps/admin/src/idle.ts`. It has no `deleted file mode` hunk and no `diff --git` for `idle.ts`; it only removes the `import { idle } from './idle'` lines and the local `idle` constant in the eight files. `apps/admin/src/idle.ts` is still present and tracked, and nothing imports it now. The brief ("it deletes `src/idle.ts`") and design.md "How the code is handed over" (table row for 1.4 lists `src/idle.ts (deleted)`) both say it is deleted. Not fixed by hand, since the rule is to stop on any difference. Needs the patch regenerated with the deletion, or an explicit decision to delete the file in a separate step.
+- Consequence: task 1.4 is not committed and not ticked. The working tree holds the unmodified 1.4 patch (8 files, uncommitted) plus this log.

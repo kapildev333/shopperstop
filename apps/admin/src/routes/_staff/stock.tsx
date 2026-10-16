@@ -1,14 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
+import { Badge, Button, Card, Chip, Dialog, DialogFooter, EmptyState, ErrorBanner, FormField, ImageTile, Input, PageHeader, Price, Select, Skeleton, StatusMessage, Table, cn, type Column } from '@shopperstop/ui'
 import { api, type ApiError } from '../../api'
-import { ImageTile } from '../../image'
 import { cleanSearch, lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
 import { storesQuery, type AdminStore } from '../../stores'
 
-// A button that cannot act now stays focusable: `disabled` would drop keyboard focus from the button just pressed.
-const idle = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[] }) {
   const search = Route.useSearch()
@@ -110,7 +107,7 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
   }
 
   const columns: Column<StockRow>[] = [
-    { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} className="w-10" /> },
+    { key: 'image', header: 'Image', cell: (row) => <ImageTile src={row.imageUrl} alt="" className="w-10 border border-line" /> },
     {
       key: 'product',
       header: 'Product',
@@ -188,8 +185,8 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
           {count === 0 ? 'No unsaved changes' : count === 1 ? '1 unsaved change' : `${count} unsaved changes`}
         </p>
         <div className="flex gap-2">
-          <Button variant="secondary" aria-disabled={count === 0} className={idle} onClick={discard}>Discard changes</Button>
-          <Button aria-disabled={count === 0 || save.isPending} className={idle} onClick={submitSave}>
+          <Button variant="secondary" aria-disabled={count === 0} onClick={discard}>Discard changes</Button>
+          <Button aria-disabled={count === 0 || save.isPending} onClick={submitSave}>
             {save.isPending ? 'Saving…' : 'Save changes'}
           </Button>
         </div>
@@ -223,13 +220,13 @@ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[
             <Table stack caption="Stock" columns={columns} rows={stock.data.items} rowKey={(row) => row.productId} />
           </Card>
           <nav aria-label="Pages" className="flex items-center justify-between gap-4">
-            <Button variant="secondary" aria-disabled={page <= 1} className={idle} onClick={() => page > 1 && go({ page: page - 1 })}>
+            <Button variant="secondary" aria-disabled={page <= 1} onClick={() => page > 1 && go({ page: page - 1 })}>
               Previous
             </Button>
             <p className="text-body text-ink tabular-nums">
               Page {stock.data.page} of {pages}, {total} products
             </p>
-            <Button variant="secondary" aria-disabled={page >= pages} className={idle} onClick={() => page < pages && go({ page: page + 1 })}>
+            <Button variant="secondary" aria-disabled={page >= pages} onClick={() => page < pages && go({ page: page + 1 })}>
               Next
             </Button>
           </nav>

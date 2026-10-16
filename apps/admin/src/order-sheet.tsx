@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Badge, Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Price, Sheet, StatusMessage } from '@shopperstop/ui'
-import { idle } from './idle'
 import { orderQuery, statusBadge, statusLabel, useSetStatus, when, type Order } from './orders'
 
 // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
@@ -135,7 +134,7 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
             />
           </FormField>
           <DialogFooter onCancel={closeDialog} cancelLabel="Keep order">
-            <Button type="submit" aria-disabled={cancel.isPending} className={idle}>
+            <Button type="submit" aria-disabled={cancel.isPending}>
               {cancel.isPending ? 'Cancelling…' : 'Cancel order'}
             </Button>
           </DialogFooter>

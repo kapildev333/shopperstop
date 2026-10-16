@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage } from '@shopperstop/ui'
-import { idle } from './idle'
+import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
 import { OrderSheet } from './order-sheet'
 import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, useSince, type Order } from './orders'
 
@@ -19,7 +18,7 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
   return (
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <Button variant="ghost" id={`number-${order.id}`} className="tabular-nums" onClick={onOpen}>{order.number}</Button>
+        <Button variant="ghost" size="compact" id={`number-${order.id}`} className="tabular-nums" onClick={onOpen}>{order.number}</Button>
         <Since at={order.placedAt} />
       </div>
       <p className="text-small text-ink">
@@ -28,7 +27,7 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
       <Price cents={order.totalCents} />
       {isActive(order.status) && (
         // Named by its own text and the order's number: "Accept SS-…".
-        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} className={idle} onClick={onNext}>
+        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} onClick={onNext}>
           {saving ? 'Saving…' : nextLabel[order.status]}
         </Button>
       )}
@@ -86,7 +85,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   const orders = board.data
   return (
     <>
-      <p role="status" aria-label="New orders" className="sr-only">{heard?.news}</p>
+      <VisuallyHidden live role="status" aria-label="New orders">{heard?.news}</VisuallyHidden>
       <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&

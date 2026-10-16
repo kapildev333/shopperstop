@@ -14,7 +14,7 @@ Failing tests: `src/order-sheet.test.tsx` › "a cancel needs a reason: without 
 - [x] 1.1 `patches/1.1-e2e-specs.diff` (`test: riders, the seeded order's rider and the dashboard's Open against the services`); lint and typecheck pass; not run
 - [x] 1.2 `patches/1.2-sheet-tests.diff` (`test: the cancel dialog opens over the order sheet`); `3 failed | 292 passed (295)`
 - [x] 1.3 `patches/1.3-sheet-code.diff` (`feat: the cancel dialog stacks over the order sheet; the keyboard lands on the result`); `295 passed (295)`
-- [ ] 1.4 `patches/1.4-ui-swaps.diff` (`refactor: ui's ImageTile, aria-disabled styling, VisuallyHidden live and compact order buttons`); no new test, the existing ones pin the behaviour (design.md decision 13); `295 passed (295)`; every gate green
+- [x] 1.4 `patches/1.4-ui-swaps.diff` (`refactor: ui's ImageTile, aria-disabled styling, VisuallyHidden live and compact order buttons`); no new test, the existing ones pin the behaviour (design.md decision 13); `295 passed (295)`; every gate green
 
 ## 2. The rider on the card and the sheet
 Waits on: task 1 (core-P3-L1 on main).
