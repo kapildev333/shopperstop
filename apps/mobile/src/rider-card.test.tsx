@@ -48,7 +48,7 @@ test('Rider on the way with a position', async () => {
   const calls = fakeCore({
     [`GET ${delivery}`]: () => json(200, { riderName: 'Asha', status: 'assigned', location: { lat: 12.9352, lng: 77.6245, recordedAt } }),
   })
-  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true)
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue()
 
   await renderCard(order({ riderName: 'Asha' }))
 
@@ -81,7 +81,7 @@ test('Rider without a position', async () => {
 test('No rider card before a rider', async () => {
   setToken('t-rider')
   const calls = fakeCore({})
-  const ready = await renderCard(order({ id: 'o-2', status: 'ready' }))
+  await renderCard(order({ id: 'o-2', status: 'ready' }))
 
   expect(screen.queryByRole('heading', { name: 'Your rider' })).toBeNull()
   expect(calls.some((request) => request.url.includes('/api/rider/'))).toBe(false)
