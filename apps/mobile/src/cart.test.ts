@@ -5,6 +5,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { queryClient } from './api'
 import {
   cartKey,
+  cartOptions,
   clearCart,
   closeCartSheet,
   getCartSummary,
@@ -114,6 +115,13 @@ test('loadCartSummary resolves undefined when the server cart cannot be read', a
   fakeCore({ 'GET /me/cart': () => apiError(500, 'internal', 'Core is down') })
 
   await expect(loadCartSummary()).resolves.toBeUndefined()
+})
+
+test('a failed server cart read throws core\'s inner error, with its code', async () => {
+  setToken('t-1')
+  fakeCore({ 'GET /me/cart': () => apiError(500, 'internal', 'Core is down') })
+
+  await expect(queryClient.fetchQuery(cartOptions('t-1'))).rejects.toMatchObject({ code: 'internal', message: 'Core is down' })
 })
 
 test('store name from core', async () => {
