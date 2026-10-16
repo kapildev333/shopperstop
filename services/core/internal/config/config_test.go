@@ -138,18 +138,21 @@ func TestLoadTrustProxy(t *testing.T) {
 	}
 }
 
-// TestLoadServiceTokens: the Makefile's dev and e2e values load as service rider;
-// unset, empty or only separators load none.
+// TestLoadServiceTokens: the Makefile's dev and e2e values load as services rider
+// and payment; unset, empty or only separators load none.
 func TestLoadServiceTokens(t *testing.T) {
-	for _, token := range []string{"dev-rider-service-token-dev-rider-00", "e2e-rider-service-token-e2e-rider-00"} {
+	for _, want := range []struct{ rider, payment string }{
+		{"dev-rider-service-token-dev-rider-00", "dev-payment-service-token-dev-pay-00"},
+		{"e2e-rider-service-token-e2e-rider-00", "e2e-payment-service-token-e2e-pay-00"},
+	} {
 		vars := valid()
-		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = "rider:" + token
+		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = "rider:" + want.rider + ",payment:" + want.payment
 		cfg, err := config.Load(env(vars))
 		if err != nil {
-			t.Fatalf("Load with rider:%s: %v", token, err)
+			t.Fatalf("Load with rider and payment: %v", err)
 		}
-		if len(cfg.ServiceTokens) != 1 || cfg.ServiceTokens["rider"] != token {
-			t.Fatalf("ServiceTokens %v, want only rider:%s", cfg.ServiceTokens, token)
+		if len(cfg.ServiceTokens) != 2 || cfg.ServiceTokens["rider"] != want.rider || cfg.ServiceTokens["payment"] != want.payment {
+			t.Fatalf("ServiceTokens %v, want rider:%s and payment:%s", cfg.ServiceTokens, want.rider, want.payment)
 		}
 	}
 	for _, v := range []string{"", " , "} {
