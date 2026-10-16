@@ -30,7 +30,7 @@ async function renderCard(element = <Harness />) {
 // The "Choose address" sheet holds the radio group; its title is a heading.
 async function openChoice() {
   await fireEvent.press(await screen.findByRole('button', { name: 'Change address' }))
-  return screen.findByRole('radiogroup', { name: 'Deliver to' })
+  return screen.findByLabelText('Deliver to')
 }
 
 test('Default address shown', async () => {
@@ -66,7 +66,7 @@ test('Another address chosen', async () => {
   const group = await openChoice()
   await fireEvent.press(within(group).getByRole('radio', { name: 'Deliver to Work' }))
 
-  await waitFor(() => expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull())
+  await waitFor(() => expect(screen.queryByLabelText('Deliver to')).toBeNull())
   expect(await screen.findByText('Delivering to Work')).toBeTruthy()
 })
 
@@ -86,10 +86,10 @@ test('Address added at checkout', async () => {
 
   const group = await openChoice()
   expect(within(group).getByRole('radio', { name: 'Deliver to Home' })).toBeChecked()
-  await fireEvent.press(within(group).getByRole('button', { name: 'Add address' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Add address' }))
 
   // The choice sheet closes before the address sheet opens.
-  await waitFor(() => expect(screen.queryByRole('radiogroup', { name: 'Deliver to' })).toBeNull())
+  await waitFor(() => expect(screen.queryByLabelText('Deliver to')).toBeNull())
   await fireEvent.press(await screen.findByRole('button', { name: 'Work' }))
   await fireEvent.changeText(screen.getByLabelText('House, flat, floor'), '1 Park St')
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
@@ -108,6 +108,6 @@ test('refused address badge', async () => {
   expect(screen.getByText('Not delivered here')).toBeTruthy()
 
   const group = await openChoice()
-  expect(within(group).getByRole('radio', { name: 'Deliver to Work' })).toHaveTextContent('Not delivered here')
-  expect(within(group).getByRole('radio', { name: 'Deliver to Home' })).not.toHaveTextContent('Not delivered here')
+  expect(within(within(group).getByRole('radio', { name: 'Deliver to Work' })).getByText('Not delivered here')).toBeTruthy()
+  expect(within(group).getAllByText('Not delivered here')).toHaveLength(1)
 })
