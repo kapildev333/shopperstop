@@ -169,9 +169,9 @@ Scope: `apps/mobile/src/app/search.tsx`, `apps/mobile/src/{catalog-search.test.t
 Scenarios: Search submits, No results suggests categories, Clear search.
 Starts from: `src/catalog-search-submit.test.tsx`: `search submits` (type " milk ", `fireEvent(box, 'submitEditing')`, `toHaveSearchParams({ q: 'milk' })`, heading "2 products for “milk”"); `src/catalog-search.test.tsx`: `no results suggests categories` (`initialUrl: '/search?q=zzz'`), `clear search`, `no query shows search for products`.
 
-- [ ] 14.1 Red
-- [ ] 14.2 The screen per design.md Decision 10 and the design file "13 · Search"
-- [ ] 14.3 Gates green
+- [x] 14.1 Red
+- [x] 14.2 The screen per design.md Decision 10 and the design file "13 · Search"
+- [x] 14.3 Gates green
 
 ## 15. e2e
 
