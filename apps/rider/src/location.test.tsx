@@ -60,6 +60,21 @@ test('first fix sent, then every 15 seconds', async () => {
   expect(sent).toEqual([{ lat: fix.lat, lng: fix.lng }, { lat: fix.lat, lng: fix.lng }])
 })
 
+test('a late first fix starts the count', async () => {
+  const { sent } = openAssigned()
+  await ready()
+
+  await act(() => vi.advanceTimersByTimeAsync(14_000))
+  act(() => geo.fix(fix.lat, fix.lng))
+  await waitFor(() => expect(sent).toHaveLength(1))
+
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  expect(sent).toHaveLength(1)
+
+  await act(() => vi.advanceTimersByTimeAsync(14_000))
+  expect(sent).toHaveLength(2)
+})
+
 test('stops after delivered', async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   const { sent } = openAssigned({

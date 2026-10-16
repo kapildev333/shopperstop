@@ -215,3 +215,30 @@ test('service fails', async () => {
   expect(router.state.location.pathname).toBe('/')
   expect(screen.getByRole('heading', { level: 1, name: 'Ready to pick up' })).toBeInTheDocument()
 })
+
+test('cancel waits for a pending pick up', async () => {
+  setToken('tok')
+  const answers: Array<(response: Response) => void> = []
+  fakeApi(
+    routes({
+      [READY]: () => json(200, { items: [readyOrder(1)] }),
+      [CLAIM]: () => new Promise<Response>((resolve) => answers.push(resolve)),
+    }),
+  )
+  const user = userEvent.setup()
+
+  renderApp('/')
+
+  await user.click(await screen.findByRole('button', { name: 'Pick up SS-AAAA0001' }))
+  const dialog = screen.getByRole('dialog', { name: 'Pick up SS-AAAA0001?' })
+  await user.click(within(dialog).getByRole('button', { name: 'Pick up' }))
+  await waitFor(() => expect(answers).toHaveLength(1))
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  await user.keyboard('{Escape}')
+
+  expect(screen.getByRole('dialog', { name: 'Pick up SS-AAAA0001?' })).toBeInTheDocument()
+
+  answers[0](apiError(409, 'conflict', 'order already claimed'))
+  expect(await screen.findByText('SS-AAAA0001 was taken by another rider or is no longer ready.')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
