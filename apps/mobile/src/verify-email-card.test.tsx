@@ -45,7 +45,7 @@ test('unverified customer sees the card', async () => {
 
   expect(await screen.findByText(CARD_TEXT)).toBeTruthy()
   expect(screen.getByRole('button', { name: SEND })).toBeTruthy()
-  account.unmount()
+  await account.unmount()
 
   // Checkout with no cart answer (fakeCore's 404): the card still shows under the header.
   fakeCore({
