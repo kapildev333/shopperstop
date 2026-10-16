@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
+import { queryClient } from './api'
 import { getToken, setToken } from './session'
 import { renderAt } from './test-data'
 
@@ -97,6 +98,7 @@ test('reset form checks fields', async () => {
 
 test('password reset', async () => {
   setToken('t')
+  queryClient.setQueryData(['me', 't'], { id: '00000000-0000-4000-8000-000000000201', email: 'asha@example.com', name: 'Asha', emailVerified: true })
   const posts: unknown[] = []
   vi.stubGlobal('fetch', async (request: Request) => {
     if (new URL(request.url).pathname === '/api/core/v1/auth/password-reset/confirm') {
@@ -112,6 +114,9 @@ test('password reset', async () => {
   expect(await screen.findByText('Your password is changed. Sign in with your new password.')).toBeInTheDocument()
   expect(posts).toEqual([{ token: 'r-1', password: 'newpass123' }])
   expect(getToken()).toBeUndefined()
+  // The cache is cleared: no ['me'] query still holds the customer. (The header's disabled ['me', undefined] query may be re-created by the token drop; it holds no data.)
+  expect(queryClient.getQueryData(['me', 't'])).toBeUndefined()
+  expect(queryClient.getQueryCache().findAll({ queryKey: ['me'] }).filter((q) => q.state.data !== undefined)).toHaveLength(0)
   expect(within(screen.getByRole('main')).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in')
 })
 

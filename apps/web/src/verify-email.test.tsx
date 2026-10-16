@@ -19,10 +19,17 @@ const json = (body: unknown, status = 200) =>
 const expired = 'This verification link is invalid or has expired.'
 
 test('email verified with the code', async () => {
+  setToken('t')
+  const seen: string[] = []
   const posts: unknown[] = []
+  let verified = false
   vi.stubGlobal('fetch', async (request: Request) => {
-    if (new URL(request.url).pathname === '/api/core/v1/auth/verify-email') {
+    const path = new URL(request.url).pathname
+    seen.push(`${request.method} ${path}`)
+    if (path === '/api/core/v1/me') return json(me(verified))
+    if (path === '/api/core/v1/auth/verify-email') {
       posts.push(await request.clone().json())
+      verified = true
       return new Response(null, { status: 204 })
     }
     throw new TypeError('fetch failed')
@@ -30,6 +37,9 @@ test('email verified with the code', async () => {
   renderAt('/verify-email?token=c-1')
   expect(await screen.findByText('Your email is verified')).toBeInTheDocument()
   expect(posts).toEqual([{ token: 'c-1' }])
+  // The site reads /me again after the 204, so the banner and header see the new answer.
+  const posted = seen.indexOf('POST /api/core/v1/auth/verify-email')
+  expect(seen.slice(posted + 1)).toContain('GET /api/core/v1/me')
   expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', '/account')
 })
 
