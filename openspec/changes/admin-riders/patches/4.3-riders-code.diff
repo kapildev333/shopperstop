@@ -1,0 +1,405 @@
+diff --git a/apps/admin/src/api.ts b/apps/admin/src/api.ts
+index f730270..6d0776a 100644
+--- a/apps/admin/src/api.ts
++++ b/apps/admin/src/api.ts
+@@ -1,9 +1,11 @@
+-import createClient from 'openapi-fetch'
++import createClient, { type Middleware } from 'openapi-fetch'
+ import type { components, paths } from '@shopperstop/ui/api'
++import type { components as riderComponents, paths as riderPaths } from '@shopperstop/ui/api/rider'
+ import { clearToken, getToken } from './session'
+ 
+ export type Staff = components['schemas']['Staff']
+ export type ApiError = components['schemas']['Error']['error']
++export type Rider = riderComponents['schemas']['Rider']
+ 
+ let unauthorized = () => {}
+ 
+@@ -18,7 +20,9 @@ export const api = createClient<paths>({
+   fetch: (request) => globalThis.fetch(request),
+ })
+ 
+-api.use({
++// One rule for both services: the staff token on every request, a 401 to it ends the session, a failure without the
++// error envelope (both services write the same one) is handed on as one with code `internal`.
++const staffSession: Middleware = {
+   onRequest({ request }) {
+     const token = getToken()
+     if (token) request.headers.set('Authorization', `Bearer ${token}`)
+@@ -39,7 +43,15 @@ api.use({
+     if (typeof body?.error?.code === 'string') return response
+     return Response.json({ error: { code: 'internal', message: 'The server did not answer as expected.' } }, { status: response.status })
+   },
++}
++api.use(staffSession)
++
++// The rider service (`services/rider`), same origin; it checks the staff token with core itself.
++export const riderApi = createClient<riderPaths>({
++  baseUrl: `${location.origin}/api/rider/v1`,
++  fetch: (request) => globalThis.fetch(request),
+ })
++riderApi.use(staffSession)
+ 
+ export const meQuery = {
+   queryKey: ['admin', 'me'],
+diff --git a/apps/admin/src/nav.ts b/apps/admin/src/nav.ts
+index e3360ec..c18bb18 100644
+--- a/apps/admin/src/nav.ts
++++ b/apps/admin/src/nav.ts
+@@ -4,6 +4,7 @@ const links = [
+   { to: '/', label: 'Dashboard', adminOnly: false },
+   { to: '/orders', label: 'Orders', adminOnly: false },
+   { to: '/stock', label: 'Stock', adminOnly: false },
++  { to: '/riders', label: 'Riders', adminOnly: false },
+   { to: '/stores', label: 'Stores', adminOnly: true },
+   { to: '/categories', label: 'Categories', adminOnly: true },
+   { to: '/products', label: 'Products', adminOnly: true },
+diff --git a/apps/admin/src/rider-dialog.tsx b/apps/admin/src/rider-dialog.tsx
+new file mode 100644
+index 0000000..fd9bda8
+--- /dev/null
++++ b/apps/admin/src/rider-dialog.tsx
+@@ -0,0 +1,126 @@
++import { useMutation, useQueryClient } from '@tanstack/react-query'
++import { useState, type FormEvent } from 'react'
++import { Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Select } from '@shopperstop/ui'
++import { riderApi, type ApiError, type Rider } from './api'
++import type { AdminStore } from './stores'
++
++type Field = 'name' | 'email' | 'phone' | 'password' | 'storeId'
++
++// One message per field for the rider service's 400 naming it.
++const messages: Record<Field, string> = {
++  name: 'Enter 1 to 100 characters.',
++  email: 'Enter a valid email address.',
++  phone: 'Enter 10 to 15 digits, with an optional + in front.',
++  password: 'Enter 8 to 72 characters.',
++  storeId: 'Choose a store.',
++}
++const taken = 'A rider with this email already exists.'
++
++// Create (no rider) or change a rider. `stores` is the admin's store choice; store staff pass `ownStoreId` and get no
++// store field. The service changes the name, the phone, the password and the status; never the email or the store.
++export function RiderDialog({ rider, stores, ownStoreId, defaultStoreId, onClose }: { rider?: Rider; stores?: AdminStore[]; ownStoreId?: string; defaultStoreId?: string; onClose: () => void }) {
++  const queryClient = useQueryClient()
++  const [name, setName] = useState(rider?.name ?? '')
++  const [email, setEmail] = useState('')
++  const [phone, setPhone] = useState(rider?.phone ?? '')
++  const [password, setPassword] = useState('')
++  const [storeId, setStoreId] = useState(ownStoreId ?? defaultStoreId ?? '')
++  const [status, setStatus] = useState(rider && !rider.isActive ? 'inactive' : 'active')
++
++  // PATCH sends only what differs from the row; an empty password keeps it, an empty phone removes it.
++  const changes = (from: Rider) => ({
++    ...(name !== from.name && { name }),
++    ...(phone !== (from.phone ?? '') && { phone }),
++    ...(password && { password }),
++    ...((status === 'active') !== from.isActive && { isActive: status === 'active' }),
++  })
++
++  const save = useMutation({
++    // The request body holds the password: a finished save is dropped from the mutation cache at once.
++    gcTime: 0,
++    mutationFn: async () => {
++      const { data, error } = rider
++        ? await riderApi.PATCH('/admin/riders/{id}', { params: { path: { id: rider.id } }, body: changes(rider) })
++        : await riderApi.POST('/admin/riders', { body: { storeId, email, name, password, ...(phone && { phone }) } })
++      if (error) throw error.error
++      return data
++    },
++    onSuccess: async () => {
++      // ponytail: every riders list is read again (one GET) instead of writing the answer in; fine at 100 riders a list.
++      await queryClient.invalidateQueries({ queryKey: ['rider', 'riders'] })
++      onClose()
++    },
++  })
++
++  function close() {
++    if (!save.isPending) onClose()
++  }
++
++  function submit(event: FormEvent) {
++    event.preventDefault()
++    if (save.isPending) return
++    if (rider && Object.keys(changes(rider)).length === 0) return onClose()
++    save.mutate()
++  }
++
++  // Any edit clears the last answer, but never while a save runs: reset() would detach it.
++  function edit<Value>(set: (value: Value) => void, value: Value) {
++    set(value)
++    if (!save.isPending) save.reset()
++  }
++
++  const apiError = save.error as Partial<ApiError> | null
++  const field = apiError?.field && apiError.field in messages ? (apiError.field as Field) : undefined
++  const fieldError = field && (apiError?.code === 'validation' ? messages[field] : apiError?.code === 'conflict' && field === 'email' ? taken : undefined)
++  const errorFor = (name: Field) => (field === name ? fieldError : undefined)
++
++  return (
++    <Dialog open onClose={close} title={rider ? `Edit ${rider.name}` : 'New rider'}>
++      <form noValidate onSubmit={submit} className="mt-4 flex flex-col gap-4">
++        {save.error && !fieldError && <ErrorBanner message="Could not save the rider. Try again." />}
++        {rider && <p className="text-body text-ink">{rider.email}. The email and the store cannot be changed: create a new rider instead.</p>}
++        <FormField label="Name" error={errorFor('name')}>
++          <Input autoComplete="off" value={name} onChange={(event) => edit(setName, event.target.value)} />
++        </FormField>
++        {!rider && (
++          <FormField label="Email" error={errorFor('email')}>
++            <Input type="email" autoComplete="off" value={email} onChange={(event) => edit(setEmail, event.target.value)} />
++          </FormField>
++        )}
++        <FormField label="Phone" hint={rider ? 'Leave empty to remove the phone number.' : 'Optional. 10 to 15 digits, with an optional + in front.'} error={errorFor('phone')}>
++          <Input type="tel" autoComplete="off" value={phone} onChange={(event) => edit(setPhone, event.target.value)} />
++        </FormField>
++        <FormField
++          label={rider ? 'New password' : 'Password'}
++          hint={rider ? 'Leave empty to keep the current password. 8 to 72 characters.' : '8 to 72 characters.'}
++          error={errorFor('password')}
++        >
++          <Input type="password" autoComplete="new-password" value={password} onChange={(event) => edit(setPassword, event.target.value)} />
++        </FormField>
++        {!rider && !ownStoreId && (
++          <FormField label="Store" error={errorFor('storeId')}>
++            <Select value={storeId} onChange={(event) => edit(setStoreId, event.target.value)}>
++              <option value="">Choose a store</option>
++              {stores?.map((store) => (
++                <option key={store.id} value={store.id}>{store.name}</option>
++              ))}
++            </Select>
++          </FormField>
++        )}
++        {rider && (
++          <FormField label="Status" hint="Inactive riders cannot sign in and are signed out at once.">
++            <Select value={status} onChange={(event) => edit(setStatus, event.target.value)}>
++              <option value="active">Active</option>
++              <option value="inactive">Inactive</option>
++            </Select>
++          </FormField>
++        )}
++        <DialogFooter onCancel={close} className="mt-2">
++          <Button type="submit" aria-disabled={save.isPending}>
++            {save.isPending ? 'Saving…' : rider ? 'Save changes' : 'Create rider'}
++          </Button>
++        </DialogFooter>
++      </form>
++    </Dialog>
++  )
++}
+diff --git a/apps/admin/src/riders.ts b/apps/admin/src/riders.ts
+new file mode 100644
+index 0000000..5f7f9dc
+--- /dev/null
++++ b/apps/admin/src/riders.ts
+@@ -0,0 +1,17 @@
++import { queryOptions } from '@tanstack/react-query'
++import { riderApi } from './api'
++
++// The rider service takes at most 100 a page.
++export const pageSize = 100
++
++// Keys: every riders list is under ['rider', 'riders']; one list is ['rider', 'riders', store or 'all'].
++// ponytail: the first 100 riders by email, no pager; the page says so when the service holds more. Add a pager when a store passes 100.
++export const ridersQuery = (store?: string) =>
++  queryOptions({
++    queryKey: ['rider', 'riders', store ?? 'all'],
++    queryFn: async () => {
++      const { data, error } = await riderApi.GET('/admin/riders', { params: { query: { pageSize, ...(store && { store }) } } })
++      if (error) throw error.error
++      return data
++    },
++  })
+diff --git a/apps/admin/src/routeTree.gen.ts b/apps/admin/src/routeTree.gen.ts
+index 7c91711..e592d24 100644
+--- a/apps/admin/src/routeTree.gen.ts
++++ b/apps/admin/src/routeTree.gen.ts
+@@ -14,6 +14,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
+ import { Route as StaffIndexRouteImport } from './routes/_staff/index'
+ import { Route as StaffAdminRouteImport } from './routes/_staff/_admin'
+ import { Route as StaffOrdersRouteImport } from './routes/_staff/orders'
++import { Route as StaffRidersRouteImport } from './routes/_staff/riders'
+ import { Route as StaffStockRouteImport } from './routes/_staff/stock'
+ import { Route as StaffAdminCategoriesRouteImport } from './routes/_staff/_admin/categories'
+ import { Route as StaffAdminStaffRouteImport } from './routes/_staff/_admin/staff'
+@@ -47,6 +48,11 @@ const StaffOrdersRoute = StaffOrdersRouteImport.update({
+   path: '/orders',
+   getParentRoute: () => StaffRoute,
+ } as any)
++const StaffRidersRoute = StaffRidersRouteImport.update({
++  id: '/riders',
++  path: '/riders',
++  getParentRoute: () => StaffRoute,
++} as any)
+ const StaffStockRoute = StaffStockRouteImport.update({
+   id: '/stock',
+   path: '/stock',
+@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
+   '/': typeof StaffIndexRoute
+   '/sign-in': typeof SignInRoute
+   '/orders': typeof StaffOrdersRoute
++  '/riders': typeof StaffRidersRoute
+   '/stock': typeof StaffStockRoute
+   '/categories': typeof StaffAdminCategoriesRoute
+   '/staff': typeof StaffAdminStaffRoute
+@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
+   '/sign-in': typeof SignInRoute
+   '/': typeof StaffIndexRoute
+   '/orders': typeof StaffOrdersRoute
++  '/riders': typeof StaffRidersRoute
+   '/stock': typeof StaffStockRoute
+   '/categories': typeof StaffAdminCategoriesRoute
+   '/staff': typeof StaffAdminStaffRoute
+@@ -128,6 +136,7 @@ export interface FileRoutesById {
+   '/sign-in': typeof SignInRoute
+   '/_staff/_admin': typeof StaffAdminRouteWithChildren
+   '/_staff/orders': typeof StaffOrdersRoute
++  '/_staff/riders': typeof StaffRidersRoute
+   '/_staff/stock': typeof StaffStockRoute
+   '/_staff/': typeof StaffIndexRoute
+   '/_staff/_admin/categories': typeof StaffAdminCategoriesRoute
+@@ -145,6 +154,7 @@ export interface FileRouteTypes {
+     | '/'
+     | '/sign-in'
+     | '/orders'
++    | '/riders'
+     | '/stock'
+     | '/categories'
+     | '/staff'
+@@ -159,6 +169,7 @@ export interface FileRouteTypes {
+     | '/sign-in'
+     | '/'
+     | '/orders'
++    | '/riders'
+     | '/stock'
+     | '/categories'
+     | '/staff'
+@@ -174,6 +185,7 @@ export interface FileRouteTypes {
+     | '/sign-in'
+     | '/_staff/_admin'
+     | '/_staff/orders'
++    | '/_staff/riders'
+     | '/_staff/stock'
+     | '/_staff/'
+     | '/_staff/_admin/categories'
+@@ -228,6 +240,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof StaffOrdersRouteImport
+       parentRoute: typeof StaffRoute
+     }
++    '/_staff/riders': {
++      id: '/_staff/riders'
++      path: '/riders'
++      fullPath: '/riders'
++      preLoaderRoute: typeof StaffRidersRouteImport
++      parentRoute: typeof StaffRoute
++    }
+     '/_staff/stock': {
+       id: '/_staff/stock'
+       path: '/stock'
+@@ -323,6 +342,7 @@ const StaffAdminRouteWithChildren = StaffAdminRoute._addFileChildren(
+ interface StaffRouteChildren {
+   StaffAdminRoute: typeof StaffAdminRouteWithChildren
+   StaffOrdersRoute: typeof StaffOrdersRoute
++  StaffRidersRoute: typeof StaffRidersRoute
+   StaffStockRoute: typeof StaffStockRoute
+   StaffIndexRoute: typeof StaffIndexRoute
+ }
+@@ -330,6 +350,7 @@ interface StaffRouteChildren {
+ const StaffRouteChildren: StaffRouteChildren = {
+   StaffAdminRoute: StaffAdminRouteWithChildren,
+   StaffOrdersRoute: StaffOrdersRoute,
++  StaffRidersRoute: StaffRidersRoute,
+   StaffStockRoute: StaffStockRoute,
+   StaffIndexRoute: StaffIndexRoute,
+ }
+diff --git a/apps/admin/src/routes/_staff/riders.tsx b/apps/admin/src/routes/_staff/riders.tsx
+new file mode 100644
+index 0000000..577ab03
+--- /dev/null
++++ b/apps/admin/src/routes/_staff/riders.tsx
+@@ -0,0 +1,86 @@
++import { useQuery } from '@tanstack/react-query'
++import { createFileRoute } from '@tanstack/react-router'
++import { useState } from 'react'
++import { Badge, Button, Card, EmptyState, ErrorBanner, FormField, PageHeader, Select, Skeleton, StatusMessage, Table, type Column } from '@shopperstop/ui'
++import type { Rider } from '../../api'
++import { RiderDialog } from '../../rider-dialog'
++import { pageSize, ridersQuery } from '../../riders'
++import { storeNameQuery } from '../../stock'
++import { storesQuery } from '../../stores'
++
++function Riders() {
++  const { staff } = Route.useRouteContext()
++  const search = Route.useSearch()
++  const navigate = Route.useNavigate()
++  const isAdmin = !staff.storeId
++  // Admins name each rider's store and choose one; store staff may not list stores (403) and see their own.
++  const stores = useQuery({ ...storesQuery, enabled: isAdmin })
++  const ownStore = useQuery({ ...storeNameQuery(staff.storeId ?? ''), enabled: !isAdmin })
++  const storeItems = stores.data?.items
++  // A `store` in the URL that is not a store is not sent (the service answers 400 to a non-uuid): all stores.
++  const store = isAdmin ? storeItems?.find((each) => each.id === search.store)?.id : undefined
++  const riders = useQuery({ ...ridersQuery(store), enabled: !isAdmin || storeItems !== undefined })
++  const [editing, setEditing] = useState<Rider | 'new'>()
++  const list = riders.data
++  const storeName = new Map(storeItems?.map((each) => [each.id, each.name]))
++  const rider = editing === 'new' ? undefined : editing && (list?.items.find((row) => row.id === editing.id) ?? editing)
++  const ready = list !== undefined && (!isAdmin || storeItems !== undefined)
++
++  const columns: Column<Rider>[] = [
++    { key: 'name', header: 'Name', cell: (each) => <span className="font-semibold text-ink">{each.name}</span> },
++    { key: 'email', header: 'Email', cell: (each) => each.email },
++    { key: 'phone', header: 'Phone', cell: (each) => <span className="tabular-nums">{each.phone ?? 'None'}</span> },
++    ...(isAdmin ? [{ key: 'store', header: 'Store', cell: (each: Rider) => storeName.get(each.storeId) ?? 'Unknown store' }] : []),
++    { key: 'status', header: 'Status', cell: (each) => <Badge variant={each.isActive ? 'success' : 'neutral'}>{each.isActive ? 'Active' : 'Inactive'}</Badge> },
++    { key: 'actions', header: 'Actions', cell: (each) => <Button variant="ghost" aria-label={`Edit ${each.email}`} onClick={() => setEditing(each)}>Edit</Button> },
++  ]
++
++  return (
++    <div className="flex flex-col gap-6">
++      <PageHeader title="Riders" actions={ready && <Button onClick={() => setEditing('new')}>New rider</Button>} />
++      {ownStore.data && (
++        <p className="text-body text-ink">
++          Store: <span className="font-semibold">{ownStore.data}</span>
++        </p>
++      )}
++      {isAdmin && storeItems && (
++        <Card className="flex flex-wrap items-end gap-4 p-4">
++          <FormField label="Store">
++            <Select value={store ?? ''} onChange={(event) => void navigate({ search: { store: event.target.value || undefined } })}>
++              <option value="">All stores</option>
++              {storeItems.map((each) => (
++                <option key={each.id} value={each.id}>{each.name}</option>
++              ))}
++            </Select>
++          </FormField>
++        </Card>
++      )}
++      {!ready ? (
++        (riders.isError && list === undefined) || (stores.isError && storeItems === undefined) ? (
++          <ErrorBanner message="Could not load the riders." onRetry={() => void Promise.all([riders.refetch(), isAdmin && stores.refetch()])} />
++        ) : (
++          <Skeleton variant="table" count={4} />
++        )
++      ) : list.items.length === 0 ? (
++        <Card className="p-6">
++          <EmptyState title="No riders yet" description="Create a rider, then they can sign in to the rider app." />
++        </Card>
++      ) : (
++        <>
++          {list.total > list.items.length && <StatusMessage>Showing the first {pageSize} of {list.total} riders, by email.</StatusMessage>}
++          <Card className="overflow-hidden">
++            <Table stack caption="Riders" columns={columns} rows={list.items} rowKey={(each) => each.id} />
++          </Card>
++        </>
++      )}
++      {editing && ready && (
++        <RiderDialog rider={rider} stores={storeItems} ownStoreId={staff.storeId} defaultStoreId={store} onClose={() => setEditing(undefined)} />
++      )}
++    </div>
++  )
++}
++
++export const Route = createFileRoute('/_staff/riders')({
++  validateSearch: (search: Record<string, unknown>): { store?: string } => ({ store: typeof search.store === 'string' ? search.store : undefined }),
++  component: Riders,
++})
