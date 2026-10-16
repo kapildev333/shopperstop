@@ -1,6 +1,6 @@
-import { Pressable, type GestureResponderEvent } from 'react-native'
+import { Pressable, StyleSheet, type GestureResponderEvent } from 'react-native'
 import { Text } from './text'
-import { colors, radius } from './tokens'
+import { colors, radius, spacing } from './tokens'
 
 export function Chip({
   selected,
@@ -16,17 +16,23 @@ export function Chip({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={{
-        minHeight: 44,
-        paddingHorizontal: 16,
-        justifyContent: 'center',
-        borderRadius: radius.pill,
-        borderWidth: 1,
-        borderColor: selected ? colors.accent : colors.lineStrong,
-        backgroundColor: selected ? colors.accentSoft : colors.surface,
-      }}
+      style={[styles.frame, selected ? styles.selected : styles.unselected]}
     >
-      <Text style={{ color: selected ? colors.accentHover : colors.ink }}>{children}</Text>
+      <Text style={selected ? styles.selectedLabel : styles.unselectedLabel}>{children}</Text>
     </Pressable>
   )
 }
+
+const styles = StyleSheet.create({
+  frame: {
+    minHeight: 44,
+    paddingHorizontal: spacing.gutter,
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  selected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  unselected: { borderColor: colors.lineStrong, backgroundColor: colors.surface },
+  selectedLabel: { color: colors.accentHover },
+  unselectedLabel: { color: colors.ink },
+})

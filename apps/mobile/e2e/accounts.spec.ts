@@ -64,7 +64,7 @@ test('register with a field error', async ({ page }) => {
   await page.getByLabel('Email', { exact: true }).fill(freshEmail())
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page).toHaveURL('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Groceries in minutes' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /shopperstop/i })).toBeVisible()
 })
 
 test('addresses against core', async ({ page }) => {

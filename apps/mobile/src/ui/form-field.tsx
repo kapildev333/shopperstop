@@ -10,10 +10,12 @@ type Props = Omit<TextInputProps, 'style'> & {
   optional?: boolean
   // A pressable inside the frame, on the right of the input (the password's show and hide).
   trailing?: ReactNode
+  // Tabular figures and letter spacing, for codes and numbers such as a pincode.
+  tabular?: boolean
 }
 
 // The hint is what a screen reader reads with the input; a shown error replaces it.
-export function FormField({ label, hint, error, optional, trailing, ...input }: Props) {
+export function FormField({ label, hint, error, optional, trailing, tabular, ...input }: Props) {
   const message = error ?? hint
   return (
     <View>
@@ -29,7 +31,7 @@ export function FormField({ label, hint, error, optional, trailing, ...input }: 
           accessibilityLabel={label}
           accessibilityHint={message}
           placeholderTextColor={colors.inkMuted}
-          style={styles.input}
+          style={[styles.input, tabular ? styles.tabular : null]}
         />
         {trailing}
       </View>
@@ -64,5 +66,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.ink,
   },
+  tabular: { fontVariant: ['tabular-nums'], letterSpacing: 2 },
   message: { marginTop: 6 },
 })

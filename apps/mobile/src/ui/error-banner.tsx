@@ -1,6 +1,8 @@
-import { Pressable, View } from 'react-native'
-import { colors, fontFamily, radius } from './tokens'
+import { CircleAlert } from 'lucide-react-native'
+import { StyleSheet, View } from 'react-native'
+import { Button } from './button'
 import { Text } from './text'
+import { colors, fontFamily, radius, spacing } from './tokens'
 
 // A thrown read (the network refused) is an Error; core's answers are envelopes with a string code.
 export function errorKind(error: unknown): 'offline' | 'server' {
@@ -19,39 +21,34 @@ type Props = { error: unknown; onRetry: () => void }
 export function ErrorBanner({ error, onRetry }: Props) {
   const text = copy[errorKind(error)]
   return (
-    <View accessible accessibilityRole="alert" style={{ gap: 8 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 10,
-          padding: 12,
-          borderRadius: radius.control,
-          backgroundColor: colors.dangerSoft,
-        }}
-      >
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="body" style={{ fontFamily: fontFamily(600) }}>
+    <View accessible accessibilityRole="alert" style={styles.stack}>
+      <View style={styles.banner}>
+        <View aria-hidden>
+          <CircleAlert size={20} color={colors.danger} />
+        </View>
+        <View style={styles.text}>
+          <Text variant="body" style={styles.title}>
             {text.title}
           </Text>
           <Text>{text.body}</Text>
         </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onRetry}
-        style={{
-          minHeight: 44,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 16,
-          borderRadius: radius.control,
-          backgroundColor: colors.accent,
-        }}
-      >
-        <Text variant="button" tone="onAccent">
-          Try again
-        </Text>
-      </Pressable>
+      <Button variant="primary" size="md" onPress={onRetry}>
+        Try again
+      </Button>
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  stack: { gap: spacing.unit * 2 },
+  banner: {
+    flexDirection: 'row',
+    gap: spacing.gridGap,
+    padding: spacing.unit * 3,
+    borderRadius: radius.control,
+    backgroundColor: colors.dangerSoft,
+  },
+  text: { flex: 1, gap: spacing.unit },
+  title: { fontFamily: fontFamily(600) },
+})

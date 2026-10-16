@@ -3,6 +3,7 @@ import { EmptyState } from './empty-state'
 import { ErrorBanner } from './error-banner'
 import { Skeleton } from './skeleton'
 import { Text } from './text'
+import { colors } from './tokens'
 
 test('empty state', async () => {
   await render(
@@ -39,4 +40,28 @@ test('skeleton labelled loading', async () => {
   await render(<Skeleton count={2} />)
   expect(screen.getByLabelText('Loading')).toBeTruthy()
   expect(screen.getAllByTestId('skeleton-block')).toHaveLength(2)
+})
+
+test('skeleton tiles', async () => {
+  await render(<Skeleton variant="tiles" columns={4} count={8} />)
+  expect(screen.getByLabelText('Loading')).toBeTruthy()
+  const blocks = screen.getAllByTestId('skeleton-block')
+  expect(blocks).toHaveLength(8)
+  expect(blocks[0]).toHaveStyle({ aspectRatio: 1 })
+})
+
+test('try again is a button', async () => {
+  const onRetry = jest.fn()
+  await render(<ErrorBanner error={{ code: 'internal', message: 'x' }} onRetry={onRetry} />)
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  expect(retry).toHaveStyle({ minHeight: 44, backgroundColor: colors.accent })
+  expect(retry.props.accessibilityState).toEqual({ disabled: false, busy: false })
+  fireEvent.press(retry)
+  expect(onRetry).toHaveBeenCalledTimes(1)
+})
+
+test('empty state level', async () => {
+  await render(<EmptyState level={1} title="Category not found" />)
+  // RNTL 14 has no `level` query option; the heading level is the aria-level prop.
+  expect(screen.getByRole('heading', { name: 'Category not found' }).props['aria-level']).toBe(1)
 })

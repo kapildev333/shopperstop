@@ -89,8 +89,15 @@ async function staffHeaders(request: APIRequestContext): Promise<{ Authorization
 }
 
 // Signs the browser in before any page script runs: the token goes where the app's session reads it.
+// The pincode is preset so the first-visit pincode sheet does not cover the tab bar (Koramangala's 560034).
 async function signedIn(page: Page, shopper: Shopper) {
-  await page.addInitScript(([key, token]) => localStorage.setItem(key, token), [tokenKey, shopper.token])
+  await page.addInitScript(
+    ([key, token, pincodeKey]) => {
+      localStorage.setItem(key, token)
+      localStorage.setItem(pincodeKey, '560034')
+    },
+    [tokenKey, shopper.token, 'shopperstop:pincode'],
+  )
 }
 
 test('History and a delivered order against core', async ({ page, request }) => {
