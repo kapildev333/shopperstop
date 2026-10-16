@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -105,6 +105,15 @@ describe('Modal focus management', () => {
     expect(screen.getByRole('button', { name: 'Confirm cancel' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: 'Keep order' })).toHaveFocus()
+    // The Sheet's last focusable, while the Dialog is on top. Only the top layer may act on Tab:
+    // the Sheet must not wrap focus to its Close button nor prevent the default.
+    const sheet = screen.getByRole('dialog', { name: 'Order' })
+    const sheetFirst = within(sheet).getByRole('button', { name: 'Close' })
+    const sheetLast = within(sheet).getByRole('button', { name: 'Cancel order' })
+    act(() => sheetLast.focus())
+    expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true)
+    expect(sheetLast).toHaveFocus()
+    expect(sheetFirst).not.toHaveFocus()
   })
 })
 
