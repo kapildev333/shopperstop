@@ -68,8 +68,8 @@ Scenarios: Sheet lines and bill; Free delivery; Out-of-stock line; Below the min
 Starts from: `src/cart-sheet.test.tsx` test `sheet lines and bill` (red: module missing). Non-navigating tests render `<CartSheet />` in `QueryClientProvider` after `openCartSheet()` (signed in with a fake `GET /me/cart` is the simplest way to set any cart, including `replaced` answers via `queryClient.setQueryData(cartKey('t-1'), …)`); "Replace opens the sheet once" starts closed and sets the cached answer three times inside awaited `act`; add one more test `failed write in the sheet` (a line's "Add one" with core unreachable shows "Could not reach ShopperStop. Try again." under it). Navigating, one per file: `proceed signed out` and `proceed signed in` with `renderRouter({ _layout: Layout, index: Stub, 'sign-in': Stub, checkout: Stub }, { initialUrl: '/' })` where `Layout` renders `QueryClientProvider` › `<Stack />` and `<CartSheet />`; assert `toHavePathname('/sign-in')` with `toHaveSearchParams({ returnTo: '/checkout' })`, or `toHavePathname('/checkout')`, and that the sheet closed (`useCartSheetOpen` false: no "My cart" heading). If the `Link` does not navigate in Jest, apply L2 task 10's ordered fallback (wait for the stub's text before opening the sheet), else stop and report.
 Drawing: design file "4 · Cart sheet" and "14 · Cart empty". Colour rule from L2's axe run: `inkMuted` text only on `surface` (it fails 4.5:1 on `canvas`); the sheet panel is `surface`, so keep every muted text inside it, never on a `canvas` block.
 
-- [ ] 5.1 `test:` the scenarios, red
-- [ ] 5.2 `feat:` `CartSheet` and the mount; gates green
+- [x] 5.1 `test:` the scenarios, red
+- [x] 5.2 `feat:` `CartSheet` and the mount; gates green
 
 ## 6. Merge at sign-in and the server store change — group C, after 3
 
