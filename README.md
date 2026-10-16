@@ -4,16 +4,15 @@ ShopperStop is a quick-commerce product in the shape of Blinkit. A customer orde
 
 ## Status
 
-Phase 1 (foundation) is tagged `v0.1.0`; Phase 2 (core service and apps) is landing. From Phase 1 on `main`:
+Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.2.0`. On `main`:
 
-- `services/core`: config, HTTP helpers, migrations, `cmd/core` serving `GET /api/core/v1/healthz` and `/readyz`, `cmd/core-admin` with `migrate` and `seed-demo`, and `openapi.json`.
-- `packages/ui`: design tokens and the shared components.
-- `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`.
-- `Makefile`, the CI workflow, and the living specs under `openspec/specs/`.
-- `docs/postman/`: the Postman collection and environment generated from `openapi.json`; `make postman` regenerates them and runs the generator tests.
-- `apps/web` (customer site shell at `/`) and `apps/admin` (admin panel shell under `/admin/`), each with a Playwright smoke suite with axe.
+- `services/core`: accounts and bearer sessions for customers and staff, stores and pincode serviceability, categories and products with images, per-store stock, carts, orders with a status machine and events, the staff dashboard; `cmd/core-admin` with `migrate`, `seed-demo --reset` and `create-admin`; `openapi.json` with an example on every route.
+- `apps/web` (customer site at `/`): pincode and store, home, categories, search and product pages, guest and server cart, sign-in and register, addresses, checkout with cash on delivery, order tracking and history.
+- `apps/admin` (admin and store-staff panel under `/admin/`): sign-in and role-based navigation, dashboard, orders board with history and order sheet, stock, stores and service areas, categories and products with image upload, staff.
+- `packages/ui`: design tokens, the shared components and the generated API types.
+- `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`; the `Makefile`, the CI workflow, the Postman collection and environment under `docs/postman/`, and the living specs under [openspec/specs/](openspec/specs/).
 
-Phase 2 adds accounts, stores and serviceability, catalog, stock, cart and orders to core, with the customer and admin pages on top; the pages still in progress are tracked in `PLAN.md`. `core-admin seed-demo --reset` loads the demo data. Behaviour is specified in [openspec/specs/](openspec/specs/).
+Phase 3 (the rider service and rider app) is being planned in `PLAN.md`. `core-admin seed-demo --reset` loads the demo data and prints the demo sign-ins.
 
 ## Quick start
 

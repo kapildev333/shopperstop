@@ -34,9 +34,11 @@ Agents: `make db`, `make dev` and `make prod-local` start containers and belong 
 
 ```
 services/core/      Go module github.com/kapildev333/shopperstop/services/core: cmd/core, cmd/core-admin, migrations/, queries/ (sqlc), internal/, openapi.json
+services/rider/     Phase 3: the rider service, same shape, module .../services/rider, routes /api/rider/v1, port 8081
 services/<name>/    every later service, same shape, own module and database
 apps/web/           customer site, React + Vite + TypeScript
 apps/admin/         admin and store-staff panel, same stack
+apps/rider/         Phase 3: the rider app, phone-first, same stack, served under /rider/
 packages/ui/        shared tokens, components and generated API types, consumed as @shopperstop/ui
 deploy/             docker-compose.yml (postgres, caddy), Caddyfile, initdb.sql (creates the `_test` and `_e2e` databases per service)
 docs/specs/         frozen: the two 2026-10-12 briefs that seed openspec/specs/; no new files
@@ -75,7 +77,7 @@ Currency is INR, shown as `₹`, stored in cents (paise) as integers.
 
 Plan-driven multi-agent workflow under `.claude/`, organised by area, spec-driven with OpenSpec, test-driven code:
 
-- Areas are sub-projects with disjoint scopes: `platform` (root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md`), `core` (`services/core/`), `ui` (`packages/ui/`), `web` (`apps/web/`), `admin` (`apps/admin/`); later services become areas. Each area has a plan in `.claude/areas/<area>.md` (format in `.claude/areas/README.md`).
+- Areas are sub-projects with disjoint scopes: `platform` (root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `README.md`, `CLAUDE.md`), `core` (`services/core/`), `ui` (`packages/ui/`), `web` (`apps/web/`), `admin` (`apps/admin/`), `rider` (`services/rider/` and `apps/rider/`, Phase 3, D29); later services become areas. Each area has a plan in `.claude/areas/<area>.md` (format in `.claude/areas/README.md`).
 - `/orchestrate <source documents>` (`.claude/commands/orchestrate.md`): the program orchestrator, a Fable 5.1 session. Owns `PLAN.md` and the root checkout, writes each area's work package, relays cross-area requests, verifies integration and tags releases at phase close. Launches no lanes for an area that has a manager. The owner runs it together with the platform manager in one session (D9).
 - `/manage <area>` (`.claude/commands/manage.md`): the area manager, one Fable 5.1 session per area in its own terminal (`claude --model claude-fable-5-1`). Runs the area's lanes as sub-agents, verifies every landing itself, lands PRs, keeps the area plan current. Sub-agents cannot launch sub-agents, which is why managers are sessions.
 - Lanes inside an area, per feature, in order:

@@ -75,3 +75,12 @@ One OpenSpec change per lane; each waits for the core lane that serves its route
 | admin-P2-L6 | `admin-staff-e2e` | core-P2-L6 (seed) | `/staff` table and create/edit dialog; the Spec 2 §13 admin e2e flows against the seeded data |
 
 Gates per PR: `make test-web` and `make e2e` (one e2e at a time; say so in `## Doing`), axe on every page visited, `openspec validate --all --strict`, and the manager's own Chrome walk-through against a running core with the demo seed.
+
+## Phase 3 work package (orchestrator, 2026-10-15)
+Spec: PLAN.md Phase 3, D30, D32, D34; Spec 2 §8; the rider contract `services/rider/openapi.json` (`/api/rider/v1/admin/riders*` with the staff token forwarded, types from `@shopperstop/ui/api/rider` after ui-P3-L2). One change.
+
+| Lane | Change | Waits on | Deliverable |
+|---|---|---|---|
+| admin-P3-L1 | `admin-riders` (MODIFIED `admin-app`, ADDED `admin-riders`) | core-P3-L1 and L2, rider-P3-L1, ui-P3-L1 and L2 on main | `/riders` (nav item for both roles): table (name, email, phone, store for admins, active badge), store selector for admins, create and edit `Dialog` (name, email, phone, password on create, store for admins, active switch) against the rider service through a second `openapi-fetch` client on `/api/rider/v1` with the same middleware rule (a not-ok answer without the envelope is a failure); store staff see and create only their store's riders. Orders board: one `GET /admin/stores/{id}/orders?active=true` per poll instead of five (D34); cards and the order sheet show the rider's name once `out_for_delivery`; events show `actorName`. Dashboard store cards show `isOpen`. Swap app-level copies for ui's `ImageTile`, `aria-disabled` styling, `VisuallyHidden live`, stacking `Sheet` and `Button size="compact"`; keep behaviour, update tests. e2e: riders page CRUD against the real rider service (the seeded riders), the board showing the seeded delivered order's rider in History |
+
+Gates per PR as Phase 2 (`make test-web`, `make e2e` with the slot per D35, `openspec validate --all --strict`, a Chrome walk against core, rider and the demo seed).
