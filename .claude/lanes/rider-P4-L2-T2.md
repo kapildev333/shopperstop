@@ -1,5 +1,5 @@
 # rider-P4-L2-T2 - The sign-in limiter trusts a proxy only when told (task 2 of rider-hygiene-carryover)
-Status: brief (not started; starts after T1's feat commit)
+Status: in progress (test commit made; code next)
 
 ## Brief
 - LANE-ID: rider-P4-L2 (task T2). Area: `rider`.
@@ -17,7 +17,14 @@ Status: brief (not started; starts after T1's feat commit)
 Stop and report here (under Blockers) on anything design.md does not settle; do not improvise. Do not touch `apps/`, `packages/`, other services, the Makefile or the lane log `rider-P4-L2.md`.
 
 ## Doing
+- Applied "Task 2: trusted proxy, tests" (riders_test.go, config_test.go); red confirmed.
+
 ## Red run
+```
+go vet ./internal/config/ ./internal/app/ (services/rider)
+vet: internal/config/config_test.go:110:24: cfg.TrustProxy undefined (type config.Config has no field or method TrustProxy)
+vet: internal/app/riders_test.go:309:8: limit.TrustProxy undefined (type *auth.Limiter has no field or method TrustProxy)
+```
 ## Green run
 ## Gates
 ## Found
