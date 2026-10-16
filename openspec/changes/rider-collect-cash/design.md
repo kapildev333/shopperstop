@@ -22,13 +22,13 @@ Ceiling: if core ever lets a payment change after `ready` (for example a refund 
 Three independent conditions in `delivery.tsx`: `paymentMethod === 'cod'` shows "Collect ₹<total> in cash" (neutral tone, as today, text changed from "Collect ₹x cash"), `paymentStatus === 'paid'` shows "Paid online", `paymentStatus === 'pending'` shows "Awaiting payment" with the warning tone (D53's pending tone). Core sends `paymentStatus` only on online orders, so at most one shows. An online delivery without a status, or `refunded`, shows nothing (both unreachable). A delivered delivery shows no line, as today.
 
 ### 4. The "Cash" badge
-A neutral `Badge` "Cash" in a flex row beside the card's `Price`, only for `cod`. The work package says "Cash"; D53 lists "Cash on delivery" as the cash badge for the other apps. The rider card is dense and the rider deals only in cash or not, so the shorter word stays (named in the report for the orchestrator). Online orders get no badge: they are all paid by Decision 1.
+A neutral `Badge` "Cash" in a flex row beside the card's `Price`, only for `cod`. The work package says "Cash"; D53 lists "Cash on delivery" as the cash badge for the other apps. The rider card is dense and the rider deals only in cash or not, so the shorter word stays. The wording is split by audience: "Cash" is the rider wording on the dense ready card; D53's "Cash on delivery" is the customer and admin wording (web, mobile, admin badges); the rider's delivery page says "Collect ₹x in cash". Online orders get no badge: they are all paid by Decision 1.
 
 ### 5. e2e
 The cross-app flow already places a cash order ("Place order (COD)"). It asserts `card.getByText('Cash', { exact: true })` on the ready card and a `status` matching `/^Collect ₹[\d,]+(\.\d{2})? in cash$/` on the delivery page, before the existing axe call. A regex rather than the exact total: the order's total is not in the test's hands and the e2e suite does not import `formatInr`. Ceiling: a wrong amount with the right shape passes e2e; the Vitest "Cash on delivery" scenario pins the exact text.
 
 ### 6. Capability
-The ready list and delivery reads are specified in `deliveries`, not `rider-service`; the delta modifies `deliveries`. `rider-service` "Rider schema migrations" still names only `0001` and `0002` in its scenario (stale since 0003); out of scope here, the migrate test is updated to the four files.
+The ready list and delivery reads are specified in `deliveries`, not `rider-service`; those deltas modify `deliveries`. `rider-service` "Rider schema migrations" named only `0001` and `0002` in its scenario (stale since 0003); its delta brings the scenario to the four files `0001_init` to `0004_delivery_payment_status`, which `TestEmbeddedMigrationsApplyOnce` asserts. The requirement text stays as it is (445 characters, under the 500-character rule).
 
 ## Risks / Trade-offs
 - web-P5-L2 reworks checkout. D53 keeps "Place order (COD)" as the cash button; if it is renamed, the rider flow's first step breaks (not this change's assertions).

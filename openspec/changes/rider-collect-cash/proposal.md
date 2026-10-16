@@ -13,7 +13,8 @@ core-P5-L1 (D50) gave every order a `paymentMethod` (`cod` or `online`) and, on 
 None.
 
 ### Modified Capabilities
-- `deliveries`: MODIFIED "Riders see their store's ready orders" (payment fields, new scenario) and "Riders claim a ready order" (the delivery keeps the payment status, new scenario). The work package named `rider-service`; the ready list and the delivery reads are specified in `deliveries`, so the delta goes there and `rider-service` is untouched.
+- `deliveries`: MODIFIED "Riders see their store's ready orders" (payment fields, new scenario) and "Riders claim a ready order" (the delivery keeps the payment status, new scenario). The work package named `rider-service`; the ready list and the delivery reads are specified in `deliveries`, so those deltas go there.
+- `rider-service`: MODIFIED "Rider schema migrations" (requirement text unchanged; the scenario "Second run applies nothing" lists the four files `0001_init` to `0004_delivery_payment_status`, stale since 0003).
 - `rider-app`: MODIFIED "Ready orders list" (the Cash badge), "Cash to collect" (the three amount lines) and "Cross-app delivery flow" (the cash assertions).
 
 ## Impact
