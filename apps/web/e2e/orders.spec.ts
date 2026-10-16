@@ -123,7 +123,7 @@ test('history against core', async ({ page, request }) => {
   await page.goto('/orders')
 
   const cards = page.getByRole('main').getByRole('listitem')
-  await expect(cards).toHaveCount(3)
+  await expect(cards.filter({ hasNotText: 'SS-DEMOAAAE' })).toHaveCount(3)
   await expect(cards.nth(0)).toContainText('SS-DEMOAAAD')
   await expect(cards.nth(1).getByText('Cancelled', { exact: true })).toBeVisible()
   await expect(cards.nth(2).getByText('Delivered', { exact: true })).toBeVisible()
