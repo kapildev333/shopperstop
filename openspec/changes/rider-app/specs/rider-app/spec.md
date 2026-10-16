@@ -163,7 +163,7 @@ While the first read is pending `/` SHALL show a skeleton; with no ready orders 
 - **THEN** there is no "Your deliveries" section
 
 ### Requirement: Pick up with confirmation
-Each ready card SHALL have a "Pick up" button named "Pick up <number>" that opens a dialog "Pick up <number>?" with "Cancel" first and "Pick up". Confirming SHALL send `POST /me/deliveries {orderId}` once, with the confirm button disabled while pending, and on 201 open `/deliveries/{id}` of the new delivery. "Cancel" and Escape SHALL close the dialog with no request.
+Each ready card SHALL have a "Pick up" button named "Pick up <number>" that opens a dialog "Pick up <number>?" with "Cancel" first and "Pick up". Confirming SHALL send `POST /me/deliveries {orderId}` once, with the confirm button disabled while pending, and on 201 open `/deliveries/{id}` of the new delivery. "Cancel" and Escape SHALL close the dialog with no request, and SHALL do nothing while the claim is pending.
 
 #### Scenario: Pick up succeeds
 - **WHEN** the rider presses "Pick up SS-AAAA0001" and then "Pick up" in the dialog, and the service answers 201 with delivery `d1`
@@ -172,6 +172,10 @@ Each ready card SHALL have a "Pick up" button named "Pick up <number>" that open
 #### Scenario: Cancel sends nothing
 - **WHEN** the rider opens the dialog and presses "Cancel"
 - **THEN** the dialog closes and no `POST /me/deliveries` was sent
+
+#### Scenario: Cancel waits for a pending pick up
+- **WHEN** the rider confirms, presses "Cancel" before the service answers, and the service then answers 409 `conflict`
+- **THEN** the dialog stayed open until the answer, then closed with the status message "SS-AAAA0001 was taken by another rider or is no longer ready."
 
 ### Requirement: Pick up refused
 When the service answers the claim 409 `conflict` or 404 `not_found`, the app SHALL close the dialog, show the status message "<number> was taken by another rider or is no longer ready." and read the ready list again. Any other failure SHALL keep the dialog open with the alert "Could not pick up the order. Try again.".
@@ -221,11 +225,15 @@ When the service answers the delivered request with 409 the page SHALL close the
 - **THEN** the dialog shows the alert "Could not mark the order delivered. Try again." and the badge still reads "On the way"
 
 ### Requirement: Location reported while on the way
-While an assigned delivery's page is open, the app SHALL watch the device position with `navigator.geolocation.watchPosition`, send the first position with `PUT /me/location {lat, lng}` at once and then the latest one every 15 seconds. It SHALL stop watching and sending when the delivery is delivered or the page is left, and SHALL not watch for a delivered delivery.
+While an assigned delivery's page is open, the app SHALL watch the device position with `navigator.geolocation.watchPosition`, send the first position with `PUT /me/location {lat, lng}` at once and then the latest one every 15 seconds counted from that first fix. It SHALL stop watching and sending when the delivery is delivered or the page is left, and SHALL not watch for a delivered delivery.
 
 #### Scenario: First fix sent, then every 15 seconds
 - **WHEN** the page of an assigned delivery is open and the device reports 12.9352, 77.6245
 - **THEN** `PUT /me/location` with `{"lat": 12.9352, "lng": 77.6245}` is sent at once and again 15 seconds later
+
+#### Scenario: A late first fix starts the count
+- **WHEN** the device reports its first position 14 seconds after the page opened
+- **THEN** one `PUT /me/location` is sent at 14 seconds, none at 15, and the next at 29
 
 #### Scenario: Stops after delivered
 - **WHEN** the rider marks the delivery delivered
