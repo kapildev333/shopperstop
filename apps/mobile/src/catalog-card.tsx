@@ -33,7 +33,7 @@ export function ProductCard({ product, storeId }: { product: StoreProduct; store
           label={product.name}
           value={count}
           max={product.inStock ? product.quantity : 0}
-          onChange={(next) => setQuantity(storeId, product.id, next)}
+          onChange={(next) => setQuantity(storeId, product, next)}
         />
       </View>
     </View>

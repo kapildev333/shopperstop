@@ -48,8 +48,9 @@ Scenarios: Card adds to the guest cart; Card shows the server cart; Card ignores
 Starts from: `src/cart-stepper.test.tsx` test `card adds to the guest cart` (red: the stub never writes async storage), then the other five, each rendering `<ProductCard product={…} storeId={…} />` from `src/catalog-card.tsx` inside `QueryClientProvider` after `setPincode('560034')` and the serviceability fake ("Test fakes" in the design file); quick taps hold every `PUT` answer and release them in order, asserting 2, 3, 2 between presses and that the second `PUT` is sent only after the first answered. Replace `src/cart.test.ts` (L2's stub tests) with: `summary counts the guest cart` (`getCartSummary()` count, storeId, totalCents), `summary reads the cached server cart`, `clear empties the guest cart`, `clear sends DELETE while signed in` (cache becomes the empty cart), `clear returns core's error`, `loadCartSummary fetches the server cart` (and resolves `undefined` when `GET /me/cart` fails), `store name from core` (`useStoreName` gives the name and `queryClient.getQueryData(['store', id])` holds the whole `Store`), `queued runs work in order` (two `queued` calls, the first held: the second starts only after the first settles, also when the first rejects), `sheet open state`. `storeOptions` and `queued` are exported for mobile-P4-L4b (checkout).
 Build: `src/cart.ts` per `docs/design/mobile-P4-L3.md` "Module interfaces" and "The port", design.md Decisions 1 and 3, without `mergeGuestCart` (task 6). `useLineWrite` lands here too (task 4 uses it).
 
-- [ ] 3.1 `test:` the scenarios and unit tests, red
-- [ ] 3.2 `feat:` `src/cart.ts`, the signature callers, the `jest.setup.ts` line; every L2 test green; gates green
+- [x] 3.1 `test:` the scenarios and unit tests, red
+- [x] 3.2 `feat:` `src/cart.ts`, the signature callers, the `jest.setup.ts` line; every L2 test green; gates green
+- [x] 3.3 `test:` `src/catalog-card.test.tsx`: QueryClientProvider around each render and the store resolved in the add test (scope extended by the manager; no assertion changes)
 
 ## 4. Write failure under the control — group C, after 3
 

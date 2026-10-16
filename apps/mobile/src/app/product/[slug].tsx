@@ -142,7 +142,7 @@ function ProductDetail({ storeId, product, categories }: { storeId: string; prod
           label={product.name}
           value={count}
           max={product.inStock ? product.quantity : 0}
-          onChange={(next) => setQuantity(storeId, product.id, next)}
+          onChange={(next) => setQuantity(storeId, product, next)}
         />
       </SafeAreaView>
     </View>
