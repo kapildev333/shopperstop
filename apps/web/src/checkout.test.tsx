@@ -119,8 +119,10 @@ test('default address chosen', async () => {
   seed({ lines: [[taaza, 4]], addresses: [work, home], storeOverrides: { minOrderCents: 9900 } })
   renderAt('/checkout')
   const addresses = await screen.findByRole('region', { name: 'Delivery address' })
-  expect(within(addresses).getByRole('button', { name: 'Deliver to Home' })).toHaveAttribute('aria-pressed', 'true')
-  expect(within(addresses).getByRole('button', { name: 'Deliver to Work' })).toHaveAttribute('aria-pressed', 'false')
+  const group = within(addresses).getByRole('radiogroup', { name: 'Deliver to' })
+  expect(within(group).getAllByRole('radio').map((radio) => radio.textContent)).toEqual(['Deliver to Work', 'Deliver to Home'])
+  expect(within(addresses).getByRole('radio', { name: 'Deliver to Home' })).toHaveAttribute('aria-checked', 'true')
+  expect(within(addresses).getByRole('radio', { name: 'Deliver to Work' })).toHaveAttribute('aria-checked', 'false')
   expect(screen.getByRole('button', { name: 'Place order (COD)' })).toBeEnabled()
 })
 
@@ -128,9 +130,9 @@ test('another address chosen', async () => {
   seed({ lines: [[taaza, 4]], addresses: [work, home], storeOverrides: { minOrderCents: 9900 } })
   renderAt('/checkout')
   const addresses = await screen.findByRole('region', { name: 'Delivery address' })
-  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Work' }))
-  expect(within(addresses).getByRole('button', { name: 'Deliver to Work' })).toHaveAttribute('aria-pressed', 'true')
-  expect(within(addresses).getByRole('button', { name: 'Deliver to Home' })).toHaveAttribute('aria-pressed', 'false')
+  await userEvent.click(within(addresses).getByRole('radio', { name: 'Deliver to Work' }))
+  expect(within(addresses).getByRole('radio', { name: 'Deliver to Work' })).toHaveAttribute('aria-checked', 'true')
+  expect(within(addresses).getByRole('radio', { name: 'Deliver to Home' })).toHaveAttribute('aria-checked', 'false')
 })
 
 test('no address yet', async () => {
@@ -263,7 +265,7 @@ test('address not served', async () => {
   })
   renderInRouter(<CheckoutPage send={send} />)
   const addresses = await screen.findByRole('region', { name: 'Delivery address' })
-  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Work' }))
+  await userEvent.click(within(addresses).getByRole('radio', { name: 'Deliver to Work' }))
   await userEvent.click(placeButton())
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Koramangala does not deliver to this address. Choose another address or add one.',
@@ -310,11 +312,11 @@ test('choosing another address clears the refusal alert', async () => {
   })
   renderInRouter(<CheckoutPage send={send} />)
   const addresses = await screen.findByRole('region', { name: 'Delivery address' })
-  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Work' }))
+  await userEvent.click(within(addresses).getByRole('radio', { name: 'Deliver to Work' }))
   await userEvent.click(placeButton())
   expect(await screen.findByRole('alert')).toHaveTextContent('does not deliver to this address')
 
-  await userEvent.click(within(addresses).getByRole('button', { name: 'Deliver to Home' }))
+  await userEvent.click(within(addresses).getByRole('radio', { name: 'Deliver to Home' }))
   expect(screen.queryByRole('alert')).toBeNull()
   // The refused address keeps its badge until the next press or a fresh read of the list; the chosen one has none.
   const workItem = within(addresses).getByText('Work', { selector: 'h3' }).closest('li') as HTMLElement
@@ -323,13 +325,13 @@ test('choosing another address clears the refusal alert', async () => {
   expect(within(homeItem).queryByText('Not delivered here')).toBeNull()
 })
 
-test('the address chip is named by its visible text', async () => {
+test('the address choice is named by its visible text', async () => {
   seed({ lines: [[taaza, 4]], addresses: [work, home], storeOverrides: { minOrderCents: 9900 } })
   renderInRouter(<CheckoutPage />)
   const addresses = await screen.findByRole('region', { name: 'Delivery address' })
-  const chip = within(addresses).getByRole('button', { name: 'Deliver to Home' })
-  expect(chip.textContent).toBe('Deliver to Home')
-  expect(within(addresses).getByRole('button', { name: 'Deliver to Work' }).textContent).toBe('Deliver to Work')
+  const choice = within(addresses).getByRole('radio', { name: 'Deliver to Home' })
+  expect(choice.textContent).toBe('Deliver to Home')
+  expect(within(addresses).getByRole('radio', { name: 'Deliver to Work' }).textContent).toBe('Deliver to Work')
 })
 
 // Pins: expected green on arrival; each is shown to fail under a temporary mutation of checkout.tsx (reverted).

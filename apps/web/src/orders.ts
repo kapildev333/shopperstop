@@ -1,7 +1,8 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { BadgeVariant } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
-import { api, call, queryClient, type ApiError } from './api'
+import type { components as RiderComponents } from '@shopperstop/ui/api/rider'
+import { api, call, queryClient, riderApi, type ApiError } from './api'
 import { cartKey, queued } from './cart'
 import { cartView, emptyCart, type CartView } from './guest-cart'
 import { getToken, useToken } from './session'
@@ -83,6 +84,46 @@ export function arrival(placedAt: string, promisedMinutes: number, now: number):
 export function useOrder(id: string) {
   const token = useToken()
   return useQuery({ ...orderOptions(token ?? '', id), enabled: !!token })
+}
+
+export type Delivery = RiderComponents['schemas']['CustomerDelivery']
+export const deliveryKey = (token: string, orderId: string) => ['delivery', token, orderId] as const
+
+// A rider's claim is what moves an order out for delivery: before that there is no delivery to read.
+export function riderStage(status: OrderStatus): boolean {
+  return status === 'out_for_delivery' || status === 'delivered'
+}
+
+// From out for delivery on: every 10 s with the order while it is out (pollInterval), once when delivered.
+// 404 (no rider claimed it, or not this customer's) is null, "no rider"; any other failure throws and keeps what is held.
+export function deliveryOptions(token: string, order: Order) {
+  return queryOptions({
+    queryKey: deliveryKey(token, order.id),
+    enabled: !!token && riderStage(order.status),
+    refetchInterval: pollInterval(order),
+    queryFn: async (): Promise<Delivery | null> => {
+      const { data, error, response } = await riderApi.GET('/orders/{orderId}/delivery', {
+        params: { path: { orderId: order.id } },
+      })
+      if (response.status === 404) return null
+      if (error || !data) throw error ?? new Error('no answer')
+      return data
+    },
+  })
+}
+
+export function useDelivery(order: Order) {
+  const token = useToken()
+  return useQuery(deliveryOptions(token ?? '', order))
+}
+
+// Whole minutes since the position was recorded, rounded down; a clock ahead of ours is "just now".
+export function lastSeen(recordedAt: string, now: number): string {
+  const minutes = Math.floor((now - Date.parse(recordedAt)) / 60_000)
+  if (minutes < 1) return 'Last seen just now'
+  if (minutes < 60) return minutes === 1 ? 'Last seen 1 minute ago' : `Last seen ${minutes} minutes ago`
+  const hours = Math.floor(minutes / 60)
+  return hours === 1 ? 'Last seen 1 hour ago' : `Last seen ${hours} hours ago`
 }
 
 // ponytail: first page only (the API default of 24); "Load more" when a customer has more.

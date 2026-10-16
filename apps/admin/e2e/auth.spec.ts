@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 // Demo staff account from core's seed (the e2e database is reset before every run).
 const adminEmail = 'admin@shopperstop.local'
 const adminPassword = 'admin12345'
-const sections = ['Dashboard', 'Orders', 'Stock', 'Stores', 'Categories', 'Products', 'Staff']
+const sections = ['Dashboard', 'Orders', 'Stock', 'Riders', 'Stores', 'Categories', 'Products', 'Staff']
 
 test('admin signs in, reloads and signs out', async ({ page }) => {
   await page.goto('./')

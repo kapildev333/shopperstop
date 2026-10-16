@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Card, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, buttonClass } from '@shopperstop/ui'
+import { Badge, Card, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, buttonClass } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { api } from '../../api'
 
@@ -32,7 +32,10 @@ function StoreCard({ store }: { store: DashboardStore }) {
   const heading = `dashboard-${store.storeId}`
   return (
     <Card role="region" aria-labelledby={heading} className="flex flex-col gap-4 p-4 text-body text-ink">
-      <h2 id={heading} className="text-h2">{store.storeName}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id={heading} className="text-h2">{store.storeName}</h2>
+        <Badge variant={store.isOpen ? 'success' : 'neutral'}>{store.isOpen ? 'Open' : 'Closed'}</Badge>
+      </div>
       <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
         <dt className="font-semibold">Orders today</dt>
         <dd className="text-right font-semibold tabular-nums">{total}</dd>

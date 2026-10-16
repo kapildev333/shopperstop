@@ -1,9 +1,11 @@
-import createClient from 'openapi-fetch'
+import createClient, { type Middleware } from 'openapi-fetch'
 import type { components, paths } from '@shopperstop/ui/api'
+import type { components as riderComponents, paths as riderPaths } from '@shopperstop/ui/api/rider'
 import { clearToken, getToken } from './session'
 
 export type Staff = components['schemas']['Staff']
 export type ApiError = components['schemas']['Error']['error']
+export type Rider = riderComponents['schemas']['Rider']
 
 let unauthorized = () => {}
 
@@ -18,7 +20,9 @@ export const api = createClient<paths>({
   fetch: (request) => globalThis.fetch(request),
 })
 
-api.use({
+// One rule for both services: the staff token on every request, a 401 to it ends the session, a failure without the
+// error envelope (both services write the same one) is handed on as one with code `internal`.
+const staffSession: Middleware = {
   onRequest({ request }) {
     const token = getToken()
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
@@ -39,7 +43,15 @@ api.use({
     if (typeof body?.error?.code === 'string') return response
     return Response.json({ error: { code: 'internal', message: 'The server did not answer as expected.' } }, { status: response.status })
   },
+}
+api.use(staffSession)
+
+// The rider service (`services/rider`), same origin; it checks the staff token with core itself.
+export const riderApi = createClient<riderPaths>({
+  baseUrl: `${location.origin}/api/rider/v1`,
+  fetch: (request) => globalThis.fetch(request),
 })
+riderApi.use(staffSession)
 
 export const meQuery = {
   queryKey: ['admin', 'me'],

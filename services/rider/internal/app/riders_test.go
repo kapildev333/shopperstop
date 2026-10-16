@@ -231,7 +231,7 @@ func TestRiderSignOutEndsOnlyThatSession(t *testing.T) {
 // ten attempts for one email pass (wrong passwords), the eleventh is refused.
 func TestRiderSignInRateLimited(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
-	limited := httptest.NewServer(New(testPool, nil, a))
+	limited := httptest.NewServer(New(testPool, nil, a, nil))
 	t.Cleanup(limited.Close)
 	email := uniqueEmail(t)
 	seedRider(t, email, true)

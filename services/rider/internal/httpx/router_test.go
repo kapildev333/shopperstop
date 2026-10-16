@@ -68,6 +68,43 @@ func TestUnknownRouteIsNotFound(t *testing.T) {
 	}
 }
 
+// TestWrongMethodIs405: a path the router serves, asked with another method,
+// answers 405 method_not_allowed with Allow listing the path's methods in a
+// fixed order; a CORS preflight on that path still answers 204.
+func TestWrongMethodIs405(t *testing.T) {
+	captureLogs(t)
+	r := NewRouter([]string{"http://b"})
+	ok := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }
+	r.Patch("/x/{id}", ok)
+	r.Get("/x/{id}", ok)
+	r.Get("/y", ok)
+
+	for _, row := range []struct{ method, path, allow string }{
+		{http.MethodDelete, "/x/1", "GET, PATCH"},
+		{http.MethodPost, "/y", "GET"},
+		{http.MethodOptions, "/y", "GET"},
+	} {
+		w := do(t, r, httptest.NewRequest(row.method, row.path, nil))
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s: status %d, want 405", row.method, row.path, w.Code)
+		}
+		if got := w.Header().Get("Allow"); got != row.allow {
+			t.Fatalf("%s %s: Allow %q, want %q", row.method, row.path, got, row.allow)
+		}
+		want := `{"error":{"code":"method_not_allowed","message":"method not allowed"}}` + "\n"
+		if got := w.Body.String(); got != want {
+			t.Fatalf("%s %s: body %q, want %q", row.method, row.path, got, want)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodOptions, "/x/1", nil)
+	req.Header.Set("Origin", "http://b")
+	req.Header.Set("Access-Control-Request-Method", "PATCH")
+	if w := do(t, r, req); w.Code != http.StatusNoContent {
+		t.Fatalf("preflight: status %d, want 204", w.Code)
+	}
+}
+
 func TestPanicIsInternal(t *testing.T) {
 	logs := captureLogs(t)
 	r := NewRouter(nil)

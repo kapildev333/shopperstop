@@ -25,6 +25,9 @@ type Config struct {
 	// ServiceTokens maps a service name to its token, from
 	// SHOPPERSTOP_CORE_SERVICE_TOKENS ("name:token,..."), optional; nil when unset.
 	ServiceTokens map[string]string
+	// TrustProxy is SHOPPERSTOP_CORE_TRUST_PROXY: "true" or "false", optional,
+	// default false. True makes the rate limiter key on X-Forwarded-For.
+	TrustProxy bool
 }
 
 // Load reads the configuration through getenv and reports every problem
@@ -85,6 +88,14 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 
 	cfg.ServiceTokens, problems = serviceTokens(getenv("SHOPPERSTOP_CORE_SERVICE_TOKENS"), problems)
+
+	switch v := strings.TrimSpace(getenv("SHOPPERSTOP_CORE_TRUST_PROXY")); v {
+	case "", "false":
+	case "true":
+		cfg.TrustProxy = true
+	default:
+		problems = append(problems, fmt.Errorf("SHOPPERSTOP_CORE_TRUST_PROXY must be true or false (got %q)", v))
+	}
 
 	if len(problems) > 0 {
 		return Config{}, errors.Join(problems...)

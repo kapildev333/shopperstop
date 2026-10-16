@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -15,17 +16,40 @@ import (
 
 // NewRouter returns the rider router with its middleware in order: request
 // id, log and recover, CORS for origins, then whatever routes the caller
-// registers. Unknown paths and wrong methods get the 404 envelope.
+// registers. Unknown paths get the 404 envelope; a known path with a method
+// it does not serve gets 405 with Allow.
 func NewRouter(origins []string) chi.Router {
 	r := chi.NewRouter()
 	r.Use(requestID, logAndRecover, cors(origins))
 	r.NotFound(notFound)
-	r.MethodNotAllowed(notFound)
+	r.MethodNotAllowed(methodNotAllowed)
 	return r
 }
 
 func notFound(w http.ResponseWriter, r *http.Request) {
 	WriteError(w, r, &Error{Status: http.StatusNotFound, Code: "not_found", Message: "not found"})
+}
+
+// allowable are the methods Allow may list, in the order it lists them.
+var allowable = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}
+
+// methodNotAllowed answers 405 method_not_allowed with Allow naming every
+// method the router serves on the request's path. chi does not hand a custom
+// handler the methods it found, so each one is matched again on the whole tree.
+func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.RawPath
+	if path == "" {
+		path = r.URL.Path
+	}
+	routes := chi.RouteContext(r.Context()).Routes
+	var allow []string
+	for _, m := range allowable {
+		if routes.Match(chi.NewRouteContext(), m, path) {
+			allow = append(allow, m)
+		}
+	}
+	w.Header().Set("Allow", strings.Join(allow, ", "))
+	WriteError(w, r, &Error{Status: http.StatusMethodNotAllowed, Code: "method_not_allowed", Message: "method not allowed"})
 }
 
 // requestID keeps a client X-Request-Id of 1 to 128 bytes, otherwise makes

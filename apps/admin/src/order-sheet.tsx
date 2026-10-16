@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Badge, Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Price, Sheet, StatusMessage } from '@shopperstop/ui'
-import { idle } from './idle'
 import { orderQuery, statusBadge, statusLabel, useSetStatus, when, type Order } from './orders'
 
 // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
@@ -16,6 +15,7 @@ function Details({ order }: { order: Order }) {
         Placed {when(order.placedAt)}
       </p>
       {order.cancelReason && <p>Reason for cancelling: {order.cancelReason}</p>}
+      {order.riderName && <p>Rider: {order.riderName}</p>}
       <section aria-labelledby="order-items" className="flex flex-col gap-2">
         <h3 id="order-items" className="text-h3">Items</h3>
         <ul className="flex flex-col gap-1">
@@ -58,7 +58,7 @@ function Details({ order }: { order: Order }) {
         <ol className="flex flex-col gap-1">
           {order.events.map((event, i) => (
             <li key={i}>
-              {statusLabel[event.toStatus]} by {actor[event.actorType]}, {when(event.createdAt)}
+              {statusLabel[event.toStatus]} by {event.actorName ?? actor[event.actorType]}, {when(event.createdAt)}
               {event.note && `: ${event.note}`}
             </li>
           ))}
@@ -69,7 +69,7 @@ function Details({ order }: { order: Order }) {
 }
 
 // One order, opened from a card or a history row that put what it knew of the order in the cache.
-// The sheet steps aside while its dialog is open: the ui modals do not stack (each closes on Escape).
+// The cancel dialog opens over the sheet; Escape closes the top one first (ui's modal stack).
 export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const query = useQuery(orderQuery(orderId))
   const order = query.data
@@ -77,6 +77,11 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
   const [asking, setAsking] = useState(false)
   const [reason, setReason] = useState('')
   const [missing, setMissing] = useState(false)
+  const result = useRef<HTMLDivElement>(null)
+  // The dialog gave the keyboard back to the sheet's "Cancel order", which a finished cancel removed: go to the result.
+  useEffect(() => {
+    if (cancel.data && !asking && document.activeElement === document.body) result.current?.focus()
+  }, [cancel.data, asking])
   if (!order) return null
 
   // The dialog stays while the cancel runs: closing it would hide a request that is still changing the order.
@@ -97,16 +102,18 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
 
   return (
     <>
-      <Sheet open={!asking} onClose={onClose} title={`Order ${order.number}`}>
+      <Sheet open onClose={onClose} title={`Order ${order.number}`}>
         <div className="flex flex-col gap-4">
           {/* The one notice a page of this lane shows itself: the sheet is a modal over the app's own notice. */}
           {query.isError && <StatusMessage tone="warning">Could not refresh. Showing what was loaded last.</StatusMessage>}
-          {cancel.data &&
-            (cancel.data.changedElsewhere ? (
-              <StatusMessage tone="warning">Someone else changed this order first: it is now {statusLabel[cancel.data.order.status]}.</StatusMessage>
-            ) : (
-              <StatusMessage tone="success">Order cancelled.</StatusMessage>
-            ))}
+          <div ref={result} role="group" aria-label="Cancel result" tabIndex={-1} className="empty:hidden">
+            {cancel.data &&
+              (cancel.data.changedElsewhere ? (
+                <StatusMessage tone="warning">Someone else changed this order first: it is now {statusLabel[cancel.data.order.status]}.</StatusMessage>
+              ) : (
+                <StatusMessage tone="success">Order cancelled.</StatusMessage>
+              ))}
+          </div>
           <Details order={order} />
           {(order.status === 'placed' || order.status === 'accepted') && (
             <Button variant="secondary" onClick={() => setAsking(true)}>Cancel order</Button>
@@ -128,7 +135,7 @@ export function OrderSheet({ orderId, onClose }: { orderId: string; onClose: () 
             />
           </FormField>
           <DialogFooter onCancel={closeDialog} cancelLabel="Keep order">
-            <Button type="submit" aria-disabled={cancel.isPending} className={idle}>
+            <Button type="submit" aria-disabled={cancel.isPending}>
               {cancel.isPending ? 'Cancelling…' : 'Cancel order'}
             </Button>
           </DialogFooter>

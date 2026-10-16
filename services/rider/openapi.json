@@ -18,6 +18,10 @@
     {
       "name": "rider-service",
       "description": "Rider sign-in, sessions and the signed-in rider."
+    },
+    {
+      "name": "deliveries",
+      "description": "Ready orders, claims, deliveries, rider location and the customer's view of a delivery."
     }
   ],
   "paths": {
@@ -766,6 +770,762 @@
           }
         }
       }
+    },
+    "/me/ready-orders": {
+      "get": {
+        "operationId": "listReadyOrders",
+        "summary": "Ready orders of the rider's store",
+        "description": "Answers the orders core holds as ready at the signed-in rider's store that no delivery holds, oldest placed first. Orders of other stores never appear. The answer is one core page of 100 orders, a working set rather than a browsable list.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ready orders of the rider's store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyOrderList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "orderId": "00000000-0000-4000-8000-000000000701",
+                      "number": "SS-DEMOAAAB",
+                      "placedAt": "2026-10-15T09:00:00Z",
+                      "itemCount": 3,
+                      "totalCents": 33900,
+                      "pincode": "560034",
+                      "customerName": "Demo Customer"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/deliveries": {
+      "get": {
+        "operationId": "listDeliveries",
+        "summary": "The rider's deliveries",
+        "description": "Answers the signed-in rider's deliveries in one status, newest claim first: assigned by default, or delivered. Another rider's deliveries never appear. A status other than assigned or delivered is 400 on status.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "assigned (default) or delivered.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "assigned",
+                "delivered"
+              ],
+              "default": "assigned"
+            },
+            "example": "delivered"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Deliveries per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the rider's deliveries in the status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000910",
+                      "orderId": "00000000-0000-4000-8000-000000000703",
+                      "orderNumber": "SS-DEMOAAAD",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "status": "assigned",
+                      "customerName": "Demo Customer",
+                      "customerPhone": "+919800000000",
+                      "address": {
+                        "line1": "12 80 Feet Rd, Koramangala",
+                        "pincode": "560034"
+                      },
+                      "totalCents": 103000,
+                      "paymentMethod": "cod",
+                      "itemCount": 4,
+                      "items": [
+                        {
+                          "name": "Banana Robusta",
+                          "unitLabel": "1 kg",
+                          "quantity": 1
+                        },
+                        {
+                          "name": "Pomegranate Bhagwa",
+                          "unitLabel": "1 kg",
+                          "quantity": 3
+                        }
+                      ],
+                      "assignedAt": "2026-10-15T09:05:00Z"
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page or pageSize is out of range, or status is not assigned or delivered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be assigned or delivered",
+                    "field": "status"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "claimOrder",
+        "summary": "Claim a ready order",
+        "description": "Gives the signed-in rider a ready order of their store. The order's details are copied into a new delivery with status assigned, and core moves the order to out_for_delivery with the rider as actor. The delivery and the move happen in one transaction: when core refuses or fails, no delivery is left behind. An order that already has a delivery is 409 \"order already claimed\"; an order core holds in another status is 409 \"order is not ready for pickup\". An unknown order and another store's order are 404, and core is not asked to move them.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryClaim"
+              },
+              "example": {
+                "orderId": "00000000-0000-4000-8000-000000000703"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new delivery, status assigned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000910",
+                  "orderId": "00000000-0000-4000-8000-000000000703",
+                  "orderNumber": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "assigned",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "itemCount": 4,
+                  "items": [
+                    {
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "quantity": 1
+                    },
+                    {
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "quantity": 3
+                    }
+                  ],
+                  "assignedAt": "2026-10-15T09:05:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The orderId is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a uuid",
+                    "field": "orderId"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order with this id, or the order is another store's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The order already has a delivery, or core does not hold it as ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "order is not ready for pickup"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer or to move the order (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/deliveries/{id}": {
+      "get": {
+        "operationId": "getDelivery",
+        "summary": "One of the rider's deliveries",
+        "description": "Answers one delivery of the signed-in rider. Another rider's delivery, an unknown id and an id that is not a uuid are all 404.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The delivery's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000901"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The delivery.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000901",
+                  "orderId": "00000000-0000-4000-8000-000000000701",
+                  "orderNumber": "SS-DEMOAAAB",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "delivered",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "totalCents": 33900,
+                  "paymentMethod": "cod",
+                  "itemCount": 3,
+                  "items": [
+                    {
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "quantity": 2
+                    },
+                    {
+                      "name": "Shimla Apple",
+                      "unitLabel": "1 kg",
+                      "quantity": 1
+                    }
+                  ],
+                  "assignedAt": "2026-10-15T09:05:00Z",
+                  "deliveredAt": "2026-10-15T09:40:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No delivery with this id, or it is another rider's, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/deliveries/{id}/delivered": {
+      "post": {
+        "operationId": "markDelivered",
+        "summary": "Mark a delivery delivered",
+        "description": "Moves the order to delivered in core with the signed-in rider as actor, then stamps the delivery with deliveredAt and answers it. The two steps share one transaction: when core refuses or fails, the delivery stays assigned and core's answer passes through (409, 404 or 502). A delivery that is already delivered is 409 \"delivery is not assigned\".",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The delivery's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000901"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The delivery, status delivered with deliveredAt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000910",
+                  "orderId": "00000000-0000-4000-8000-000000000703",
+                  "orderNumber": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "delivered",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "itemCount": 4,
+                  "items": [
+                    {
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "quantity": 1
+                    },
+                    {
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "quantity": 3
+                    }
+                  ],
+                  "assignedAt": "2026-10-15T09:05:00Z",
+                  "deliveredAt": "2026-10-15T09:40:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No delivery with this id, or it is another rider's, or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The delivery is not assigned, or core refused the move (the order is not out for delivery).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "delivery is not assigned"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer or to move the order (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/location": {
+      "put": {
+        "operationId": "putLocation",
+        "summary": "Report the rider's location",
+        "description": "Stores the signed-in rider's last position, replacing the previous one, stamped with the server's clock. Accepted whether or not the rider has an assigned delivery. lat is checked before lng; a missing or out-of-range value is 400 naming the field, and nothing is stored.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationUpdate"
+              },
+              "example": {
+                "lat": 12.9716,
+                "lng": 77.5946
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The position was stored. No body."
+          },
+          "400": {
+            "description": "A missing lat or lng, lat outside -90 to 90, or lng outside -180 to 180. Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between -90 and 90",
+                    "field": "lat"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}/delivery": {
+      "get": {
+        "operationId": "getOrderDelivery",
+        "summary": "A customer's view of their order's delivery",
+        "description": "Reads the order from core with the customer's bearer, which proves the order is theirs, then answers the rider's name and the delivery's status. location appears only while the delivery is assigned and the rider reported a position after the claim. The rider's phone, email and id are never shown. Another customer's order and an order without a delivery are 404; a bearer core does not know is 401.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "The order's id (core's order id).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000701"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The delivery as the customer sees it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDelivery"
+                },
+                "example": {
+                  "riderName": "Arjun Rao",
+                  "status": "assigned",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245,
+                    "recordedAt": "2026-10-15T09:20:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a bearer core does not know.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Another customer's order, an order with no delivery, or an id that is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -814,6 +1574,7 @@
                   "not_found",
                   "conflict",
                   "rate_limited",
+                  "method_not_allowed",
                   "internal"
                 ]
               },
@@ -978,6 +1739,291 @@
           "total": {
             "type": "integer",
             "description": "Every rider the caller may see, not just this page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadyOrder": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "number",
+          "placedAt",
+          "itemCount",
+          "totalCents",
+          "pincode",
+          "customerName"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Core's order id."
+          },
+          "number": {
+            "type": "string",
+            "description": "The order number the customer and the store see."
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "itemCount": {
+            "type": "integer",
+            "description": "Units carried: the sum of the line quantities."
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "pincode": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadyOrderList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Oldest placed first; never null.",
+            "items": {
+              "$ref": "#/components/schemas/ReadyOrder"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliveryClaim": {
+        "type": "object",
+        "required": [
+          "orderId"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ready order to claim."
+          }
+        }
+      },
+      "DeliveryItem": {
+        "type": "object",
+        "required": [
+          "name",
+          "unitLabel",
+          "quantity"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "unitLabel": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliveryAddress": {
+        "type": "object",
+        "required": [
+          "line1",
+          "pincode"
+        ],
+        "properties": {
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string",
+            "description": "Omitted when the order has none."
+          },
+          "pincode": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Delivery": {
+        "type": "object",
+        "required": [
+          "id",
+          "orderId",
+          "orderNumber",
+          "storeId",
+          "status",
+          "customerName",
+          "address",
+          "totalCents",
+          "paymentMethod",
+          "itemCount",
+          "items",
+          "assignedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The store the order belongs to (core's store id)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "assigned",
+              "delivered"
+            ]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "description": "Omitted when the order has none."
+          },
+          "address": {
+            "$ref": "#/components/schemas/DeliveryAddress"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "cod"
+          },
+          "itemCount": {
+            "type": "integer",
+            "description": "Units carried: the sum of the line quantities."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryItem"
+            }
+          },
+          "assignedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Omitted until the delivery is delivered."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliveryList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Delivery"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every delivery of the caller in this status, not just this page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "LocationUpdate": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitude in degrees, -90 to 90."
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitude in degrees, -180 to 180."
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng",
+          "recordedAt"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the server received the position."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerDelivery": {
+        "type": "object",
+        "required": [
+          "riderName",
+          "status"
+        ],
+        "properties": {
+          "riderName": {
+            "type": "string",
+            "description": "The rider's current name."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "assigned",
+              "delivered"
+            ]
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location",
+            "description": "The rider's last position, only while the delivery is assigned and recorded after the claim. Omitted otherwise."
           }
         },
         "additionalProperties": false

@@ -86,6 +86,7 @@ test('an admin sees the dashboard cards and opens a store\'s orders from one', a
   await signIn(page, 'admin@shopperstop.local', 'admin12345')
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Indiranagar', 'Koramangala'])
   const store = page.getByRole('region', { name: 'Koramangala' })
+  await expect(store.getByText('Open', { exact: true })).toBeVisible()
   await expect(store).toContainText('Orders today')
   await expect(store).toContainText('Revenue today')
   await expect(store).toContainText(/Low stock\d+ products/)
@@ -98,5 +99,12 @@ test('an admin sees the dashboard cards and opens a store\'s orders from one', a
   await expect(page.getByRole('navigation', { name: 'Orders' }).getByRole('link', { name: 'Board' })).toHaveAttribute('aria-current', 'page')
   await page.getByRole('navigation', { name: 'Orders' }).getByRole('link', { name: 'History' }).click()
   await expect(page.getByRole('table', { name: 'Order history' }).getByRole('button', { name: 'SS-DEMOAAAB' })).toBeVisible()
+  await expectNoAxeViolations(page)
+
+  // The seeded delivered order went out with the seeded rider (core's demo seed, matching the rider service's).
+  await page.getByRole('table', { name: 'Order history' }).getByRole('button', { name: 'SS-DEMOAAAB' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Order SS-DEMOAAAB' })
+  await expect(sheet).toContainText('Rider: Arjun Rao')
+  await expect(sheet).toContainText('Delivered by Arjun Rao')
   await expectNoAxeViolations(page)
 })

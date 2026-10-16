@@ -11,12 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
 )
 
 // New returns the rider router. Routes are registered with their full path
 // so chi.Walk yields the paths openapi.json documents.
-func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
+func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliveries) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/rider/v1/healthz", healthz)
 	r.Get("/api/rider/v1/readyz", readyz(pool))
@@ -27,6 +28,13 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.With(a.RequireStaff).Post("/api/rider/v1/admin/riders", a.AdminCreateRider)
 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders/{id}", a.AdminGetRider)
 	r.With(a.RequireStaff).Patch("/api/rider/v1/admin/riders/{id}", a.AdminUpdateRider)
+	r.With(a.RequireRider).Get("/api/rider/v1/me/ready-orders", d.ReadyOrders)
+	r.With(a.RequireRider).Post("/api/rider/v1/me/deliveries", d.Claim)
+	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries", d.List)
+	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries/{id}", d.Get)
+	r.With(a.RequireRider).Post("/api/rider/v1/me/deliveries/{id}/delivered", d.Delivered)
+	r.With(a.RequireRider).Put("/api/rider/v1/me/location", d.PutLocation)
+	r.Get("/api/rider/v1/orders/{orderId}/delivery", d.OrderDelivery)
 	return r
 }
 

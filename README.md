@@ -12,7 +12,7 @@ Phase 1 (foundation) is tagged `v0.1.0` and Phase 2 (core service and apps) `v0.
 - `packages/ui`: design tokens, the shared components and the generated API types.
 - `deploy/`: Docker Compose with Postgres 16 and a production-profile Caddy, `initdb.sql`, `Caddyfile`; the `Makefile`, the CI workflow, the Postman collection and environment under `docs/postman/`, and the living specs under [openspec/specs/](openspec/specs/).
 
-Phase 3 (the rider service and rider app) is in progress; `services/rider` and `apps/rider` are not on `main` yet, and their targets skip until they land. `core-admin seed-demo --reset` loads the demo data and prints the demo sign-ins.
+Phase 3 (the rider service and rider app) is on `main`: `services/rider` on :8081 with riders, deliveries, pick-up and location, and `apps/rider` under `/rider/`; the customer tracking page shows the rider, and the admin panel manages riders. `core-admin seed-demo --reset` and `rider-admin seed-demo --reset` load the demo data and print the demo sign-ins. Of the servers below, only `apps/mobile` is not on `main` yet.
 
 Phase 4 (the customer mobile app, `apps/mobile`, built with Expo) runs alongside Phase 3's tail; see [Mobile app](#mobile-app).
 
@@ -32,7 +32,7 @@ make dev
 
 `make dev` starts Postgres 16 as `shopperstop-postgres-1` with the roles and databases from `deploy/initdb.sql`, applies the migrations, runs `seed-demo --reset`, and then runs core on <http://localhost:8080>, the customer web on <http://localhost:5173> and the admin panel on <http://localhost:5174/admin/>, until Ctrl-C. Check core with `curl http://localhost:8080/api/core/v1/healthz`. Each target prints a skip line while its directory is absent. Postgres keeps running after Ctrl-C; stop it with `docker compose -f deploy/docker-compose.yml stop`.
 
-Phase 3 adds the rider service on <http://localhost:8081> and the rider app on <http://localhost:5175/rider/> to `make dev` once they land.
+`make dev` also runs the rider service on <http://localhost:8081> and the rider app on <http://localhost:5175/rider/> (Phase 3).
 
 **Cloned before Phase 3?** `deploy/initdb.sql` runs only when the Postgres volume is first created, so an existing volume lacks the rider role and databases. Apply the rider lines once with `grep shopperstop_rider deploy/initdb.sql | docker exec -i shopperstop-postgres-1 psql -v ON_ERROR_STOP=1 -U postgres` (the `psql` inside the container; none is needed on the host).
 
@@ -73,7 +73,7 @@ Local databases only. `core-admin seed-demo --reset` loads these accounts and pr
 | Rider app (`localhost:5175/rider/`) | Rider, Indiranagar | `rider1-indiranagar@shopperstop.local` | `rider12345` |
 | Rider app (`localhost:5175/rider/`) | Rider, Indiranagar | `rider2-indiranagar@shopperstop.local` | `rider12345` |
 
-The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008). The four rider rows are from Phase 3: `rider-admin seed-demo --reset` loads them once the rider service lands, and they are not on `main` yet.
+The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pincodes 560038 and 560008). The four rider rows are loaded by `rider-admin seed-demo --reset` (Phase 3), which `make dev` runs after core's seed.
 
 ## Mobile app
 
@@ -109,7 +109,7 @@ Each target prints `<target>: <path> absent, skipping` while its part of the tre
 
 ## API
 
-The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The rider contract, `services/rider/openapi.json`, follows the same rules once the rider service lands. The Postman collections generated from the contracts live under `docs/postman/`, one per service (the rider's from Phase 3 on), with the shared environment (`riderBaseUrl`, `riderToken`, `riderId` and `deliveryId` included); `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`.
+The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The rider contract, [services/rider/openapi.json](services/rider/openapi.json), follows the same rules. The Postman collections generated from the contracts live under `docs/postman/`, one per service (the rider's from Phase 3 on), with the shared environment (`riderBaseUrl`, `riderToken`, `riderId` and `deliveryId` included); `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`.
 
 ## Design
 

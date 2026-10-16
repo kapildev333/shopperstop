@@ -5,8 +5,75 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type DeliveryStatus string
+
+const (
+	DeliveryStatusAssigned  DeliveryStatus = "assigned"
+	DeliveryStatusDelivered DeliveryStatus = "delivered"
+)
+
+func (e *DeliveryStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DeliveryStatus(s)
+	case string:
+		*e = DeliveryStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DeliveryStatus: %T", src)
+	}
+	return nil
+}
+
+type NullDeliveryStatus struct {
+	DeliveryStatus DeliveryStatus
+	Valid          bool // Valid is true if DeliveryStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDeliveryStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.DeliveryStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DeliveryStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDeliveryStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DeliveryStatus), nil
+}
+
+type Delivery struct {
+	ID             string
+	OrderID        string
+	OrderNumber    string
+	StoreID        string
+	RiderID        string
+	Status         DeliveryStatus
+	CustomerName   string
+	CustomerPhone  string
+	AddressLine1   string
+	AddressLine2   string
+	AddressPincode string
+	TotalCents     int64
+	PaymentMethod  string
+	ItemCount      int32
+	Items          []byte
+	AssignedAt     pgtype.Timestamptz
+	DeliveredAt    pgtype.Timestamptz
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
 
 type Rider struct {
 	ID           string
@@ -18,6 +85,15 @@ type Rider struct {
 	IsActive     bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+}
+
+type RiderLocation struct {
+	RiderID    string
+	Lat        float64
+	Lng        float64
+	RecordedAt pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
 }
 
 type Session struct {

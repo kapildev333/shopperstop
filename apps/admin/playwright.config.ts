@@ -16,6 +16,13 @@ export default defineConfig({
       reuseExistingServer,
       timeout: 120_000,
     },
+    {
+      command: 'go run ./cmd/rider',
+      cwd: '../../services/rider',
+      url: 'http://localhost:18081/api/rider/v1/healthz',
+      reuseExistingServer,
+      timeout: 120_000,
+    },
     { command: 'vite preview', url: 'http://localhost:15174/admin/', reuseExistingServer },
   ],
 })

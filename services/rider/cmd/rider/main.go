@@ -19,6 +19,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
 	"github.com/kapildev333/shopperstop/services/rider/internal/config"
 	"github.com/kapildev333/shopperstop/services/rider/internal/core"
+	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -55,7 +56,7 @@ func run(cfg config.Config) error {
 	slog.Info("rider listening", "addr", ln.Addr().String())
 	c := core.New(cfg.CoreURL, cfg.CoreServiceToken, time.Now)
 	a := auth.New(pool, cfg.SessionPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), c)
-	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a))
+	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err
 	}

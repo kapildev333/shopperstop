@@ -63,7 +63,11 @@ export function ordersCore(storeId: string, orders: Order[]) {
       const query = new URL(request.url).searchParams
       const page = Number(query.get('page') ?? 1)
       const pageSize = Number(query.get('pageSize') ?? 24)
-      const match = read.filter((order) => !query.get('status') || order.status === query.get('status')).sort((a, b) => b.placedAt.localeCompare(a.placedAt))
+      // `active=true` keeps every order that is not delivered or cancelled, as core does.
+      const active = query.get('active') === 'true'
+      const match = read
+        .filter((order) => (!query.get('status') || order.status === query.get('status')) && (!active || (order.status !== 'delivered' && order.status !== 'cancelled')))
+        .sort((a, b) => b.placedAt.localeCompare(a.placedAt))
       return json(200, { items: match.slice((page - 1) * pageSize, page * pageSize), page, pageSize, total: match.length })
     },
   }

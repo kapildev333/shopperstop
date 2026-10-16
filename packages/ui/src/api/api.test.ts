@@ -51,7 +51,8 @@ it('response types are usable by name', () => {
   expectTypeOf<paths['/readyz']['get']['responses'][200]['content']['application/json']>().toEqualTypeOf<{
     status: 'ok'
   }>()
-  expectTypeOf<components['schemas']['Error']['error']['code']>().toEqualTypeOf<
+  // The nine Phase 2 codes stay in the contract; core may add codes (core-P3-L3 adds method_not_allowed).
+  expectTypeOf<
     | 'validation'
     | 'unauthorized'
     | 'forbidden'
@@ -61,14 +62,15 @@ it('response types are usable by name', () => {
     | 'not_serviceable'
     | 'rate_limited'
     | 'internal'
-  >()
+  >().toExtend<components['schemas']['Error']['error']['code']>()
 })
 
 it('rider response types are usable by name', () => {
   expectTypeOf<RiderPaths['/readyz']['get']['responses'][200]['content']['application/json']>().toEqualTypeOf<{
     status: 'ok'
   }>()
-  expectTypeOf<RiderComponents['schemas']['Error']['error']['code']>().toEqualTypeOf<
+  // The seven Phase 3 codes stay in the contract; rider may add codes (rider-P4-L1 adds method_not_allowed).
+  expectTypeOf<
     | 'validation'
     | 'unauthorized'
     | 'forbidden'
@@ -76,5 +78,5 @@ it('rider response types are usable by name', () => {
     | 'conflict'
     | 'rate_limited'
     | 'internal'
-  >()
+  >().toExtend<RiderComponents['schemas']['Error']['error']['code']>()
 })

@@ -54,8 +54,9 @@ test('the board shows a column per active status with each order\'s number, time
   expect(screen.queryByText('SS-TEST0005')).not.toBeInTheDocument()
   expect(screen.queryByText('SS-TEST0006')).not.toBeInTheDocument()
   expect(screen.getByLabelText('Store')).toHaveValue(indiranagar.id)
-  // Core lists one status per request: five requests, the largest page each.
-  expect(listRequests(calls)).toEqual(['placed', 'accepted', 'packing', 'ready', 'out_for_delivery'].map((status) => ({ status, pageSize: '100' })))
+  // One request for every active order, the largest page core gives.
+  expect(listRequests(calls)).toEqual([{ active: 'true', pageSize: '100' }])
+  expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
 })
 
 test('store staff see the board of their own store by name, with no store selector and no stores request', async () => {
@@ -128,14 +129,14 @@ test('the board asks core again every 10 seconds and shows an order where it now
   renderApp('/orders')
   await screen.findByText('SS-TEST0001')
   expect(within(column('Placed')).getByText('SS-TEST0001')).toBeInTheDocument()
-  expect(listRequests(calls)).toHaveLength(5)
+  expect(listRequests(calls)).toHaveLength(1)
 
   // Another staff member accepts it.
   orders[0] = { ...orders[0], status: 'accepted' }
   await poll(9_000)
-  expect(listRequests(calls)).toHaveLength(5)
+  expect(listRequests(calls)).toHaveLength(1)
   await poll(1_000)
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
   await waitFor(() => expect(within(column('Accepted')).getByText('SS-TEST0001')).toBeInTheDocument())
   expect(within(column('Placed')).getByText('No orders')).toBeInTheDocument()
 })
@@ -186,11 +187,11 @@ test('a hidden tab is not polled, and showing it again asks core at once', async
   const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
   await poll(30_000)
-  expect(listRequests(calls)).toHaveLength(5)
+  expect(listRequests(calls)).toHaveLength(1)
 
   visibility.mockReturnValue('visible')
   act(() => void window.dispatchEvent(new Event('visibilitychange')))
-  await waitFor(() => expect(listRequests(calls)).toHaveLength(10))
+  await waitFor(() => expect(listRequests(calls)).toHaveLength(2))
 })
 
 test('a failed poll keeps the board and announces nothing; the next good answer shows and announces what is new', async () => {
@@ -302,15 +303,6 @@ test('stores that cannot be loaded offer a retry that reloads', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
   expect(await screen.findByText('SS-TEST0001')).toBeInTheDocument()
 })
-
-// From the review of task 1.
-// Another list request fails for one status only, while `failing.status` names it.
-function oneStatusFails(storeId: string, routes: Record<string, (request: Request) => Promise<Response>>) {
-  const failing: { status?: string } = {}
-  const key = `GET /admin/stores/${storeId}/orders`
-  const lists = async (request: Request) => (new URL(request.url).searchParams.get('status') === failing.status ? apiError(500, 'internal') : routes[key](request))
-  return { failing, routes: { ...routes, [key]: lists } }
-}
 
 test('coming back to a store announces nothing for an order placed while its board was away', async () => {
   useFakeClock()
@@ -424,22 +416,21 @@ test('a column is named by its status and how many orders it holds', async () =>
   expect(screen.getByRole('heading', { level: 2, name: 'Placed, 2 orders' })).toHaveTextContent(/^Placed2$/)
 })
 
-test('one of the five requests failing on a later poll keeps the whole board, with the notice that it could not refresh', async () => {
+test('the one list failing on a later poll keeps the whole board, with the notice that it could not refresh', async () => {
   useFakeClock()
   setToken('tok')
   const orders = [order(1, 'placed'), order(2, 'ready')]
-  const core = oneStatusFails(indiranagar.id, ordersCore(indiranagar.id, orders).routes)
+  const core = ordersCore(indiranagar.id, orders)
   fakeCore({ ...asAdmin, ...core.routes })
 
   const router = renderApp('/orders')
   await screen.findByText('SS-TEST0001')
-  // The placed order is accepted elsewhere, and core cannot list the ready orders.
+  // The placed order is accepted elsewhere, and core cannot list the active orders.
   orders[0] = { ...orders[0], status: 'accepted' }
-  core.failing.status = 'ready'
+  core.fail('lists')
   await poll()
   await refreshFailed(router, ['admin', 'orders', indiranagar.id, 'board'])
 
-  // No column of the new answer next to columns of the old one: the board is as it was.
   expect(within(column('Placed')).getByText('SS-TEST0001')).toBeInTheDocument()
   expect(within(column('Ready')).getByText('SS-TEST0002')).toBeInTheDocument()
   expect(within(column('Accepted')).getByText('No orders')).toBeInTheDocument()
@@ -447,10 +438,10 @@ test('one of the five requests failing on a later poll keeps the whole board, wi
   expect(screen.getByText('Could not refresh. Showing what was loaded last.')).toHaveAttribute('role', 'status')
 })
 
-test('one of the five requests failing on the first load is a board that could not be loaded', async () => {
+test('the one list failing on the first load is a board that could not be loaded', async () => {
   setToken('tok')
-  const core = oneStatusFails(indiranagar.id, ordersCore(indiranagar.id, [order(1, 'placed')]).routes)
-  core.failing.status = 'packing'
+  const core = ordersCore(indiranagar.id, [order(1, 'placed')])
+  core.fail('lists')
   fakeCore({ ...asAdmin, ...core.routes })
 
   renderApp('/orders')
@@ -468,10 +459,33 @@ test('the poll stops when the board is left', async () => {
   const router = renderApp('/orders')
   await screen.findByText('SS-TEST0001')
   await poll()
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
   await act(() => router.navigate({ to: '/' }))
   await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
   await poll(30_000)
 
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
+})
+
+test('a card taken out by a rider names the rider; a card without one does not', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'ready'), order(2, 'out_for_delivery', { riderName: 'Arjun Rao' }), order(3, 'out_for_delivery')]).routes })
+
+  renderApp('/orders')
+
+  const out = within(await screen.findByRole('region', { name: /^Out for delivery/ })).getAllByRole('listitem')
+  expect(out[0]).toHaveTextContent('SS-TEST0003')
+  expect(out[0]).not.toHaveTextContent('Rider')
+  expect(out[1]).toHaveTextContent('Rider: Arjun Rao')
+  expect(within(column('Ready')).getByRole('listitem')).not.toHaveTextContent('Rider')
+})
+
+test('a store with more active orders than one page says how many the board shows', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, [`GET /admin/stores/${indiranagar.id}/orders`]: () => json(200, { items: [order(1, 'placed')], page: 1, pageSize: 100, total: 130 }) })
+
+  renderApp('/orders')
+
+  expect(await screen.findByText('Showing the newest 1 of 130 active orders.')).toHaveAttribute('role', 'status')
+  expect(screen.getByText('SS-TEST0001')).toBeInTheDocument()
 })

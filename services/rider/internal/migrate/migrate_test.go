@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 
@@ -201,14 +203,14 @@ func TestApplyRejectsDuplicateVersion(t *testing.T) {
 }
 
 // TestEmbeddedMigrationsApplyOnce applies the rider's embedded files: the first
-// run records 0001_init and 0002_riders, the second applies nothing.
+// run records 0001_init, 0002_riders and 0003_deliveries, the second applies nothing.
 func TestEmbeddedMigrationsApplyOnce(t *testing.T) {
 	reset(t, "riders", "sessions")
 	ctx := context.Background()
 	if _, err := pool.Exec(ctx, "drop function if exists set_updated_at() cascade"); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"0001_init", "0002_riders"}
+	want := []string{"0001_init", "0002_riders", "0003_deliveries"}
 
 	got, err := migrate.Apply(ctx, pool, migrations.FS)
 	if err != nil {
@@ -226,5 +228,38 @@ func TestEmbeddedMigrationsApplyOnce(t *testing.T) {
 	}
 	if !reflect.DeepEqual(recorded(t), want) {
 		t.Fatalf("recorded %v, want %v", recorded(t), want)
+	}
+}
+
+// TestApplyConcurrentRunsSerialise: two runs started together both succeed and
+// every file is applied and recorded exactly once. The first file sleeps so
+// that, without the lock, the second run reads schema_migrations while the
+// first is still inside 0001_a and tries to apply it too.
+func TestApplyConcurrentRunsSerialise(t *testing.T) {
+	reset(t, "t1", "t2")
+	fsys := fstest.MapFS{
+		"0001_a.sql": {Data: []byte("select pg_sleep(0.3); create table t1 (id int);")},
+		"0002_b.sql": {Data: []byte("create table t2 (id int);")},
+	}
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	var applied [2][]string
+	var errs [2]error
+	for i := range 2 {
+		wg.Go(func() { applied[i], errs[i] = migrate.Apply(ctx, pool, fsys) })
+	}
+	wg.Wait()
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("run %d: %v", i+1, err)
+		}
+	}
+	want := []string{"0001_a", "0002_b"}
+	both := slices.Sorted(slices.Values(append(slices.Clone(applied[0]), applied[1]...)))
+	if !reflect.DeepEqual(both, want) {
+		t.Fatalf("the two runs applied %v and %v, want each of %v exactly once", applied[0], applied[1], want)
+	}
+	if got := recorded(t); !reflect.DeepEqual(got, want) {
+		t.Fatalf("recorded %v, want %v", got, want)
 	}
 }

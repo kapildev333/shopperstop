@@ -1,30 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import { ShoppingBasket } from 'lucide-react'
-import { Card, ErrorBanner, Price, Stepper } from '@shopperstop/ui'
+import { Card, ErrorBanner, ImageTile, Price, Stepper } from '@shopperstop/ui'
 import { useCartQuantity } from './cart'
 import type { StoreProduct } from './catalog'
-
-// Alt is empty: the name beside the tile is the link's text.
-export function ImageTile({ src }: { src?: string }) {
-  return (
-    <div className="aspect-square w-full overflow-hidden rounded-control bg-surface">
-      {src ? (
-        <img src={src} alt="" loading="lazy" className="size-full object-contain" />
-      ) : (
-        <div data-placeholder className="flex size-full items-center justify-center bg-canvas">
-          <ShoppingBasket size={20} aria-hidden className="text-ink-muted" />
-        </div>
-      )}
-    </div>
-  )
-}
 
 export function ProductCard({ product }: { product: StoreProduct }) {
   const [quantity, setQuantity, failure] = useCartQuantity(product)
   return (
     <Card className="flex flex-col gap-2 p-3">
       <Link to="/p/$slug" params={{ slug: product.slug }} className="flex flex-col gap-2">
-        <ImageTile src={product.imageUrl} />
+        <ImageTile src={product.imageUrl} alt="" className="w-full" />
         <p className="line-clamp-2 text-body font-semibold text-ink">{product.name}</p>{' '}
         <p className="text-small text-ink-muted">{product.unitLabel}</p>
       </Link>
