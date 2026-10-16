@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ShopperStop: a quick-commerce product in the shape of Blinkit. A customer orders groceries from the nearest dark store; the store packs and delivers in minutes. Portfolio product built to the UniCourse standard (`../UniCourse`): real flows, tests, documented design, multi-agent orchestration. Microservices in one repository: `services/core` first, then rider, payment and receipt services, each its own Go module and Postgres database, talking over HTTP.
 
-Phases 1 and 2 are on `main` (`v0.1.0`, `v0.2.0`); Phase 3 adds the rider service and app (D29); Phase 4 adds the customer mobile app (D36), alongside Phase 3's tail. The two founding briefs are `docs/specs/2026-10-12-foundation-and-design-system.md` (Spec 1) and `docs/specs/2026-10-12-core-service-and-apps.md` (Spec 2); they are frozen. Phase 1 seeded `openspec/specs/platform` and `design-system` from them; later capabilities are seeded by their Phase 2 changes (D4). `PLAN.md` tracks state.
+Phases 1 to 3 are on `main` (`v0.1.0`, `v0.2.0`, `v0.3.0`; Phase 3 is the rider service and app, D29); Phase 4, the customer mobile app (D36), is in progress on `main`. The two founding briefs are `docs/specs/2026-10-12-foundation-and-design-system.md` (Spec 1) and `docs/specs/2026-10-12-core-service-and-apps.md` (Spec 2); they are frozen. Phase 1 seeded `openspec/specs/platform` and `design-system` from them; later capabilities are seeded by their Phase 2 changes (D4). `PLAN.md` tracks state.
 
 ## Commands
 
