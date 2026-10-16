@@ -31,8 +31,8 @@ Gates, in order (paste the last lines into your log):
 - With the manager's e2e slot only (ask in your log and wait): `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L5b && make e2e`; paste every suite's summary line; the mobile suite all green, `flow.spec.ts` included.
 - If `node_modules` is absent: `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L5b && npm ci` first.
 
-- [ ] 1.1 `test:` `e2e/flow.spec.ts` with the scenario; lint and typecheck green; the bite check recorded
-- [ ] 1.2 `make e2e` exits 0 with the slot; mobile suite all green including the flow
+- [x] 1.1 `test:` `e2e/flow.spec.ts` with the scenario; lint and typecheck green; the bite check recorded
+- [x] 1.2 `make e2e` exits 0 with the slot; mobile suite all green including the flow
 
 ## 2. Acceptance (team lead)
 
