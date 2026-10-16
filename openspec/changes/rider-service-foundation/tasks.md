@@ -75,6 +75,6 @@ Commits: `test: rider demo seed and create-rider`, then `feat: rider-admin seed-
 
 ## 6. Manager verification (area manager, not a worker)
 
-- [ ] 6.1 Re-run on the branch: `make test-rider`, `make test-core`, `make gen` and `make postman` (tree clean), `openspec validate --all --strict`
-- [ ] 6.2 Runtime: with `RIDER_ENV` from the Makefile, `go run ./cmd/rider-admin migrate` twice (second prints `nothing to apply`) and `seed-demo --reset` against `shopperstop_rider` with core stopped; then with core and rider running, sign in `rider1-koramangala@shopperstop.local` / `rider12345` and read `/me`; sign in `koramangala@shopperstop.local` at core and read `/api/rider/v1/admin/riders` through rider (two riders) and `?store=...0402` (403); stop core and see 502 after the 30 s cache; paste the outputs into the lane status
-- [ ] 6.3 Team lead's `/opsx:verify`: every scenario maps to a passing test, every task ticked, nothing outside the scope landed
+- [x] 6.1 Re-run on the branch: `make test-rider`, `make test-core`, `make gen` and `make postman` (tree clean), `openspec validate --all --strict`
+- [x] 6.2 Runtime: with `RIDER_ENV` from the Makefile, `go run ./cmd/rider-admin migrate` twice (second prints `nothing to apply`) and `seed-demo --reset` against `shopperstop_rider` with core stopped; then with core and rider running, sign in `rider1-koramangala@shopperstop.local` / `rider12345` and read `/me`; sign in `koramangala@shopperstop.local` at core and read `/api/rider/v1/admin/riders` through rider (two riders) and `?store=...0402` (403); stop core and see 502 after the 30 s cache; paste the outputs into the lane status
+- [x] 6.3 Team lead's `/opsx:verify`: every scenario maps to a passing test, every task ticked, nothing outside the scope landed
