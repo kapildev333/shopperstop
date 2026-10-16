@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/core/internal/auth"
@@ -37,10 +38,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return migrateDB(stdout, stderr)
 	case "seed-demo":
-		if len(args) > 2 || (len(args) == 2 && args[1] != "--reset") {
+		reset, force, ok := seedFlags(args[1:])
+		if !ok {
 			return usage(stderr)
 		}
-		return seedDemoCmd(len(args) == 2, stdout, stderr)
+		return seedDemoCmd(reset, force, stdout, stderr)
 	case "create-admin":
 		if len(args) != 2 {
 			return usage(stderr)
@@ -52,8 +54,43 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 func usage(stderr io.Writer) int {
-	fmt.Fprintln(stderr, "usage: core-admin migrate | seed-demo [--reset] | create-admin <email>")
+	fmt.Fprintln(stderr, "usage: core-admin migrate | seed-demo [--reset] [--force] | create-admin <email>")
 	return 2
+}
+
+// seedFlags reads seed-demo's flags: --reset and --force, each at most once, in any order.
+func seedFlags(args []string) (reset, force, ok bool) {
+	for _, a := range args {
+		switch {
+		case a == "--reset" && !reset:
+			reset = true
+		case a == "--force" && !force:
+			force = true
+		default:
+			return false, false, false
+		}
+	}
+	return reset, force, true
+}
+
+// localDatabase refuses a database URL naming any host but this machine
+// (localhost, 127.0.0.1, ::1 or a Unix socket directory), so the demo rows and
+// their public passwords never land on a shared database by mistake.
+func localDatabase(databaseURL string) error {
+	cfg, err := pgconn.ParseConfig(databaseURL)
+	if err != nil {
+		return fmt.Errorf("parse SHOPPERSTOP_CORE_DATABASE_URL: %w", err)
+	}
+	hosts := []string{cfg.Host}
+	for _, f := range cfg.Fallbacks {
+		hosts = append(hosts, f.Host)
+	}
+	for _, h := range hosts {
+		if h != "localhost" && h != "127.0.0.1" && h != "::1" && !strings.HasPrefix(h, "/") {
+			return fmt.Errorf("refusing to load demo data into a database on %s, not this machine; add --force to load it anyway", h)
+		}
+	}
+	return nil
 }
 
 func migrateDB(stdout, stderr io.Writer) int {
@@ -84,12 +121,19 @@ func migrateDB(stdout, stderr io.Writer) int {
 	return 0
 }
 
-// seedDemoCmd loads the demo data, clearing it first when reset is set, and prints seed.Summary.
-func seedDemoCmd(reset bool, stdout, stderr io.Writer) int {
+// seedDemoCmd loads the demo data, clearing it first when reset is set, and
+// prints seed.Summary. Without force it refuses a database on another host.
+func seedDemoCmd(reset, force bool, stdout, stderr io.Writer) int {
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
 		fmt.Fprintf(stderr, "core-admin: %v\n", err)
 		return 1
+	}
+	if !force {
+		if err := localDatabase(cfg.DatabaseURL); err != nil {
+			fmt.Fprintf(stderr, "core-admin: seed-demo: %v\n", err)
+			return 1
+		}
 	}
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
