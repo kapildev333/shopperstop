@@ -34,9 +34,9 @@ Scope: `apps/mobile/scripts/icons.mjs`, `apps/mobile/scripts/icons.test.mjs`, `a
 Scenarios: Committed icons match the generator; App config points at the icons.
 Starts from: `apps/mobile/scripts/icons.test.mjs`: `committed icons match the generator` (for each `IMAGES` entry: decode `assets/<file>` per design.md Decision 6, assert 1024 × 1024 and colour type 2 for opaque, 6 otherwise, pixels deep-equal `render(entry, brandColors(tokensCss))`; icon pixel (0, 0) is the brand colour and (512, 512) the on-brand colour; adaptive pixel (512, 512) is on-brand with alpha 255 and (0, 0) has alpha 0), `app config points at the icons` (`expo.icon === './assets/icon.png'`, `expo.android.adaptiveIcon.foregroundImage === './assets/adaptive-icon.png'`, both files exist, `backgroundColor === brandColors(tokensCss).brand`). Hex values are never written in the test: they come from `tokens.css`. Red: `icons.mjs` does not exist (commit the test with a minimal `icons.mjs` that exports the four names and throws `not implemented` if the import error is not a clean red; say which in the log).
 
-- [ ] 2.1 `test:` the two tests, red
-- [ ] 2.2 `icons.mjs` per design.md Decisions 1 and 2 (`IMAGES` holds `icon.png` and `adaptive-icon.png` only), run it, commit the two PNGs
-- [ ] 2.3 `app.json` `icon` and `android.adaptiveIcon` per design.md Decision 3; nothing else in the file changes (`git diff` shows only those lines)
+- [x] 2.1 `test:` the two tests, red
+- [x] 2.2 `icons.mjs` per design.md Decisions 1 and 2 (`IMAGES` holds `icon.png` and `adaptive-icon.png` only), run it, commit the two PNGs
+- [x] 2.3 `app.json` `icon` and `android.adaptiveIcon` per design.md Decision 3; nothing else in the file changes (`git diff` shows only those lines)
 
 ## 3. Splash screen from the tokens
 
