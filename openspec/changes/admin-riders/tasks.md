@@ -40,11 +40,19 @@ Failing tests: all of `src/riders.test.tsx` (7 tests, 8 runs) and `src/rider-dia
 - [x] 4.1 `patches/4.1-riders-tests.diff` (`test: riders page, rider dialog, Riders in the nav`); `25 failed | 297 passed (322)`; typecheck fails here by design (`Rider` comes with 4.3)
 - [x] 4.2 `patches/4.2-rider-service-config.diff` and `patches/4.3-riders-code.diff`, then `npm run build --workspace apps/admin` leaves `routeTree.gen.ts` as the patch wrote it (`feat: riders page against the rider service`); `322 passed (322)`; every gate green
 
+## 3b. Review fix: the board's total after a status change (R2-1), and R1 nit 1
+Waits on: tasks 1 to 4 landed (HEAD 752d935, admin `322 passed (322)`). From `.claude/lanes/admin-P3-L1-R2.md` finding 1: a status change rewrote the board's `items` but kept core's old `total`, so delivering or cancelling one of a store's active orders showed "Showing the newest n of n+1 active orders." until the next poll. The fix moves `total` by the change in the item count (also right on the 409 path, where an order joins the board). R1 nit 1 (a double blank line in `routes/_staff/stock.tsx`) is folded into the `fix:` commit.
+Scope: `apps/admin/src/orders-status.test.tsx`, `apps/admin/src/order-sheet.test.tsx` (one test appended to each), `apps/admin/src/orders.ts`, `apps/admin/src/routes/_staff/stock.tsx`, this file's ticks.
+Scenarios: Orders board › More active orders than one page (no note while every active order is shown, also after a status change).
+Failing tests: `src/orders-status.test.tsx` › "an order that leaves the board takes its count with it: no note of orders not shown"; `src/order-sheet.test.tsx` › "a cancel that takes the order off the board takes its count with it: no note of orders not shown".
+- [ ] 3b.1 `patches/3b.1-board-total-tests.diff` (`test: an order leaving the board takes its count with it`); `2 failed | 322 passed (324)`
+- [ ] 3b.2 `patches/3b.2-board-total-fix.diff` (`fix: a status change moves the board's total with its items`); `324 passed (324)`; every gate green
+
 ## 5. Against core and the rider service (the manager's e2e slot)
 Waits on: tasks 1 to 4 landed and reviewed, the e2e slot (D35), and core's seed giving SS-DEMOAAAB the rider "Arjun Rao" (design.md "Requests").
 Scope: `apps/admin/e2e/*.spec.ts` (fixes only, after a recorded failure), this file's ticks, the lane log.
 Scenarios: Riders against the rider service; Orders against core › both; End-to-end suite with axe › both; Core reached through a same-origin proxy › Preview proxies to the rider service.
-- [ ] 5.1 The manager runs `make e2e` (admin expected 15: today's 14 + `riders.spec.ts`) and `curl -s http://localhost:15174/api/rider/v1/healthz` while the preview runs, then walks `/riders` (admin and store staff, 390 px too), the board and a stacked cancel dialog in Chromium against core, rider and the demo seeds. A failure is recorded first and fixed by a worker with `fix:`, never by weakening an assertion.
+- [ ] 5.1 (after 3b) The manager runs `make e2e` (admin expected 15: today's 14 + `riders.spec.ts`) and `curl -s http://localhost:15174/api/rider/v1/healthz` while the preview runs, then walks `/riders` (admin and store staff, 390 px too), the board and a stacked cancel dialog in Chromium against core, rider and the demo seeds. A failure is recorded first and fixed by a worker with `fix:`, never by weakening an assertion.
 
 ## Workflow follow-up
 - Team lead runs `/opsx:verify admin-riders` after task 5: every scenario in design.md "Tests" has a passing test, every task ticked, nothing extra in `git diff origin/main...HEAD` (the `patches/` folder is part of the change).

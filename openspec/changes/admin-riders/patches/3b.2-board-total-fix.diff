@@ -1,0 +1,30 @@
+diff --git a/apps/admin/src/orders.ts b/apps/admin/src/orders.ts
+index d41665e..b9a8f95 100644
+--- a/apps/admin/src/orders.ts
++++ b/apps/admin/src/orders.ts
+@@ -96,7 +96,12 @@ export function useSetStatus(storeId: string) {
+       const board = boardQuery(storeId).queryKey
+       // A poll still in the air was read before this answer: drop it, or it would put the card back where it was.
+       await queryClient.cancelQueries({ queryKey: board })
+-      queryClient.setQueryData(board, (list) => list && { ...list, items: [...list.items.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])] })
++      queryClient.setQueryData(board, (list) => {
++        if (!list) return list
++        const items = [...list.items.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])]
++        // Core's total moves with the board: an order that left it, or joined it on a 409, counts.
++        return { ...list, items, total: list.total + items.length - list.items.length }
++      })
+       const detail = orderQuery(order.id).queryKey
+       await queryClient.cancelQueries({ queryKey: detail })
+       queryClient.setQueryData(detail, order)
+diff --git a/apps/admin/src/routes/_staff/stock.tsx b/apps/admin/src/routes/_staff/stock.tsx
+index 0e67b35..a1bbea9 100644
+--- a/apps/admin/src/routes/_staff/stock.tsx
++++ b/apps/admin/src/routes/_staff/stock.tsx
+@@ -6,7 +6,6 @@ import { api, type ApiError } from '../../api'
+ import { cleanSearch, lowStockBelow, maxPage, maxQuantity, maxSearch, pageSize, parseQuantity, stockQuery, storeNameQuery, toRows, type Edits, type StockRow, type StockSearch } from '../../stock'
+ import { storesQuery, type AdminStore } from '../../stores'
+ 
+-
+ function StoreStock({ storeId, stores }: { storeId: string; stores?: AdminStore[] }) {
+   const search = Route.useSearch()
+   const navigate = Route.useNavigate()
