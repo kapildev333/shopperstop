@@ -47,7 +47,7 @@ The canvas shows one address with "Change". "Change" opens a `Sheet` "Choose add
 
 ### 4. Placing runs in L3's write queue
 
-As web: `placeOrder` runs inside `queued` from `src/cart.ts`, so a Stepper tap made before the press is written before the order is placed, and checks the token is unchanged when its turn comes. Web's `cart.ts` exports `queued`; L3's interface list does not name it (request in the lane log). If L3 lands without the export, task 1 adds the one word `export` in `src/cart.ts` (the only edit outside this change's files) and task 0 records it.
+As web: `placeOrder` runs inside `queued` from `src/cart.ts`, so a Stepper tap made before the press is written before the order is placed, and checks the token is unchanged when its turn comes. L3 exports `queued<T>(work)` from `src/cart.ts` (L3 task 3, at this lane's request; checked in task 0).
 
 ### 5. Outcomes navigate with `replace`
 
@@ -55,9 +55,9 @@ On 201 the answered order is put in `orderKey(token, id)` (L4a), the cart cache 
 
 ### 6. The cart's store, not the pincode's
 
-The lines card reads `GET /stores/{cart.storeId}` (web's rule: the cart may be at another store than the pincode resolves to). It shares the query key `['store', id]` with L3's `useStoreName`, so the replaced notice and checkout read one cache entry; that needs the whole `Store` cached under the key (request to L3: `storeOptions(id)`). If L3 lands caching only the name there, task 3 uses its own key `['store', id, 'checkout']` and task 0 records it.
+The lines card reads `GET /stores/{cart.storeId}` (web's rule: the cart may be at another store than the pincode resolves to). It uses L3's `storeOptions(storeId)` (key `['store', id]`, the whole `Store`, throws `error.error`; `useStoreName` selects the name from the same entry), as `useQuery({ ...storeOptions(view.storeId ?? ''), enabled: !!view?.storeId })`.
 
-Fees and the minimum come only from the server cart (`GET /me/cart`, which core prices at the cart's own store), never from `useStore()` (the pincode's store). Checkout is signed-in only, so L3's guest pricing (zero fees and minimum 0 while no store resolves, L3 review R1 finding 2) never reaches it: the guest cart is merged at sign-in and the screen shows core's answer. Core re-checks the minimum at placement; its 400 `subtotal` refusal is the "Placement fails" scenario. Scenario "Minimum from the cart when the pincode is not served" pins it.
+Fees and the minimum come only from the server cart (`GET /me/cart`, which core prices at the cart's own store), never from `useStore()` (the pincode's store); checked in task 0 against L3 as merged: signed in, `useCart().view` is `GET /me/cart`'s answer unchanged, and the guest pricing with the resolved store's fees applies only with no token. Checkout is signed-in only, so L3's guest pricing (zero fees and minimum 0 while no store resolves, L3 review R1 finding 2) never reaches it: the guest cart is merged at sign-in and the screen shows core's answer. Core re-checks the minimum at placement; its 400 `subtotal` refusal is the "Placement fails" scenario. Scenario "Minimum from the cart when the pincode is not served" pins it.
 
 ### 7. Marks are text, not badges; the block names marked products
 
@@ -88,7 +88,7 @@ Every route and field exists: `POST /orders` with `OrderCreate` `{addressId}` â†
 All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L4b.md` and the lane logs:
 
 - New: `src/checkout.ts`, `src/checkout-address.tsx`, `src/checkout-screen.tsx`, `src/app/checkout.tsx`, `e2e/checkout.spec.ts`; tests `src/checkout.test.ts`, `src/checkout-address.test.tsx`, `src/checkout-screen.test.tsx`, `src/checkout-redirect.test.tsx`, `src/checkout-back.test.tsx`, `src/checkout-place.test.tsx`, `src/checkout-placed.test.tsx`, `src/checkout-emptied.test.tsx`, `src/checkout-unconfirmed.test.tsx`, `src/checkout-out-of-stock.test.tsx`
-- Possibly one word in `src/cart.ts` (`export` on `queued`, Decision 4)
+- No file outside this change's list: L3's exports cover what checkout needs (task 0)
 
 ## Scenario to test
 
@@ -110,7 +110,8 @@ Task 1's unit tests of `outcomeOf`, `refusalOf`, `shortText` and `blockReason` c
 
 ## Risks / Trade-offs
 
-- [L3 not merged when this is written] Written against `docs/design/mobile-P4-L3.md` as proposed. Task 0 reconciles names with L3 as merged before any worker starts (as L3 did with L2).
+- [L3's names] Reconciled in task 0 against L3 as merged (#300, archived #301): `useCart`, `cartKey`, `queued`, `storeOptions`, `useLineWrite`, `useLineQuantity`, `openCartSheet`, `CartWriteAlert`, `cartView`, `emptyCart` as named here; the cart sheet's "Proceed to checkout" is a link to `/checkout`. `ReplacedNotice` is not shown at checkout (no Stepper there, web shows none either).
+- [`useCart().error` is core's whole envelope] L3's `cartOptions` throws `{ error: {...} }`, not the inner error, so L1's `ErrorBanner` reads every failed cart read as "You're offline". The checkout scenario only uses an unreachable core, so nothing here depends on it; reported to the manager for L3 as a follow-up.
 - [Two sheets] "Choose address" closes before "Add address" opens; on the web export the second dialog's role arrives after its slide, so tests and e2e wait for `getByRole('dialog', { name: 'Add address' })`.
 - [Success shows the empty state for a frame] The cart cache empties before `router.replace` lands; web has the same frame. Harmless: the screen is replaced at once.
 - [`replace` to a tab route] `/orders` is the Orders tab inside `(tabs)`; `router.replace('/orders')` from a stack screen is what L4a's "Your orders" does with `navigate`. Task 4's router test asserts the path.

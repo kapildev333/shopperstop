@@ -59,7 +59,7 @@ export function CheckoutScreen(): JSX.Element                    // no token →
 export default function CheckoutRoute() { return <CheckoutScreen /> }
 ```
 
-From L3 (`src/cart.ts`, `src/cart-guest.ts`, `src/cart-alert.tsx`), as `docs/design/mobile-P4-L3.md` names them: `useCart()` (`view`, `isError`, `error`, `refetch`), `cartKey(token)`, `queued` (design.md Decision 4), `useLineWrite(storeId, product)` → `[failure, write]`, `openCartSheet()`, `cartView`, `emptyCart`, `CartWriteAlert({ message })`, the store query (design.md Decision 6). From L1: `useAddresses()`, `AddressSheet({ open, onClose })`, `useBack()` (`src/screen-support.ts`), `useToken()`, `getToken()`, `queryClient`, `call`. From L4a: `orderKey`, `ordersKey`, `OrderResult`. From L2: `ImageTile`, `imageUri` (`src/catalog.ts`).
+From L3 (`src/cart.ts`, `src/cart-guest.ts`, `src/cart-alert.tsx`), as `docs/design/mobile-P4-L3.md` names them: `useCart()` (`view`, `isError`, `error`, `refetch`), `cartKey(token)`, `queued<T>(work)`, `storeOptions(storeId)` (whole `Store` under `['store', id]`), `useLineWrite(storeId, product)` → `[failure, write]`, `openCartSheet()`, `cartView`, `emptyCart`, `CartWriteAlert({ message })`. Not used here: `ReplacedNotice`, `useLineQuantity` (checkout lines show the server cart's quantity). From L1: `useAddresses()`, `AddressSheet({ open, onClose })`, `useBack()` (`src/screen-support.ts`), `useToken()`, `getToken()`, `queryClient`, `call`. From L4a: `orderKey`, `ordersKey`, `OrderResult`. From L2: `ImageTile`, `imageUri` (`src/catalog.ts`).
 
 ## Test fakes
 

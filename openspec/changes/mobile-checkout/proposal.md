@@ -25,6 +25,6 @@ None.
 
 ## Impact
 
-- Files: `apps/mobile/src/app/checkout.tsx`, `apps/mobile/src/checkout*.ts(x)` and their tests, `apps/mobile/e2e/checkout.spec.ts`, this change, `docs/design/mobile-P4-L4b.md`, `.claude/lanes/mobile-P4-L4b*.md`. Possibly one word in L3's `src/cart.ts` (`export` on `queued`, design.md Decision 4).
+- Files: `apps/mobile/src/app/checkout.tsx`, `apps/mobile/src/checkout*.ts(x)` and their tests, `apps/mobile/e2e/checkout.spec.ts`, this change, `docs/design/mobile-P4-L4b.md`, `.claude/lanes/mobile-P4-L4b*.md`.
 - Cross-area contracts relied on, unchanged: `services/core/openapi.json` through `@shopperstop/ui/api` (`POST /orders`, `GET /me/cart`, `PUT /me/cart/items`, `GET /me/addresses`, `POST /me/addresses`, `GET /stores/{id}`, `GET /orders/{id}`; the e2e suite also uses `POST /auth/register`, `POST /admin/auth/sign-in`, `GET` and `PUT /admin/stores/{id}/stock`, `GET /stores/{id}/products`, `GET /orders`); `@shopperstop/ui/tokens`; `@shopperstop/ui/format` (`formatInr`). No rider route. No new dependency.
-- Depends on mobile-P4-L3 (`mobile-cart`) on main: `useCart`, `cartKey`, `queued`, `useLineWrite`, `CartWriteAlert`, `openCartSheet`, `cartView` and `emptyCart`, the cart sheet's "Proceed to checkout" link and the merge at sign-in; on L1's `useAddresses` and `AddressSheet`; on L4a's `orderKey`, `ordersKey`, `Order` and the tracking route.
+- Depends on mobile-P4-L3 (`mobile-cart`) on main: `useCart`, `cartKey`, `queued`, `storeOptions`, `useLineWrite`, `CartWriteAlert`, `openCartSheet`, `cartView` and `emptyCart`, the cart sheet's "Proceed to checkout" link and the merge at sign-in; on L1's `useAddresses` and `AddressSheet`; on L4a's `orderKey`, `ordersKey`, `Order` and the tracking route.
