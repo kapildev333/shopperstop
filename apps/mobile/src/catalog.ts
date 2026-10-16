@@ -65,3 +65,17 @@ export function useProductPages(storeId: string, filter: ProductFilter) {
     },
   })
 }
+
+// The store's category tree; disabled until a store is open, so the screen header can ask before the gate opens.
+export function useCategories(storeId: string | undefined) {
+  return useQuery({
+    queryKey: ['categories', storeId],
+    enabled: !!storeId,
+    queryFn: async () => {
+      const { data, error } = await api.GET('/stores/{id}/categories', { params: { path: { id: storeId ?? '' } } })
+      if (error) throw error.error
+      if (!data) throw unreachable
+      return data.items
+    },
+  })
+}
