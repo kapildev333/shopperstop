@@ -19,6 +19,16 @@ const koramangala = {
   promisedMinutes: 10,
 }
 const indiranagar = { ...koramangala, id: 's-2', name: 'Indiranagar', promisedMinutes: 12 }
+const cartProduct = {
+  id: 'p-1',
+  name: 'Amul Taaza',
+  slug: 'amul-taaza',
+  unitLabel: '500 ml',
+  mrpCents: 2900,
+  priceCents: 2700,
+  inStock: true,
+  quantity: 5,
+}
 
 // Core answers by pincode: 560034 and 560095 are Koramangala's, 560038 is Indiranagar's, every other pincode is not served.
 function serviceability() {
@@ -92,7 +102,7 @@ test('same store or empty cart', async () => {
   serviceability()
   setPincode('560034')
   await resolvePincode('560034')
-  setQuantity('s-1', 'p-1', 1)
+  setQuantity('s-1', cartProduct, 1)
   await openSheet()
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560095')
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
@@ -114,7 +124,7 @@ async function continueToOtherStore() {
   serviceability()
   setPincode('560034')
   await resolvePincode('560034')
-  setQuantity('s-1', 'p-1', 2)
+  setQuantity('s-1', cartProduct, 2)
   await openSheet()
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))

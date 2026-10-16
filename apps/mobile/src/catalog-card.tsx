@@ -1,7 +1,8 @@
 import { Link } from 'expo-router'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { imageUri, stockLabel, type Category, type StoreProduct } from './catalog'
-import { setQuantity, useQuantity } from './cart'
+import { useLineWrite, useQuantity } from './cart'
+import { CartWriteAlert } from './cart-alert'
 import { Badge } from './ui/badge'
 import { Price } from './ui/price'
 import { Stepper } from './ui/stepper'
@@ -12,6 +13,7 @@ import { colors, fontFamily, radius, spacing } from './ui/tokens'
 // The product card: one link to the product, its price and the stepper that counts it in the cart.
 export function ProductCard({ product, storeId }: { product: StoreProduct; storeId: string }) {
   const count = useQuantity(product.id)
+  const [failure, write] = useLineWrite(storeId, product)
   const stock = product.inStock ? stockLabel(product.quantity) : undefined
   return (
     <View style={styles.card}>
@@ -33,9 +35,10 @@ export function ProductCard({ product, storeId }: { product: StoreProduct; store
           label={product.name}
           value={count}
           max={product.inStock ? product.quantity : 0}
-          onChange={(next) => setQuantity(storeId, product.id, next)}
+          onChange={write}
         />
       </View>
+      <CartWriteAlert message={failure} />
     </View>
   )
 }

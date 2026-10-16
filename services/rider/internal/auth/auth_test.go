@@ -211,3 +211,46 @@ func TestRiderProbeRefusesMissingToken(t *testing.T) {
 		}
 	}
 }
+
+// TestStartSessionSweepsExpired: starting a session deletes every session at
+// or past its expiry, of any rider, and keeps the live ones.
+func TestStartSessionSweepsExpired(t *testing.T) {
+	ctx := context.Background()
+	a := New(testPool, testPepper, nil, nil)
+	var expired, live []string
+	for i, rider := range []string{newRider(t), newRider(t), newRider(t), newRider(t)} {
+		tok, err := a.startSession(ctx, rider)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i < 2 {
+			if _, err := testPool.Exec(ctx, "update sessions set expires_at = now() - interval '1 second' where token_hash = $1", hashOf(tok)); err != nil {
+				t.Fatal(err)
+			}
+			expired = append(expired, tok)
+		} else {
+			live = append(live, tok)
+		}
+	}
+	fresh, err := a.startSession(ctx, newRider(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := func(tok string) int {
+		var n int
+		if err := testPool.QueryRow(ctx, "select count(*) from sessions where token_hash = $1", hashOf(tok)).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	for _, tok := range expired {
+		if n := count(tok); n != 0 {
+			t.Fatalf("expired session still stored (%d rows), want swept", n)
+		}
+	}
+	for _, tok := range append(live, fresh) {
+		if n := count(tok); n != 1 {
+			t.Fatalf("live session has %d rows, want kept", n)
+		}
+	}
+}

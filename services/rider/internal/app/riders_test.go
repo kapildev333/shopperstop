@@ -247,6 +247,104 @@ func TestRiderSignInRateLimited(t *testing.T) {
 	}
 }
 
+// signInFrom signs email in at base with testPassword over a new connection
+// (so a new client port) carrying forwardedFor as X-Forwarded-For.
+func signInFrom(t *testing.T, base, email, forwardedFor string) (int, []byte) {
+	t.Helper()
+	b, err := json.Marshal(map[string]string{"email": email, "password": testPassword})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := http.NewRequest(http.MethodPost, base+signInPath, bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-For", forwardedFor)
+	req.Close = true
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.StatusCode, out
+}
+
+// signedUpEmail seeds an active rider and returns its email.
+func signedUpEmail(t *testing.T) string {
+	t.Helper()
+	email := uniqueEmail(t)
+	seedRider(t, email, true)
+	return email
+}
+
+// TestRiderSignInRateLimitedPerIP: two sign-ins from one client IP pass and the
+// third is refused, though every attempt names a different email and sends a
+// different X-Forwarded-For. Each request opens a new connection, so a new
+// client port: the key must drop the port, and X-Forwarded-For must not be trusted.
+func TestRiderSignInRateLimitedPerIP(t *testing.T) {
+	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now), nil)
+	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	t.Cleanup(limited.Close)
+	for i, forwarded := range []string{"203.0.113.1", "203.0.113.2"} {
+		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d: got %d %s, want 200", i+1, status, body)
+		}
+	}
+	status, body := signInFrom(t, limited.URL, signedUpEmail(t), "203.0.113.3")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt from one IP: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
+// TestRiderSignInRateLimitedPerForwardedIP: behind a trusted proxy the per-IP
+// count keys on the first X-Forwarded-For address, so a third sign-in from one
+// forwarded client is refused while another client behind the same proxy passes.
+func TestRiderSignInRateLimitedPerForwardedIP(t *testing.T) {
+	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+	limit.TrustProxy = true
+	a := auth.New(testPool, testPepper, limit, nil)
+	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	t.Cleanup(limited.Close)
+	for i, forwarded := range []string{"203.0.113.7", " 203.0.113.7 , 10.0.0.1"} {
+		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d from 203.0.113.7: got %d %s, want 200", i+1, status, body)
+		}
+	}
+	status, body := signInFrom(t, limited.URL, signedUpEmail(t), "203.0.113.7, 10.0.0.1")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt from 203.0.113.7: got %d %s, want 429 rate_limited", status, body)
+	}
+	if status, body := signInFrom(t, limited.URL, signedUpEmail(t), "203.0.113.8, 10.0.0.1"); status != http.StatusOK {
+		t.Fatalf("first attempt from 203.0.113.8 behind the same proxy: got %d %s, want 200", status, body)
+	}
+}
+
+// TestRiderSignInEmptyForwardedForFallsBackToConnection: behind a trusted proxy
+// an empty or blank X-Forwarded-For keys the count on the connection address,
+// not on the empty string. The third attempt names 127.0.0.1 as its forwarded
+// address, which only shares a bucket with the fallback if the fallback is used.
+func TestRiderSignInEmptyForwardedForFallsBackToConnection(t *testing.T) {
+	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+	limit.TrustProxy = true
+	a := auth.New(testPool, testPepper, limit, nil)
+	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	t.Cleanup(limited.Close)
+	for i, forwarded := range []string{"", "   "} {
+		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d with X-Forwarded-For %q: got %d %s, want 200", i+1, forwarded, status, body)
+		}
+	}
+	status, body := signInFrom(t, limited.URL, signedUpEmail(t), "127.0.0.1")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt keyed on the connection address: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
 // captureRequestLog sends the default logger to a buffer for the rest of the
 // test and returns a function giving the last "request" line as a map.
 // Tests that use it must not call t.Parallel: the default logger is global.

@@ -62,3 +62,22 @@ test('sheet dialog is named by its title', async () => {
   while (!('onRequestClose' in modal.props) && modal.parent) modal = modal.parent
   expect(modal.props.accessibilityLabel).toBe('Add address')
 })
+
+// The footer (artboard 4's Proceed bar) stays put while the cart scrolls: it sits after the ScrollView, not inside it.
+test('footer stays below the scroll', async () => {
+  await render(
+    <Sheet open title="My cart" onClose={() => {}} footer={<Text>Proceed</Text>}>
+      <Text>Cart line</Text>
+    </Sheet>,
+  )
+  expect(screen.getByText('Proceed')).toBeTruthy()
+  const footer = screen.getByText('Proceed')
+  let insideScroll = false
+  for (let node = footer.parent; node; node = node.parent) {
+    if (node.type === 'RCTScrollView') insideScroll = true
+  }
+  expect(insideScroll).toBe(false)
+  let scroll = screen.getByText('Cart line')
+  while (scroll.type !== 'RCTScrollView' && scroll.parent) scroll = scroll.parent
+  expect(scroll.type).toBe('RCTScrollView')
+})

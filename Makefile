@@ -97,7 +97,7 @@ gen:
 	else echo "gen: services/core/sqlc.yaml absent, skipping"; fi
 	@if test -f services/rider/sqlc.yaml; then cd services/rider && sqlc generate; \
 	else echo "gen: services/rider/sqlc.yaml absent, skipping"; fi
-	@if test -d packages/ui; then npm run gen:api --workspace packages/ui --if-present; \
+	@if test -d packages/ui; then npm run gen:api --workspace packages/ui --if-present && npm run gen:tokens --workspace packages/ui --if-present; \
 	else echo "gen: packages/ui absent, skipping"; fi
 
 postman:

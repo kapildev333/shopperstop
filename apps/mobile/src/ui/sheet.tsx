@@ -11,10 +11,12 @@ type SheetProps = {
   title: string
   onClose: () => void
   children: ReactNode
+  // Rendered after the scroll, so it stays put while the content scrolls (artboard 4's Proceed bar).
+  footer?: ReactNode
 }
 
 // A modal from the bottom. `onRequestClose` covers the Android back gesture and Escape on the web export.
-export function Sheet({ open, title, onClose, children }: SheetProps) {
+export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
   // The content scrolls past 80% of the window, leaving room for the header and the keyboard on a small phone.
   const { height } = useWindowDimensions()
   return (
@@ -37,6 +39,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.8 }}>
               {children}
             </ScrollView>
+            {footer}
           </SafeAreaView>
         </KeyboardAvoidingView>
       </View>
