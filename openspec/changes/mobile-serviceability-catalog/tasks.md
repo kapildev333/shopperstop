@@ -93,9 +93,9 @@ Scope: `apps/mobile/src/{cart.ts,cart.test.ts}`, `apps/mobile/jest.setup.ts` (on
 Scenario: Counts belong to one store.
 Starts from: `src/cart.test.ts`: `counts belong to one store`, `clear empties the counts` (resolves `undefined`, count 0, no store).
 
-- [ ] 7.1 Red
-- [ ] 7.2 `src/cart.ts` per design.md Decision 5 and the interfaces
-- [ ] 7.3 Gates green
+- [x] 7.1 Red
+- [x] 7.2 `src/cart.ts` per design.md Decision 5 and the interfaces
+- [x] 7.3 Gates green
 
 ## 8. Store resolution and notices
 

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { queryClient } from './src/api'
+import { clearCart } from './src/cart'
 import { closePincodeSheet, setPincode } from './src/pincode'
 import { setToken } from './src/session'
 
@@ -35,6 +36,7 @@ afterEach(async () => {
   setToken(undefined)
   setPincode(undefined)
   closePincodeSheet()
+  await clearCart()
   queryClient.clear()
   mockSecureStore.clear()
   await AsyncStorage.clear()
