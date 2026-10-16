@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -247,4 +248,168 @@ func TestStoreNotFound(t *testing.T) {
 
 	_, err := c.Store(context.Background(), unknownID)
 	requireHTTPError(t, err, http.StatusNotFound, "not_found")
+}
+
+const (
+	orderReady = "00000000-0000-4000-8000-000000000a01"
+	orderPack  = "00000000-0000-4000-8000-000000000a02"
+	orderOther = "00000000-0000-4000-8000-000000000a03"
+	storeB     = "00000000-0000-4000-8000-000000000402"
+	riderID    = "00000000-0000-4000-8000-000000000801"
+	ownerToken = "customer-owner"
+	otherToken = "customer-other"
+)
+
+var arjun = core.Actor{Type: "rider", ID: riderID, Name: "Arjun Rao"}
+
+// order is a core order at store with status, the shape core's GET /admin/orders/{id} answers.
+func order(id, store, status string) core.Order {
+	return core.Order{
+		ID: id, Number: "SS-DEMOAAAB", StoreID: store, Status: status,
+		CustomerName: "Demo Customer", CustomerPhone: "+919800000000",
+		Address:    core.OrderAddress{Line1: "12 80 Feet Rd, Koramangala", Pincode: "560034"},
+		TotalCents: 33900, PaymentMethod: "cod",
+		PlacedAt: time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC),
+		Items:    []core.OrderItem{{Name: "Banana Robusta", UnitLabel: "1 kg", Quantity: 2}},
+	}
+}
+
+func TestStoreOrdersReadsReadyWithServiceToken(t *testing.T) {
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	ready := order(orderReady, storeA, "ready")
+	f.AddOrder(ready, "")
+	f.AddOrder(order(orderPack, storeA, "packing"), "")
+	f.AddOrder(order(orderOther, storeB, "ready"), "")
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+
+	got, err := c.StoreOrders(context.Background(), storeA, "ready")
+	if err != nil {
+		t.Fatalf("StoreOrders: %v", err)
+	}
+	if !reflect.DeepEqual(got, []core.Order{ready}) {
+		t.Fatalf("StoreOrders = %+v, want only the ready order of store A", got)
+	}
+}
+
+func TestOrderReadsWithServiceToken(t *testing.T) {
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	ready := order(orderReady, storeA, "ready")
+	f.AddOrder(ready, "")
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+
+	got, err := c.Order(context.Background(), orderReady)
+	if err != nil {
+		t.Fatalf("Order: %v", err)
+	}
+	if !reflect.DeepEqual(got, ready) {
+		t.Fatalf("Order = %+v, want %+v", got, ready)
+	}
+	_, err = c.Order(context.Background(), unknownID)
+	if !errors.Is(err, core.ErrNotFound) {
+		t.Fatalf("unknown order: %v, want ErrNotFound", err)
+	}
+}
+
+func TestChangeStatusSendsActor(t *testing.T) {
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	f.AddOrder(order(orderReady, storeA, "ready"), "")
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+
+	if err := c.ChangeStatus(context.Background(), orderReady, "out_for_delivery", arjun); err != nil {
+		t.Fatalf("ChangeStatus: %v", err)
+	}
+	want := []coretest.StatusChange{{Status: "out_for_delivery", Actor: arjun}}
+	if got := f.StatusChanges(orderReady); !reflect.DeepEqual(got, want) {
+		t.Fatalf("StatusChanges = %+v, want %+v", got, want)
+	}
+	if got := f.OrderStatus(orderReady); got != "out_for_delivery" {
+		t.Fatalf("order status %q, want out_for_delivery", got)
+	}
+}
+
+func TestChangeStatusConflict(t *testing.T) {
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	f.AddOrder(order(orderPack, storeA, "packing"), "")
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+
+	err := c.ChangeStatus(context.Background(), orderPack, "out_for_delivery", arjun)
+	if !errors.Is(err, core.ErrConflict) {
+		t.Fatalf("ChangeStatus on packing order: %v, want ErrConflict", err)
+	}
+	requireHTTPError(t, err, http.StatusConflict, "conflict")
+	if got := f.StatusChanges(orderPack); len(got) != 0 {
+		t.Fatalf("refused move recorded: %+v", got)
+	}
+	if got := f.OrderStatus(orderPack); got != "packing" {
+		t.Fatalf("order status %q after refusal, want packing", got)
+	}
+}
+
+func TestServiceTokenRefusedIs502(t *testing.T) {
+	buf := captureLogs(t)
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	f.AddOrder(order(orderReady, storeA, "ready"), "")
+	c := core.New(f.URL(), "wrong-token", time.Now)
+	ctx := context.Background()
+	calls := map[string]func() error{
+		"StoreOrders":  func() error { _, err := c.StoreOrders(ctx, storeA, "ready"); return err },
+		"Order":        func() error { _, err := c.Order(ctx, orderReady); return err },
+		"ChangeStatus": func() error { return c.ChangeStatus(ctx, orderReady, "out_for_delivery", arjun) },
+	}
+	for name, call := range calls {
+		t.Run(name, func(t *testing.T) {
+			before := len(failureLines(t, buf))
+			requireHTTPError(t, call(), http.StatusBadGateway, "internal")
+			lines := failureLines(t, buf)
+			if len(lines) != before+1 {
+				t.Fatalf("%d %q log lines after the call, want %d", len(lines), failMessage, before+1)
+			}
+			if got := lines[len(lines)-1]["status"]; got != float64(http.StatusUnauthorized) {
+				t.Fatalf("logged status %v, want 401", got)
+			}
+		})
+	}
+}
+
+func TestStoreOrdersMissingStoreIs502(t *testing.T) {
+	buf := captureLogs(t)
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	f.FailRoute("GET /api/core/v1/admin/stores/{id}/orders", http.StatusNotFound)
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+
+	_, err := c.StoreOrders(context.Background(), storeA, "ready")
+	requireHTTPError(t, err, http.StatusBadGateway, "internal")
+	if n := len(failureLines(t, buf)); n != 1 {
+		t.Fatalf("%d %q log lines, want 1", n, failMessage)
+	}
+}
+
+func TestCustomerOrder(t *testing.T) {
+	f := coretest.New()
+	t.Cleanup(f.Close)
+	ready := order(orderReady, storeA, "ready")
+	f.AddOrder(ready, ownerToken)
+	f.AddOrder(order(orderOther, storeA, "placed"), otherToken)
+	c := core.New(f.URL(), coretest.ServiceToken, time.Now)
+	ctx := context.Background()
+
+	got, err := c.CustomerOrder(ctx, ownerToken, orderReady)
+	if err != nil {
+		t.Fatalf("owner: %v", err)
+	}
+	if !reflect.DeepEqual(got, ready) {
+		t.Fatalf("CustomerOrder = %+v, want %+v", got, ready)
+	}
+	if _, err := c.CustomerOrder(ctx, otherToken, orderReady); !errors.Is(err, core.ErrNotFound) {
+		t.Fatalf("other customer: %v, want ErrNotFound", err)
+	}
+	if _, err := c.CustomerOrder(ctx, "unknown-token", orderReady); !errors.Is(err, core.ErrUnauthorized) {
+		t.Fatalf("unknown token: %v, want ErrUnauthorized", err)
+	}
 }
