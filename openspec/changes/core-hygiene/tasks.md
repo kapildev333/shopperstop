@@ -24,8 +24,8 @@ Scope: `services/core/queries/auth.sql`, `services/core/internal/auth/db/auth.sq
 
 Scope: `services/core/internal/seed/` (`seed.go`, `seed_test.go`), this file (ticks). Scenario: orders "The delivered demo order names its rider" / Seeded rider; `TestSummaryMatchesSeed` and `TestDemoOrdersThroughTheRouter` stay green. Starts from `internal/seed/seed_test.go` `TestResetLoadsDemoOrders` (fails: "orders with a rider: 0, want 1"). Commits: `test: SS-DEMOAAAB is delivered by the demo rider`, `feat: seed the demo rider on SS-DEMOAAAB`.
 
-- [ ] 3.1 Add the four `assertSQL` lines to `TestResetLoadsDemoOrders`; see it fail; commit.
-- [ ] 3.2 Apply the `seed.go` diff; run the gates; tick 3.1 and 3.2; commit.
+- [x] 3.1 Add the four `assertSQL` lines to `TestResetLoadsDemoOrders`; see it fail; commit.
+- [x] 3.2 Apply the `seed.go` diff; run the gates; tick 3.1 and 3.2; commit.
 
 ## 4. A wrong method answers 405
 
