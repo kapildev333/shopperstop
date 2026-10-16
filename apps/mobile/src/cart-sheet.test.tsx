@@ -288,3 +288,24 @@ test('failed write in the sheet', async () => {
   void fireEvent.press(await screen.findByRole('button', { name: 'Add one Amul Taaza' }))
   expect(await screen.findByText('Could not reach ShopperStop. Try again.')).toBeTruthy()
 })
+
+test('lines at another store show their own count', async () => {
+  await serve()
+  setToken('t-1')
+  queryClient.setQueryData(cartKey('t-1'), cart([{ product: taaza, quantity: 2 }], indiranagarId))
+  await openSheet()
+  await render(sheet())
+
+  expect(screen.getByLabelText('Quantity of Amul Taaza')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Add Amul Taaza' })).toBeNull()
+})
+
+test('lines with no resolved store show their own count', async () => {
+  setToken('t-1')
+  queryClient.setQueryData(cartKey('t-1'), cart([{ product: taaza, quantity: 2 }], indiranagarId))
+  await openSheet()
+  await render(sheet())
+
+  expect(screen.getByLabelText('Quantity of Amul Taaza')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Add Amul Taaza' })).toBeNull()
+})
