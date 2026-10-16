@@ -94,6 +94,10 @@ test('addresses against core', async ({ page }) => {
   await page.getByRole('button', { name: 'Add address', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toBeVisible()
   await expectNoViolations(page)
+
+  // Escape closes the sheet (the modal's close request on the web export).
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toHaveCount(0)
 })
 
 test('sign out against core', async ({ page }) => {
