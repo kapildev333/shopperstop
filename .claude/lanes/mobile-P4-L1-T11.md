@@ -58,3 +58,23 @@ FAIL src/auth-forms-register-home.test.tsx
   Cannot find module './app/sign-in' from 'src/auth-forms-register-home.test.tsx'
 Test Suites: 3 failed, 3 total
 ```
+
+## Done (11.1 to 11.3)
+Commits on the branch: `39515b7` test (red), `20e327c` test (split navigating tests into their own files), `4b4314f` test (`await fireEvent`), `ab34174` test (typed router result instead of the untyped matchers), then the `feat:` commit with `src/auth-forms.tsx`, `src/app/sign-in.tsx`, `src/app/register.tsx` and boxes 11.1 to 11.3 ticked.
+
+Deviations, each small, for the team lead:
+- `splitError(error, fields)` is exported from `src/auth-forms.tsx`. T13's local `splitError` in `address-sheet.tsx` does the same job for its own field list. T14 or the reviewer can fold them into one export.
+- The alert is `accessible` with `accessibilityRole="alert"`. RNTL's `getByRole('alert')` does not find the non-accessible View.
+- RNTL 14's `fireEvent` is async: tests `await` it. Without that, state updates are not visible to the assertion.
+- expo-router ships no types for `toHavePathname` and `toHaveSearchParams`; the two navigating tests read `router.getPathname()` and `router.getSearchParams()` from the `renderRouter` result instead.
+- Links use expo-router's `Link` (approved by the manager).
+
+Gates (run from the worktree root, after the feat commit's staging):
+```
+npm run build --workspace packages/ui         exit 0
+npm run lint --workspace apps/mobile          exit 0
+npm run typecheck --workspace apps/mobile     exit 0
+npm run test --workspace apps/mobile -- --run exit 0: Test Suites 17 passed, Tests 67 passed
+npm run build --workspace apps/mobile         exit 0 in 4s, Exported: dist; dist holds index.html, register.html, sign-in.html
+openspec validate mobile-foundation-accounts --strict  valid
+```

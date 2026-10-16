@@ -120,9 +120,9 @@ Scope: `apps/mobile/src/{auth-forms.tsx,auth-forms.test.tsx}`, `apps/mobile/src/
 Scenarios: Sign-in screen, Password shown on request, Required fields checked, Short password on register, Field error from the envelope, Non-field error in an alert, Register lands on Home.
 Starts from: `src/auth-forms.test.tsx`, the scenario names; `renderRouter` with `sign-in`, `register` and a one-line `index` route; `fakeCore` for the answers; "no request is sent" asserts the `fakeCore` call list is empty. Password bytes by `new TextEncoder().encode(p).length`.
 
-- [ ] 11.1 Red
-- [ ] 11.2 `auth-forms.tsx` (both forms, checks, `splitError`, alert) and the two route files per sections 9 and 10 of `docs/design/mobile-P4-L1.md`; on success `router.replace(safeReturnTo(returnTo))`; Back calls `router.back()` when it can, else `router.replace('/')`
-- [ ] 11.3 Gates green; `dist` holds `sign-in.html` and `register.html`
+- [x] 11.1 Red
+- [x] 11.2 `auth-forms.tsx` (both forms, checks, `splitError`, alert) and the two route files per sections 9 and 10 of `docs/design/mobile-P4-L1.md`; on success `router.replace(safeReturnTo(returnTo))`; Back calls `router.back()` when it can, else `router.replace('/')`
+- [x] 11.3 Gates green; `dist` holds `sign-in.html` and `register.html`
 
 ## 12. Edit profile sheet
 
