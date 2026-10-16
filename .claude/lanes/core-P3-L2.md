@@ -1,0 +1,16 @@
+# core-P3-L2 - core backlog: active orders, store snapshot, dashboard isOpen (OpenSpec change core-orders-backlog)
+Status: started
+## Doing
+2026-10-15: change proposed and validated (`openspec validate --all --strict` 15 passed); two worker briefs in the report. Waiting for the manager to launch Task 1.
+## Found
+- Change `openspec/changes/core-orders-backlog/`: proposal; deltas `orders` (MODIFIED "Orders are snapshots" 452 chars, ADDED "Staff read a store's active orders in one call" 399 chars) and `admin-staff` (MODIFIED "Staff dashboard" 356 chars). design.md carries all code, SQL, tests and two Python scripts for the `openapi.json` edits verbatim; tasks.md two sequential worker tasks. No `docs/design/core-P3-L2.md`: design.md is enough.
+- Spike on 061b010 (tree restored before the commit): builds, `go vet` clean, five new tests pass (`TestBackfillStoreSnapshot`, `TestOrderStoreSnapshot`, the seed snapshot assertion, `TestStoreOrdersActive`, `TestDashboardIsOpen`), every package green under `-race -count=1`; `make gen postman` writes `core.d.ts`, the Postman collection and the eight `models.go`.
+- Decisions: `active` accepts `true` only (absent or empty = no filter; anything else, or with a non-empty `status`, 400 field `active`); page-size cap 100 stays, the panel sends `active=true&pageSize=100`; `store_name` and `promised_minutes` NOT NULL with no default, backfilled in 0008; `storeName`, `promisedMinutes`, `isOpen` required in the contract.
+- `openapi.json` round-trips byte for byte through Python `json` (indent 2, ensure_ascii False); Node `JSON.stringify` reorders numeric response keys. The two scripts in design.md reproduce the spike's file exactly.
+- Four raw `insert into orders` must name the new columns: `seed.go`, `seed_test.go`, `order/schema_test.go`, `app/orders_staff_test.go`.
+- Cross-area break (spike `make test-web`): with the regenerated `core.d.ts`, `apps/web/src/test-data.ts:35` (TS2322, `order()`), `apps/admin/src/orders-fake.ts:12` (TS2322, `order()`) and `apps/admin/src/dashboard.test.tsx:17-18` (TS2741, `atIndiranagar`, `atKoramangala`) fail typecheck. Plain members fail on main today (TS2353 excess property); a spread typechecks against both the old and new types (checked): web `...{ storeName: 'Koramangala', promisedMinutes: 10 },` after `storeId` in `order()`; admin `...{ storeName: 'Indiranagar', promisedMinutes: 12 },` after `storeId: indiranagar.id,` in `order()`; admin `...{ isOpen: true },` after `storeName` in both dashboard fixtures. With those, `make test-web` exit 0 (71, 295, 153 tests).
+## Requests
+- to web (through the core area plan, before core-orders-backlog merges): `apps/web/src/test-data.ts`, in `order()`, after `storeId: '00000000-0000-4000-8000-000000000401',` add `...{ storeName: 'Koramangala', promisedMinutes: 10 },`.
+- to admin (through the core area plan, before core-orders-backlog merges): `apps/admin/src/orders-fake.ts`, in `order()`, after `storeId: indiranagar.id,` add `...{ storeName: 'Indiranagar', promisedMinutes: 12 },`; `apps/admin/src/dashboard.test.tsx` add `...{ isOpen: true },` after `storeName` in `atIndiranagar` (line 17) and `atKoramangala` (line 18 on).
+## Blockers
+None.
