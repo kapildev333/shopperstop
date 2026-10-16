@@ -27,10 +27,15 @@ export default function VerifyEmail() {
   const code = entered ?? (token || undefined)
 
   // Keyed by the code and never stale: the code is spent on first use, so a second post would only be refused.
+  // An errored query has no data, so a remount would load it again unless retryOnMount is off. Only Try again or a retyped code posts again.
   const verify = useQuery<true, ApiError>({
     queryKey: ['verify-email', code],
     enabled: !!code,
     staleTime: Infinity,
+    retry: false,
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<true> => {
       const failure = await call(() => api.POST('/auth/verify-email', { body: { token: code as string } }))
       if (failure) throw failure
@@ -46,7 +51,9 @@ export default function VerifyEmail() {
       return
     }
     setFieldError(undefined)
-    setEntered(next)
+    // The same code again leaves the key unchanged: ask the query to send it again.
+    if (next === code) void verify.refetch()
+    else setEntered(next)
   }
 
   const form = (
