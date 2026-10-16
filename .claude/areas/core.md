@@ -3,7 +3,7 @@ Scope: `services/core/`
 Depends on: platform (`deploy/initdb.sql` and `make db` from task 4, landed #4; `.github/workflows/ci.yml` core job from task 13, landed #15; CI blocked by account billing, see PLAN.md)
 Spec: Spec 1 §3, §4, §11; Spec 2 §9, §10, §12, §13; plan tasks 5, 6, 7, 8 (sequential, one module, one feature)
 ## Doing
-Phase 3 core complete including core-P3-L3 (2026-10-16): L1 (#203, #204), L2 (#215, #216), L3 (#228, archive #229); no core worktree, branch or PR open. Next: nothing until the orchestrator writes a new package here or relays a request. No `make e2e` from core.
+Paused 2026-10-16, next: Phase 5 package (payment service: online payment, `paymentStatus`, email verification, password reset), written by the orchestrator after Phase 3 closes. Phase 3 core complete: L1 (#203, #204), L2 (#215, #216), L3 (#228, #229). No core worktree, branch or PR open. Requests that need core before then come by message to the core session or under `## Requests` here. No `make e2e` from core.
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
