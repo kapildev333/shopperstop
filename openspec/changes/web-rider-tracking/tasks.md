@@ -47,8 +47,8 @@ Scope: `apps/web/vite.config.ts`, `apps/web/playwright.config.ts`, `apps/web/e2e
 Scenarios: Customer order rider card › Seeded delivered order against core and rider, Rider picked up and located against core and rider; Customer site reaches core through a same-origin proxy › Web preview proxies to rider; Customer site end-to-end suite with axe (rider started, both seeds reset).
 Failing tests: `e2e/smoke.spec.ts` "web preview proxies to rider"; `e2e/orders.spec.ts` "seeded delivered order against core and rider", "rider picked up and located against core and rider". Red and green are shown by the manager's `make e2e`, not by the worker.
 
-- [ ] 4.1 The e2e tests committed (`test: rider card against core and rider`); lint and typecheck green
-- [ ] 4.2 Decision 8 (`feat: start and proxy the rider service for the web suite`); all gates green
+- [x] 4.1 The e2e tests committed (`test: rider card against core and rider`); lint and typecheck green
+- [x] 4.2 Decision 8 (`feat: start and proxy the rider service for the web suite`); all gates green
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-rider-tracking` after 4.2 lands and the manager's `make e2e` is green.
