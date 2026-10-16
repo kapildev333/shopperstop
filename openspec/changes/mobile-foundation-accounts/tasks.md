@@ -33,9 +33,9 @@ Scope: `apps/mobile/src/{session.ts,api.ts,fake-core.ts,session.test.ts,api.test
 Scenarios: Mobile session token (3), Mobile lost session (3), Mobile failed answers without the error envelope (7), Mobile client reaches core (1).
 Starts from: `src/session.test.ts`: `token persisted and cleared`, `token restored on load` (set the fake store, then `jest.isolateModules` to load `session.ts`); `src/api.test.ts`: `default core URL`, `bearer attached`, `401 to the current token`, `401 without a token keeps a new session`, `401 to a replaced token keeps the new session`, `empty failed answer becomes internal`, `HTML failed answer becomes internal`, `enveloped failure passes through`, `bare 401 ends the session and becomes internal`, `no content answer untouched`, `failed write reports an error`, `unreachable core reports an error`. All through `api` and `fakeCore` (the fake `fetch` is the boundary), as `apps/web/src/api.test.ts` and `apps/admin/src/api.ts` do.
 
-- [ ] 2.1 Red: the two test files fail (modules absent)
-- [ ] 2.2 `session.ts` per Decision 5 (`Platform.OS === 'web'` uses `localStorage`; else `SecureStore.getItem`/`setItem`, `deleteItemAsync` to clear; all in `try`/`catch`); `api.ts` per Decision 5 and the interfaces in `docs/design/mobile-P4-L1.md`; `fake-core.ts` per Decision 12
-- [ ] 2.3 Gates green
+- [x] 2.1 Red: the two test files fail (modules absent)
+- [x] 2.2 `session.ts` per Decision 5 (`Platform.OS === 'web'` uses `localStorage`; else `SecureStore.getItem`/`setItem`, `deleteItemAsync` to clear; all in `try`/`catch`); `api.ts` per Decision 5 and the interfaces in `docs/design/mobile-P4-L1.md`; `fake-core.ts` per Decision 12
+- [x] 2.3 Gates green
 
 ## 3. Sign in, register, sign out
 

@@ -10,10 +10,8 @@ test('default core URL', async () => {
   const saved = process.env.EXPO_PUBLIC_CORE_URL
   delete process.env.EXPO_PUBLIC_CORE_URL
   try {
-    let fresh!: typeof import('./api')
-    jest.isolateModules(() => {
-      fresh = require('./api') as typeof import('./api')
-    })
+    jest.resetModules()
+    const fresh = jest.requireActual<typeof import('./api')>('./api')
     const calls = fakeCore({ 'GET /me': () => json(200, {}) })
 
     await fresh.api.GET('/me')

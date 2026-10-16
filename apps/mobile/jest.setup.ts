@@ -1,3 +1,6 @@
+import { queryClient } from './src/api'
+import { setToken } from './src/session'
+
 // The device keychain is the process boundary, like the file system: an in-memory store stands in for it.
 const mockSecureStore = new Map<string, string>()
 
@@ -19,5 +22,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  setToken(undefined)
+  queryClient.clear()
   mockSecureStore.clear()
 })

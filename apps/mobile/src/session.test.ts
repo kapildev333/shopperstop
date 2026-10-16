@@ -13,8 +13,7 @@ test('token persisted and cleared', () => {
 test('token restored on load', () => {
   SecureStore.setItem('shopperstop.customer-token', 't-2')
 
-  jest.isolateModules(() => {
-    const session = require('./session') as typeof import('./session')
-    expect(session.getToken()).toBe('t-2')
-  })
+  jest.resetModules()
+  const session = jest.requireActual<typeof import('./session')>('./session')
+  expect(session.getToken()).toBe('t-2')
 })
