@@ -71,8 +71,8 @@ Scope: `apps/mobile/src/ui/{error-banner.tsx,chip.tsx,skeleton.tsx,form-field.ts
 Behaviour: design.md Decision 11; design file "Changes to L1 primitives".
 Starts from: `src/ui/states.test.tsx`: `skeleton tiles` (`variant="tiles" columns={4} count={8}` renders 8 blocks, labelled "Loading"), `try again is a button` (the retry is L1's `Button`: its style has `minHeight` 44 and `colors.accent` background, and pressing it calls `onRetry`), `empty state level` (`level={1}` gives a level-1 heading); `src/ui/form-field.test.tsx`: `tabular input` (`tabular` puts `fontVariant: ['tabular-nums']` on the input).
 
-- [ ] 5.1 Red: the four new tests
-- [ ] 5.2 `feat:` the props and `Button` reuse; `refactor:` `StyleSheet.create` in `error-banner.tsx`, `chip.tsx`, `skeleton.tsx`; `jest.config.js` maps `^lucide-react-native$` to `require.resolve('lucide-react-native/dist/cjs/lucide-react-native.js')`
+- [x] 5.1 Red: the four new tests
+- [x] 5.2 `feat:` the props and `Button` reuse; `refactor:` `StyleSheet.create` in `error-banner.tsx`, `chip.tsx`, `skeleton.tsx`; `jest.config.js` maps `^lucide-react-native$` to `require.resolve('lucide-react-native/dist/cjs/lucide-react-native.js')`
 - [ ] 5.3 Gates green (every L1 test still passes)
 
 ## 6. Pincode store
