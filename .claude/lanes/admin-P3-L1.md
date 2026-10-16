@@ -1,6 +1,12 @@
 # admin-P3-L1 - riders page, rider names, one active-orders poll, ui swaps (OpenSpec change admin-riders)
-Status: started
+Status: started (acceptance passed except task 5.1)
 ## Doing
+2026-10-15: acceptance, `/opsx:verify admin-riders` at cfcb965 (origin/main c20b72b): PASS, except task 5.1 (the full `make e2e`), which waits on core-P3-L3's seed (SS-DEMOAAAB's rider). Evidence:
+- Scenarios: every scenario of both deltas maps in design.md "Tests" to a test. A Vitest JSON run here gives `324` total, `324` passed, `0` failed; all 33 Vitest names in that map are among the passing titles (the `%s` ones by pattern). The 2 e2e mappings (`riders.spec.ts` and the two `orders.spec.ts` tests, with the "Open" and "Rider: Arjun Rao" lines) exist; the manager's early run passed the riders spec and failed only the seed-dependent line. No `.only`/`.skip` under `apps/admin/src` or `e2e`.
+- Tasks: 1.1 to 4.2, 3b.1 and 3b.2 ticked; 5.1 open, with the manager's partial evidence recorded in tasks.md.
+- Nothing extra: `git diff --stat origin/main...HEAD` holds only design.md's files under `apps/admin` (44 files), the change folder and the lane's logs (T1 to T5, T3b, R1 to R4, this log). The 13 patches applied in order with `git apply --cached` onto origin/main in a temporary index give a tree equal to HEAD under `apps/admin` (0 diff lines). That needed one fix to the change: patch 1.4 lacked the `idle.ts` deletion hunk (the T1 worker stopped on it and the manager deleted the file by hand in 1.4), so the hunk is now appended to `patches/1.4-ui-swaps.diff`, making the archived change reproduce what landed.
+- `openspec validate admin-riders --strict` valid, `--all --strict` passed (output in the report).
+- Before the PR: nothing must change in `apps/admin`. The full `make e2e` (admin 15) is still owed once core-P3-L3 merges, then 5.1 is ticked. If core's seed never names the rider, the fallback is the owner's call (design.md "Requests").
 2026-10-15: task 3b (review fix R2-1 and R1 nit 1) briefed; tasks 1 to 4 landed at 752d935 (admin 322). Task 5 after 3b.
 2026-10-15: change proposed and committed; tasks 1 to 3 can start now (main has ui-P3-L1, core-P3-L1, core-P3-L2). Task 4 waits on ui-P3-L2 (`@shopperstop/ui/api/rider`). Task 5 waits on the e2e slot and core's seed request.
 ## Found

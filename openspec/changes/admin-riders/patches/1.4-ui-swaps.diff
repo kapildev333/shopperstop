@@ -261,3 +261,13 @@ index 07fa7b3..c4b7bb1 100644
              {save.isPending ? 'Saving…' : user ? 'Save changes' : 'Create staff user'}
            </Button>
          </DialogFooter>
+diff --git a/apps/admin/src/idle.ts b/apps/admin/src/idle.ts
+deleted file mode 100644
+index f2453cf..0000000
+--- a/apps/admin/src/idle.ts
++++ /dev/null
+@@ -1,4 +0,0 @@
+-// For a button that cannot act now but must stay focusable: `disabled` would drop keyboard focus from the button just
+-// pressed. Use with `aria-disabled` and a handler that does nothing meanwhile.
+-// ponytail: an app-level class until ui's Button styles `aria-disabled` itself (asked of ui by admin-P2-L4).
+-export const idle = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
