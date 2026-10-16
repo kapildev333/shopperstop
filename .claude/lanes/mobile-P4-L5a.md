@@ -1,7 +1,7 @@
 # mobile-P4-L5a - mobile-release-config: EAS profiles, icon and splash from the tokens, device run notes (team lead)
 Status: done (4.1 accepted)
 ## Doing
-4.1 accepted and ticked. Next is the manager's verification and PR.
+R1 fix pass done (fixes 1-4 plus coordinator's RIDER_URL README item). Gates green; manager verifies and opens the PR.
 ## Found
 - Change `openspec/changes/mobile-release-config/`: proposal, `specs/mobile-app/spec.md` (4 ADDED requirements, 6 scenarios), design.md (6 decisions, scenario-to-test map), tasks.md (3 worker tasks + acceptance).
 - 4.1 verify (2026-10-16, head 21b00f7 + this commit):
@@ -14,3 +14,5 @@ Status: done (4.1 accepted)
 - to mobile-P4-L2 (via manager), still open: in `apps/mobile/package.json`, `"test": "sh -c 'jest --ci && node --test scripts/*.test.mjs' --"`. Until it lands, `make test-web` and CI do not run the six release checks (design.md Decision 6 ceiling); the manager runs them by hand.
 - to mobile manager: archive by PR after merge.
 ## Blockers
+- R1 fix pass (2026-10-16): a79a96a test script runs node --test (root `-- --run` still ignored; 6 of 6); 8639ad1 README preview steps: core and rider URLs set before the build, EAS CLI named, and the device run line sets EXPO_PUBLIC_RIDER_URL; d8b00ec/b0e3c7e brandColors throws on non-#RRGGBB (test first); 2ee4f8c splash centre test passed immediately (already on-brand, opaque).
+- Gates (Node 22.23.3, apps/mobile): lint 0, typecheck 0, npm test 0 (jest 25 suites / 94 tests; node --test 7 of 7), build 0; openspec validate --all --strict 20 passed.
