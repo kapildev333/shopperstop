@@ -1,0 +1,987 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ShopperStop rider API",
+    "version": "0.3.0",
+    "description": "The rider service: the riders who deliver orders, their sign-in and sessions, and the staff routes that manage them. Every error is the envelope {\"error\": {code, message, field?}}. Routes that need a signed-in rider or staff user take Authorization: Bearer <token>: a rider's token from sign-in, or a staff token that core issued and this service checks with core."
+  },
+  "servers": [
+    {
+      "url": "/api/rider/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "platform",
+      "description": "Service health: liveness and readiness."
+    },
+    {
+      "name": "rider-service",
+      "description": "Rider sign-in, sessions and the signed-in rider."
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "getHealthz",
+        "summary": "Liveness",
+        "description": "Answers 200 whenever the process is up. Does not touch the database.",
+        "tags": [
+          "platform"
+        ],
+        "responses": {
+          "200": {
+            "description": "The process is up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "getReadyz",
+        "summary": "Readiness",
+        "description": "Answers 200 when the database answers a ping within 2 seconds. Answers 503 with code internal otherwise.",
+        "tags": [
+          "platform"
+        ],
+        "responses": {
+          "200": {
+            "description": "The database answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The database did not answer within 2 seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "database not ready"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "operationId": "postAuthSignIn",
+        "summary": "Sign in as a rider",
+        "description": "Checks the email and password and answers a new session token. The rider's other sessions stay signed in. A wrong password, an unknown email and an inactive rider all answer the same 401. More than 10 attempts for one email, or more than 100 from one client IP, within an hour answer 429.",
+        "tags": [
+          "rider-service"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              },
+              "example": {
+                "email": "rider1-koramangala@shopperstop.local",
+                "password": "rider12345"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new session and the rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiderSession"
+                },
+                "example": {
+                  "token": "k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq",
+                  "rider": {
+                    "id": "00000000-0000-4000-8000-000000000801",
+                    "storeId": "00000000-0000-4000-8000-000000000401",
+                    "email": "rider1-koramangala@shopperstop.local",
+                    "name": "Arjun Rao",
+                    "phone": "+919000000001",
+                    "isActive": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email is not an address, or the password is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong email or password, or the rider is inactive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "wrong email or password"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many sign-in attempts for this email or client IP within an hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "postAuthSignOut",
+        "summary": "Sign out this session",
+        "description": "Ends the session of the bearer token. The rider's other sessions stay signed in.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The session is ended."
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "The signed-in rider",
+        "description": "Answers the rider the bearer token belongs to.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signed-in rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000801",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "rider1-koramangala@shopperstop.local",
+                  "name": "Arjun Rao",
+                  "phone": "+919000000001",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/riders": {
+      "get": {
+        "operationId": "listAdminRiders",
+        "summary": "List riders",
+        "description": "One page of riders ordered by email. An admin sees every store's riders, or one store's with store. Store staff see their own store's riders; a store parameter naming another store is 403 forbidden. A store that is not a uuid is 400 on store. The staff token is checked with core, and the answer is cached for 30 seconds per token.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number from 1. Default 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Riders per page, from 1 to 100. Default 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            }
+          },
+          {
+            "name": "store",
+            "in": "query",
+            "required": false,
+            "description": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000401"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of riders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiderList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000801",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "email": "rider1-koramangala@shopperstop.local",
+                      "name": "Arjun Rao",
+                      "phone": "+919000000001",
+                      "isActive": true
+                    }
+                  ],
+                  "page": 1,
+                  "pageSize": 24,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "page or pageSize is out of range, or store is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a store id",
+                    "field": "store"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or core does not know the token as a staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Store staff named another store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "store staff list their own store only"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAdminRider",
+        "summary": "Create a rider",
+        "description": "Creates an active rider at a store core knows, and answers it. Email, name (1 to 100 characters), phone (optional: empty, or 10 to 15 digits after an optional +) and password (8 to 72 bytes) are checked as core checks a customer's. Store staff may create riders only at their own store. A store core does not know is 400 on storeId; an email taken in any case is 409 on email.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderCreate"
+              },
+              "example": {
+                "storeId": "00000000-0000-4000-8000-000000000401",
+                "email": "ravi.kumar@shopperstop.local",
+                "name": "Ravi Kumar",
+                "password": "rider12345",
+                "phone": "+919000000099"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new rider, active.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000805",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "ravi.kumar@shopperstop.local",
+                  "name": "Ravi Kumar",
+                  "phone": "+919000000099",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is malformed, or core does not know the store (then field is storeId).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be 8 to 72 bytes",
+                    "field": "password"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or core does not know the token as a staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Store staff named another store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "store staff create riders at their own store only"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The email is already a rider's, in any case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "email already registered",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/riders/{id}": {
+      "get": {
+        "operationId": "getAdminRider",
+        "summary": "Read a rider",
+        "description": "Answers the rider in the path. Store staff get 404 for a rider of another store, as for an id that does not exist.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rider's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000801"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000801",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "rider1-koramangala@shopperstop.local",
+                  "name": "Arjun Rao",
+                  "phone": "+919000000001",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or core does not know the token as a staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No rider with this id at a store the caller may see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAdminRider",
+        "summary": "Update a rider",
+        "description": "Changes name, phone (\"\" clears it), isActive and password; absent members stay as they are, and null is refused with 400 on the member. storeId and email cannot change. Setting isActive to false ends the rider's sessions in the same change, so the rider's token answers 401 and the rider cannot sign in. A new password does not end sessions.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rider's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000801"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderPatch"
+              },
+              "example": {
+                "name": "Ravi K.",
+                "phone": "",
+                "isActive": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000801",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "rider1-koramangala@shopperstop.local",
+                  "name": "Arjun Rao",
+                  "phone": "+919000000001",
+                  "isActive": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A member is null or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must not be null",
+                    "field": "name"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or core does not know the token as a staff user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No rider with this id at a store the caller may see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A rider's token from sign-in, or a staff token from core, sent as Authorization: Bearer <token>."
+      }
+    },
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "validation",
+                  "unauthorized",
+                  "forbidden",
+                  "not_found",
+                  "conflict",
+                  "rate_limited",
+                  "internal"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "Rider": {
+        "type": "object",
+        "required": [
+          "id",
+          "storeId",
+          "email",
+          "name",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The store the rider works at (core's store id)."
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Omitted when the rider has no phone."
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RiderSession": {
+        "type": "object",
+        "required": [
+          "token",
+          "rider"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Send as Authorization: Bearer <token>. Shown once."
+          },
+          "rider": {
+            "$ref": "#/components/schemas/Rider"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "RiderCreate": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "email",
+          "name",
+          "password"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A store core knows."
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "description": "Optional. Empty, or 10 to 15 digits after an optional +."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "8 to 72 bytes."
+          }
+        }
+      },
+      "RiderPatch": {
+        "type": "object",
+        "description": "Every member is optional; null is refused.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "description": "\"\" clears the phone."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "false ends the rider's sessions."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72
+          }
+        }
+      },
+      "RiderList": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Rider"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every rider the caller may see, not just this page."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
