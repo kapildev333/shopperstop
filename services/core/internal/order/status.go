@@ -46,7 +46,8 @@ func allowed(from, to db.OrderStatus, actorType string) bool {
 // row lock, and records the event with note. A cancel also returns the order's
 // quantities to the store's stock. An order outside sc is "not found"; a move the
 // table does not allow is 409 conflict and changes nothing, and so is accepting
-// an order whose payment is pending (409 payment_pending).
+// an order whose payment is pending (409 payment_pending). The system cancels only
+// an order awaiting payment (409 conflict otherwise), so a paid or cash order is never cancelled by it.
 func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to db.OrderStatus, actor Actor, note string) error {
 	var row db.LockOrderRow
 	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
@@ -60,6 +61,9 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 		}
 		if to == db.OrderStatusAccepted && row.PaymentStatus != nil && *row.PaymentStatus == db.PaymentStatusPending {
 			return &httpx.Error{Status: http.StatusConflict, Code: "payment_pending", Message: "the order awaits payment"}
+		}
+		if actor.Type == "system" && to == db.OrderStatusCancelled && (row.PaymentStatus == nil || *row.PaymentStatus != db.PaymentStatusPending) {
+			return &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "only an order awaiting payment can be cancelled by the system"}
 		}
 		var riderName, actorName, actorID *string
 		if actor.Name != "" {

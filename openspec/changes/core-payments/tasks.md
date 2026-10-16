@@ -1,6 +1,6 @@
 # Tasks
 
-Four worker tasks, in order, on branch `lane/core-P5-L1-payments` in `.worktrees/core-P5-L1`. Every code block is verbatim in `design.md` ("Task 1" to "Task 4"); a choice neither file settles is a stop-and-report.
+Five worker tasks, in order (task 5 is a fix after the task 2 review, not in `design.md`), on branch `lane/core-P5-L1-payments` in `.worktrees/core-P5-L1`. Every code block is verbatim in `design.md` ("Task 1" to "Task 4"); a choice neither file settles is a stop-and-report.
 
 Databases (D26): tests only, on the per-run schemas of `shopperstop_core_test`. No `core-admin migrate`, no `seed-demo`, no `make dev`/`make seed`/`make e2e`, no client on `shopperstop_core` or `shopperstop_core_e2e`, no `docker`. Never run the archived Phase 3 `check-wiring.sh` (it starts a real rider on :8081 against the dev database).
 
@@ -33,3 +33,10 @@ Scope: `services/core/internal/seed/{seed.go,seed_test.go,summary.go}`, this fil
 
 - [x] 4.1 `git apply --include='*_test.go'` the Task 4 block; run `go test -race -count=1 ./internal/seed` and see the three fail; commit.
 - [x] 4.2 `git apply --exclude='*_test.go'` the Task 4 block; run the gates (no `openapi.json` change; `make gen postman` stays clean); tick 4.1 and 4.2; commit.
+
+## 5. System cancel only while payment is pending
+
+Scope: `services/core/internal/order/status.go`, `services/core/internal/app/orders_payment_test.go`, `services/core/openapi.json` (the status route's 409 description, one sentence), generated `core.d.ts` and the Postman collection if `openapi.json` changes, this change (`specs/orders/spec.md`, `design.md`, this file). Scenario: orders "The payment service cannot cancel a paid order" (and the existing "Payment timeout"). Starts from `internal/app/orders_payment_test.go` `TestSystemCancelNeedsPendingPayment` (red: a paid order is cancelled with 200). Commits: `test: the payment service cannot cancel a paid or cash order`, `fix: system cancel only while payment is pending`.
+
+- [x] 5.1 Add `TestSystemCancelNeedsPendingPayment`: a paid online order and a cash order are refused 409 `conflict` with status, events and stock unchanged; the pending timeout still cancels 200; run it and see it fail; commit.
+- [x] 5.2 In `Transition`, after the table check, refuse a `system` cancel unless the payment is `pending` (409 `conflict`, "only an order awaiting payment can be cancelled by the system"); update the status route's 409 description; `make gen postman`; run the gates; tick 5.1 and 5.2; commit.

@@ -91,7 +91,7 @@ Every transition SHALL append one event with the previous status, the new status
 - **THEN** the order has `status` `delivered`, a `deliveredAt` time and a last event from `out_for_delivery` to `delivered` by `staff`
 
 ### Requirement: A service moves orders for a rider
-A service SHALL change status only by its row of the service actor table: `rider` names `actor` `{type: "rider", id, name}` and moves only to `out_for_delivery` or `delivered`; `payment` names `{type: "system", name}` with no id and only cancels. `name` is 1 to 80 characters trimmed. Another target, or another service, answers 403 `forbidden` before the actor is read; a bad or missing `actor`, or any from staff, 400 field `actor`; a move the table refuses 409. A refusal changes nothing.
+A service SHALL change status only by its row of the service actor table: `rider` names `actor` `{type: "rider", id, name}` and moves only to `out_for_delivery` or `delivered`; `payment` names `{type: "system", name}` with no id and only cancels an order awaiting payment. Another target, or another service, answers 403 `forbidden` before the actor is read; a bad or missing `actor`, or any from staff, 400 field `actor`; a move the table refuses 409. A refusal changes nothing.
 
 #### Scenario: Out for delivery
 - **WHEN** the service sends `{"status":"out_for_delivery","actor":{"type":"rider","id":"<uuid>","name":"Ravi Kumar"}}` for a `ready` order
@@ -116,6 +116,10 @@ A service SHALL change status only by its row of the service actor table: `rider
 #### Scenario: Payment timeout
 - **WHEN** the payment service sends `{"status":"cancelled","note":"not paid in 15 minutes","actor":{"type":"system","name":"payment timeout"}}` for a `pending` online order of 2 units with stock 3
 - **THEN** the response is 200 with `status` `cancelled`, `cancelReason` `not paid in 15 minutes` and a last event by `system` with `actorName` `payment timeout` and no actor id, and the stock is 5
+
+#### Scenario: The payment service cannot cancel a paid order
+- **WHEN** the payment service sends `{"status":"cancelled","actor":{"type":"system","name":"payment timeout"}}` for a `placed` online order whose payment is `paid`, or for a cash order
+- **THEN** the response is 409 with code `conflict`, and the order stays `placed` with its stock and events unchanged
 
 #### Scenario: The payment service only cancels
 - **WHEN** the payment service sends `accepted` or `delivered` with a system actor, `cancelled` with no actor, a rider actor, a system actor with an id or a blank name, or the rider service sends `cancelled` with a system actor, for a `placed` order

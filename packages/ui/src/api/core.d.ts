@@ -3553,7 +3553,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled (conflict); or staff accept an online order whose payment is still pending (payment_pending). Nothing changes. */
+            /** @description The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled (conflict); or staff accept an online order whose payment is still pending (payment_pending); the payment service's system cancel of an order not awaiting payment (paid or cash) is conflict too. Nothing changes. */
             409: {
                 headers: {
                     [name: string]: unknown;
