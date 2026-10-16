@@ -43,9 +43,9 @@ Scope: `apps/mobile/src/{auth.ts,auth.test.ts}`.
 Scenarios: Unsafe returnTo ignored; supports Mobile return after sign-in and Mobile account screen (sign out).
 Starts from: `src/auth.test.ts`: `unsafe returnTo ignored`, `sign in stores the token and the customer` (fake 200 session: `getToken()` is the token, `queryClient.getQueryData(['me', token])` is the customer), `sign in failure returns the error` (fake 401 envelope: resolves to it, no token), `register stores the token`, `sign out ends the session` (fake 204: `POST /auth/sign-out` sent with the bearer, no token, cache empty).
 
-- [ ] 3.1 Red
-- [ ] 3.2 `auth.ts` per Decision 5 (web's `auth.ts` without the cart merge and `signOutAndGoHome`); `useMe` stays in `api.ts`
-- [ ] 3.3 Gates green
+- [x] 3.1 Red
+- [x] 3.2 `auth.ts` per Decision 5 (web's `auth.ts` without the cart merge and `signOutAndGoHome`); `useMe` stays in `api.ts`
+- [x] 3.3 Gates green
 
 ## 4. Tokens and Text
 
