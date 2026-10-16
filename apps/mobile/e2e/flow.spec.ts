@@ -108,6 +108,9 @@ test('Customer order to delivered against core', async ({ page, request }) => {
   // 3. Browse one category from Home, then go back.
   await page.getByRole('link', { name: 'Dairy, Bread & Eggs', exact: true }).click()
   await expect(page).toHaveURL(/\/category\/dairy-bread-eggs$/)
+  // The heading fills in once the tree loads; the first product link once the grid does. Axe runs after both.
+  await expect(page.getByRole('heading', { level: 1, name: 'Dairy, Bread & Eggs', exact: true })).toBeVisible()
+  await expect(page.getByRole('link').first()).toBeVisible()
   await expectNoViolations(page)
   await page.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
@@ -128,6 +131,8 @@ test('Customer order to delivered against core', async ({ page, request }) => {
     await cart.getByRole('button', { name: `Add one ${a.name}`, exact: true }).click()
   }
   await expect(cart.getByRole('group', { name: `Quantity of ${a.name}`, exact: true })).toHaveText(String(qa))
+  // The last write has reached the server once the cart bar counts qa items; only then close the sheet and sign out.
+  await expect(cartBar(page, `${qa} items`)).toBeVisible()
   await expectNoViolations(page)
   await cart.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(cart).toBeHidden()
