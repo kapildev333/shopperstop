@@ -1,4 +1,10 @@
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
+import { coreLog } from './e2e/mail'
+
+// Core's stdout goes to coreLog, emptied at each start: the account-security e2e reads the mails core logs there.
+mkdirSync(dirname(coreLog), { recursive: true })
 
 const reuseExistingServer = !process.env.CI
 
@@ -10,7 +16,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'go run ./cmd/core',
+      command: `go run ./cmd/core > ${JSON.stringify(coreLog)}`,
       cwd: '../../services/core',
       url: 'http://localhost:18080/api/core/v1/healthz',
       reuseExistingServer,
