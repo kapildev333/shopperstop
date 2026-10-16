@@ -26,6 +26,7 @@ rider-P3-L3 running (2026-10-16): worktree `.worktrees/rider-P3-L3`, branch `lan
 - 2026-10-15: CI jobs fail in 1 to 3 s with zero steps (billing); #207 and #208 merged on the local gates pasted in the PRs.
 
 ## Backlog
+- rider-P3-L4 candidate (from core-P3-L3 `core-hygiene`, relayed 2026-10-16): wrong method on a known route should answer 405 `method_not_allowed` with `Allow` instead of 404; confirm the migration runner's advisory lock (the copy names lock 727101); core's design.md decisions 2 and 3 carry over unchanged. After L3.
 - Ceilings named in D32 (delivery proof, COD collection, batches, online or offline state, location history, distance); a map once a map library is decided; push notifications; a shared Go module once payment lands (D31).
 
 ## Phase 3 work package (orchestrator, 2026-10-15)
