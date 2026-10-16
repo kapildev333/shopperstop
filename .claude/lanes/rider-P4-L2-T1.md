@@ -1,5 +1,5 @@
 # rider-P4-L2-T1 - Sign-in sweeps expired sessions (task 1 of rider-hygiene-carryover)
-Status: done (test 8c0e202, feat next; tasks 1.1 and 1.2 ticked)
+Status: done (test 8c0e202, feat done (c41910e); tasks 1.1 and 1.2 ticked)
 
 ## Brief
 - LANE-ID: rider-P4-L2 (task T1). Area: `rider`.
