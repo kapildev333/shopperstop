@@ -4,7 +4,7 @@ import { apiError, fakeCore, json } from './fake-core'
 import { ProfileSheet } from './profile-sheet'
 import { setToken } from './session'
 
-const customer = { id: '6f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f70', email: 'asha@example.test', name: 'Asha Rao' }
+const customer = { id: '6f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f70', email: 'asha@example.test', name: 'Asha Rao', emailVerified: false }
 
 test('profile saved', async () => {
   setToken('t-12')
