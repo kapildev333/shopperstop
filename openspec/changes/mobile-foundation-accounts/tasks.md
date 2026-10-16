@@ -62,9 +62,9 @@ Starts from: `src/ui/text.test.tsx`: `body text by default` (style `fontFamily` 
 Scope: `apps/mobile/src/ui/{button.tsx,button.test.tsx}`.
 Starts from: `src/ui/button.test.tsx`: `button presses` (role button, label text, `onPress` once), `disabled button does not press` (`accessibilityState.disabled`), `loading button is busy and disabled`, `variants use tokens` (primary background `colors.accent` and text `colors.onAccent`; secondary border `colors.lineStrong`; danger text `colors.danger`; ghost text `colors.accent`), `sizes` (md min height 44, lg 48), `icon button needs a label` (found by `getByRole('button', { name: 'Close' })`, hit area 44 × 44).
 
-- [ ] 5.1 Red
-- [ ] 5.2 `Button` and `IconButton` per Decision 6 and the shared-pieces table of `docs/design/mobile-P4-L1.md` (`Pressable`, `accessibilityRole="button"`, Lucide icon prop for `IconButton`)
-- [ ] 5.3 Gates green
+- [x] 5.1 Red
+- [x] 5.2 `Button` and `IconButton` per Decision 6 and the shared-pieces table of `docs/design/mobile-P4-L1.md` (`Pressable`, `accessibilityRole="button"`, Lucide icon prop for `IconButton`)
+- [x] 5.3 Gates green
 
 ## 6. FormField
 
