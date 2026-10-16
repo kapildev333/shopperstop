@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react-native'
-import { renderRouter } from 'expo-router/testing-library'
+import { renderRouter, testRouter } from 'expo-router/testing-library'
 import { fakeCore, json } from './fake-core'
 import type { Order } from './orders'
 import { setToken } from './session'
@@ -36,14 +36,14 @@ test('Statuses current on return', async () => {
     'GET /orders': () => json(200, { items: [placed], total: 1 }),
   }
   const calls = fakeCore(routes)
-  const router = await renderRouter(appDir, { initialUrl: '/orders' })
+  await renderRouter(appDir, { initialUrl: '/orders' })
   const card = await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })
   expect(within(card).getByText('Placed')).toBeTruthy()
 
   // Core moves the order on while the customer is on Home.
   routes['GET /orders'] = () => json(200, { items: [{ ...placed, status: 'packing' }], total: 1 })
-  await router.navigate('/')
-  await router.navigate('/orders')
+  await testRouter.navigate('/')
+  await testRouter.navigate('/orders')
 
   expect(await within(await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })).findByText('Packing')).toBeTruthy()
   expect(calls.filter((request) => new URL(request.url).pathname.endsWith('/orders'))).toHaveLength(2)

@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react-native'
-import { renderRouter } from 'expo-router/testing-library'
+import { renderRouter, testRouter } from 'expo-router/testing-library'
 import { queryClient } from './api'
 import { fakeCore, json } from './fake-core'
 import type { Order } from './orders'
@@ -37,13 +37,13 @@ test('Failed read on return keeps the list', async () => {
     'GET /orders': () => json(200, { items: [placed], total: 1 }),
   }
   const calls = fakeCore(routes)
-  const router = await renderRouter(appDir, { initialUrl: '/orders' })
+  await renderRouter(appDir, { initialUrl: '/orders' })
   await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })
 
   // Core can no longer be reached when the customer comes back.
   routes['GET /orders'] = () => Promise.reject(new TypeError('Network request failed'))
-  await router.navigate('/')
-  await router.navigate('/orders')
+  await testRouter.navigate('/')
+  await testRouter.navigate('/orders')
 
   await waitFor(() => expect(calls.filter((request) => new URL(request.url).pathname.endsWith('/orders'))).toHaveLength(2))
   await waitFor(() => expect(queryClient.isFetching()).toBe(0))

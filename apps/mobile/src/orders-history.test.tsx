@@ -74,7 +74,7 @@ test('History lists orders', async () => {
 
   const cancelledLink = screen.getByRole('link', { name: 'View order SS-DEMOAAAC' })
   expect(within(cancelledLink).getByText('Cancelled')).toBeTruthy()
-  expect(within(cancelledLink).getByText('1 item')).toBeTruthy()
+  expect(within(cancelledLink).getByText('Today, 10:02 · 1 item')).toBeTruthy()
   expect(screen.queryByText(/Showing your latest/)).toBeNull()
 
   const listed = screen
