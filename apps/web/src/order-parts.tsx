@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Badge, Price } from '@shopperstop/ui'
+import { Badge, ImageTile, Price } from '@shopperstop/ui'
 import { arrival, statusName, statusVariant, type OrderStatus } from './orders'
-import { ImageTile } from './product-card'
 
 // One read-only line: picture, name, unit, quantity and its total. Cart lines and order items both fit it;
 // children go under the text (checkout puts its out-of-stock mark there), so they wrap instead of leaving the card.
@@ -23,7 +22,7 @@ export function LineRow({
   return (
     <li className="flex flex-wrap items-center gap-3 py-3">
       <div className="w-14 shrink-0">
-        <ImageTile src={imageUrl} />
+        <ImageTile src={imageUrl} alt="" className="w-full" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-body font-semibold text-ink">{name}</p>

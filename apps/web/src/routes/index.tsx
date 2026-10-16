@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ErrorBanner, PageHeader, Skeleton, buttonClass } from '@shopperstop/ui'
+import { ErrorBanner, ImageTile, PageHeader, Skeleton, buttonClass } from '@shopperstop/ui'
 import { usePicked, useCategories } from '../catalog'
 import { getPincode, openPincodeSheet } from '../pincode'
-import { ImageTile, ProductGrid } from '../product-card'
+import { ProductGrid } from '../product-card'
 import { StoreGate } from '../store-gate'
 
 function Home() {
@@ -54,7 +54,7 @@ function Categories({ storeId }: { storeId: string }) {
           {data.map((parent) => (
             <li key={parent.id}>
               <Link to="/c/$slug" params={{ slug: parent.slug }} className="flex flex-col items-center gap-2">
-                <ImageTile src={parent.imageUrl} />
+                <ImageTile src={parent.imageUrl} alt="" className="w-full" />
                 <span className="text-center text-small text-ink">{parent.name}</span>
               </Link>
             </li>

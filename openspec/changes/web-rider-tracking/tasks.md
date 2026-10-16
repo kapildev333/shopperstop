@@ -39,7 +39,7 @@ Failing tests (`src/checkout.test.tsx`): "default address chosen", "another addr
 
 - [x] 3.1 The tests and e2e locators committed (`test: checkout address choice is a radio group`); lint and typecheck green; exactly those five red
 - [x] 3.2 Decision 7, checkout part (`feat: checkout address choice from ui's ChoiceGroup`); all gates green
-- [ ] 3.3 Decision 7, `ImageTile` part (`refactor: ImageTile from @shopperstop/ui`); all gates green, no test changed
+- [x] 3.3 Decision 7, `ImageTile` part (`refactor: ImageTile from @shopperstop/ui`); all gates green, no test changed
 
 ## 4. e2e against core and rider
 

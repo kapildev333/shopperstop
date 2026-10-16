@@ -6,6 +6,7 @@ import {
   ButtonLink,
   EmptyState,
   ErrorBanner,
+  ImageTile,
   Price,
   Sheet,
   Skeleton,
@@ -17,7 +18,6 @@ import {
 import { useAsked, useCart, useLineWrite } from './cart'
 import { keys, useStore } from './catalog'
 import { itemCount, maxQuantity, type CartLine, type CartView } from './guest-cart'
-import { ImageTile } from './product-card'
 
 const RouterButtonLink = createLink(ButtonLink)
 
@@ -192,7 +192,7 @@ function CartLineRow({ storeId, line }: { storeId: string; line: CartLine }) {
     <li className="flex flex-col gap-2 py-3">
       <div className="flex items-center gap-3">
         <div className="w-14 shrink-0">
-          <ImageTile src={product.imageUrl} />
+          <ImageTile src={product.imageUrl} alt="" className="w-full" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-body font-semibold text-ink">{product.name}</p>
