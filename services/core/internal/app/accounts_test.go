@@ -365,6 +365,28 @@ func TestSignInRateLimitedPerForwardedIP(t *testing.T) {
 	}
 }
 
+// TestSignInEmptyForwardedForFallsBackToConnection: behind a trusted proxy an
+// empty or blank X-Forwarded-For keys the count on the connection address, not
+// on the empty string. The third attempt names 127.0.0.1 as its forwarded
+// address, which only shares a bucket with the fallback if the fallback is used.
+func TestSignInEmptyForwardedForFallsBackToConnection(t *testing.T) {
+	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+	limit.TrustProxy = true
+	a := auth.New(testPool, testPepper, limit, nil)
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
+	t.Cleanup(limited.Close)
+	for i, forwarded := range []string{"", "   "} {
+		email := seedCustomer(t).Customer.Email
+		if status, body := signInFrom(t, limited.URL, email, forwarded); status != http.StatusOK {
+			t.Fatalf("attempt %d with X-Forwarded-For %q: got %d %s, want 200", i+1, forwarded, status, body)
+		}
+	}
+	status, body := signInFrom(t, limited.URL, seedCustomer(t).Customer.Email, "127.0.0.1")
+	if e := decodeError(t, body); status != http.StatusTooManyRequests || e.Error.Code != "rate_limited" {
+		t.Fatalf("third attempt keyed on the connection address: got %d %s, want 429 rate_limited", status, body)
+	}
+}
+
 func TestPatchMe(t *testing.T) {
 	s := newCustomer(t)
 	status, body := call(t, http.MethodPatch, "/api/core/v1/me", s.Token,
