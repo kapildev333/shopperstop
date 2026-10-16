@@ -21,21 +21,23 @@ import { colors, fontFamily, radius, shadows, spacing } from '../ui/tokens'
 // Signed out, the screen asks to sign in and comes back here.
 export default function Account() {
   const token = useToken()
+  // Set by Sign out: until the navigation home lands, the screen renders nothing, so the token clearing cannot redirect to sign-in.
+  const [leaving, setLeaving] = useState(false)
   return (
     <>
       <Head>
         <title>My account · ShopperStop</title>
       </Head>
-      {token ? <AccountContent /> : <Redirect href="/sign-in?returnTo=%2Faccount" />}
+      {token ? <AccountContent onSignOut={() => setLeaving(true)} /> : leaving ? null : <Redirect href="/sign-in?returnTo=%2Faccount" />}
     </>
   )
 }
 
-function AccountContent() {
+function AccountContent({ onSignOut }: { onSignOut: () => void }) {
   const router = useRouter()
   const back = useBack()
-  // Leave the screen first: dropping the token while it is mounted would redirect to sign-in.
-  function onSignOut() {
+  function signOutAndLeave() {
+    onSignOut()
     router.replace('/')
     void signOut()
   }
@@ -59,7 +61,7 @@ function AccountContent() {
           </Pressable>
         </Link>
         <AddressesCard />
-        <Button variant="danger" size="lg" onPress={onSignOut}>
+        <Button variant="danger" size="lg" onPress={signOutAndLeave}>
           Sign out
         </Button>
       </ScrollView>
