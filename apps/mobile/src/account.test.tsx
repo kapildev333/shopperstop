@@ -166,3 +166,52 @@ test('Failed refetch keeps the account', async () => {
   expect(screen.getByText('Home')).toBeTruthy()
   expect(screen.queryByRole('alert')).toBeNull()
 })
+
+// A row action holds its request open; a second press while it is pending must not send another one.
+function holdUntil() {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  return { gate, release }
+}
+
+test('set default is not sent twice while pending', async () => {
+  setToken('t-acct')
+  const hold = holdUntil()
+  const calls = fakeCore({
+    'GET /me': () => json(200, customer),
+    'GET /me/addresses': () => json(200, { items: [home, work] }),
+    [`PATCH /me/addresses/${work.id}`]: async () => {
+      await hold.gate
+      return json(200, { ...work, isDefault: true })
+    },
+  })
+  await renderAccount()
+
+  await fireEvent.press(await screen.findByRole('button', { name: 'Set Work as default' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Set Work as default' }))
+  hold.release()
+
+  await waitFor(() => expect(calls.filter((request) => request.method === 'PATCH')).toHaveLength(1))
+})
+
+test('delete is not sent twice while pending', async () => {
+  setToken('t-acct')
+  const hold = holdUntil()
+  const calls = fakeCore({
+    'GET /me': () => json(200, customer),
+    'GET /me/addresses': () => json(200, { items: [home, work] }),
+    [`DELETE /me/addresses/${work.id}`]: async () => {
+      await hold.gate
+      return json(204)
+    },
+  })
+  await renderAccount()
+
+  await fireEvent.press(await screen.findByRole('button', { name: 'Delete Work' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Delete Work' }))
+  hold.release()
+
+  await waitFor(() => expect(calls.filter((request) => request.method === 'DELETE')).toHaveLength(1))
+})
