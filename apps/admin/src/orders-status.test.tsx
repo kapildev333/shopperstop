@@ -207,3 +207,17 @@ test('the keyboard after a delivery is on a result named for what it holds', asy
   await waitFor(() => expect(result).toHaveFocus())
   expect(result).toHaveTextContent('SS-TEST0001 is now Delivered.')
 })
+
+test('an order that leaves the board takes its count with it: no note of orders not shown', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [order(1, 'out_for_delivery'), order(2, 'placed')]).routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  await userEvent.click(button('Mark delivered SS-TEST0001'))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark delivered' }))
+
+  expect(await screen.findByText('SS-TEST0001 is now Delivered.')).toBeInTheDocument()
+  expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+  expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
+})

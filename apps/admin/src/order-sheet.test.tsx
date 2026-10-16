@@ -328,3 +328,19 @@ test('the sheet names the order\'s rider, and the rider on the events the rider 
     'Delivered by Arjun Rao, 13 Oct 2026, 3:01 pm',
   ])
 })
+
+test('a cancel that takes the order off the board takes its count with it: no note of orders not shown', async () => {
+  setToken('tok')
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [first, order(2, 'placed')]).routes })
+
+  renderApp('/orders')
+  await userEvent.click(within(await openSheet()).getByRole('button', { name: 'Cancel order' }))
+  await userEvent.type(screen.getByLabelText('Reason'), 'Out of stock')
+  await userEvent.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
+  const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
+  expect(await within(sheet).findByText('Order cancelled.')).toBeInTheDocument()
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+
+  expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
+  expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
+})

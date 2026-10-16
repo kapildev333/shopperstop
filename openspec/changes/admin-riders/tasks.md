@@ -45,7 +45,7 @@ Waits on: tasks 1 to 4 landed (HEAD 752d935, admin `322 passed (322)`). From `.c
 Scope: `apps/admin/src/orders-status.test.tsx`, `apps/admin/src/order-sheet.test.tsx` (one test appended to each), `apps/admin/src/orders.ts`, `apps/admin/src/routes/_staff/stock.tsx`, this file's ticks.
 Scenarios: Orders board › More active orders than one page (no note while every active order is shown, also after a status change).
 Failing tests: `src/orders-status.test.tsx` › "an order that leaves the board takes its count with it: no note of orders not shown"; `src/order-sheet.test.tsx` › "a cancel that takes the order off the board takes its count with it: no note of orders not shown".
-- [ ] 3b.1 `patches/3b.1-board-total-tests.diff` (`test: an order leaving the board takes its count with it`); `2 failed | 322 passed (324)`
+- [x] 3b.1 `patches/3b.1-board-total-tests.diff` (`test: an order leaving the board takes its count with it`); `2 failed | 322 passed (324)`
 - [ ] 3b.2 `patches/3b.2-board-total-fix.diff` (`fix: a status change moves the board's total with its items`); `324 passed (324)`; every gate green
 
 ## 5. Against core and the rider service (the manager's e2e slot)
