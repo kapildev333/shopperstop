@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native'
 import { queryClient } from './api'
 import type { CartProduct } from './cart'
 import { cartView } from './cart-guest'
@@ -73,6 +73,9 @@ async function chooseAddress(name: string) {
   await waitFor(() => expect(screen.queryByLabelText('Deliver to')).toBeNull())
 }
 
+// Lets the queued work and the screen's state updates run a few turns more.
+const flush = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 10)))
+
 // Placing is pressed without waiting: the handler answers later, so the test waits on what the screen shows.
 test('Place order sent once', async () => {
   setToken('t-1')
@@ -120,8 +123,43 @@ test('Place order sends nothing while the address list is unread', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Place order' }))
   expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
 
+  await flush()
+  expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+
   release(addresses([home]))
   expect(await screen.findByText('Delivering to Home')).toBeTruthy()
+})
+
+// Two presses in the same tick, before the first answer: the sending ref is what stops the second, the state is not set yet.
+test('Place order sent once on a double press in one tick', async () => {
+  setToken('t-1')
+  let release: (reply: Response) => void = () => {}
+  let posts = 0
+  fakeCore({
+    'GET /me/cart': () => json(200, twoLines()),
+    'GET /me/addresses': () => addresses([home]),
+    [`GET /stores/${storeId}`]: () => json(200, store),
+    'POST /orders': () => {
+      posts += 1
+      if (posts === 1) return new Promise<Response>((resolve) => (release = resolve))
+      return apiError(400, 'validation', 'address not found', 'addressId')
+    },
+  })
+  await renderScreen()
+  await screen.findByText('From Koramangala')
+
+  const button = screen.getByRole('button', { name: 'Place order' })
+  // No await between the two presses: one outer act holds both, so the inner act scopes do not overlap.
+  await act(async () => {
+    void fireEvent.press(button)
+    void fireEvent.press(button)
+  })
+  await waitFor(() => expect(posts).toBe(1))
+
+  release(apiError(400, 'validation', 'address not found', 'addressId'))
+  expect(await screen.findByText('Could not place your order. Try again.')).toBeTruthy()
+  await flush()
+  expect(posts).toBe(1)
 })
 
 test('Address not served', async () => {
