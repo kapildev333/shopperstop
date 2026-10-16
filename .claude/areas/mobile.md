@@ -1,0 +1,58 @@
+# mobile - the customer mobile app
+Scope: `apps/mobile/` (D36: one area, one manager, one e2e suite on the Expo web export)
+Depends on: core (`services/core/openapi.json`, complete on main since v0.2.0; Phase 3's `riderName` and `promisedMinutes` when they land), ui (`@shopperstop/ui/api` types; `@shopperstop/ui/tokens` TS export from ui-P4-L1), platform (Makefile origins and e2e port, platform-P4-L1), rider (optional: `GET /api/rider/v1/orders/{orderId}/delivery` for the tracking rider card, after rider-P3-L2)
+Spec: PLAN.md Phase 4 and D36 to D40; the design canvas "ShopperStop App Design" (https://claude.ai/artifact/75BFgGxUe3viRFjgvn8Ywy, 19 artboards at 390×844, same token names and values as `packages/ui/src/tokens.css`); `openspec/specs/web-app` (the customer behaviour the app mirrors: pincode and store, browsing, cart, accounts, checkout, tracking, history), `openspec/specs/{serviceability,catalog,stock,cart,accounts,orders}` (core's contract); Spec 1 §4 (stack), §5 (OpenSpec, TDD), §8 (tokens, type scale, radius, motion, tap targets), §10 (UI rules); Spec 2 §5 (bearer sessions, no cookies: "the mobile app is the same client with no new auth work"), §7 (customer pages). The work package below is the brainstorm input; team leads turn it into OpenSpec changes seeding the capability `mobile-app` (D4).
+## Doing
+Nothing yet. Start once ui-P4-L1 (`@shopperstop/ui/tokens`) and platform-P4-L1 (origins, e2e port 15176) are on `origin/main`; L1's team lead may propose before that.
+
+## Lanes
+| Lane | Task | Scope | Status |
+|------|------|-------|--------|
+| mobile-P4-L1 | `mobile-foundation-accounts` | `apps/mobile/`, `openspec/changes/mobile-foundation-accounts/` | not started |
+| mobile-P4-L2 | `mobile-serviceability-catalog` | `apps/mobile/`, `openspec/changes/mobile-serviceability-catalog/` | waits on L1 |
+| mobile-P4-L3 | `mobile-cart` | `apps/mobile/`, `openspec/changes/mobile-cart/` | waits on L2 |
+| mobile-P4-L4 | `mobile-checkout-orders` | `apps/mobile/`, `openspec/changes/mobile-checkout-orders/` | waits on L3 |
+| mobile-P4-L5 | `mobile-e2e-release` | `apps/mobile/`, `openspec/changes/mobile-e2e-release/` | waits on L4 |
+
+## Requests
+- to ui (standing): the app imports token values from `@shopperstop/ui/tokens` (ui-P4-L1) and API types from `@shopperstop/ui/api`; it never copies hex values. A pattern the app needs that `packages/ui` cannot provide for React Native lives in `apps/mobile/src/ui/` and is named in the lane's design.md with the web component it mirrors.
+- to core (standing): nothing new; the app uses the Phase 2 contract. Report here if a route's shape blocks a screen.
+- to platform (standing): the Makefile's dev and e2e origins include the app's web export ports (5176 dev, 15176 preview, platform-P4-L1); `make e2e` runs the mobile workspace's `e2e` script like the other apps'.
+
+## Found
+
+## Backlog
+- Ceilings named in D37: native device e2e (Maestro or Detox) once a device farm or simulator is in CI; push notifications (with the receipt service); deep links from SMS; store submission (EAS submit) after the owner's developer accounts exist; dark mode after this phase (Spec 1).
+
+## Phase 4 work package (orchestrator, 2026-10-16)
+One Expo app that mirrors the customer web behaviour screen for screen from the design canvas, built from the same core contract and token values. Conventions are CLAUDE.md's (kebab-case files, PascalCase components, camelCase JSON, cents and `₹`, one word per domain term) plus D37's stack. Every screen name below is the artboard title on the canvas; read the artboard's `.dc.html` (through the Artifact tool in a Fable session, or the manager pastes its markup into the brief) before building it: spacing, type sizes, colours and copy come from there, with the token names kept.
+
+### Shared rules for every lane
+- Stack (D37): Expo SDK (latest stable at the time of L1; record the pin and the React Native version), TypeScript strict, Expo Router (file-based, `app/`), TanStack Query, `openapi-fetch` 0.17.0 with `paths` from `@shopperstop/ui/api` against `${CORE_URL}/api/core/v1` (`EXPO_PUBLIC_CORE_URL`, default `http://localhost:8080`), `expo-secure-store` for the customer token, `@react-native-async-storage/async-storage` for the pincode and the guest cart, `@expo-google-fonts/inter` (400, 600, 700, bundled), `lucide-react-native` with `react-native-svg`, `react-native-safe-area-context`. Styling with `StyleSheet` and the values from `@shopperstop/ui/tokens`; no Tailwind or NativeWind; a `no-literal-colors.test.ts` like the web apps' (hex literals and colour names fail outside `src/ui/tokens.ts`).
+- Tests: `jest-expo` with React Native Testing Library; every scenario of the change's spec deltas has a test; fetch is faked at the process boundary like the web apps (a fake `fetch` that answers the routes the test names, never a mocked module of the app). `lint` (ESLint with `react-hooks` and the jsx-a11y equivalent for RN where it applies), `typecheck`, `test`, `build` (`expo export --platform web` into `dist/`) and `e2e` npm scripts so the root `make test-web` and `make e2e` pick the workspace up unchanged.
+- e2e: Playwright with axe against the web export served on 15176 (the `e2e` script starts core from the env `make e2e` passes, like `apps/web`), at 390×844 only. Native-only behaviour (safe areas, gestures, secure store) is covered by RNTL tests, not e2e (ceiling, D37).
+- Design: the token names and values are `tokens.css`'s; type scale, radius (8 controls, 12 cards and sheets, pill steppers), 44 px tap targets, 150 ms motion, status colours (D28), display stock cap "10+ left" (D7), green as the single action colour, yellow as a surface only. Icons Lucide 20 px, 16 px in buttons, `accessibilityLabel` on icon-only controls; every screen has `accessibilityRole` on controls and `accessibilityLiveRegion` where the web uses `aria-live`.
+- Each lane's OpenSpec change adds `ADDED` requirements to `mobile-app` only where the app's behaviour differs from `web-app` (navigation, storage, sheets) and otherwise references the `web-app` requirement it mirrors in `design.md`, with the mobile scenario written out in the delta anyway (the suite needs it).
+
+### mobile-P4-L1 `mobile-foundation-accounts`
+- `apps/mobile/` workspace: `app.json` (name ShopperStop, slug `shopperstop`, scheme `shopperstop`, brand yellow splash and icon placeholders drawn from the tokens, `web.output: "static"`), `metro.config.js` for the monorepo (`watchFolders` root, `nodeModulesPaths`), `tsconfig` strict extending Expo's, ESLint, Jest, Playwright config, the npm scripts above.
+- `src/api.ts` (client, token attach from secure store, the "not-ok answer without the envelope is a failure" middleware from the web apps, 401 clears the token only when the failing request carried the current token), `src/session.ts` (customer token in secure store, 30-day sliding like web), `src/ui/` primitives mirroring `@shopperstop/ui` in React Native: `Button` (primary, secondary, danger, compact), `IconButton`, `Input` with `FormField`, `Stepper`, `Badge`, `Chip`, `Card`, `Sheet` (bottom sheet with backdrop, Escape equivalent = back gesture and close button, focus to the title), `Dialog` (Cancel first), `EmptyState`, `ErrorBanner`, `StatusMessage`, `Skeleton`, `Price` (tabular, `₹`, `formatInr` from ui if it is importable in RN, else a copy named in design.md), `TabBar` (Home, Categories, Orders per artboard 1), each with an RNTL test.
+- Screens: `9 · Sign in`, `10 · Register` (return to where the user was), `11 · Account` (name, phone, addresses with default, sign out), `12 · Add address` (and edit), `18 · Loading (skeleton)` and `19 · Error` as the patterns every later screen uses (`data === undefined ? (isError ? ErrorBanner : Skeleton) : content`, a failed refetch keeps the showing screen with one notice, from web-P2-L6).
+- e2e: sign in, register, account, address add and default, axe on each, against core with the demo seed.
+
+### mobile-P4-L2 `mobile-serviceability-catalog`
+- `7 · Pincode sheet (first visit)` (pincode in AsyncStorage `shopperstop:pincode`, resolved through `GET /serviceability`), `8 · Not serviceable / closed` (full-screen notice with the pincode control; a closed store blocks browsing), `1 · Home` (brand header with the promise line, pincode line, account button, search field, category grid, "Picked for you" rail with ADD and Stepper, sticky cart bar, tab bar), `2 · Category` (child chips, product grid, load more on scroll end), `3 · Product` (image, breadcrumb, badges, details, "More in", bottom price bar with Add to cart and Stepper), `13 · Search (results / empty)`, `17 · Change pincode, clears cart` (the "Change store?" confirm; the cart clear itself lands in L3 and is stubbed as a hook here, as web did). Stepper counts are local until L3 replaces the hook body.
+- e2e: pincode, home, category, product, search, not serviceable, with axe.
+
+### mobile-P4-L3 `mobile-cart`
+- `4 · Cart sheet` (lines with Steppers, free-delivery nudge, bill details with MRP strike, minimum-order block, Proceed), `14 · Cart empty`, the sticky cart bar on every browsing screen, guest cart in AsyncStorage `shopperstop:cart` behind the same hook as the server cart, merge at sign-in by `PUT /me/cart/items` per line then discard, one write queue for quick taps, clamp to stock from the answer, D27 replaced notice (sheet opens once), confirm on store change sends `DELETE /me/cart`.
+- e2e: guest cart, quick taps, merge at sign-in, clamp, store change, with axe.
+
+### mobile-P4-L4 `mobile-checkout-orders`
+- `5 · Checkout` (address card with Change to the address list, lines, payment card fixed to cash on delivery with the note "UPI and cards come with the payment service", bill, Place order; `out_of_stock` highlights lines with Remove and blocks the button), `6 · Order tracking` (brand header with "Arriving in N min" from `promisedMinutes`, status timeline from events with times, products and totals, address, Cancel order while `placed` or `accepted`, "Need help?" links to the account screen until a help route exists; the rider card with name, last seen and Maps link when `riderName` and the rider delivery read are on main, else omitted and named as a follow-up), `15 · Orders history`, `16 · Cancel order dialog` (reason optional, Cancel first), poll every 10 s while not terminal, the checkout failure rules from web-P2-L11 (an emptied cart, a 500 "may have been placed" with a link to history).
+- e2e: checkout with a new address, order placed, tracking, history, cancel, out of stock at checkout, with axe.
+
+### mobile-P4-L5 `mobile-e2e-release`
+- The Spec 2 §13 customer flow end to end on the web export (register, pincode, browse, two products, quantity change, sign out and in with the cart merged, checkout with a new address, placed; then tracking shows the staff's delivered state driven through core's staff routes directly, since the admin app is not part of this suite), `eas.json` with `preview` and `production` profiles, app icon and splash from the brand tokens, `README` section for running on a device (`npx expo start`, Expo Go, the `EXPO_PUBLIC_CORE_URL` for a phone on the LAN), the manager's walk on a simulator or Expo Go recorded in the lane log. Store submission is out of scope (ceiling).
+
+Gates per PR: `make test-web` (the workspace rides along), `make e2e` with the slot (D35), `openspec validate --all --strict`, the manager's own walk at 390×844 on the web export against core with the demo seed and, from L2 on, once on a simulator or Expo Go.
