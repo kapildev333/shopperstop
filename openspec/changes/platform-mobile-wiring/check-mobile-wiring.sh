@@ -26,13 +26,20 @@ make)
   [ "$(count Makefile localhost:15176)" = 2 ] || fail "Makefile: want localhost:15176 exactly twice"
   grep -nE 'apps/mobile|expo' Makefile && fail "Makefile names apps/mobile or expo"
   # The rider-wiring make checks still hold, except its four assertions on the old three-origin lists.
+  # Its make section needs a tree without services/rider and apps/rider (it runs `make rider` for real),
+  # so it runs on a scratch tree: this Makefile and the directories its make -n checks need (no packages/ui, so `make rider-app` builds nothing).
   if [ -f "$prior" ]; then
-    sh "$prior" make 2>&1 | grep '^FAIL' \
+    tmp=$(mktemp -d)
+    cp Makefile "$tmp/"
+    mkdir -p "$tmp/services/core" "$tmp/apps/web" "$tmp/apps/admin" "$tmp/scripts" "$tmp/node_modules"
+    touch "$tmp/services/core/sqlc.yaml" "$tmp/scripts/postman.mjs"
+    (cd "$tmp" && sh "$OLDPWD/$prior" make) 2>&1 | grep '^FAIL' \
       | grep -vF "make -n core lacks: SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'" \
       | grep -vF "make -n e2e npm run e2e lacks: SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'" \
       | grep -vF "make -n rider lacks: SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'" \
       | grep -vF "make -n e2e npm run e2e lacks: SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175'" \
       | while read -r l; do echo "prior $l"; done | grep . && fail "rider-wiring make checks regressed (lines above)"
+    rm -rf "$tmp"
   else fail "missing $prior"; fi
   ;;
 docs)

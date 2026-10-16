@@ -16,5 +16,5 @@ Commit: `feat: core and rider origins for the mobile web export and mobile docs`
 
 ## 2. Acceptance (team lead, then manager)
 
-- [ ] 2.1 Team lead: `/opsx:verify` by hand: every scenario of the delta maps to a passing check line, task 1 ticked, `git diff --stat origin/main..HEAD` holds only the scope files, the change folder and lane logs
+- [x] 2.1 Team lead: `/opsx:verify` by hand: every scenario of the delta maps to a passing check line, task 1 ticked, `git diff --stat origin/main..HEAD` holds only the scope files, the change folder and lane logs
 - [ ] 2.2 Manager: re-run the 1.3 commands and `make -n core`, `make -n e2e` in the worktree; record in the lane status cell

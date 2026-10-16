@@ -39,7 +39,7 @@ The docs say `npx expo start --port 5176` rather than the bare `npx expo start` 
 
 ### 6. The test is a committed check script
 
-Like platform-rider-wiring, the scenarios are text and `make -n` output with no framework: `check-mobile-wiring.sh` (sections `make`, `docs`) greps the files and dry-run output and runs the two archived checks (`check-docs.sh`; `check-wiring.sh` `docs`, and its `make` section with its four assertions on the old three-origin lists filtered out, because this change supersedes exactly those). On 8dc76d1 it prints 24 FAIL lines; on a scratch copy with the edits below it prints `mobile wiring check: ok`, and `check-docs.sh` and `check-wiring.sh deploy ci docs` stay ok. The worker's red step is that failing run, the commit is `feat:`.
+Like platform-rider-wiring, the scenarios are text and `make -n` output with no framework: `check-mobile-wiring.sh` (sections `make`, `docs`) greps the files and dry-run output and runs the two archived checks (`check-docs.sh`; `check-wiring.sh` `docs`, and its `make` section with its four assertions on the old three-origin lists filtered out, because this change supersedes exactly those). That `make` section needs a tree without `services/rider` and `apps/rider` and runs `make rider` for real, so the check runs it on a scratch tree holding the Makefile and the directories its dry runs need (acceptance fix: `services/rider` landed on `main` with rider-P3-L1, and on the merged tree the section started the rider service). On 8dc76d1 it prints 24 FAIL lines; on a scratch copy with the edits below it prints `mobile wiring check: ok`, and `check-docs.sh` and `check-wiring.sh deploy ci docs` stay ok. The worker's red step is that failing run, the commit is `feat:`.
 
 ## The edits
 
