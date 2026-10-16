@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { StyleSheet, Switch, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { saveAddress, type Address } from './addresses'
 import { splitError } from './screen-support'
 import { Button } from './ui/button'
@@ -7,6 +7,7 @@ import { Chip } from './ui/chip'
 import { FormField } from './ui/form-field'
 import { Sheet } from './ui/sheet'
 import { Text } from './ui/text'
+import { Toggle } from './ui/toggle'
 import { colors, fontFamily, radius, spacing } from './ui/tokens'
 
 const fieldNames = ['label', 'line1', 'line2', 'pincode'] as const
@@ -90,17 +91,7 @@ function AddressForm({ address, onClose }: { address?: Address; onClose: () => v
         onChangeText={setPincode}
         error={errors.fields.pincode}
       />
-      <View style={styles.switchRow}>
-        <Switch
-          accessibilityRole="switch"
-          accessibilityLabel="Make this my default address"
-          value={isDefault}
-          onValueChange={setIsDefault}
-          trackColor={{ false: colors.lineStrong, true: colors.accent }}
-          thumbColor={colors.surface}
-        />
-        <Text style={styles.switchText}>Make this my default address</Text>
-      </View>
+      <Toggle label="Make this my default address" checked={isDefault} onChange={setIsDefault} />
       {errors.banner ? (
         <View accessible accessibilityRole="alert" style={styles.alert}>
           <Text>{errors.banner}</Text>
@@ -128,15 +119,6 @@ const styles = StyleSheet.create({
   },
   message: {
     marginTop: spacing.unit,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.unit * 2,
-    minHeight: 44,
-  },
-  switchText: {
-    flex: 1,
   },
   alert: {
     backgroundColor: colors.dangerSoft,
