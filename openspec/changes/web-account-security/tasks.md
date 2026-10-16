@@ -24,4 +24,4 @@ Scope: `apps/web/playwright.config.ts` (core's webServer command and the `mkdirS
 
 - [x] 3.1 Write `e2e/mail.ts` and the two tests (design.md decision 5; "Password reset against core" checks the old password with `request.post('/api/core/v1/auth/sign-in', ...)` answering 401); with the e2e slot, run `make e2e`, see both fail on the `mailedCode` timeout and every other test pass; commit.
 - [x] 3.2 Change `playwright.config.ts` as decision 5 says; with the slot, run `make e2e` (all green) and the gates; tick 3.1 and 3.2; commit.
-- [ ] 3.3 (manager, with the e2e slot) `make e2e` on the lane head: `email verified against core` and `password reset against core` pass with every other web spec; the worker built 3.1 and 3.2 without the slot, so neither the red nor the green `make e2e` has run yet.
+- [x] 3.3 (manager, with the e2e slot) `make e2e` on the lane head: `email verified against core` and `password reset against core` pass with every other web spec; the worker built 3.1 and 3.2 without the slot, so neither the red nor the green `make e2e` has run yet.
