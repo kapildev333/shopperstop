@@ -140,9 +140,9 @@ Scope: `apps/mobile/src/{addresses.ts,address-sheet.tsx,address-sheet.test.tsx}`
 Scenarios: Address added, Edit sheet prefilled, Address sheet checks fields, Envelope field error in the sheet.
 Starts from: `src/address-sheet.test.tsx`, the scenario names (`fakeCore`; request bodies read from the recorded `Request`s).
 
-- [ ] 13.1 Red
-- [ ] 13.2 `addresses.ts`: `useAddresses`, `saveAddress` (interfaces in `docs/design/mobile-P4-L1.md`); `AddressSheet({ open, address?, onClose })` per section 12
-- [ ] 13.3 Gates green
+- [x] 13.1 Red
+- [x] 13.2 `addresses.ts`: `useAddresses`, `saveAddress` (interfaces in `docs/design/mobile-P4-L1.md`); `AddressSheet({ open, address?, onClose })` per section 12
+- [x] 13.3 Gates green
 
 ## 14. Account screen
 
