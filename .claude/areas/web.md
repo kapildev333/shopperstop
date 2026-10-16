@@ -59,3 +59,12 @@ One OpenSpec change per lane; each waits for the core lane that serves its route
 | web-P2-L5 | `web-e2e-flows` | core-P2-L6 (seed), admin-P2-L5 | the two Spec 2 §13 end-to-end flows in `apps/web/e2e`, driving both origins (the Playwright config also builds and serves the admin preview on 15174 under `/admin/`): register, pincode, browse, add two products, change a quantity, sign out and in to see the merged cart, checkout with a new address, order placed; store staff advance it to delivered on the board; tracking shows delivered. Second flow: admin creates a product and sets stock, customer finds it by search. axe on every page visited |
 
 Acting manager: the orchestrator session (D21) until a `/manage web` session starts; that session takes over by reading this file. Gates per PR: `make test-web`, `make e2e` (one at a time; say so in `## Doing`), `openspec validate --all --strict`, the manager's own Chrome walk-through against a running core with the demo seed.
+
+## Phase 3 work package (orchestrator, 2026-10-15)
+Spec: PLAN.md Phase 3, D30, D32, D34; Spec 2 §7 (`/orders/{id}` tracking); the rider contract `services/rider/openapi.json` (`GET /api/rider/v1/orders/{orderId}/delivery` with the customer token, types from `@shopperstop/ui/api/rider` after ui-P3-L2). One change.
+
+| Lane | Change | Waits on | Deliverable |
+|---|---|---|---|
+| web-P3-L1 | `web-rider-tracking` (MODIFIED `web-app`) | core-P3-L1 and L2, rider-P3-L2, ui-P3-L1 and L2 on main | Tracking page: once the order is `out_for_delivery` a "Rider" card with the rider's name from `Order.riderName`, the state, "Last seen <relative time>" and an "Open in Maps" `ButtonLink` to `https://www.google.com/maps?q=<lat>,<lng>` (`target="_blank"`, `rel="noopener"`) when the delivery read carries a location, polled with the order every 10 s while not terminal; the timeline shows `actorName` on rider events ("Picked up by Asha"); the countdown uses `Order.promisedMinutes` (D34) instead of the store's current value; the delivery read's 404 before a claim shows nothing. Swap the app-level image tile for ui's `ImageTile` and checkout's `Chip` address group for `ChoiceGroup`; keep behaviour, update the tests. e2e: tracking shows the rider card against core and rider with the seeded delivered delivery (the live flow is rider-P3-L3's) |
+
+Gates per PR as Phase 2 (`make test-web`, `make e2e` with the slot per D35, `openspec validate --all --strict`, a phone-width walk).
