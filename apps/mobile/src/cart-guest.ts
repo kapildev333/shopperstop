@@ -149,7 +149,7 @@ async function persist(next: GuestCart) {
   }
 }
 
-// One read per app run. Its result is dropped when a change beat it.
+// One read per app run. Its result is dropped when a change beat it; every later call resolves the live cart.
 export function loadGuestCart(): Promise<GuestCart> {
   if (!loading) {
     loading = read().then((stored) => {
@@ -158,10 +158,9 @@ export function loadGuestCart(): Promise<GuestCart> {
         loaded = true
         emit()
       }
-      return cart
     })
   }
-  return loading
+  return loading.then(() => cart)
 }
 
 export function getGuestCart(): GuestCart {
