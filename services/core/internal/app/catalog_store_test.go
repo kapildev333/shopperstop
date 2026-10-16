@@ -364,3 +364,74 @@ func TestStoreProductsNULInQ(t *testing.T) {
 	status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+storeID+"/products?q=a%00b", "", nil)
 	expectError(t, "q=a%00b", status, body, http.StatusBadRequest, "validation", "q", "")
 }
+
+// names lists the product names of a store product list in order.
+func names(list storeProductListView) []string {
+	out := make([]string, 0, len(list.Items))
+	for _, p := range list.Items {
+		out = append(out, p.Name)
+	}
+	return out
+}
+
+func TestStoreProductsInStockOnly(t *testing.T) {
+	token := adminToken(t)
+	storeID := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Instock Dairy"})
+	for name, qty := range map[string]int{"Zinstock a": 3, "Zinstock b": 0, "Zinstock c": 1} {
+		setStock(t, storeID, createProduct(t, token, productBody(cat.ID, name)).ID, qty)
+	}
+	createProduct(t, token, productBody(cat.ID, "Zinstock d")) // no stock row at the store
+
+	first := storeProducts(t, storeID, url.Values{"q": {"Zinstock"}, "inStock": {"true"}, "pageSize": {"1"}})
+	second := storeProducts(t, storeID, url.Values{"q": {"Zinstock"}, "inStock": {"true"}, "pageSize": {"1"}, "page": {"2"}})
+	if first.Total != 2 || strings.Join(names(first), ",") != "Zinstock a" || strings.Join(names(second), ",") != "Zinstock c" {
+		t.Fatalf("inStock=true: got %+v then %+v, want total 2, a on page 1, c on page 2", first, second)
+	}
+	for _, v := range []string{"false", ""} {
+		if all := storeProducts(t, storeID, url.Values{"q": {"Zinstock"}, "inStock": {v}}); all.Total != 4 {
+			t.Fatalf("inStock=%q: got total %d, want 4 (no filter)", v, all.Total)
+		}
+	}
+}
+
+func TestStoreProductsSortByPrice(t *testing.T) {
+	token := adminToken(t)
+	storeID := insertStore(t, true)
+	cat := createCategory(t, token, map[string]any{"name": "Sort Dairy"})
+	for name, price := range map[string]int{"Zsort b": 3000, "Zsort a": 3000, "Zsort c": 1000, "Zsort d": 5000} {
+		body := productBody(cat.ID, name)
+		body["priceCents"] = price
+		setStock(t, storeID, createProduct(t, token, body).ID, 2)
+	}
+
+	for by, want := range map[string]string{
+		"price_asc":  "Zsort c,Zsort a,Zsort b,Zsort d",
+		"price_desc": "Zsort d,Zsort a,Zsort b,Zsort c",
+		"":           "Zsort a,Zsort b,Zsort c,Zsort d",
+	} {
+		if got := strings.Join(names(storeProducts(t, storeID, url.Values{"q": {"Zsort"}, "sort": {by}})), ","); got != want {
+			t.Errorf("sort=%q: got %s, want %s", by, got, want)
+		}
+	}
+	page2 := storeProducts(t, storeID, url.Values{"q": {"Zsort"}, "sort": {"price_desc"}, "pageSize": {"2"}, "page": {"2"}})
+	if page2.Total != 4 || strings.Join(names(page2), ",") != "Zsort b,Zsort c" {
+		t.Fatalf("sort=price_desc page 2 of 2: got %+v, want total 4 and b, c", page2)
+	}
+}
+
+func TestStoreProductsBadInStockOrSort(t *testing.T) {
+	storeID := insertStore(t, true)
+	for _, c := range []struct{ query, field string }{
+		{"inStock=yes", "inStock"},
+		{"inStock=TRUE", "inStock"},
+		{"sort=price", "sort"},
+		{"sort=PRICE_ASC", "sort"},
+		{"sort=name", "sort"},
+	} {
+		status, body := call(t, http.MethodGet, "/api/core/v1/stores/"+storeID+"/products?"+c.query, "", nil)
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
+			t.Errorf("%s: got %d %s, want 400 validation field %s", c.query, status, body, c.field)
+		}
+	}
+}
