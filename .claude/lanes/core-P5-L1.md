@@ -1,0 +1,20 @@
+# core-P5-L1 - core payments: payment method and status, payment route, events feed (OpenSpec change core-payments)
+Status: started
+## Doing
+2026-10-16: change `core-payments` written and validated (`--strict`, and `--all --strict`); four worker briefs (`core-P5-L1-t1.md` to `-t4.md`), sequential on the lane branch. Waiting for the manager to launch task 1.
+## Found
+- Change `openspec/changes/core-payments/`: deltas `orders` (ADDED "Customers pay cash or online", "Paying online needs a verified email", "Staff accept only paid online orders", "The payment service marks payments paid or refunded", "Services tail order events", "Event numbers follow commit order", "The demo order paid online"; MODIFIED "Transitions are recorded", "A service moves orders for a rider", "Orders name their rider", "Demo orders") and `platform` (MODIFIED "Error envelope", "Service tokens are configured", "Services reach the rider's admin routes", "The contract names the service routes"). No `accounts` delta: `emailVerified` exists, the rule that uses it is an orders requirement. design.md carries every hand-written change as a verbatim diff (chain checked with `git apply` on 8bee46d) plus three `openapi.json` scripts. No `docs/design/core-P5-L1.md`.
+- Spike in this worktree, tree restored before the commit: every core package green under `-race -count=1` after each task; `make gen postman` clean; `make test-web` passes after task 4 (all workspaces typecheck against the new `core.d.ts`).
+- Already on main before this lane: `orders.payment_method` (cod only), `Order.paymentMethod` required, `order_events.actor_type` and `OrderEvent.actorType` admitting `system`. So the type change for the apps is an enum widening plus optional fields: no fixture breaks.
+- Seed: `SS-DEMOAAAC` is `...0702` (cancelled); the paid demo order is `...0704` `SS-DEMOAAAE`, placed three days ago (oldest, so history order and today's dashboard counts hold), reference `fake_demo_0a01`.
+- `OrderCreate.paymentMethod` must not carry `default: cod`: openapi-typescript then makes it required and breaks `apps/web/src/orders.ts:147` (spiked, removed).
+- Folded in from the manager (relayed from platform-P5-L1): services are named per route (`OrService(staff, names...)`, `RequireService(names...)`); `payment` reaches `GET /admin/orders/{id}`, the status route (cancel only), the payment route and the feed, nothing else; `config_test` and the platform scenario use the two-entry Makefile value (`payment:dev-payment-service-token-dev-pay-00`, `payment:e2e-payment-service-token-e2e-pay-00`, read from the platform-P5-L1 worktree's Makefile). Briefs forbid the archived `check-wiring.sh`.
+- `seq` alone would let a tailing reader skip an event committed late; every event insert takes a transaction advisory lock first so `seq` follows commit order (`ponytail` ceiling: one lock for all stores).
+## Requests
+- to web (before task 4 merges): `apps/web/e2e/orders.spec.ts` line 126: `await expect(cards.filter({ hasNotText: 'SS-DEMOAAAE' })).toHaveCount(3)`.
+- to mobile (before task 4 merges): `apps/mobile/e2e/orders.spec.ts` line 110: `await expect(page.getByRole('link', { name: /^View order SS-DEMOAAA[BCD],/ })).toHaveCount(3)`.
+- to admin, web, mobile (information, for the Phase 5 app lanes): a payment change is an order event with `fromStatus` equal to `toStatus`, `actorType` `system`, `actorName` `payment` and a note `Payment paid, reference ...`; render it by its note, not as a status step (admin's sheet shows it as "Placed by payment" today). A timeout cancel is `actorType` `system`, `actorName` `payment timeout`.
+- to payment: demo payment `...0a01` uses gateway reference `fake_demo_0a01` for order `...0704`; a 409 from `POST /admin/orders/{id}/payment` means "read the order" (no idempotent replay); feed items with `fromStatus == toStatus` are payment events, skip them in the refund worker; the feed's `paymentStatus` is the order's current one.
+- to platform: the Makefile's two-entry `SHOPPERSTOP_CORE_SERVICE_TOKENS` values are pinned in core's `config_test.go`; tell core if they change.
+## Blockers
+None.
