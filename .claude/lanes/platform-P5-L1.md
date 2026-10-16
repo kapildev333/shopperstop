@@ -34,3 +34,14 @@ Verdict: approve (commits 490b4c7 test, 6762af2 feat). No findings.
 - Scenarios: each spec-delta scenario (URLs, skip line, committed-collection guard, routes, ids, environment variables, payment id fixed) has a test; the guard test passes before and after by design.
 - Test-first: 490b4c7 touches only the test file (21 pass / 6 fail per log, names match task 2.1); 6762af2 adds the code, env, tasks 2.1 to 2.3 ticked and the T2 log. Scope clean; no needless complexity.
 - Not re-run: make test-core and make test-rider (worker reports exit 0; the change cannot affect them beyond the environment file).
+## T3 review
+Verdict: approve (commit ddf619c), with three optional nits. No blocking findings.
+- Re-ran: `check-payment-wiring.sh` (all sections) `payment wiring check: ok`; archived `check-docs.sh`, `check-readme-mobile.sh`, `check-tooling.sh` each ok; ci.yml parses as YAML; `openspec validate --all --strict` 20 passed, 0 failed.
+- CI `payment` job mirrors `rider` line for line (postgres:16 service, initdb.sql via psql, `hashFiles('services/payment/go.mod')` guard on every step after checkout, setup-go from payment go.mod/go.sum, `make test-payment`); env name and URL match the Makefile's `SHOPPERSTOP_PAYMENT_TEST_DATABASE_URL`. The e2e job needs no change: it already loads all of initdb.sql (so `shopperstop_payment_e2e` exists), and `make e2e` seeds payment with `E2E_ENV` on :18082 with the fake gateway.
+- Docs vs tree: ports 8082/18082, targets (`payment`, `test-payment`, `-j6` dev, seed), env names, databases, skip behaviour and the Caddy route all match the Makefile, Caddyfile and initdb.sql; `customerToken`, `paymentBaseUrl`, `paymentId` exist in the Postman environment. The `grep shopperstop_payment deploy/initdb.sql` one-liner selects exactly the four statements.
+- config.yaml: the list reads correctly ("..., rider-app, mobile-app from Phase 4, and payment-service and payment-gateway-razorpay from Phase 5."); only the Oxford comma changed. Capabilities match PLAN.md Phase 5.
+- Scope: only the six listed files plus tasks.md ticks and the T3 log. No needless complexity.
+- Nit 1 (CLAUDE.md:36, "Agents:" paragraph): add the new gate. Edit: "Lanes run `make test-core`, `make test-rider`, `make test-web`" -> "Lanes run `make test-core`, `make test-rider`, `make test-payment`, `make test-web`".
+- Nit 2 (CLAUDE.md layout): `services/payment/` sits after `services/<name>/ every later service`, so the catch-all precedes the specific line. Move the `services/payment/` line to directly after the `services/rider/` line, before `services/<name>/`.
+- Nit 3 (README.md:122): "the ones the rider service calls" is no longer the whole set once payment calls core with its own token. Edit: "(the ones the rider and payment services call)".
+- Test-first: the check script is the test (design Decision 11); the red run is in the T3 log; single `feat:` commit as the brief says.
