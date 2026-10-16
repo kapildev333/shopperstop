@@ -1,5 +1,5 @@
 # core-P5-L1-t4 - demo order paid online (task 4 of core-payments)
-Status: ready
+Status: done (4.1 test 95e4671, 4.2 feat)
 ## Brief
 - LANE-ID: core-P5-L1 (task 4 of 4). Area: core. Role: worker. Starts after task 3 is committed on the branch.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L1. Branch: lane/core-P5-L1-payments. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
@@ -12,6 +12,9 @@ Status: ready
 - Gates (all pass before the feat commit): from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`: `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`. From the worktree root with `PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (`node_modules` installed; `npm ci` if missing): `make gen postman`, then `git status --short` clean after the commit; `make test-web`; `openspec validate --all --strict`.
 - Rules: tests only against the per-run schemas of `shopperstop_core_test`; no `docker`, no `make db`/`dev`/`seed`/`e2e`, no `core-admin migrate` or `seed-demo` against any database, and never run the archived Phase 3 `check-wiring.sh` (it starts a real rider on :8081 against the dev database). Run `openapi.json` scripts from a scratchpad file not named after a stdlib module; never commit them. Write your progress in this file only (not in `core-P5-L1.md`).
 ## Doing
+- 4.1 committed (95e4671): three red as briefed (orders 3 want 4; router total 3 want 4; summary ids 12 want 13).
+- 4.2 applied: seed.go and summary.go per design.md; no openapi.json change; postman 22/22; test-web green; openspec 20/20.
 ## Found
+- Postman orderId stays ...0703; environment file unchanged.
 ## Requests
 ## Blockers

@@ -31,5 +31,5 @@ Scope: `services/core/queries/order.sql` (`LockEvents`, `EventFeed`), sqlc outpu
 
 Scope: `services/core/internal/seed/{seed.go,seed_test.go,summary.go}`, this file (ticks). Scenarios: orders "The demo order paid online", "Demo orders" (both). Starts from `internal/seed/seed_test.go` `TestResetLoadsDemoOrders` (red: 3 orders, want 4), `TestDemoOrdersThroughTheRouter` (red: total 3) and `TestSummaryMatchesSeed` (red: 12 ids, want 13). Commits: `test: demo order SS-DEMOAAAE paid online`, `feat: seed SS-DEMOAAAE paid online`.
 
-- [ ] 4.1 `git apply --include='*_test.go'` the Task 4 block; run `go test -race -count=1 ./internal/seed` and see the three fail; commit.
-- [ ] 4.2 `git apply --exclude='*_test.go'` the Task 4 block; run the gates (no `openapi.json` change; `make gen postman` stays clean); tick 4.1 and 4.2; commit.
+- [x] 4.1 `git apply --include='*_test.go'` the Task 4 block; run `go test -race -count=1 ./internal/seed` and see the three fail; commit.
+- [x] 4.2 `git apply --exclude='*_test.go'` the Task 4 block; run the gates (no `openapi.json` change; `make gen postman` stays clean); tick 4.1 and 4.2; commit.
