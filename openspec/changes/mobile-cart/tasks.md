@@ -28,8 +28,8 @@ Scope: `src/cart-guest.ts`, `src/cart-guest.test.ts`.
 Scenarios: Guest line set and removed; Guest line clamped; Another store replaces the guest cart; Out of stock at another store keeps the guest cart; Guest totals follow the store's fees; Guest cart persisted and restored; Guest change wins over a late read; Guest cart with blocked storage.
 Starts from: `src/cart-guest.test.ts` test `guest line set and removed` (red: module missing), then the other scenario names, plus `mergeBodies keeps guest order`, `itemCount and mrpTotalCents`. Port `apps/web/src/guest-cart.ts` per `docs/design/mobile-P4-L3.md` "Module interfaces" and design.md Decision 2. Storage scenarios load the module inside `jest.isolateModules` (as `src/pincode.test.ts` does); a late read is a mocked `getItem` returning a promise the test resolves; blocked storage is `jest.spyOn(AsyncStorage, 'getItem' | 'setItem' | 'removeItem').mockRejectedValue(...)`. Import nothing from `src/cart.ts`.
 
-- [ ] 1.1 `test:` the scenarios, red
-- [ ] 1.2 `feat:` `src/cart-guest.ts`; gates green
+- [x] 1.1 `test:` the scenarios, red
+- [x] 1.2 `feat:` `src/cart-guest.ts`; gates green
 
 ## 2. Sheet footer (`src/ui/sheet.tsx`) — group A
 
