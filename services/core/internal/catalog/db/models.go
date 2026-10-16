@@ -141,13 +141,24 @@ type Category struct {
 }
 
 type Customer struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	Name         string
-	Phone        string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID            string
+	Email         string
+	PasswordHash  string
+	Name          string
+	Phone         string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	EmailVerified bool
+}
+
+type CustomerToken struct {
+	ID         string
+	TokenHash  []byte
+	CustomerID string
+	Purpose    string
+	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
 }
 
 type Order struct {

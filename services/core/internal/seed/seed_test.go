@@ -58,6 +58,7 @@ func addOtherRows(t *testing.T) {
 		`insert into addresses (customer_id, label, line1, pincode, is_default) values ('00000000-0000-4000-8000-000000000999', 'Home', 'Elsewhere', '110001', true)`,
 		`insert into staff_users (email, password_hash, name, role) values ('stray@example.com', 'x', 'Stray', 'admin')`,
 		`insert into sessions (token_hash, subject_type, subject_id, expires_at) values (decode('0102', 'hex'), 'customer', '00000000-0000-4000-8000-000000000999', now() + interval '1 day')`,
+		`insert into customer_tokens (token_hash, customer_id, purpose, expires_at) values (decode('0304', 'hex'), '00000000-0000-4000-8000-000000000999', 'reset_password', now() + interval '1 day')`,
 	}
 	for _, s := range stmts {
 		if _, err := testPool.Exec(context.Background(), s); err != nil {
@@ -115,6 +116,7 @@ func TestResetTwiceLeavesDemoAccounts(t *testing.T) {
 	assertCount(t, "customers", 1)
 	assertCount(t, "addresses", 2)
 	assertCount(t, "sessions", 0)
+	assertCount(t, "customer_tokens", 0)
 
 	var id, email, role string
 	var active bool
@@ -126,11 +128,12 @@ func TestResetTwiceLeavesDemoAccounts(t *testing.T) {
 	}
 
 	var cid, cemail, name, phone string
-	if err := testPool.QueryRow(ctx, "select id::text, email::text, name, phone from customers").Scan(&cid, &cemail, &name, &phone); err != nil {
+	var verified bool
+	if err := testPool.QueryRow(ctx, "select id::text, email::text, name, phone, email_verified from customers").Scan(&cid, &cemail, &name, &phone, &verified); err != nil {
 		t.Fatal(err)
 	}
-	if cid != customerID || cemail != "demo@shopperstop.local" || name != "Demo Customer" || phone != "+919800000000" {
-		t.Fatalf("customer row: %s %s %s %s, want the demo customer", cid, cemail, name, phone)
+	if cid != customerID || cemail != "demo@shopperstop.local" || name != "Demo Customer" || phone != "+919800000000" || !verified {
+		t.Fatalf("customer row: %s %s %s %s verified %v, want the demo customer, verified", cid, cemail, name, phone, verified)
 	}
 
 	rows, err := testPool.Query(ctx, "select id::text, customer_id::text, label, line1, pincode, is_default from addresses order by is_default desc")

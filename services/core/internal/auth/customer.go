@@ -20,10 +20,11 @@ import (
 
 // Customer is a customer as the API shows it. Phone is omitted when empty.
 type Customer struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Phone string `json:"phone,omitempty"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Phone         string `json:"phone,omitempty"`
+	EmailVerified bool   `json:"emailVerified"`
 }
 
 // customerSession is the body of register (201) and sign-in (200).
@@ -98,8 +99,8 @@ func checkName(name string) (string, error) {
 
 // refused answers 429 and reports true when the attempt is over the limit.
 // A nil limiter admits every attempt.
-func (a *Auth) refused(w http.ResponseWriter, r *http.Request, email string) bool {
-	if a.limit == nil || a.limit.Allow(email, clientIP(r, a.limit.TrustProxy)) {
+func refused(w http.ResponseWriter, r *http.Request, limit *Limiter, email string) bool {
+	if limit == nil || limit.Allow(email, clientIP(r, limit.TrustProxy)) {
 		return false
 	}
 	httpx.WriteError(w, r, &httpx.Error{Status: http.StatusTooManyRequests, Code: "rate_limited", Message: "too many attempts, try again later"})
@@ -130,7 +131,7 @@ func (a *Auth) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.limit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)
@@ -167,7 +168,7 @@ func (a *Auth) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusCreated, customerSession{
 		Token:    token,
-		Customer: Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone},
+		Customer: Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone, EmailVerified: row.EmailVerified},
 	})
 }
 
@@ -179,7 +180,7 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.limit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)
@@ -212,7 +213,7 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, customerSession{
 		Token:    token,
-		Customer: Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone},
+		Customer: Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone, EmailVerified: row.EmailVerified},
 	})
 }
 
@@ -244,7 +245,7 @@ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, pg.Map(err))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone})
+	httpx.WriteJSON(w, http.StatusOK, Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone, EmailVerified: row.EmailVerified})
 }
 
 // UpdateMe changes the fields present in the body and answers 200 with the
@@ -272,7 +273,7 @@ func (a *Auth) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, pg.Map(err))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone})
+	httpx.WriteJSON(w, http.StatusOK, Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone, EmailVerified: row.EmailVerified})
 }
 
 // CustomerByID answers the customer with this id, for placing an order; an
@@ -282,5 +283,5 @@ func CustomerByID(ctx context.Context, d db.DBTX, id string) (Customer, error) {
 	if err != nil {
 		return Customer{}, pg.Map(err)
 	}
-	return Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone}, nil
+	return Customer{ID: row.ID, Email: row.Email, Name: row.Name, Phone: row.Phone, EmailVerified: row.EmailVerified}, nil
 }
