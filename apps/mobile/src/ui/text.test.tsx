@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react-native'
 import { Text } from './text'
 import { colors } from './tokens'
 
-test('body text by default', () => {
-  render(<Text>Hello</Text>)
+test('body text by default', async () => {
+  await render(<Text>Hello</Text>)
   expect(screen.getByText('Hello')).toHaveStyle({
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
@@ -12,8 +12,8 @@ test('body text by default', () => {
   })
 })
 
-test('variant picks the family by weight', () => {
-  render(
+test('variant picks the family by weight', async () => {
+  await render(
     <>
       <Text variant="display">Big</Text>
       <Text variant="h3">Mid</Text>
@@ -23,8 +23,8 @@ test('variant picks the family by weight', () => {
   expect(screen.getByText('Mid')).toHaveStyle({ fontFamily: 'Inter_600SemiBold', fontSize: 16, lineHeight: 22 })
 })
 
-test('tone', () => {
-  render(
+test('tone', async () => {
+  await render(
     <>
       <Text tone="inkMuted">Muted</Text>
       <Text tone="danger">Bad</Text>
@@ -40,12 +40,12 @@ test('tone', () => {
   expect(screen.getByText('Action')).toHaveStyle({ color: colors.onAccent })
 })
 
-test('heading is announced', () => {
-  render(<Text variant="h1" heading={1}>Groceries in minutes</Text>)
+test('heading is announced', async () => {
+  await render(<Text variant="h1" heading={1}>Groceries in minutes</Text>)
   expect(screen.getByRole('heading', { name: 'Groceries in minutes' })).toBeTruthy()
 })
 
-test('tabular numbers', () => {
-  render(<Text tabular>1,234.50</Text>)
+test('tabular numbers', async () => {
+  await render(<Text tabular>1,234.50</Text>)
   expect(screen.getByText('1,234.50')).toHaveStyle({ fontVariant: ['tabular-nums'] })
 })
