@@ -38,7 +38,7 @@ Scenarios: Customer checkout address choice › Default address chosen, Another 
 Failing tests (`src/checkout.test.tsx`): "default address chosen", "another address chosen", "address not served", "choosing another address clears the refusal alert", "the address choice is named by its visible text" (all changed to radios). The `ImageTile` swap has no failing test: it changes no behaviour (design Decision 7); the suite is green before and after it.
 
 - [x] 3.1 The tests and e2e locators committed (`test: checkout address choice is a radio group`); lint and typecheck green; exactly those five red
-- [ ] 3.2 Decision 7, checkout part (`feat: checkout address choice from ui's ChoiceGroup`); all gates green
+- [x] 3.2 Decision 7, checkout part (`feat: checkout address choice from ui's ChoiceGroup`); all gates green
 - [ ] 3.3 Decision 7, `ImageTile` part (`refactor: ImageTile from @shopperstop/ui`); all gates green, no test changed
 
 ## 4. e2e against core and rider
