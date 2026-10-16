@@ -152,26 +152,21 @@ test('countdown after the promise', () => {
   expect(screen.queryByText(/Arriving in/)).toBeNull()
 })
 
-// The control (a placed order with its store known shows the countdown) makes the absence below mean something.
+// The control (a placed order shows the countdown) makes the absence below mean something.
 test('no countdown once finished', async () => {
   const placedAt = new Date(Date.now() - 3 * 60_000).toISOString()
+  // The control: a placed order shows the countdown from its own promise, no store read needed.
   seed({ status: 'placed', placedAt })
-  queryClient.setQueryData(keys.store(koramangala), store())
   renderAt(`/orders/${id}`)
   expect(await screen.findByText('Arriving in 7 minutes')).toBeInTheDocument()
 
-  cleanup()
-  seed({ status: 'delivered', placedAt })
-  renderAt(`/orders/${id}`)
-  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
-  expect(screen.queryByText(/Arriving in|Running late/)).toBeNull()
-
-  cleanup()
-  queryClient.removeQueries({ queryKey: keys.store(koramangala) })
-  seed({ status: 'placed', placedAt })
-  renderAt(`/orders/${id}`)
-  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
-  expect(screen.queryByText(/Arriving in|Running late/)).toBeNull()
+  for (const status of ['delivered', 'cancelled'] as const) {
+    cleanup()
+    seed({ status, placedAt })
+    renderAt(`/orders/${id}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+    expect(screen.queryByText(/Arriving in|Running late/)).toBeNull()
+  }
 })
 
 test('cancel offered while placed or accepted', async () => {
@@ -341,4 +336,35 @@ test('last seen kept current', async () => {
     vi.advanceTimersByTime(60_000)
   })
   expect(within(rider).getByText('Last seen 4 minutes ago')).toBeInTheDocument()
+})
+
+test('rider events name the rider', async () => {
+  const at = (minute: number) => `2026-10-13T10:${String(minute).padStart(2, '0')}:00.000Z`
+  seed({
+    status: 'delivered',
+    riderName: 'Asha',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: at(0) },
+      { toStatus: 'accepted', actorType: 'staff', createdAt: at(1) },
+      { toStatus: 'packing', actorType: 'staff', createdAt: at(2) },
+      { toStatus: 'ready', actorType: 'staff', createdAt: at(5) },
+      { toStatus: 'out_for_delivery', actorType: 'rider', actorName: 'Asha', createdAt: at(6) },
+      { toStatus: 'delivered', actorType: 'rider', actorName: 'Asha', createdAt: at(15) },
+    ],
+  })
+  renderAt(`/orders/${id}`)
+  const history = await screen.findByRole('region', { name: 'Status history' })
+  const entries = within(history).getAllByRole('listitem')
+  expect(entries[4]).toHaveTextContent('Out for delivery')
+  expect(within(entries[4]).getByText('Picked up by Asha')).toBeInTheDocument()
+  expect(entries[5]).toHaveTextContent('Delivered')
+  expect(within(entries[5]).getByText('Delivered by Asha')).toBeInTheDocument()
+  expect(within(history).getAllByText(/ by /)).toHaveLength(2)
+})
+
+test("countdown uses the order's promise", async () => {
+  seed({ status: 'placed', placedAt: new Date(Date.now() - 3 * 60_000).toISOString(), promisedMinutes: 20 })
+  queryClient.setQueryData(keys.store(koramangala), store({ promisedMinutes: 10 }))
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByText('Arriving in 17 minutes')).toBeInTheDocument()
 })
