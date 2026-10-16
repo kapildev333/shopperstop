@@ -71,6 +71,6 @@ Commits: `test: late first fix and pending pick up`, then `fix: location count f
 
 ## 6. Verification (manager)
 
-- [ ] 6.1 After task 2's commit: one `make e2e` (slot taken per D35) to see the rider suite red on missing page content only; note the failures in the area plan
-- [ ] 6.2 After tasks 1 to 5 and 7: `make test-web`, `make e2e` (admin, rider and web suites green), `openspec validate --all --strict`
-- [ ] 6.3 Phone-width walk (390 px) against core and rider with the demo seed on the dev servers: sign in as `rider1-koramangala@shopperstop.local`, see the banner store name, pick up an order made ready on the admin board, call link, cash line, location reaching the customer read, Mark delivered, History; compare with the Figma `Rider web` section
+- [x] 6.1 After task 2's commit: one `make e2e` (slot taken per D35) to see the rider suite red on missing page content only; note the failures in the area plan
+- [x] 6.2 After tasks 1 to 5 and 7: `make test-web`, `make e2e` (admin, rider and web suites green), `openspec validate --all --strict`
+- [x] 6.3 Phone-width walk (390 px) against core and rider with the demo seed on the dev servers: sign in as `rider1-koramangala@shopperstop.local`, see the banner store name, pick up an order made ready on the admin board, call link, cash line, location reaching the customer read, Mark delivered, History; compare with the Figma `Rider web` section
