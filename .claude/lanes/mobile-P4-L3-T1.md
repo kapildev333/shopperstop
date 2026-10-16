@@ -15,3 +15,8 @@ Task 1 done: `src/cart-guest.ts` and `src/cart-guest.test.ts` green (10/10). Tas
 - to mobile-P4-L3 (task 2 worker): the lint and typecheck gates stay red until the `footer` feat commit lands.
 ## Blockers
 None.
+
+## Follow-up 1.3 (2026-10-16, team lead decision ed228e7)
+- `clearGuestCart()` now always wins over a pending read: marks loaded, emits and removes the stored value even when the cart in memory is already empty. `set` keeps the no-op rule.
+- Red: `test: clear before the read settles wins (red)` (`0ed2ef4`), failed with the stored cart winning over the clear (1 failed, 10 passed).
+- Green after fix: `src/cart-guest.test.ts` 11 passed; eslint clean on both files; `npm run lint` and `npm run typecheck --workspace apps/mobile` clean; `npm run test --workspace apps/mobile -- --run` 69 suites, 249 tests passed; `npm run build --workspace apps/mobile` exit 0; `openspec validate mobile-cart --strict` valid.

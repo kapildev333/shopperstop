@@ -178,8 +178,12 @@ export function dispatchGuest(action: CartAction): void {
   void persist(next)
 }
 
+// Always wins over a read still pending, even when the cart in memory is already empty (no change to dispatch).
 export function clearGuestCart(): void {
-  dispatchGuest({ type: 'clear' })
+  cart = emptyCart
+  loaded = true
+  emit()
+  void persist(emptyCart)
 }
 
 // Server snapshot is not yet known: the static export renders in Node, where storage is not read.
