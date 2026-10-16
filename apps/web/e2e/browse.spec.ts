@@ -91,7 +91,7 @@ test('browse a category against core', async ({ page }) => {
   await expectNoViolations(page)
   await page.getByRole('group', { name: 'Subcategories' }).getByRole('button', { name: 'Milk' }).click()
   await expect(page).toHaveURL(/\/c\/milk$/)
-  await expect(page.getByRole('button', { name: 'Milk' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('group', { name: 'Subcategories' }).getByRole('button', { name: 'Milk' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('a[href^="/p/"]').first()).toBeVisible()
   await expectNoViolations(page)
 })
