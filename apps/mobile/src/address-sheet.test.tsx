@@ -15,7 +15,7 @@ test('address added', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Work' }))
   await fireEvent.changeText(screen.getByLabelText('House, flat, floor'), '1 Park St')
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
-  await fireEvent(screen.getByRole('switch', { name: 'Make this my default address' }), 'valueChange', true)
+  await fireEvent.press(screen.getByRole('switch', { name: 'Make this my default address' }))
   await fireEvent.press(screen.getByRole('button', { name: 'Save address' }))
 
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
@@ -35,7 +35,7 @@ test('edit sheet prefilled', async () => {
   expect(screen.getByRole('button', { name: 'Gym' })).toHaveProp('accessibilityState', { selected: true })
   expect(screen.getByLabelText('House, flat, floor')).toHaveProp('value', '5 Lake Rd')
   expect(screen.getByLabelText('Pincode')).toHaveProp('value', '560001')
-  expect(screen.getByRole('switch', { name: 'Make this my default address' })).toHaveProp('value', false)
+  expect(screen.getByRole('switch', { name: 'Make this my default address' })).toHaveProp('accessibilityState', { checked: false })
 
   await fireEvent.press(screen.getByRole('button', { name: 'Save address' }))
 
