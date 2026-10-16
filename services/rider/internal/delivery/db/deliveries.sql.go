@@ -53,10 +53,10 @@ func (q *Queries) CountRiderDeliveries(ctx context.Context, arg CountRiderDelive
 
 const createDelivery = `-- name: CreateDelivery :one
 insert into deliveries (order_id, order_number, store_id, rider_id, customer_name, customer_phone,
-    address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items)
+    address_line1, address_line2, address_pincode, total_cents, payment_method, payment_status, item_count, items)
 values ($1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10, $11, $12, $13)
-returning id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at
+    $7, $8, $9, $10, $11, $12, $13, $14)
+returning id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status
 `
 
 type CreateDeliveryParams struct {
@@ -71,6 +71,7 @@ type CreateDeliveryParams struct {
 	AddressPincode string
 	TotalCents     int64
 	PaymentMethod  string
+	PaymentStatus  string
 	ItemCount      int32
 	Items          []byte
 }
@@ -88,6 +89,7 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		arg.AddressPincode,
 		arg.TotalCents,
 		arg.PaymentMethod,
+		arg.PaymentStatus,
 		arg.ItemCount,
 		arg.Items,
 	)
@@ -112,12 +114,13 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		&i.DeliveredAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
 
 const lockRiderDelivery = `-- name: LockRiderDelivery :one
-select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at from deliveries where id = $1 and rider_id = $2 for update
+select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status from deliveries where id = $1 and rider_id = $2 for update
 `
 
 type LockRiderDeliveryParams struct {
@@ -148,12 +151,13 @@ func (q *Queries) LockRiderDelivery(ctx context.Context, arg LockRiderDeliveryPa
 		&i.DeliveredAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
 
 const markDelivered = `-- name: MarkDelivered :one
-update deliveries set status = 'delivered', delivered_at = now() where id = $1 returning id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at
+update deliveries set status = 'delivered', delivered_at = now() where id = $1 returning id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status
 `
 
 func (q *Queries) MarkDelivered(ctx context.Context, id string) (Delivery, error) {
@@ -179,6 +183,7 @@ func (q *Queries) MarkDelivered(ctx context.Context, id string) (Delivery, error
 		&i.DeliveredAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
@@ -214,7 +219,7 @@ func (q *Queries) OrderDelivery(ctx context.Context, orderID string) (OrderDeliv
 }
 
 const riderDeliveries = `-- name: RiderDeliveries :many
-select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at from deliveries where rider_id = $1 and status = $2
+select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status from deliveries where rider_id = $1 and status = $2
 order by assigned_at desc, id limit $3 offset $4
 `
 
@@ -259,6 +264,7 @@ func (q *Queries) RiderDeliveries(ctx context.Context, arg RiderDeliveriesParams
 			&i.DeliveredAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PaymentStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -271,7 +277,7 @@ func (q *Queries) RiderDeliveries(ctx context.Context, arg RiderDeliveriesParams
 }
 
 const riderDelivery = `-- name: RiderDelivery :one
-select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at from deliveries where id = $1 and rider_id = $2
+select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status from deliveries where id = $1 and rider_id = $2
 `
 
 type RiderDeliveryParams struct {
@@ -302,6 +308,7 @@ func (q *Queries) RiderDelivery(ctx context.Context, arg RiderDeliveryParams) (D
 		&i.DeliveredAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }

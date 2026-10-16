@@ -357,6 +357,16 @@ export interface components {
             /** @description Units carried: the sum of the line quantities. */
             itemCount: number;
             totalCents: number;
+            /**
+             * @description Core's payment method: cod is cash on delivery, the rider collects the total; online is paid through the payment service.
+             * @enum {string}
+             */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, omitted for cash: core's payment status, read live.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
             pincode: string;
             customerName: string;
         };
@@ -400,8 +410,16 @@ export interface components {
             customerPhone?: string;
             address: components["schemas"]["DeliveryAddress"];
             totalCents: number;
-            /** @description cod */
-            paymentMethod: string;
+            /**
+             * @description Core's payment method at the claim: cod is cash on delivery, the rider collects the total; online is paid through the payment service.
+             * @enum {string}
+             */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, omitted for cash: core's payment status at the claim. Core freezes it from ready on (a paid order cannot be cancelled once packing), so it stays paid.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
             /** @description Units carried: the sum of the line quantities. */
             itemCount: number;
             items: components["schemas"]["DeliveryItem"][];
@@ -1169,6 +1187,18 @@ export interface operations {
                      *           "placedAt": "2026-10-15T09:00:00Z",
                      *           "itemCount": 3,
                      *           "totalCents": 33900,
+                     *           "paymentMethod": "cod",
+                     *           "pincode": "560034",
+                     *           "customerName": "Demo Customer"
+                     *         },
+                     *         {
+                     *           "orderId": "00000000-0000-4000-8000-000000000704",
+                     *           "number": "SS-DEMOAAAE",
+                     *           "placedAt": "2026-10-15T09:10:00Z",
+                     *           "itemCount": 2,
+                     *           "totalCents": 21800,
+                     *           "paymentMethod": "online",
+                     *           "paymentStatus": "paid",
                      *           "pincode": "560034",
                      *           "customerName": "Demo Customer"
                      *         }

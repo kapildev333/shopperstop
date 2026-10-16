@@ -1,8 +1,8 @@
 -- name: CreateDelivery :one
 insert into deliveries (order_id, order_number, store_id, rider_id, customer_name, customer_phone,
-    address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items)
+    address_line1, address_line2, address_pincode, total_cents, payment_method, payment_status, item_count, items)
 values (@order_id, @order_number, @store_id, @rider_id, @customer_name, @customer_phone,
-    @address_line1, @address_line2, @address_pincode, @total_cents, @payment_method, @item_count, @items)
+    @address_line1, @address_line2, @address_pincode, @total_cents, @payment_method, @payment_status, @item_count, @items)
 returning *;
 
 -- name: ClaimedOrders :many

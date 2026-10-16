@@ -1,5 +1,5 @@
 # rider-P5-L1-T1 - rider service passes core's payment through (task 1 of rider-collect-cash)
-Status: test commit in progress (red confirmed)
+Status: done (test 5a39265, feat in this lane)
 
 ## Brief
 - LANE-ID: rider-P5-L1 (task T1). Area: `rider`.
@@ -27,6 +27,15 @@ vet: internal/app/deliveries_test.go:56:21: o.PaymentStatus undefined (type core
     migrate_test.go:220: applied [0001_init 0002_riders 0003_deliveries], want [0001_init 0002_riders 0003_deliveries 0004_delivery_payment_status]
 ```
 ## Green run
+Applied "Task 1: code" (design.md, unchanged by the concurrent commit 458b1b6). `make gen postman` changed exactly the five generated files plus the scope files. Stable on a second run.
+
 ## Gates
+- `GOFLAGS=-count=1 make test-rider`: exit 0; every package `ok` (app 27.4s, migrate 3.3s, auth, core, seed, cmd/rider, cmd/rider-admin and others; no FAIL).
+- `make gen postman` after the commit: `git status --short` clean (see Found for the repeat run).
+- `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
+
 ## Found
+- Branch moved while working: `458b1b6` (team lead, docs and the rider-service spec delta, not in code scope) landed on this branch between my test and feat steps. Stacked on it; no code scope overlap.
+
 ## Blockers
+None.
