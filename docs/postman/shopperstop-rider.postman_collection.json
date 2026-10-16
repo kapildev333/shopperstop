@@ -2275,7 +2275,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n      \"number\": \"SS-DEMOAAAB\",\n      \"placedAt\": \"2026-10-15T09:00:00Z\",\n      \"itemCount\": 3,\n      \"totalCents\": 33900,\n      \"pincode\": \"560034\",\n      \"customerName\": \"Demo Customer\"\n    }\n  ]\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n      \"number\": \"SS-DEMOAAAB\",\n      \"placedAt\": \"2026-10-15T09:00:00Z\",\n      \"itemCount\": 3,\n      \"totalCents\": 33900,\n      \"paymentMethod\": \"cod\",\n      \"pincode\": \"560034\",\n      \"customerName\": \"Demo Customer\"\n    },\n    {\n      \"orderId\": \"00000000-0000-4000-8000-000000000704\",\n      \"number\": \"SS-DEMOAAAE\",\n      \"placedAt\": \"2026-10-15T09:10:00Z\",\n      \"itemCount\": 2,\n      \"totalCents\": 21800,\n      \"paymentMethod\": \"online\",\n      \"paymentStatus\": \"paid\",\n      \"pincode\": \"560034\",\n      \"customerName\": \"Demo Customer\"\n    }\n  ]\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },

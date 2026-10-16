@@ -66,7 +66,7 @@ The rider service SHALL write one `log/slog` JSON line per request with the meth
 
 #### Scenario: Second run applies nothing
 - **WHEN** migrations are applied twice to an empty schema
-- **THEN** the first run applies `0001_init` and `0002_riders` and the second applies none
+- **THEN** the first run applies `0001_init`, `0002_riders`, `0003_deliveries` and `0004_delivery_payment_status` in that order and the second applies none
 
 #### Scenario: A failed file leaves no trace
 - **WHEN** a migration file fails halfway

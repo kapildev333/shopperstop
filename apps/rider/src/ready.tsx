@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, StatusMessage, buttonClass } from '@shopperstop/ui'
+import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, StatusMessage, buttonClass } from '@shopperstop/ui'
 import { useSince } from '@shopperstop/ui/app'
 import { deliveryQuery, rider, type ApiError, type Delivery, type ReadyOrder } from './api'
 import { itemCount } from './format'
@@ -45,7 +45,10 @@ function ReadyCard({ order, onPick }: { order: ReadyOrder; onPick: () => void })
           Pincode <span className="tabular-nums">{order.pincode}</span>
         </span>
       </div>
-      <Price cents={order.totalCents} className="text-h3" />
+      <div className="flex items-center gap-2">
+        <Price cents={order.totalCents} className="text-h3" />
+        {order.paymentMethod === 'cod' && <Badge>Cash</Badge>}
+      </div>
       <Button size="lg" className="w-full" aria-label={`Pick up ${order.number}`} onClick={onPick}>
         Pick up
       </Button>

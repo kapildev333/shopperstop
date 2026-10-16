@@ -79,12 +79,14 @@ test('customer to rider to delivered', async ({ request, browser }) => {
     await expect(phone.getByRole('heading', { level: 1, name: 'Ready to pick up', exact: true })).toBeVisible()
     const card = phone.getByRole('list', { name: 'Ready orders', exact: true }).getByRole('listitem').filter({ hasText: number })
     await expect(card).toBeVisible({ timeout: 15_000 })
+    await expect(card.getByText('Cash', { exact: true })).toBeVisible()
     await card.getByRole('button', { name: `Pick up ${number}`, exact: true }).click()
     const pickUp = phone.getByRole('dialog', { name: `Pick up ${number}?`, exact: true })
     await expect(pickUp).toBeVisible()
     await expectNoViolations(phone)
     await pickUp.getByRole('button', { name: 'Pick up', exact: true }).click()
     await expect(phone.getByRole('heading', { level: 1, name: `Order ${number}`, exact: true })).toBeVisible()
+    await expect(phone.getByRole('status').filter({ hasText: /^Collect ₹[\d,]+(\.\d{2})? in cash$/ })).toBeVisible()
     await expectNoViolations(phone)
 
     // The tracking page shows the pick up, and core and the rider service name the rider.

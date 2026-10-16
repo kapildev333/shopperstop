@@ -6,7 +6,7 @@ Deliveries in the rider service (`services/rider`): a rider at a store sees core
 ## Requirements
 
 ### Requirement: Riders see their store's ready orders
-`GET /me/ready-orders` SHALL answer `{items}`: the orders core holds as `ready` at the signed-in rider's store, without those that have a delivery, oldest `placedAt` first, each as `{orderId, number, placedAt, itemCount, totalCents, pincode, customerName}` where `itemCount` is the sum of the line quantities. Another store's orders SHALL never appear.
+`GET /me/ready-orders` SHALL answer `{items}`: the orders core holds as `ready` at the signed-in rider's store, without those that have a delivery, oldest `placedAt` first, each as `{orderId, number, placedAt, itemCount, totalCents, paymentMethod, paymentStatus?, pincode, customerName}` where `itemCount` is the sum of the line quantities, `paymentMethod` is core's (`cod` or `online`) and `paymentStatus` is core's, present only when core's order has one. Another store's orders SHALL never appear.
 
 #### Scenario: Ready orders of the rider's store only
 - **WHEN** core holds a ready order at the rider's store, a ready order at another store and a packing order at the rider's store
@@ -15,6 +15,10 @@ Deliveries in the rider service (`services/rider`): a rider at a store sees core
 #### Scenario: A claimed order leaves the list
 - **WHEN** a ready order already has a delivery
 - **THEN** it is not in the list
+
+#### Scenario: Payment passes through
+- **WHEN** core holds two ready orders at the rider's store, a cash order and then an online order whose payment is `paid`
+- **THEN** the first item has `paymentMethod` `cod` and no `paymentStatus` member, and the second has `paymentMethod` `online` and `paymentStatus` `paid`
 
 ### Requirement: Riders claim a ready order
 `POST /me/deliveries {orderId}` SHALL, in one transaction, insert an `assigned` delivery holding snapshots of core's order, then move the order to `out_for_delivery` in core with the rider as actor, and answer 201 `Delivery`. An `orderId` that is not a uuid SHALL be 400 on `orderId`; an order core does not know, or of another store, SHALL be 404 with no core status call.
@@ -26,6 +30,13 @@ Deliveries in the rider service (`services/rider`): a rider at a store sees core
 #### Scenario: Another store's order
 - **WHEN** a rider claims a ready order of another store
 - **THEN** the answer is 404 `not_found`, no delivery exists and core received no status change
+
+### Requirement: A claim keeps the order's payment
+The delivery a claim creates SHALL hold core's payment method and, when core's order has one, its payment status, and every `Delivery` answer SHALL carry `paymentMethod` and, when the delivery holds one, `paymentStatus`.
+
+#### Scenario: Claim keeps the payment
+- **WHEN** a rider claims a ready online order whose payment core holds as `paid`, reads that delivery, then claims a ready cash order
+- **THEN** the first claim's answer and the read both carry `paymentMethod` `online` and `paymentStatus` `paid`, and the cash claim's answer carries `paymentMethod` `cod` and no `paymentStatus` member
 
 ### Requirement: Claims are exclusive and refusals leave nothing
 An order SHALL have at most one delivery: a claim of an order that has one SHALL be 409 `conflict`. When core refuses the move (409) or does not find the order (404), or fails, the delivery SHALL be rolled back and the answer SHALL be 409 `conflict`, 404 `not_found` or 502 `internal`.

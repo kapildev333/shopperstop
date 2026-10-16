@@ -50,7 +50,8 @@ type Delivery struct {
 	CustomerPhone string     `json:"customerPhone,omitempty"`
 	Address       Address    `json:"address"`
 	TotalCents    int64      `json:"totalCents"`
-	PaymentMethod string     `json:"paymentMethod"`
+	PaymentMethod string     `json:"paymentMethod"`           // cod | online
+	PaymentStatus string     `json:"paymentStatus,omitempty"` // online only, as core held it at the claim
 	ItemCount     int        `json:"itemCount"`
 	Items         []Item     `json:"items"`
 	AssignedAt    time.Time  `json:"assignedAt"`
@@ -59,13 +60,15 @@ type Delivery struct {
 
 // ReadyOrder is one ready order of the rider's store that no delivery holds.
 type ReadyOrder struct {
-	OrderID      string    `json:"orderId"`
-	Number       string    `json:"number"`
-	PlacedAt     time.Time `json:"placedAt"`
-	ItemCount    int       `json:"itemCount"`
-	TotalCents   int64     `json:"totalCents"`
-	Pincode      string    `json:"pincode"`
-	CustomerName string    `json:"customerName"`
+	OrderID       string    `json:"orderId"`
+	Number        string    `json:"number"`
+	PlacedAt      time.Time `json:"placedAt"`
+	ItemCount     int       `json:"itemCount"`
+	TotalCents    int64     `json:"totalCents"`
+	PaymentMethod string    `json:"paymentMethod"`
+	PaymentStatus string    `json:"paymentStatus,omitempty"`
+	Pincode       string    `json:"pincode"`
+	CustomerName  string    `json:"customerName"`
 }
 
 var errClaimed = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "order already claimed"}
@@ -126,7 +129,8 @@ func readyView(o core.Order) ReadyOrder {
 	}
 	return ReadyOrder{
 		OrderID: o.ID, Number: o.Number, PlacedAt: o.PlacedAt, ItemCount: units,
-		TotalCents: o.TotalCents, Pincode: o.Address.Pincode, CustomerName: o.CustomerName,
+		TotalCents: o.TotalCents, PaymentMethod: o.PaymentMethod, PaymentStatus: o.PaymentStatus,
+		Pincode: o.Address.Pincode, CustomerName: o.CustomerName,
 	}
 }
 
@@ -205,7 +209,8 @@ func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order) 
 			OrderID: o.ID, OrderNumber: o.Number, StoreID: o.StoreID, RiderID: rider.ID,
 			CustomerName: o.CustomerName, CustomerPhone: o.CustomerPhone,
 			AddressLine1: o.Address.Line1, AddressLine2: o.Address.Line2, AddressPincode: o.Address.Pincode,
-			TotalCents: o.TotalCents, PaymentMethod: o.PaymentMethod, ItemCount: int32(units), Items: raw,
+			TotalCents: o.TotalCents, PaymentMethod: o.PaymentMethod, PaymentStatus: o.PaymentStatus,
+			ItemCount: int32(units), Items: raw,
 		})
 		if err != nil {
 			return err
@@ -228,8 +233,8 @@ func toDelivery(row db.Delivery) (Delivery, error) {
 		ID: row.ID, OrderID: row.OrderID, OrderNumber: row.OrderNumber, StoreID: row.StoreID,
 		Status: string(row.Status), CustomerName: row.CustomerName, CustomerPhone: row.CustomerPhone,
 		Address:    Address{Line1: row.AddressLine1, Line2: row.AddressLine2, Pincode: row.AddressPincode},
-		TotalCents: row.TotalCents, PaymentMethod: row.PaymentMethod, ItemCount: int(row.ItemCount),
-		Items: items, AssignedAt: row.AssignedAt.Time,
+		TotalCents: row.TotalCents, PaymentMethod: row.PaymentMethod, PaymentStatus: row.PaymentStatus,
+		ItemCount: int(row.ItemCount), Items: items, AssignedAt: row.AssignedAt.Time,
 	}
 	if row.DeliveredAt.Valid {
 		t := row.DeliveredAt.Time
