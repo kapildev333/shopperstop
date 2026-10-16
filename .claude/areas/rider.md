@@ -3,12 +3,12 @@ Scope: `services/rider/`, `apps/rider/` (D29: one area, one manager, one e2e sui
 Depends on: platform (rider databases, Makefile targets and e2e env, Caddy, CI: platform-P3-L1), core (service tokens and `actor` on the status route: core-P3-L1), ui (`@shopperstop/ui`, and `packages/ui/src/api/rider.d.ts` from ui-P3-L2 for the app)
 Spec: PLAN.md Phase 3 and D29 to D35; Spec 1 §4 (stack), §5 (OpenSpec, TDD), §8 and §10 (UI, binding for `apps/rider`), §11 (API documentation); Spec 2 §4 (status machine, "the rider service will later own out_for_delivery to delivered"), §5 (bearer sessions), §6 (envelope, lists, errors), §9 (service layout), §10 (config), §12 (logging), §13 (testing). The work package below is the brainstorm input; the team leads turn it into OpenSpec changes that seed the capabilities `rider-service`, `deliveries` and `rider-app` (D4).
 ## Doing
-Ready to start (2026-10-15): platform-P3-L1 is on `origin/main` (#193): Makefile `rider`, `rider-app`, `test-rider`, `seed`, `dev`, `e2e`, `gen`, `postman` all know the rider and skip while it is absent; `deploy/initdb.sql` has the rider role; the running container has the databases (D33). Start rider-P3-L1 from the package below.
+rider-P3-L1 running (2026-10-15): worktree `.worktrees/rider-P3-L1`, branch `lane/rider-P3-L1-service-foundation`, team lead proposing `rider-service-foundation`. Not running `make e2e`. Ready since platform-P3-L1 (#193): Makefile targets, `initdb.sql` role, databases in the running container (D33).
 
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
-| rider-P3-L1 | `rider-service-foundation` | `services/rider/`, `openspec/changes/rider-service-foundation/` | not started |
+| rider-P3-L1 | `rider-service-foundation` | `services/rider/`, `openspec/changes/rider-service-foundation/` | started 2026-10-15: team lead proposing |
 | rider-P3-L2 | `rider-deliveries` | `services/rider/`, `openspec/changes/rider-deliveries/` | waits on core-P3-L1 and L1 |
 | rider-P3-L3 | `rider-app` | `apps/rider/`, `openspec/changes/rider-app/` | waits on L2 and ui-P3-L1 |
 
