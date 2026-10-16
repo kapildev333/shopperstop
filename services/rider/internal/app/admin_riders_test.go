@@ -268,6 +268,22 @@ func TestCreateRiderRefusalsNameTheField(t *testing.T) {
 	}
 }
 
+// TestCreateRiderChecksFieldsBeforeCore: a bad email is refused on email before
+// core is asked about the store, so an unknown storeId does not reach core.
+func TestCreateRiderChecksFieldsBeforeCore(t *testing.T) {
+	before := coreFake.Calls("GET /api/core/v1/stores/{id}")
+	status, body := callAt(t, srv.URL, http.MethodPost, ridersPath, adminToken, map[string]string{
+		"storeId": unknownUUID, "email": "not-an-email", "name": "R", "password": testPassword,
+	})
+	e := expectError(t, "bad email, unknown store", status, body, http.StatusBadRequest, "validation")
+	if e.Error.Field != "email" {
+		t.Fatalf("names field %q, want email", e.Error.Field)
+	}
+	if after := coreFake.Calls("GET /api/core/v1/stores/{id}"); after != before {
+		t.Fatalf("core store route called %d times during the refused create, want none", after-before)
+	}
+}
+
 func TestStoreStaffCreatesOnlyForOwnStore(t *testing.T) {
 	email := uniqueEmail(t)
 	status, body := callAt(t, srv.URL, http.MethodPost, ridersPath, staffAToken, map[string]string{
