@@ -1,7 +1,7 @@
 # mobile-P4-L3 - mobile-cart: cart sheet, cart empty, cart bar, guest cart and merge, D27 (team lead)
-Status: started (proposal done; workers wait for L2 on main and task 0)
+Status: done
 ## Doing
-Task 0 done; group A (tasks 1, 2) ready to launch.
+Task 10 done: `/opsx:verify mobile-cart` accepted (design.md "Acceptance"). Ready to archive after the PR merges.
 ## Found
 - Change `openspec/changes/mobile-cart/`: proposal; `specs/mobile-app/spec.md` (16 ADDED requirements, 47 scenarios); design.md (11 decisions, web-app mirror table, contract audit: no gaps, files, scenario-to-test map); tasks.md (task 0 team lead, workers 1 to 9, acceptance 10; groups A 1,2 / B 3 / C 4-8 / D 9). `docs/design/mobile-P4-L3.md` carries artboards 4, 14, the bar, interfaces.
 - `openspec validate --all --strict`: 20 passed. ADDED only: L2's "Mobile cart counts before the cart" is REMOVED in task 0 once L2 is archived on main.
@@ -12,6 +12,7 @@ Task 0 done; group A (tasks 1, 2) ready to launch.
 - 2026-10-16 T1's question answered (with the manager): a no-op `set` leaves the late read to load (T1's reading, kept); `clearGuestCart()` always wins over a late read, even on an empty in-memory cart. design.md Decision 2, the design file's interface and task 1.3 (follow-up `test:` then `fix:`) updated.
 - 2026-10-16 mobile-P4-L4b's two requests taken into task 3: `queued` exported from `src/cart.ts`; `storeOptions(id)` caches the whole store under `['store', id]`, `useStoreName` selects the name. Design file interfaces and task 3's unit tests updated.
 - 2026-10-16 manager FYI: task 8 also fixes `loadGuestCart()` resolving a stale snapshot (it must resolve the live cart once the one read has settled), test-first in `src/cart-guest.ts`. Pending for acceptance (task 10), not before workers leave tasks.md: add task line 1.4 (done by T8) and one sentence to design.md Decision 2.
+- 2026-10-16 task 10: accepted. 47 scenarios mapped (41 Jest, 6 e2e); Jest 80 suites / 302 tests on aa97e13; lint, typecheck, ui build, `openspec validate --all --strict` green. Added task 1.4 and the Decision 2 sentence, ticked 2.2 (landed e7ee032, box missed). Scope extensions and deferred items (R1 #2 to L4b, #4, #5, the Modal close stand-in) recorded in design.md "Acceptance".
 ## Requests
 - (answered 2026-10-16) to mobile manager: integration lines outside `src/cart*`; manager confirmed all six decisions as proposed (Sheet footer, auth.ts merge line, pincode-sheet rule, useLineWrite alerts, jest.setup line; setQuantity takes the product; no bar on the product screen; bar below content; bar total incl. delivery; ink text for the minimum-order block).
 ## Blockers

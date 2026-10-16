@@ -31,6 +31,7 @@ Starts from: `src/cart-guest.test.ts` test `guest line set and removed` (red: mo
 - [x] 1.1 `test:` the scenarios, red
 - [x] 1.2 `feat:` `src/cart-guest.ts`; gates green
 - [x] 1.3 Follow-up (manager decision on T1's question, design.md Decision 2): `test:` `clear before the read settles wins` in `src/cart-guest.test.ts` (stored cart holds P, read pending, `clearGuestCart()` on the empty in-memory cart, then resolve the read: the cart is empty and async storage has no `shopperstop:cart`), red; then `fix:` `clearGuestCart()` marks loaded, emits and removes the stored value even when the reducer returns the same empty cart; the no-op rule for `set` stays; gates green
+- [x] 1.4 Follow-up taken by task 8's worker (manager-extended scope): `test:` `a later load resolves the live cart, not the first read` (c694725), then `fix:` `loadGuestCart()` resolves the current cart once the single read has settled, not the snapshot of that read (b77b459); task 6's merge and task 8's store-change check compare against the live cart
 
 ## 2. Sheet footer (`src/ui/sheet.tsx`) — group A
 
@@ -39,7 +40,7 @@ Scenario: none directly (design.md Decision 5; used by Mobile cart checkout and 
 Starts from: `src/ui/sheet.test.tsx` new test `footer stays below the scroll` (render `<Sheet open title="My cart" footer={<Text>Proceed</Text>}>` with content: "Proceed" is shown, and it is not inside the `ScrollView`: walk `.parent` from the "Proceed" text and find no element whose type is `RCTScrollView`; the content text is inside it). Add `footer?: ReactNode` rendered after the `ScrollView`; nothing else changes; every existing sheet test stays green unchanged.
 
 - [x] 2.1 `test:` red
-- [ ] 2.2 `feat:` the prop; gates green
+- [x] 2.2 `feat:` the prop; gates green (e7ee032; ticked at acceptance)
 
 ## 3. Cart hooks and writes (`src/cart.ts`) — group B, after 1
 
@@ -110,4 +111,4 @@ Starts from: `e2e/cart.spec.ts` with the six scenario names, committed red befor
 
 ## 10. Acceptance (team lead)
 
-- [ ] 10.1 `/opsx:verify mobile-cart`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run
+- [x] 10.1 `/opsx:verify mobile-cart`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run

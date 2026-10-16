@@ -41,7 +41,7 @@ Workers cannot open the canvas: `docs/design/mobile-P4-L3.md` carries the artboa
 
 ### 2. Guest storage read once, asynchronously
 
-As `src/pincode.ts`: module state with `useSyncExternalStore`; the first `useGuestCart()` (from an effect) or `loadGuestCart()` starts the one read; a `set` that changes the cart before the read settles marks it loaded and the read's result is dropped; a `set` that changes nothing (for example 0 for a product not in the cart) leaves the read to load the stored cart; `clearGuestCart()` always wins, even on an empty in-memory cart: it marks the cart loaded, emits and removes the stored value, because a clear is the customer's decision (store change confirmed, merge done) and a late read must not bring the cart back (manager, 2026-10-16, on T1's question). Every storage call is in `try`/`catch` or `.catch`. The static render in Node never reads (the read starts from an effect). On the web export async storage is `localStorage` under the same key, which the e2e suite reads.
+As `src/pincode.ts`: module state with `useSyncExternalStore`; the first `useGuestCart()` (from an effect) or `loadGuestCart()` starts the one read; a `set` that changes the cart before the read settles marks it loaded and the read's result is dropped; a `set` that changes nothing (for example 0 for a product not in the cart) leaves the read to load the stored cart; `clearGuestCart()` always wins, even on an empty in-memory cart: it marks the cart loaded, emits and removes the stored value, because a clear is the customer's decision (store change confirmed, merge done) and a late read must not bring the cart back (manager, 2026-10-16, on T1's question). `loadGuestCart()` resolves the live cart once its single read has settled, never the snapshot that read produced, so later callers (the merge, the store-change check) compare against changes made since (found and fixed in task 8, task line 1.4). Every storage call is in `try`/`catch` or `.catch`. The static render in Node never reads (the read starts from an effect). On the web export async storage is `localStorage` under the same key, which the e2e suite reads.
 
 ### 3. `setQuantity` takes the product
 
@@ -103,12 +103,29 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L3.md` and th
 | Proceed signed in | `src/cart-sheet-proceed-signed-in.test.tsx`: `proceed signed in` | 5 |
 | Merge bodies in guest order; Guest cart discarded after merge; Merge dropped when the session changed | `src/cart-merge.test.ts`: the scenario names | 6 |
 | Server cart emptied on a store change; Emptying the server cart fails | `src/cart-store-change.test.tsx`: the scenario names | 6 |
-| Bar follows the cart; Replaced notice names the old store (bar) | `src/cart-bar.test.tsx`: `bar follows the cart`, `bar shows the replaced notice` | 7 |
-| Bar on the browsing screens | `src/cart-bar-screens.test.tsx`: `bar on the browsing screens` | 7 |
+| Bar follows the cart; Replaced notice names the old store (bar half); Replaced notice without the old store (bar half) | `src/cart-bar.test.tsx`: `bar follows the cart`, `bar shows the replaced notice`, `bar names another store while the old one is unknown` | 7 |
+| Bar on the browsing screens | `src/cart-bar-screens.test.tsx`: `bar on the home tab`, `bar on the categories tab`, `bar on a category screen`, `bar on search`, `no bar on the product screen` (one test per screen) | 7 |
 | Failed lookup keeps the cart's pincode; Unread server cart is fetched before comparing; Failed lookup with an empty cart | `src/cart-pincode-check.test.tsx`: the scenario names | 8 |
 | Guest cart against core; Quick taps against core; Merge at sign-in against core; Clamp against core; Server store change against core; Replaced notice against core | `e2e/cart.spec.ts`: the scenario names | 9 |
 
 Task 2 (`Sheet` footer) and the summary and clear tests of task 3 (`src/cart.test.ts`) cover no scenario directly; tasks.md names them.
+
+## Acceptance (team lead, 2026-10-16)
+
+`/opsx:verify mobile-cart`: **accepted.** Every scenario of the delta maps to a passing named test (table above; Jest run on the merged branch aa97e13: 80 suites, 302 tests passed; the 6 e2e scenarios are the six `test(...)` names in `e2e/cart.spec.ts`, green in two `make e2e` runs reported by task 9 and verified by the manager: admin 15, mobile 21, rider 7, web 45). Every task is ticked. Gates re-run: `packages/ui` build, mobile lint, typecheck and test green; `openspec validate --all --strict` green.
+
+Scope extensions, all inside `apps/mobile/`, accepted:
+- `src/catalog-card.test.tsx`: wraps the card in `QueryClientProvider` (task 3; `useQuantity` now reads queries).
+- `src/pincode-sheet.tsx` and the new `src/pincode-store-change-close.test.tsx` (R1 fix): the store change dialog keeps its last change while it closes, so the closing dialog neither blanks nor stores the wrong pincode.
+- `src/app/search.tsx` (R1 fix, beyond the mount line): the result count reads in `ink` for contrast on `canvas`.
+- `src/cart-guest.ts` by task 8's worker: `loadGuestCart()` resolves the live cart (task line 1.4, Decision 2).
+- R1 findings 1 and 3 fixed in this lane: sheet lines count their own cart (`useLineQuantity`), one `ReplacedNotice` for the bar and the sheet.
+
+Deferred, named:
+- R1 #2 (a guest cart priced without a resolved store has zero fees and minimum, so Proceed can show below the store's minimum): handled in mobile-P4-L4b (checkout re-reads the store and core re-checks at placement).
+- R1 #4: three "overlapping act() calls" console errors in `src/cart-write-failure.test.tsx`; not failing; clean up when that file is next touched.
+- R1 #5: a guest change in the milliseconds before the one storage read settles drops the stored lines (Decision 2's rule); accepted.
+- The Modal close in `src/pincode-store-change-close.test.tsx` is a stand-in (the test calls the dialog's close path directly; RNTL cannot run the native `Modal` fade-out); the e2e store-change scenario covers the real close on the web export.
 
 ## Risks / Trade-offs
 
