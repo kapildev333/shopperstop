@@ -16,6 +16,11 @@ function SignIn() {
             if (!error) await navigate({ href: safeReturnTo(returnTo), replace: true })
             return error
           }}
+          forgotPassword={
+            <Link to="/forgot-password" className="self-start text-body text-accent underline">
+              Forgot password?
+            </Link>
+          }
         />
         <p className="mt-4 text-body text-ink">
           New to ShopperStop?{' '}
