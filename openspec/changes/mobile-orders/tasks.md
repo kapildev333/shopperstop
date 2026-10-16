@@ -21,8 +21,8 @@ LANE-ID `mobile-P4-L4a-T1`. Scope: `src/orders.ts`, `src/orders.test.ts`. Scenar
 
 LANE-ID `mobile-P4-L4a-T2`. Scope: `src/rider.ts`, `src/rider.test.ts`. Scenarios: Default rider URL; Rider read follows the status; Last seen wording. Start from `src/rider.test.ts` test `Default rider URL` (red). `rider.ts` must not import `src/orders.ts` (T1 runs in parallel). Also test `mapsUrl(12.9352, 77.6245)` is `https://www.google.com/maps?q=12.9352,77.6245` and that `deliveryOptions`' query function answers `null` on a 404 from the fake (key `'GET /api/rider/v1/orders/<id>/delivery'`, design.md Decision 3).
 
-- [ ] 2.1 `test:` the three scenarios plus `mapsUrl` and the 404-is-null read, red
-- [ ] 2.2 `feat:` `src/rider.ts` per §5; gates green
+- [x] 2.1 `test:` the three scenarios plus `mapsUrl` and the 404-is-null read, red
+- [x] 2.2 `feat:` `src/rider.ts` per §5; gates green
 
 ## 3. Orders tab (`src/app/(tabs)/orders.tsx`) — group B, after 1
 
