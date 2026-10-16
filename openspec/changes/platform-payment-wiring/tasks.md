@@ -34,10 +34,10 @@ Scenarios: "CI runs a rider job" (Workflow shape with the rider job), "CI runs a
 Starts from: `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh ci docs`, failing on the tree after task 1.
 Commit: `feat: payment ci job, docs and area lists`.
 
-- [ ] 3.1 Red: run `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh ci docs`; paste the last line and the FAIL lines into the log
-- [ ] 3.2 Insert the `payment` job from design.md between `rider` and `web` in `ci.yml` (no other job changes); apply every find-and-replace of design.md "README.md, CLAUDE.md, .claude/commands/*.md, openspec/config.yaml" with the Edit tool; nothing else in those files changes
-- [ ] 3.3 Green: `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh` (every section) prints `payment wiring check: ok`; `openspec validate --all --strict` passes. Paste the outputs
-- [ ] 3.4 `git status --short` before the commit shows only the six files, this file and the log
+- [x] 3.1 Red: run `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh ci docs`; paste the last line and the FAIL lines into the log
+- [x] 3.2 Insert the `payment` job from design.md between `rider` and `web` in `ci.yml` (no other job changes); apply every find-and-replace of design.md "README.md, CLAUDE.md, .claude/commands/*.md, openspec/config.yaml" with the Edit tool; nothing else in those files changes
+- [x] 3.3 Green: `sh openspec/changes/platform-payment-wiring/check-payment-wiring.sh` (every section) prints `payment wiring check: ok`; `openspec validate --all --strict` passes. Paste the outputs
+- [x] 3.4 `git status --short` before the commit shows only the six files, this file and the log
 
 ## 4. Manager verification and runtime evidence (area manager, not a worker)
 
