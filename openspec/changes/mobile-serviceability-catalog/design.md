@@ -70,7 +70,7 @@ No cart bar in L2: the area plan gives "the sticky cart bar on every browsing sc
 
 Tabs on the category rail are `role="tab"` with `aria-selected` inside a `role="tablist"` named "Subcategories": a selected button is not valid ARIA (`aria-selected` is not allowed on `button`, axe `aria-allowed-attr`), and React Native has no `aria-pressed`.
 
-The web export is `output: "static"`; dynamic routes export as `category/[slug].html` and `product/[slug].html`, which `expo serve` matches. The e2e suite reaches them by in-app navigation first and also by a direct load of `/product/banana-robusta`; if the direct load does not hydrate, task 15 stops and reports (ceiling: in-app navigation only, as L1 Decision 3 foresaw).
+The web export is `output: "static"`, and a direct load of `/product/<slug>` or `/category/<slug>` answers 404: `expo serve` has no fallback for dynamic routes (found by mobile-P4-L4a). As in L4a, the e2e suite reaches them only by in-app navigation. Ceiling: no deep link to a product or category on the static web export; native apps and in-app navigation are unaffected. No cheap app-side fix: `generateStaticParams` would need core's catalog at build time, and a server fallback belongs to the hosting (Caddy rewrite) when the web export is ever served for real.
 
 ### 8. Paged grid
 
@@ -150,7 +150,8 @@ Tasks 1, 4 and 5 test primitives and cleanups no scenario names directly; their 
 
 - [axe on the tab rail] `role="tab"` without `aria-controls` / a `tabpanel` is valid ARIA; if axe still objects on react-native-web markup, task 15 stops and reports (no rule switched off).
 - [Modal over the tabs in Jest] RNTL hides elements behind an open `Modal` with `accessibilityViewIsModal`; tests that query Home with no pincode find the sheet, and tests that query the tabs set a pincode first (`setPincode` before render, serviceability faked).
-- [Static export and dynamic routes] Decision 7.
+- [Static export and dynamic routes] Decision 7: in-app navigation only in e2e (ceiling).
+- [axe `region` on the tab bar] mobile-P4-L4a gives the tab bar a navigation landmark named "Main" in `src/app/(tabs)/_layout.tsx` and lands first; L2 merges main before task 11 and does not edit that file.
 - [Hermes `Intl`] `formatInr` uses `Intl.NumberFormat('en-IN')`; Hermes on Expo 58 ships `Intl`, but the manager's device walk checks "₹1,234.50" for 123450 (L1 risk carried over). Ceiling: a hand-written grouping in `Price` if a device shows "₹1234.50".
 - [Store change failure untested] The "Could not empty your cart." branch exists in `PincodeSheet` but the stub's clear never fails; L3 adds the test with `DELETE /me/cart` answered 500.
 - [Touch areas] Stepper and ADD are 36 tall per the canvas; `hitSlop` brings them to 44. On the web export `hitSlop` is ignored; 36 is above axe's 24 px `target-size`.
