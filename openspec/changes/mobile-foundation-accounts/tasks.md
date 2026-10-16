@@ -110,9 +110,9 @@ Scope: `apps/mobile/src/app/_layout.tsx`, `apps/mobile/src/app/index.tsx` (delet
 Scenarios: Home in the tabs, Tab switch, Unknown path.
 Starts from: `src/shell.test.tsx` with `renderRouter` (Decision 12): `home in the tabs`, `tab switch`, `unknown path`.
 
-- [ ] 10.1 Red
-- [ ] 10.2 Root layout: `useFonts` (Inter 400, 600, 700), render nothing until loaded, `QueryClientProvider` with `queryClient`, `SafeAreaProvider`, `Stack` without headers; tabs per the Tab bar section; Home, Categories, Orders and not found per `docs/design/mobile-P4-L1.md`; each screen's root `View` has `role="main"`
-- [ ] 10.3 Gates green; `ls apps/mobile/dist` shows `index.html`, `categories.html`, `orders.html`
+- [x] 10.1 Red
+- [x] 10.2 Root layout: `useFonts` (Inter 400, 600, 700), render nothing until loaded, `QueryClientProvider` with `queryClient`, `SafeAreaProvider`, `Stack` without headers; tabs per the Tab bar section; Home, Categories, Orders and not found per `docs/design/mobile-P4-L1.md`; each screen's root `View` has `role="main"`
+- [x] 10.3 Gates green; `ls apps/mobile/dist` shows `index.html`, `categories.html`, `orders.html`
 
 ## 11. Sign-in and register screens
 
