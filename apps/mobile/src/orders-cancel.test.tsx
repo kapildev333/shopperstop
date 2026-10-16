@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native'
 import { queryClient } from './api'
 import { CancelOrderDialog } from './orders-cancel'
 import { useOrder, type Order } from './orders'
@@ -116,4 +116,23 @@ test('Cancel refused', async () => {
   expect(await screen.findByText('Could not cancel the order. Try again.')).toBeTruthy()
   expect(onClose).not.toHaveBeenCalled()
   expect(attempts).toBe(2)
+})
+
+// Both presses land before React renders the disabled state, so only the in-flight ref can stop the second one.
+test('Cancel is not sent twice when pressed twice in one tick', async () => {
+  setToken('t-cancel')
+  const calls = fakeCore({
+    'POST /orders/order-1/cancel': () => json(200, order({ status: 'cancelled' })),
+  })
+  const onClose = jest.fn()
+  await renderDialog(order(), onClose)
+
+  const button = screen.getByRole('button', { name: 'Cancel order' })
+  await act(async () => {
+    void fireEvent.press(button)
+    void fireEvent.press(button)
+  })
+
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  expect(calls.filter((request) => request.method === 'POST')).toHaveLength(1)
 })
