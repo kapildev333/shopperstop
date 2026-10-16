@@ -10,8 +10,8 @@ Gates, from the worktree root with `export PATH=$HOME/.local/node-v22.23.3/bin:$
 
 Scope: `services/rider/internal/migrate/` (`migrate.go`, `migrate_test.go`), `services/rider/internal/testdb/testdb.go`, this file (ticks). Scenario: rider-service "Rider schema migrations" / Concurrent runs serialise; the existing migrate tests (Second run applies nothing, A failed file leaves no trace) stay green. Starts from `services/rider/internal/migrate/migrate_test.go` `TestApplyConcurrentRunsSerialise` (fails: SQLSTATE 23505 on `pg_type_typname_nsp_index`). Commits: `test: two rider migrate runs at once apply each file once`, `feat: rider migrate holds an advisory lock for the whole run`.
 
-- [ ] 1.1 Apply the "Task 1: migration lock, tests" diff; run `go test -race -count=1 -run TestApplyConcurrentRunsSerialise ./internal/migrate/` from `services/rider` with `SHOPPERSTOP_RIDER_TEST_DATABASE_URL` from the Makefile and see it fail; commit.
-- [ ] 1.2 Apply the "Task 1: migration lock, code" diff (`migrate.go`, `testdb.go`); run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 Apply the "Task 1: migration lock, tests" diff; run `go test -race -count=1 -run TestApplyConcurrentRunsSerialise ./internal/migrate/` from `services/rider` with `SHOPPERSTOP_RIDER_TEST_DATABASE_URL` from the Makefile and see it fail; commit.
+- [x] 1.2 Apply the "Task 1: migration lock, code" diff (`migrate.go`, `testdb.go`); run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. A wrong method answers 405
 
