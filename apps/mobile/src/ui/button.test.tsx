@@ -1,9 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
+import { X } from 'lucide-react-native'
 import { Button, IconButton } from './button'
 import { colors } from './tokens'
-
-// Stands in for a Lucide icon: the same props, no SVG in the test.
-const Icon = (_props: { size?: number; color?: string }) => null
 
 test('button presses', async () => {
   const onPress = jest.fn()
@@ -73,7 +71,7 @@ test('sizes', async () => {
 
 test('icon button needs a label', async () => {
   const onPress = jest.fn()
-  await render(<IconButton label="Close" icon={Icon} onPress={onPress} />)
+  await render(<IconButton label="Close" icon={X} onPress={onPress} />)
   const button = screen.getByRole('button', { name: 'Close' })
   expect(button).toHaveStyle({ width: 44, height: 44 })
   fireEvent.press(button)
