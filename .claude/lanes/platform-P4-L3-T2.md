@@ -1,5 +1,5 @@
 # platform-P4-L3-T2 - make gen runs gen:tokens, README troubleshooting and tooling notes (worker brief)
-Status: not started (starts after T1 is committed)
+Status: done (commit a1517ad feat; gates green, task 2.3 ticked)
 ## Brief
 - LANE-ID: platform-P4-L3-T2 (team lead platform-P4-L3). Area: platform.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/platform-P4-L3. Branch: lane/platform-P4-L3-postman-tooling. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no attribution trailers; never push.
@@ -13,6 +13,22 @@ Status: not started (starts after T1 is committed)
 - Never run `make db`, `make dev`, `make prod-local` or any docker command.
 - Stop and write here if: `make gen` changes a file (other than through your Makefile edit); a check needs README text different from design.md; anything needs a file outside scope.
 ## Doing
+- Done: 2.1 (red, below), 2.2 (green, feat a1517ad: Makefile gen line, three README edits, ticks 2.1 and 2.2), 2.3 (gates below, tick in the chore commit).
 ## Found
+- Red (`sh openspec/changes/platform-postman-tooling/check-tooling.sh` on branch head 262edd5, clean tree), exit 1, 10 failures:
+  - FAIL: make -n gen: 'npm run gen:tokens --workspace packages/ui --if-present' missing or out of order
+  - FAIL: README.md has no ## Troubleshooting section
+  - FAIL: Troubleshooting lacks: Cannot read properties of null (reading 'edgesOut')
+  - FAIL: Troubleshooting lacks: 10.9.9
+  - FAIL: Troubleshooting lacks: @vitest/browser-playwright
+  - FAIL: Troubleshooting lacks: npm install --package-lock-only
+  - FAIL: Troubleshooting lacks: npm ci --dry-run
+  - FAIL: make gen row lacks: packages/ui/src/tokens.ts
+  - FAIL: API lacks: serviceToken
+  - FAIL: API lacks: x-service-token
+  - tooling check: 10 failures
+- Green (after a1517ad, clean tree): `tooling check: ok`, exit 0.
+- Text check: the Troubleshooting paragraph, the make gen row, the API sentence and the Makefile line are byte-identical to design.md 5 and 6 (grep -F compare).
+- Gates: `docs check: ok` (check-docs.sh, exit 0); `readme mobile check: ok` (check-readme-mobile.sh, exit 0); `make -n gen` exit 0, the packages/ui line shows `gen:api && gen:tokens`; `make gen` exit 0 and `git status --porcelain` empty afterwards; `openspec validate --all --strict` exit 0 (20 passed, 0 failed). Not run, per brief: check-mobile-wiring.sh, check-wiring.sh, make db/dev/prod-local, make e2e. No containers touched.
 ## Requests
 ## Blockers
