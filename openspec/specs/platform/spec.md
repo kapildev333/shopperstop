@@ -211,7 +211,7 @@ On SIGINT or SIGTERM the core service SHALL stop accepting new connections, let 
 
 ### Requirement: Postman collection is generated from the contract
 
-`make postman` SHALL write, for each service `core` and `rider` whose `services/<service>/openapi.json` exists, `docs/postman/shopperstop-<service>.postman_collection.json` from that file alone: one folder per tag in the contract's tag order, one request per operation named by its `summary`, URLs rooted at `{{baseUrl}}` for core and `{{riderBaseUrl}}` for rider, and each operation's request body example as the raw JSON body. An input that is not a valid OpenAPI document SHALL make it exit non-zero without writing the collection.
+`make postman` SHALL write `docs/postman/shopperstop-<service>.postman_collection.json` for each service (`core`, `rider`) from `services/<service>/openapi.json` alone: one folder per tag in the contract's tag order, one request per operation named by its `summary`, URLs rooted at `{{baseUrl}}` for core and `{{riderBaseUrl}}` for rider, each request body example as the raw JSON body. An invalid OpenAPI document SHALL make it exit non-zero without writing the collection.
 
 #### Scenario: Folders follow the contract tags
 - **WHEN** `make postman` runs against the Phase 1 contract
