@@ -1,0 +1,16 @@
+Lane rider-P4-L3, area rider. Every task: worktree `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/rider-P4-L3`, branch `lane/rider-P4-L3-app-shared-swap`; `export PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (Node 22.11 fails Vitest with ERR_REQUIRE_ESM); `test -d node_modules || npm ci`; `npm run build --workspace packages/ui` before the rider gates. Design and exact diffs in `design.md` ("Code"). Commit with a pathspec, never amend. Gates from the worktree root: `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run`, `npm run build --workspace apps/rider`. Tasks run in order on the one branch.
+
+## 1. Shared client and token store (design 1 to 5, 7)
+Scope: `apps/rider/src/api.ts`, `apps/rider/src/session.ts`, `apps/rider/src/api.test.ts`, `apps/rider/src/session.test.ts`, `apps/rider/src/shell.test.tsx`, `apps/rider/src/sign-in.test.tsx`. Scenarios: "A failure answer without an envelope reaches the caller as internal", "401 mid-session returns to sign-in"; unchanged and still green: "Expired session on load", "401 to a replaced token keeps the new session", "Service unreachable on load", "Token survives a reload", "Blocked storage keeps the token in memory", "Core never gets the rider token". Failing tests: `apps/rider/src/api.test.ts` › `a failure answer with an error envelope without a message reaches the caller as an internal error with its status`, `a 401 mid-session returns to sign-in`, `expired session on load returns to sign-in`; `session.test.ts` › `blocked storage keeps the token in memory`; `shell.test.tsx` › `sign out ends the session`; `sign-in.test.tsx` › four tests (8 red in all). Commits: `test: rider envelope rule and mid-session 401 against the shared client`, then `feat: rider uses createApiClient and createTokenStore from @shopperstop/ui/app`.
+
+- [ ] 1.1 Apply "Task 1: tests"; see 8 failed / 52 passed; commit `test:` (the four test files)
+- [ ] 1.2 Apply "Task 1: code"; 61 passed; gates green; commit `feat:` (`api.ts`, `session.ts`)
+
+## 2. Shared time helpers (design 6)
+Scope: `apps/rider/src/format.ts`, `apps/rider/src/format.test.ts`, `apps/rider/src/ready.tsx`, `apps/rider/src/routes/_rider/history.tsx`. Scenario: none new; "Ready orders list" (`ready.test.tsx`, "12 min ago") and "Delivery history" stay green. No failing test: the task moves two imports to `@shopperstop/ui/app` and deletes the copies, whose behaviour is tested in `packages/ui/src/app/time.test.tsx`. Commit: `refactor: rider takes since, useSince and when from @shopperstop/ui/app`.
+
+- [ ] 2.1 Apply "Task 2"; gates green (61 passed); `grep -rn "useSyncExternalStore\|Intl.DateTimeFormat\|openapi-fetch'" apps/rider/src` finds nothing; commit `refactor:`
+
+## 3. Acceptance (team lead) and verification (manager)
+- [ ] 3.1 Team lead `/opsx:verify`: every delta scenario has a passing test, tasks 1 and 2 ticked, `test:` before `feat:` in task 1, diff against the base only in design.md's files, this change and the rider-P4-L3 lane logs
+- [ ] 3.2 Manager: `make test-web` green on the lane head, `openspec validate --all --strict`; optional `make e2e` slot (no page changed)
