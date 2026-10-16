@@ -106,8 +106,7 @@ test('History and a delivered order against core', async ({ page, request }) => 
   await page.goto('/')
   await page.getByRole('tab', { name: 'Orders', exact: true }).click()
 
-  const cards = page.getByRole('link', { name: /^View order / })
-  await expect(cards).toHaveCount(3)
+  await expect(page.getByRole('link', { name: /^View order SS-DEMOAAA[BCD],/ })).toHaveCount(3)
   await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAD,/ })).toContainText('Placed')
   await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAC,/ })).toContainText('Cancelled')
   await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAB,/ })).toContainText('Delivered')

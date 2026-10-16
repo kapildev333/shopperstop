@@ -24,6 +24,7 @@ import { postOrder, cartEmptied, placeOrder } from './orders'
 import { type CartLine, type CartProduct, type CartView } from './guest-cart'
 import { LineRow } from './order-parts'
 import { useToken } from './session'
+import { VerifyEmailBanner } from './verify-email-banner'
 
 // A refusal the page shows: its message, and the address it is about when core named one.
 type Refusal = { message: string; addressId?: string; unconfirmed?: true }
@@ -182,6 +183,7 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Checkout" />
+      <VerifyEmailBanner />
       {children}
     </div>
   )
