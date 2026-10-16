@@ -203,21 +203,32 @@ func (f *Fake) store(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, s)
 }
 
-// storeOrders filters by store and status, newest first. ponytail: pageSize is
-// not honoured and every match is returned; core pages at 100 and the fake holds a handful of orders.
+// storeOrders filters by store and status, newest first. A store is known when
+// AddStore registered it or an order names it; any other store is core's 404.
+// ponytail: pageSize is not honoured and every match is returned; core pages at 100 and the fake holds a handful of orders.
 func (f *Fake) storeOrders(w http.ResponseWriter, r *http.Request) {
 	if !serviceOnly(w, r) {
 		return
 	}
 	storeID, status := r.PathValue("id"), r.URL.Query().Get("status")
 	f.mu.Lock()
+	_, known := f.stores[storeID]
 	items := []core.Order{}
 	for i := len(f.sequence) - 1; i >= 0; i-- {
-		if o := f.orders[f.sequence[i]]; o.StoreID == storeID && o.Status == status {
+		o := f.orders[f.sequence[i]]
+		if o.StoreID != storeID {
+			continue
+		}
+		known = true
+		if o.Status == status {
 			items = append(items, o.Order)
 		}
 	}
 	f.mu.Unlock()
+	if !known {
+		httpx.WriteError(w, r, core.ErrNotFound)
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"items": items, "page": 1, "pageSize": 100, "total": len(items)})
 }
 
@@ -238,6 +249,8 @@ func (f *Fake) adminOrder(w http.ResponseWriter, r *http.Request) {
 // setStatus applies core's rules for a service move: the actor is required,
 // only out_for_delivery and delivered are reachable, and the table allows
 // ready to out_for_delivery and out_for_delivery to delivered.
+// It checks less than core: no uuid check on the path id or the actor id, no
+// actor name length, no status enum. Core answers 400 to those; the rider never sends them.
 func (f *Fake) setStatus(w http.ResponseWriter, r *http.Request) {
 	if !serviceOnly(w, r) {
 		return

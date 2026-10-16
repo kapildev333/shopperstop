@@ -197,7 +197,7 @@ func (c *Client) service(ctx context.Context, method, path string, body, out any
 // do sends one request to base+"/api/core/v1"+path with bearer (when
 // non-empty) and JSON body (when non-nil), decodes a 2xx into out (when
 // non-nil), returns ErrUnauthorized on 401, ErrNotFound on 404, ErrConflict on
-// 409, and the logged 502 error otherwise. Every method, the rider's later calls included, goes through it.
+// 409, and the logged 502 error otherwise.
 func (c *Client) do(ctx context.Context, method, path, bearer string, body, out any) error {
 	var reader io.Reader
 	if body != nil {
