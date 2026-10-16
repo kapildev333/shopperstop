@@ -21,19 +21,22 @@ Deliveries in the rider service (`services/rider`): a rider at a store sees core
 - **THEN** the first item has `paymentMethod` `cod` and no `paymentStatus` member, and the second has `paymentMethod` `online` and `paymentStatus` `paid`
 
 ### Requirement: Riders claim a ready order
-`POST /me/deliveries {orderId}` SHALL, in one transaction, insert an `assigned` delivery holding snapshots of core's order, its payment method and, when core's order has one, its payment status included, then move the order to `out_for_delivery` in core with the rider as actor, and answer 201 `Delivery`. Every `Delivery` answer SHALL carry the snapshot's `paymentMethod` and, when the snapshot has one, `paymentStatus`. An `orderId` that is not a uuid SHALL be 400 on `orderId`; an order core does not know, or of another store, SHALL be 404 with no core status call.
+`POST /me/deliveries {orderId}` SHALL, in one transaction, insert an `assigned` delivery holding snapshots of core's order, then move the order to `out_for_delivery` in core with the rider as actor, and answer 201 `Delivery`. An `orderId` that is not a uuid SHALL be 400 on `orderId`; an order core does not know, or of another store, SHALL be 404 with no core status call.
 
 #### Scenario: Claim succeeds
 - **WHEN** a rider claims a ready order of their store
 - **THEN** the answer is 201 with status `assigned` and the order's number, customer, address, total, payment method and items, and core received `out_for_delivery` with actor `{type: rider, id, name}`
 
-#### Scenario: Claim keeps the payment
-- **WHEN** a rider claims a ready online order whose payment core holds as `paid`, reads that delivery, then claims a ready cash order
-- **THEN** the first claim's answer and the read both carry `paymentMethod` `online` and `paymentStatus` `paid`, and the cash claim's answer carries `paymentMethod` `cod` and no `paymentStatus` member
-
 #### Scenario: Another store's order
 - **WHEN** a rider claims a ready order of another store
 - **THEN** the answer is 404 `not_found`, no delivery exists and core received no status change
+
+### Requirement: A claim keeps the order's payment
+The delivery a claim creates SHALL hold core's payment method and, when core's order has one, its payment status, and every `Delivery` answer SHALL carry `paymentMethod` and, when the delivery holds one, `paymentStatus`.
+
+#### Scenario: Claim keeps the payment
+- **WHEN** a rider claims a ready online order whose payment core holds as `paid`, reads that delivery, then claims a ready cash order
+- **THEN** the first claim's answer and the read both carry `paymentMethod` `online` and `paymentStatus` `paid`, and the cash claim's answer carries `paymentMethod` `cod` and no `paymentStatus` member
 
 ### Requirement: Claims are exclusive and refusals leave nothing
 An order SHALL have at most one delivery: a claim of an order that has one SHALL be 409 `conflict`. When core refuses the move (409) or does not find the order (404), or fails, the delivery SHALL be rolled back and the answer SHALL be 409 `conflict`, 404 `not_found` or 502 `internal`.
