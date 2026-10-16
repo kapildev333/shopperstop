@@ -10,8 +10,8 @@ Gates, from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://
 
 Scope: `services/core/queries/catalog.sql` (`StoreProducts`, `CountStoreProducts` only), sqlc output (`services/core/internal/catalog/db/catalog.sql.go`, regenerated only), `services/core/internal/catalog/store.go`, `services/core/internal/app/catalog_store_test.go`, `services/core/openapi.json`, generated `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json`, this file (ticks). Scenarios: catalog "Store products can be limited to those in stock" (all three), "Store products can be sorted by price" (all four); "Store products are listed and searched" stays green. Starts from `internal/app/catalog_store_test.go` `TestStoreProductsInStockOnly` (fails: total 4, `inStock` ignored), `TestStoreProductsSortByPrice` (fails: name order) and `TestStoreProductsBadInStockOrSort` (fails: 200). Commits: `test: in-stock filter and price sort on a store's products`, `feat: inStock and sort on GET /stores/{id}/products`.
 
-- [ ] 1.1 Apply the Task 1 test diff to `internal/app/catalog_store_test.go`; run `go test -race -count=1 -run 'TestStoreProducts' ./internal/app` and see the three new tests fail; commit.
-- [ ] 1.2 Apply the `queries/catalog.sql` and `internal/catalog/store.go` diffs, run `make gen`; run the Task 1 `openapi.json` script; `make gen postman`; run the gates (`make test-web` passes: Task 1 adds only optional parameters); tick 1.1 and 1.2; commit.
+- [x] 1.1 Apply the Task 1 test diff to `internal/app/catalog_store_test.go`; run `go test -race -count=1 -run 'TestStoreProducts' ./internal/app` and see the three new tests fail; commit.
+- [x] 1.2 Apply the `queries/catalog.sql` and `internal/catalog/store.go` diffs, run `make gen`; run the Task 1 `openapi.json` script; `make gen postman`; run the gates (`make test-web` passes: Task 1 adds only optional parameters); tick 1.1 and 1.2; commit.
 
 ## 2. Store city
 

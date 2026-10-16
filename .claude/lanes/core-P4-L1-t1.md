@@ -1,5 +1,5 @@
 # core-P4-L1-t1 - inStock and sort on a store's products (task 1 of core-catalog-filters-store-city)
-Status: started
+Status: done (feat commit pending review)
 ## Brief
 - LANE-ID: core-P4-L1 (task 1 of 2). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L1. Branch: lane/core-P4-L1-catalog-filters-store-city. Commit there; never push; never touch the root checkout.
@@ -11,7 +11,8 @@ Status: started
 - Gates (all must pass before the feat commit): from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`: `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`. From the worktree root with `PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (`node_modules` is installed; `npm ci` if missing): `make gen postman` then `git status --short` clean after the commit, `make test-web`, `openspec validate --all --strict`.
 - Rules: tests only against the per-run schemas of `shopperstop_core_test`; no `docker`, no `make db`/`dev`/`seed`/`e2e`, no `core-admin migrate` or `seed-demo` against any database. Run the `openapi.json` script from a file in your scratchpad (not named after a stdlib module), never commit it.
 ## Doing
-Not started.
+Task 1 done: test commit 5b545e3 (three red tests, seen failing), feat commit for SQL, store.go, sqlc, openapi.json, core.d.ts, Postman, ticks 1.1 and 1.2.
 ## Found
+- Gates: gofmt empty; go vet clean; go test -race -count=1 ./... all ok (services/core); make gen postman ok (17 postman tests pass); make test-web exit 0; openspec validate --all --strict 20 passed.
 ## Requests
 ## Blockers

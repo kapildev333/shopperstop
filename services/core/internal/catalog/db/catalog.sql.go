@@ -33,20 +33,29 @@ func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (i
 
 const countStoreProducts = `-- name: CountStoreProducts :one
 select count(*) from products p
+left join store_stock s on s.product_id = p.id and s.store_id = $1
 where p.is_active
-  and ($1::text is null or p.name ilike $1 or p.brand ilike $1)
-  and ($2::uuid is null
-       or p.category_id = $2
-       or p.category_id in (select c.id from categories c where c.parent_id = $2))
+  and ($2::text is null or p.name ilike $2 or p.brand ilike $2)
+  and ($3::uuid is null
+       or p.category_id = $3
+       or p.category_id in (select c.id from categories c where c.parent_id = $3))
+  and (not $4::boolean or coalesce(s.quantity, 0) > 0)
 `
 
 type CountStoreProductsParams struct {
+	StoreID    string
 	Pattern    *string
 	CategoryID *string
+	InStock    bool
 }
 
 func (q *Queries) CountStoreProducts(ctx context.Context, arg CountStoreProductsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStoreProducts, arg.Pattern, arg.CategoryID)
+	row := q.db.QueryRow(ctx, countStoreProducts,
+		arg.StoreID,
+		arg.Pattern,
+		arg.CategoryID,
+		arg.InStock,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -450,14 +459,19 @@ where p.is_active
   and ($3::uuid is null
        or p.category_id = $3
        or p.category_id in (select c.id from categories c where c.parent_id = $3))
-order by p.name, p.id
-limit $5 offset $4
+  and (not $4::boolean or coalesce(s.quantity, 0) > 0)
+order by case when $5::text = 'price_asc' then p.price_cents end asc,
+         case when $5::text = 'price_desc' then p.price_cents end desc,
+         p.name, p.id
+limit $7 offset $6
 `
 
 type StoreProductsParams struct {
 	StoreID    string
 	Pattern    *string
 	CategoryID *string
+	InStock    bool
+	Sort       string
 	PageOffset int32
 	PageSize   int32
 }
@@ -476,11 +490,14 @@ type StoreProductsRow struct {
 	Quantity    int32
 }
 
+// in_stock keeps quantity above 0 at the store; sort 'price_asc' or 'price_desc' orders by price first, anything else by name.
 func (q *Queries) StoreProducts(ctx context.Context, arg StoreProductsParams) ([]StoreProductsRow, error) {
 	rows, err := q.db.Query(ctx, storeProducts,
 		arg.StoreID,
 		arg.Pattern,
 		arg.CategoryID,
+		arg.InStock,
+		arg.Sort,
 		arg.PageOffset,
 		arg.PageSize,
 	)

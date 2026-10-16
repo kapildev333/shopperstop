@@ -95,8 +95,28 @@ func storeFilters(r *http.Request) (pat *string, categoryID *string, err error) 
 	return pat, categoryID, nil
 }
 
+// storeView reads inStock (true filters, false or empty does not) and sort
+// (price_asc or price_desc; empty means by name). Anything else is 400 naming the parameter.
+func storeView(r *http.Request) (inStock bool, sort string, err error) {
+	query := r.URL.Query()
+	switch query.Get("inStock") {
+	case "", "false":
+	case "true":
+		inStock = true
+	default:
+		return false, "", invalid("inStock", "must be true or false")
+	}
+	switch sort = query.Get("sort"); sort {
+	case "", "price_asc", "price_desc":
+	default:
+		return false, "", invalid("sort", "must be price_asc or price_desc")
+	}
+	return inStock, sort, nil
+}
+
 // StoreProducts answers the paged active products the store sells, ordered by
-// name, filtered by q and categoryId (with its children). 404 for an unknown store.
+// name or by price (sort), filtered by q, categoryId (with its children) and
+// inStock, all in SQL so total counts every match. 404 for an unknown store.
 func StoreProducts(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		storeID, err := httpx.PathID(r, "id")
@@ -118,16 +138,21 @@ func StoreProducts(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, err)
 			return
 		}
+		inStock, sort, err := storeView(r)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
 		q := db.New(pool)
 		rows, err := q.StoreProducts(r.Context(), db.StoreProductsParams{
-			StoreID: storeID, Pattern: pat, CategoryID: categoryID,
+			StoreID: storeID, Pattern: pat, CategoryID: categoryID, InStock: inStock, Sort: sort,
 			PageOffset: int32((page - 1) * pageSize), PageSize: int32(pageSize),
 		})
 		if err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}
-		total, err := q.CountStoreProducts(r.Context(), db.CountStoreProductsParams{Pattern: pat, CategoryID: categoryID})
+		total, err := q.CountStoreProducts(r.Context(), db.CountStoreProductsParams{StoreID: storeID, Pattern: pat, CategoryID: categoryID, InStock: inStock})
 		if err != nil {
 			httpx.WriteError(w, r, err)
 			return

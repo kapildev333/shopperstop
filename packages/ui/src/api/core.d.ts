@@ -637,7 +637,7 @@ export interface paths {
         };
         /**
          * List a store's products
-         * @description Public, no session. The paged active products a store sells, ordered by name, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them. Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match, not just this page. An unknown store answers 404 not_found; a bad q or categoryId answers 400 naming the field.
+         * @description Public, no session. The paged active products a store sells, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them, and by inStock. Ordered by name, or by price with sort (equal prices by name, then id). Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match after every filter, not just this page. An unknown store answers 404 not_found; a bad q, categoryId, inStock or sort answers 400 naming the parameter.
          */
         get: operations["getStoreProducts"];
         put?: never;
@@ -5125,6 +5125,16 @@ export interface operations {
                  */
                 categoryId?: string;
                 /**
+                 * @description true lists only products whose quantity at this store is above 0. false, empty or absent means no filter. Any other value answers 400 naming inStock.
+                 * @example true
+                 */
+                inStock?: boolean;
+                /**
+                 * @description price_asc: cheapest first; price_desc: dearest first; equal prices by name, then id. Empty or absent: by name, then id. Any other value answers 400 naming sort.
+                 * @example price_asc
+                 */
+                sort?: "price_asc" | "price_desc";
+                /**
                  * @description Page number, from 1. Default 1.
                  * @example 1
                  */
@@ -5177,7 +5187,7 @@ export interface operations {
                     "application/json": components["schemas"]["StoreProductList"];
                 };
             };
-            /** @description A q or categoryId is invalid. The field names it. */
+            /** @description A q, categoryId, inStock or sort is invalid. The field names it. */
             400: {
                 headers: {
                     [name: string]: unknown;
