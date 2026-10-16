@@ -7,29 +7,14 @@ import { Button, IconButton } from './ui/button'
 import { FormField } from './ui/form-field'
 import { Text } from './ui/text'
 import { colors, fontFamily, radius } from './ui/tokens'
-import { type ApiError } from './api'
 import { register, safeReturnTo, signIn } from './auth'
-
-type Errors = { fields: Record<string, string>; banner?: string }
-
-// An envelope error naming a shown field goes under that field; any other failure goes in the alert.
-export function splitError(error: ApiError | undefined, fields: readonly string[]): Errors {
-  if (!error) return { fields: {} }
-  const field = error.field
-  return field && fields.includes(field) ? { fields: { [field]: error.message } } : { fields: {}, banner: error.message }
-}
+import { splitError, useBack, type Errors } from './screen-support'
 
 const minBytes = 8
 const maxBytes = 72
 
 function Back({ label, onBack }: { label: string; onBack: () => void }) {
   return <IconButton label={label} icon={ChevronLeft} tone="onBrand" onPress={onBack} />
-}
-
-// Back goes to the previous screen when there is one, else Home (the deep-link case).
-export function useBack() {
-  const router = useRouter()
-  return () => (router.canGoBack() ? router.back() : router.replace('/'))
 }
 
 function Alert({ message }: { message: string }) {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, Switch, View } from 'react-native'
 import { saveAddress, type Address } from './addresses'
-import { splitError } from './auth-forms'
+import { splitError } from './screen-support'
 import { Button } from './ui/button'
 import { Chip } from './ui/chip'
 import { FormField } from './ui/form-field'
