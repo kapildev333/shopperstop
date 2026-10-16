@@ -41,8 +41,8 @@ Scenarios: Default address shown; No address yet; Choice sheet lists the address
 Starts from: `src/checkout-address.test.tsx` test `Default address shown` (red: module missing). Each test renders a harness in the test file, `function Harness() { const [chosen, setChosen] = useState<string>(); return <AddressCard chosen={chosen} onChoose={setChosen} /> }`, inside `QueryClientProvider`, after `setToken('t-1')` and `fakeCore` with `GET /me/addresses`. The sheets are found by `findByRole('dialog', { name })` or their title text; the radios by `getByRole('radio', { name: 'Deliver to Home' })` with `toBeChecked()` / `not.toBeChecked()`, inside `getByRole('radiogroup', { name: 'Deliver to' })` (if the radiogroup role does not come through in Jest, use `getByLabelText('Deliver to')` and note it in your log). "Address added at checkout": `GET /me/addresses` answers Home first and Home and Work after the `POST /me/addresses` (201) has been received; fill L1's sheet as `src/address-sheet.test.tsx` does (the "Work" chip, "House, flat, floor", "Pincode", "Save address"); assert the "Add address" sheet is gone and "Delivering to Work" shows. Add one test with no scenario: `refused address badge` (`refusedId` set: "Not delivered here" in the card and on that row of the choice sheet only).
 Build: design file "Address card" and "Module interfaces" (`chosenAddress`, `addressLine`, `AddressCard`), design.md Decision 3. Do not edit `src/address-sheet.tsx` or `src/addresses.ts`.
 
-- [ ] 2.1 `test:` the five scenarios and the badge test, red
-- [ ] 2.2 `feat:` `src/checkout-address.tsx`; gates green
+- [x] 2.1 `test:` the five scenarios and the badge test, red
+- [x] 2.2 `feat:` `src/checkout-address.tsx`; gates green
 
 ## 3. Checkout screen, states and route — group B, after 1 and 2
 
