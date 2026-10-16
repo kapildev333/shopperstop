@@ -35,8 +35,8 @@ LANE-ID `mobile-P4-L4a-T3`. Scope: `src/app/(tabs)/orders.tsx`, `src/orders-hist
 
 LANE-ID `mobile-P4-L4a-T4`. Scope: `src/app/orders/[id].tsx`, `src/orders-tracking.tsx`, `src/orders-tracking.test.tsx`, `src/orders-tracking-redirect.test.tsx`, `src/orders-tracking-help.test.tsx`, `src/orders-tracking-not-found.test.tsx`. Scenarios in `orders-tracking.test.tsx` (non-navigating; render `<OrderTracking id=… />` in `QueryClientProvider` like `src/account.test.tsx`): Tracking shows the order; Finished order labels; Unknown order; Tracking loading; Tracking fails with nothing held; Status change announced in place; Cancelled order shows the reason; Timeline of a packing order; Timeline of a cancelled order; Rider steps name the rider; Failed poll keeps the order; Headline kept current (fake-timer recipe, §6). Navigating, one per file: Signed-out tracking redirect; Need help opens the account; Your orders from an unknown order. Start from `src/orders-tracking.test.tsx` test `Tracking shows the order` (red). The route file reads `useLocalSearchParams<{ id: string }>()` and renders `<OrderTracking id={id} />`. Export `Headline` for its test. Do not add the rider card or the cancel button: T7 mounts them. Drawing: §2.
 
-- [ ] 4.1 `test:` the fifteen scenarios, red
-- [ ] 4.2 `feat:` the tracking screen; gates green
+- [x] 4.1 `test:` the fifteen scenarios, red
+- [x] 4.2 `feat:` the tracking screen; gates green
 
 ## 5. Rider card (`src/rider-card.tsx`) — group B, after 1 and 2
 
