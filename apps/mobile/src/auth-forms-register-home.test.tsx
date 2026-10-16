@@ -16,10 +16,10 @@ test('register lands on Home', async () => {
   await renderRouter({ index: () => <Text>Home</Text>, 'sign-in': SignIn, register: Register }, { initialUrl: '/register' })
   await screen.findByRole('heading', { name: 'Create account' })
 
-  fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
-  fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
-  fireEvent.changeText(screen.getByLabelText('Password'), 'secret-pass')
-  fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
+  await fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
+  await fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
+  await fireEvent.changeText(screen.getByLabelText('Password'), 'secret-pass')
+  await fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
 
   await waitFor(() => expect(screen).toHavePathname('/'))
   expect(getToken()).toBe('t-reg')

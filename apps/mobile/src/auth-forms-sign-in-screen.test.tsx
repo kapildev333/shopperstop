@@ -13,7 +13,7 @@ test('sign-in screen', async () => {
   expect(screen.getByLabelText('Password')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy()
 
-  fireEvent.press(screen.getByRole('link', { name: 'Create an account' }))
+  await fireEvent.press(screen.getByRole('link', { name: 'Create an account' }))
 
   expect(await screen.findByRole('heading', { name: 'Create account' })).toBeTruthy()
   expect(screen).toHavePathname('/register')

@@ -18,7 +18,7 @@ test('password shown on request', async () => {
   await screen.findByRole('heading', { name: 'Sign in' })
 
   expect(screen.getByLabelText('Password')).toHaveProp('secureTextEntry', true)
-  fireEvent.press(screen.getByRole('button', { name: 'Show password' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Show password' }))
 
   expect(screen.getByLabelText('Password')).toHaveProp('secureTextEntry', false)
   expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy()
@@ -29,7 +29,7 @@ test('required fields checked', async () => {
   await renderRouter(routes(), { initialUrl: '/sign-in' })
   await screen.findByRole('heading', { name: 'Sign in' })
 
-  fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
 
   expect(await screen.findByText('Enter your email')).toBeTruthy()
   expect(screen.getByText('Enter your password')).toBeTruthy()
@@ -41,7 +41,7 @@ test('required fields checked on register', async () => {
   await renderRouter(routes(), { initialUrl: '/register' })
   await screen.findByRole('heading', { name: 'Create account' })
 
-  fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
 
   expect(await screen.findByText('Enter your name')).toBeTruthy()
   expect(screen.getByText('Enter your email')).toBeTruthy()
@@ -54,10 +54,10 @@ test('short password on register', async () => {
   await renderRouter(routes(), { initialUrl: '/register' })
   await screen.findByRole('heading', { name: 'Create account' })
 
-  fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
-  fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
-  fireEvent.changeText(screen.getByLabelText('Password'), 'x'.repeat(7))
-  fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
+  await fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
+  await fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
+  await fireEvent.changeText(screen.getByLabelText('Password'), 'x'.repeat(7))
+  await fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
 
   expect(await screen.findByText('Use 8 to 72 characters')).toBeTruthy()
   expect(calls).toEqual([])
@@ -70,10 +70,10 @@ test('field error from the envelope', async () => {
   await renderRouter(routes(), { initialUrl: '/register' })
   await screen.findByRole('heading', { name: 'Create account' })
 
-  fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
-  fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
-  fireEvent.changeText(screen.getByLabelText('Password'), 'secret-pass')
-  fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
+  await fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
+  await fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
+  await fireEvent.changeText(screen.getByLabelText('Password'), 'secret-pass')
+  await fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
 
   expect(await screen.findByText('Email already registered')).toBeTruthy()
   expect(screen.queryByRole('alert')).toBeNull()
@@ -86,9 +86,9 @@ test('non-field error in an alert', async () => {
   await renderRouter(routes(), { initialUrl: '/sign-in' })
   await screen.findByRole('heading', { name: 'Sign in' })
 
-  fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
-  fireEvent.changeText(screen.getByLabelText('Password'), 'wrong-pass')
-  fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
+  await fireEvent.changeText(screen.getByLabelText('Email'), customer.email)
+  await fireEvent.changeText(screen.getByLabelText('Password'), 'wrong-pass')
+  await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }))
 
   expect(within(await screen.findByRole('alert')).getByText('Wrong email or password')).toBeTruthy()
   expect(getToken()).toBeUndefined()
