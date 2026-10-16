@@ -945,7 +945,7 @@
           "request": {
             "name": "Ask for a password reset",
             "description": {
-              "content": "When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Every attempt counts against its email and client IP with sign-in and registration: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429. In development the mail is written to core's log, not sent.",
+              "content": "When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Reset requests have their own budget, the same numbers as sign-in and registration but not shared with them: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429, and a reset never uses up sign-in attempts. A failure to mail the code still answers 202. In development the mail is written to core's log, not sent.",
               "type": "text/plain"
             },
             "url": {

@@ -99,8 +99,8 @@ func checkName(name string) (string, error) {
 
 // refused answers 429 and reports true when the attempt is over the limit.
 // A nil limiter admits every attempt.
-func (a *Auth) refused(w http.ResponseWriter, r *http.Request, email string) bool {
-	if a.limit == nil || a.limit.Allow(email, clientIP(r, a.limit.TrustProxy)) {
+func refused(w http.ResponseWriter, r *http.Request, limit *Limiter, email string) bool {
+	if limit == nil || limit.Allow(email, clientIP(r, limit.TrustProxy)) {
 		return false
 	}
 	httpx.WriteError(w, r, &httpx.Error{Status: http.StatusTooManyRequests, Code: "rate_limited", Message: "too many attempts, try again later"})
@@ -131,7 +131,7 @@ func (a *Auth) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.limit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)
@@ -180,7 +180,7 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.limit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)

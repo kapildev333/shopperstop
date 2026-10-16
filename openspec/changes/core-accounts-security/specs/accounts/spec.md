@@ -28,7 +28,7 @@
 - **THEN** the stored hash is a bcrypt hash of cost 12 that matches `password123` and does not contain it
 
 ### Requirement: Sign-in and registration are rate limited
-The core service SHALL count attempts at customer registration, customer sign-in, password reset requests and staff sign-in in memory per process and SHALL answer 429 `rate_limited` to an attempt beyond 10 per email address (compared without case) or beyond 100 per client IP within one hour.
+The core service SHALL count attempts at customer registration, customer sign-in and staff sign-in in memory per process, against one limiter, and SHALL count password reset requests against a second limiter of its own with the same numbers, so a reset never uses up sign-in attempts. It SHALL answer 429 `rate_limited` to an attempt beyond 10 per email address (compared without case) or beyond 100 per client IP within one hour.
 
 #### Scenario: Eleventh attempt for one email
 - **WHEN** a client makes 10 sign-in or registration attempts for `slow@example.com` within an hour and then an 11th
@@ -37,6 +37,10 @@ The core service SHALL count attempts at customer registration, customer sign-in
 #### Scenario: Eleventh reset request for one email
 - **WHEN** a client asks for a password reset for one email 10 times within an hour and then an 11th time
 - **THEN** the first 10 answer 202 and the 11th answers 429 with code `rate_limited`
+
+#### Scenario: Reset requests leave sign-in open
+- **WHEN** a client asks for a password reset for a customer's email 11 times within an hour, the 11th answered 429, and then the customer signs in with the right password
+- **THEN** the sign-in answers 200
 
 #### Scenario: Hundred and first attempt from one IP
 - **WHEN** one IP makes 100 attempts for different emails within an hour and then a 101st
@@ -88,6 +92,10 @@ The core service SHALL count attempts at customer registration, customer sign-in
 #### Scenario: Bad code
 - **WHEN** the confirm route gets an empty token, an unknown token, an expired reset code, a verification code, or a reset code already spent
 - **THEN** each answers 400 with code `validation` and field `token`, and the password is unchanged
+
+#### Scenario: Mail fails for a registered email
+- **WHEN** a client asks for a reset for a registered email and the code cannot be issued or mailed
+- **THEN** the answer is 202 with no body, as for any email, and the failure is logged without the code
 
 #### Scenario: Malformed email
 - **WHEN** a client asks for a reset for `not-an-email`

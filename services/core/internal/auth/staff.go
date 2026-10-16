@@ -30,7 +30,7 @@ func (a *Auth) StaffSignIn(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.limit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)

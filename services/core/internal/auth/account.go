@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -111,7 +112,9 @@ func (a *Auth) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 // RequestPasswordReset mails a reset token when the email is a customer's and
 // answers 202 either way, so the answer never says whether it is registered.
-// Attempts count against the sign-in limiter like a sign-in.
+// Attempts count against ResetLimit, not the sign-in limiter. A failure to
+// issue or mail the token for a registered email is logged, without the
+// token, and still answers 202.
 // ponytail: an unknown email answers sooner (no insert, no mail); a queued
 // mailer that sends after the answer closes the gap.
 func (a *Auth) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +123,7 @@ func (a *Auth) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if a.refused(w, r, in.Email) {
+	if refused(w, r, a.ResetLimit, in.Email) {
 		return
 	}
 	email, err := checkEmail(in.Email)
@@ -130,13 +133,17 @@ func (a *Auth) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	row, err := a.q.CustomerByEmail(ctx, email)
-	if err == nil {
-		err = a.mailToken(ctx, row.ID, row.Email, purposeResetPassword,
-			"Reset your ShopperStop password", "Use this code within 24 hours to set a new password:")
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
+	}
+	if err := a.mailToken(ctx, row.ID, row.Email, purposeResetPassword,
+		"Reset your ShopperStop password", "Use this code within 24 hours to set a new password:"); err != nil {
+		slog.ErrorContext(ctx, "password reset mail not sent", "customerId", row.ID, "err", err)
 	}
 	w.WriteHeader(http.StatusAccepted)
 }

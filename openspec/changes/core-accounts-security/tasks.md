@@ -28,3 +28,10 @@ Scope: `services/core/cmd/core-admin/main.go`, `services/core/cmd/core-admin/mai
 
 - [x] 3.1 `git apply --include='*_test.go'` the Task 3 block; run `go test -race -count=1 ./cmd/core-admin` and see it fail; commit.
 - [x] 3.2 `git apply --exclude='*_test.go'` the Task 3 block; run the gates (no `openapi.json` change); tick 3.1 and 3.2; commit.
+
+## 4. Reset limiter and mail failure
+
+Scope: `services/core/internal/auth/{auth.go,customer.go,staff.go,account.go}`, `services/core/cmd/core/main.go`, `services/core/internal/app/password_reset_test.go`, `services/core/openapi.json` (the reset description only), generated `core.d.ts` and the Postman collection, the spec delta and `design.md` (wording), this file (ticks). Scenarios: accounts "Sign-in and registration are rate limited" / Reset requests leave sign-in open; "Customers reset a forgotten password" / Mail fails for a registered email. Starts from `internal/app/password_reset_test.go` `TestPasswordResetLeavesSignInOpen` and `TestPasswordResetMailFailureAnswers202` (red: the package did not compile, `Auth.ResetLimit` undefined, so the pin tests `TestResetCodeDoesNotVerifyEmail` and `TestPasswordResetLeavesOtherCustomersSessions` ran with the feat commit). Commits: `test: password reset keeps sign-in open and never reveals a mail failure`, `fix: separate reset limiter; mail failure answers 202`.
+
+- [x] 4.1 Add the failing tests (`TestPasswordResetLeavesSignInOpen`, `TestPasswordResetMailFailureAnswers202`) and the two pins; commit.
+- [x] 4.2 `Auth.ResetLimit` built in `main` with the sign-in numbers; `refused` takes its limiter; a mail or token failure for a found email is logged and answers 202; reset description and spec and design wording; regenerate; run the gates; tick 4.1 and 4.2; commit.

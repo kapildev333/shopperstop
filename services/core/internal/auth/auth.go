@@ -25,6 +25,10 @@ type Auth struct {
 	// Mailer sends the verification and password reset mail. New sets
 	// LogMailer; tests replace it before serving.
 	Mailer Mailer
+	// ResetLimit counts password reset requests on their own budget, so a
+	// reset never uses up the customer's sign-in attempts. Nil admits every
+	// request; New leaves it nil and main sets it.
+	ResetLimit *Limiter
 
 	pool     *pgxpool.Pool
 	q        *db.Queries

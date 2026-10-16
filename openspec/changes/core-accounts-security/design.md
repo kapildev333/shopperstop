@@ -26,7 +26,7 @@ Everything below was spiked in this worktree at 49553f4 and the tree restored be
 
 ### 4. Reset
 
-`POST /auth/password-reset` reads `{email}`, counts the attempt with `refused` (the shared sign-in limiter, so reset requests, sign-ins and registrations share the per-email and per-IP budgets), validates the email (400 field `email`), looks the customer up and mails only when found, and answers 202 with no body either way. Ceiling: an unknown email answers sooner (no upsert, no mail); a queued mailer closes that gap. `POST /auth/password-reset/confirm` checks the password length first (400 field `password`, code not spent), then in one transaction consumes the code, hashes (bcrypt 12, so no hash is paid for a bad code), sets the password and `email_verified = true` (the code proved the address), and deletes every customer session of that customer; 204. The confirm route is not rate limited: a 43-character random code cannot be guessed, and a bad code costs one indexed delete.
+`POST /auth/password-reset` reads `{email}`, counts the attempt with `refused` against `Auth.ResetLimit`, a second `Limiter` built in `main` with the sign-in numbers (10 per email, 100 per IP, an hour), so reset requests have their own budget and never consume a customer's sign-in attempts (`ResetLimit` is an exported field set after `New`, like `Mailer` and `TrustProxy`; nil admits every request), validates the email (400 field `email`), looks the customer up and mails only when found, and answers 202 with no body either way. A failure to issue or mail the code for a found email is logged with slog (customer id and error, never the code) and still answers 202, so a mail outage never shows as a difference. Ceiling: an unknown email answers sooner (no upsert, no mail); a queued mailer closes that gap. `POST /auth/password-reset/confirm` checks the password length first (400 field `password`, code not spent), then in one transaction consumes the code, hashes (bcrypt 12, so no hash is paid for a bad code), sets the password and `email_verified = true` (the code proved the address), and deletes every customer session of that customer; 204. The confirm route is not rate limited: a 43-character random code cannot be guessed, and a bad code costs one indexed delete.
 
 ### 5. `emailVerified` is required in `Customer`
 
@@ -63,7 +63,7 @@ platform-P4-L3 also regenerates `docs/postman/`. Whichever merges second merges 
 - [Mobile fixture line] → blocks the merge, not the build; one line, spiked.
 - [Codes in the dev log] → acceptable while there are no real customers (Decision 1).
 - [Reset timing reveals registration] → named ceiling (Decision 4).
-- [Shared limiter] → ten reset requests for an email also block its sign-in for the hour; same as ten bad sign-ins today.
+- [Separate reset limiter] → a reset flood from one IP is refused at its own 100 per hour, and an email's sign-in budget is untouched; the two budgets sit side by side per process, so an IP may make 200 attempts an hour across both routes.
 
 ## Code (verbatim diffs from the spike)
 
