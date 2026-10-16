@@ -29,7 +29,7 @@ Scenarios: Customer status history names the rider › Rider events name the rid
 Failing tests (`src/order-tracking.test.tsx`): "rider events name the rider", "countdown uses the order's promise", "no countdown once finished" (changed).
 
 - [x] 2.1 The tests committed (`test: rider names in the history and the order's own promise`); lint and typecheck green; exactly those three red
-- [ ] 2.2 Decisions 5 and 6 (`feat: rider names in the history and the order's own promise`); all gates green
+- [x] 2.2 Decisions 5 and 6 (`feat: rider names in the history and the order's own promise`); all gates green
 
 ## 3. ui swaps: ChoiceGroup at checkout, ImageTile everywhere
 

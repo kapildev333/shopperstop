@@ -15,15 +15,12 @@ import {
   VisuallyHidden,
   buttonClass,
 } from '@shopperstop/ui'
-import { useStore, type Store } from './catalog'
 import { Totals } from './cart-drawer'
 import { cancelOrder, canCancel, formatWhen, lastSeen, postCancel, riderStage, statusMessage, statusName, underWay, useDelivery, useOrder, type Order } from './orders'
 import { Countdown, LineRow, StatusBadge, useNow } from './order-parts'
 
 export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof postCancel }) {
   const { data: order, isError, refetch } = useOrder(id)
-  // The store's promised minutes drive the countdown; read before the early returns.
-  const store = useStore(order?.storeId)
 
   // A view checks its data before its error: a failed repeat keeps the order on screen.
   if (order === undefined) {
@@ -50,7 +47,7 @@ export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof
       </Frame>
     )
   }
-  return <OrderContent id={id} order={order} store={store.data} send={send} />
+  return <OrderContent id={id} order={order} send={send} />
 }
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
@@ -62,7 +59,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function OrderContent({ id, order, store, send }: { id: string; order: Order; store?: Store; send: typeof postCancel }) {
+function OrderContent({ id, order, send }: { id: string; order: Order; send: typeof postCancel }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [cancelError, setCancelError] = useState<string>()
@@ -96,7 +93,7 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
       {/* The one status message: it stays at this place, so a change is announced in place. The countdown is beside it, not in it. */}
       <Card className="flex flex-col gap-4 p-4 sm:p-6">
         <StatusMessage tone={order.status === 'delivered' ? 'success' : 'neutral'}>{statusMessage(order)}</StatusMessage>
-        {underWay(order.status) && store && <Countdown placedAt={order.placedAt} promisedMinutes={store.promisedMinutes} />}
+        {underWay(order.status) && <Countdown placedAt={order.placedAt} promisedMinutes={order.promisedMinutes} />}
         {canCancel(order.status) && (
           <div>
             <Button variant="ghost-danger" onClick={open}>
@@ -199,6 +196,11 @@ function History({ order }: { order: Order }) {
         {order.events.map((event) => (
           <li key={`${event.createdAt}-${event.toStatus}`} className="flex flex-col">
             <p className="text-body font-semibold text-ink">{statusName(event.toStatus)}</p>
+            {event.actorType === 'rider' && event.actorName && (
+              <p className="text-small text-ink">
+                {event.toStatus === 'out_for_delivery' ? 'Picked up' : 'Delivered'} by {event.actorName}
+              </p>
+            )}
             <time dateTime={event.createdAt} className="text-small text-ink-muted">
               {formatWhen(event.createdAt)}
             </time>
