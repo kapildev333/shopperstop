@@ -3,10 +3,12 @@ Scope: root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `REA
 Depends on: none
 Spec: Spec 1 §3, §5.1, §6, §7, §11, §12; plan tasks 1, 3, 4, 12, 13, 15 (tasks 1 and 2 done by the orchestrator)
 ## Doing
+platform-P3-L1 done 2026-10-15 (#193, archived #194 and #195). Nothing running; the orchestrator session runs the next platform chore when one is requested.
 No platform lane running. Phase 1 platform tasks are all on main; the only open item is the first green CI run (account billing). No `make e2e` running.
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
+| platform-P3-L1 | `platform-rider-wiring`: rider databases, Caddy, Makefile, CI job, Postman per service, docs | `deploy/`, `Makefile`, `scripts/`, `docs/postman/`, `.github/workflows/ci.yml`, `README.md`, `CLAUDE.md`, `openspec/changes/platform-rider-wiring/` | done 2026-10-15: PR #193 (6dbfd05); 3 tasks, 3 reviews approve, acceptance pass; manager verified check-wiring ok, Postman 17 tests, `make test` (core ok, Vitest ui 54, admin 295, web 153), `make postman` x2 clean, strict 15, `make e2e` admin 14 and web 42 with the rider skip line, pgx as the rider role; archived #194 (three merged requirements split) and #195 (one shortened) |
 | platform-P1-L3 | Task 3 OpenSpec seed (`platform`, `design-system` specs) | `openspec/` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (diff gate, validate); PR #3 merged; archived in #5 |
 | platform-P1-L4 | Task 4 deploy files and `make db` | `deploy/`, `Makefile` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (`make db` healthy, `select 1` as shopperstop_core on `_test`, role owns 3 databases); PR #4 merged; archived in #6 |
 | platform-P1-L9 | Task 13 CI workflow and Makefile | `.github/workflows/`, `Makefile` | done 2026-10-12: reviewer approve, acceptance pass with task 3.1 (first green CI run) open because GitHub Actions is disabled by account billing; manager verified skip targets, dry runs, e2e isolation, YAML; PR #15 merged; change `platform-ci-makefile` stays open until a real CI run ticks 3.1, then archive |
