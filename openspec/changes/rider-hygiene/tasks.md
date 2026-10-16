@@ -24,5 +24,5 @@ Scope: `services/rider/internal/httpx/` (`router.go`, `router_test.go`), `servic
 
 ## 3. Acceptance (team lead) and verification (manager)
 
-- [ ] 3.1 Team lead: `/opsx:verify rider-hygiene`: every scenario in the delta has a passing test, tasks 1 and 2 ticked, nothing outside design.md "Files" landed.
-- [ ] 3.2 Manager: re-run the gates on the merged head (with ui's `api.test.ts` fix on main, `make test-web` green); exercise the real rider service: `DELETE /api/rider/v1/healthz` answers 405 `Allow: GET`, and two `rider-admin migrate` runs started together against a throwaway database both exit 0.
+- [x] 3.1 Team lead: `/opsx:verify rider-hygiene`: every scenario in the delta has a passing test, tasks 1 and 2 ticked, nothing outside design.md "Files" landed.
+- [x] 3.2 Manager: re-run the gates on the merged head (with ui's `api.test.ts` fix on main, `make test-web` green); exercise the real rider service: `DELETE /api/rider/v1/healthz` answers 405 `Allow: GET`, and two `rider-admin migrate` runs started together against a throwaway database both exit 0.
