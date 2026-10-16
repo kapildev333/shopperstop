@@ -122,7 +122,12 @@ function OrderCard({ order, now, onOpen }: { order: Order; now: number; onOpen: 
   return (
     <Pressable
       accessibilityRole="link"
-      accessibilityLabel={`View order ${order.number}`}
+      accessibilityLabel={[
+        `View order ${order.number}`,
+        statusName(order.status),
+        `${placedLabel(order.placedAt, now)} · ${itemCountLabel(order)}`,
+        formatInr(order.totalCents),
+      ].join(', ')}
       onPress={onOpen}
       style={{
         backgroundColor: colors.surface,
