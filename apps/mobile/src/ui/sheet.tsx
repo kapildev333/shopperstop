@@ -18,7 +18,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
   // The content scrolls past 80% of the window, leaving room for the header and the keyboard on a small phone.
   const { height } = useWindowDimensions()
   return (
-    <Modal transparent visible={open} animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible={open} animationType="slide" onRequestClose={onClose} accessibilityLabel={title}>
       <View style={styles.root}>
         <Pressable
           accessibilityRole="button"
