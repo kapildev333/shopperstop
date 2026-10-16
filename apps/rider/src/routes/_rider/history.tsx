@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Card, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, Table, type Column } from '@shopperstop/ui'
 import { rider, type Delivery } from '../../api'
-import { when } from '../../format'
+import { when } from '@shopperstop/ui/app'
 
 // The newest 50 delivered deliveries. ponytail: no pager; a rider past 50 sees the newest 50, add the admin pager when riders ask.
 const pageSize = 50

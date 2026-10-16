@@ -91,7 +91,7 @@ test('wrong credentials or inactive rider', async () => {
   await fillAndSubmit('arjun@example.test', 'wrong')
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is wrong, or the account is inactive.')
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:rider-token')).toBeNull()
 })
 
@@ -102,7 +102,7 @@ test('rate limited', async () => {
   await fillAndSubmit('arjun@example.test', 'secret-test')
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Too many sign-in attempts. Try again later.')
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
 })
 
 test('service unreachable or failing', async () => {
@@ -121,7 +121,7 @@ test('service unreachable or failing', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.'))
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
 })
 
 test('field validation from the service', async () => {
@@ -135,5 +135,5 @@ test('field validation from the service', async () => {
   expect(await screen.findByText('must be a valid email address')).toBeInTheDocument()
   expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('must be a valid email address')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
 })

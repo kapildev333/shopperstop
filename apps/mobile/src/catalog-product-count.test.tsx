@@ -48,7 +48,7 @@ const banana = {
 // Not navigating: the Home press is a cart write made before the product screen renders.
 test('count follows the product across screens', async () => {
   setPincode('560034')
-  setQuantity('s-1', banana.id, 1)
+  setQuantity(storeId, banana, 1)
   fakeCore({
     'GET /serviceability': () => json(200, { store }),
     [`GET /stores/${storeId}/categories`]: () => json(200, { items: [{ ...fruit, children: [] }] }),

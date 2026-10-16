@@ -1,5 +1,6 @@
 import type { components } from '@shopperstop/ui/api'
 import { api, call, queryClient, type ApiError } from './api'
+import { mergeGuestCart } from './cart'
 import { setToken } from './session'
 
 type CustomerSession = components['schemas']['CustomerSession']
@@ -28,6 +29,7 @@ async function openSession(
   if (error) return error
   if (!opened.session) return { code: 'internal', message: 'Core answered without a session. Try again.' }
   startSession(opened.session)
+  await mergeGuestCart()
   return undefined
 }
 

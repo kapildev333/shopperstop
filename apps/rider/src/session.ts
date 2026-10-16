@@ -1,36 +1,7 @@
-const KEY = 'shopperstop:rider-token'
+import { createTokenStore } from '@shopperstop/ui/app'
 
-// Memory is the source for every request; localStorage keeps the session across reloads (Spec 2 §5).
-// Storage can be blocked or full (privacy modes, disabled cookies): the token then lives in memory only.
-function read() {
-  try {
-    return localStorage.getItem(KEY)
-  } catch {
-    return null
-  }
-}
-
-function write(value: string | null) {
-  try {
-    if (value) localStorage.setItem(KEY, value)
-    else localStorage.removeItem(KEY)
-  } catch {
-    // Not persisted; the memory copy still holds for this page.
-  }
-}
-
-let token = read()
-
-export function getToken() {
-  return token
-}
-
-export function setToken(value: string) {
-  token = value
-  write(value)
-}
-
-export function clearToken() {
-  token = null
-  write(null)
-}
+// Memory first, mirrored to localStorage (memory only when storage is blocked): the shared store (Spec 2 §5, D29 key).
+export const session = createTokenStore('shopperstop:rider-token')
+export const getToken = session.get
+export const setToken = (token: string) => session.set(token)
+export const clearToken = () => session.set(undefined)

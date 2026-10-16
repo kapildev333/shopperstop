@@ -1,0 +1,18 @@
+# mobile-P4-L3-T3 - Cart hooks and writes (mobile-cart task 3)
+Status: done
+## Doing
+Task 3 done (3.1, 3.2, 3.3 ticked). Feat `d1c8814` landed after the scope extension; full suite green three times.
+## Found
+- Red commits: `d8c4c6d` (`test: card adds to the guest cart and cart hook unit tests (red)`), `db36d00` (`test: queued runs work in order and store options cache (red)`, the team lead's 8256d44 additions), `cd67f99` (`test: quick taps and failed write wait for their counts, not the press`, a test correction after the red run).
+- Found while building: an awaited `fireEvent.press` never returns while its server write is held or fails over the network in RNTL 14 (the press hangs in act). The stepper tests therefore fire the press unawaited and wait for each count with `waitFor`. Logged here, not a product bug: the count and storage behaviour are correct.
+- `src/cart.ts` as built: `useCart` (`error` included), `useQuantity`, `useLineWrite`, `setQuantity(storeId, product, quantity)`, `clearCart`, `getCartSummary` (sync: signed-in cache, else guest cart priced at the cached store), `useCartSummary`, `loadCartSummary`, `queued` (exported), `storeOptions(storeId)` (exported, whole Store under `['store', id]`), `useStoreName` (select on `storeOptions`), `openCartSheet` / `closeCartSheet` / `useCartSheetOpen`. `CartSummary` has `totalCents`. Not included: `mergeGuestCart` (task 6).
+- Callers changed: `src/catalog-card.tsx` and `src/app/product/[slug].tsx` pass the product; `src/pincode-sheet.test.tsx` passes a product object; `src/catalog-product-count.test.tsx` passes a product object and the resolved store id (the guest line was stored under `s-1`, which no longer matches the resolved store); `jest.setup.ts` adds `closeCartSheet()` after `clearCart()`.
+- Gates on the working tree: `npm run lint --workspace apps/mobile` exit 0; `npm run typecheck --workspace apps/mobile` exit 0; `npm run build --workspace packages/ui` exit 0; `npm run build --workspace apps/mobile` exit 0; `openspec validate mobile-cart --strict` valid. `npx jest --ci` (full, 70 suites): 69 pass, 260 tests pass, 1 suite fails (3 tests) in `src/catalog-card.test.tsx`.
+## Landed after the scope decision
+- `ab5d900` `test:` `src/catalog-card.test.tsx` (scope extended by the manager, wrapper only): the three renders sit inside `QueryClientProvider client={queryClient}`. The add test also resolves its store (`560034` faked to store `s-1`), because the guest count only shows at a resolved store, as the card does behind the store gate. No assertion changed.
+- `d1c8814` `feat:` the cart module and the callers, `jest.setup.ts`, tasks 3.1 to 3.3 ticked.
+- Gates on `d1c8814`: `npm run build --workspace packages/ui` exit 0; `npm run lint --workspace apps/mobile` exit 0; `npm run typecheck --workspace apps/mobile` exit 0; `npm run test --workspace apps/mobile -- --run` 70 suites, 263 tests passed (three full runs: 70/263 each time); `npm run build --workspace apps/mobile` exit 0 (Exported: dist); `openspec validate mobile-cart --strict` valid.
+## Requests
+- to mobile manager / team lead: `src/catalog-card.test.tsx` renders `ProductCard` with no `QueryClientProvider`, so `useQuantity` (through `useStore`) throws "No QueryClient set" in its three tests (`card links and prices`, `add shows the count`, `out-of-stock card`). The file is not in task 3's scope list. The fix is a `QueryClientProvider client={queryClient}` wrapper around each `render` in that file (the same wrapper `catalog-product-count.test.tsx` uses). Decide: add that file to task 3's scope, or name another lane. Until then the feat commit (`cart.ts`, the callers, `jest.setup.ts`, the two L2 tests, the tasks.md tick for 3.1 and 3.2) is held.
+## Blockers
+None.
