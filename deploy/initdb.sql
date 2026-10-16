@@ -6,3 +6,7 @@ create role shopperstop_rider login password 'shopperstop_rider';
 create database shopperstop_rider owner shopperstop_rider;
 create database shopperstop_rider_test owner shopperstop_rider;
 create database shopperstop_rider_e2e owner shopperstop_rider;
+create role shopperstop_payment login password 'shopperstop_payment';
+create database shopperstop_payment owner shopperstop_payment;
+create database shopperstop_payment_test owner shopperstop_payment;
+create database shopperstop_payment_e2e owner shopperstop_payment;
