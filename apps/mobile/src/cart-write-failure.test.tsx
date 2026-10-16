@@ -136,8 +136,8 @@ test('next tap clears the failure', async () => {
   expect(await screen.findByRole('alert')).toBeTruthy()
 
   // The held write leaves the alert gone at once; the write's own answer brings it back.
-  void fireEvent.press(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
-  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  await fireEvent.press(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  expect(screen.queryByRole('alert')).toBeNull()
   await waitFor(() => expect(writes).toBe(2))
   failSecond()
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ShopperStop. Try again.')
