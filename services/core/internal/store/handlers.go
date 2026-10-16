@@ -101,7 +101,7 @@ func Create(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		row, err := db.New(pool).CreateStore(r.Context(), db.CreateStoreParams{
-			Name: *f.Name, AddressLine: *f.AddressLine, Pincode: *f.Pincode, IsOpen: *f.IsOpen,
+			Name: *f.Name, City: *f.City, AddressLine: *f.AddressLine, Pincode: *f.Pincode, IsOpen: *f.IsOpen,
 			DeliveryFeeCents: *f.DeliveryFeeCents, FreeDeliveryAboveCents: *f.FreeDeliveryAboveCents,
 			MinOrderCents: *f.MinOrderCents, PromisedMinutes: *f.PromisedMinutes,
 		})
@@ -149,7 +149,7 @@ func Update(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		row, err := db.New(pool).UpdateStore(r.Context(), db.UpdateStoreParams{
-			ID: id, Name: f.Name, AddressLine: f.AddressLine, Pincode: f.Pincode, IsOpen: f.IsOpen,
+			ID: id, Name: f.Name, City: f.City, AddressLine: f.AddressLine, Pincode: f.Pincode, IsOpen: f.IsOpen,
 			DeliveryFeeCents: f.DeliveryFeeCents, FreeDeliveryAboveCents: f.FreeDeliveryAboveCents,
 			MinOrderCents: f.MinOrderCents, PromisedMinutes: f.PromisedMinutes,
 		})

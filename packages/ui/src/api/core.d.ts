@@ -463,7 +463,7 @@ export interface paths {
         put?: never;
         /**
          * Create a store
-         * @description Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. Name and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.
+         * @description Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city means none. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.
          */
         post: operations["createStore"];
         delete?: never;
@@ -495,7 +495,7 @@ export interface paths {
         head?: never;
         /**
          * Change a store
-         * @description Admins only. Changes only the fields present: name, addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.
+         * @description Admins only. Changes only the fields present: name, city (empty clears it), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.
          */
         patch: operations["updateStore"];
         trace?: never;
@@ -637,7 +637,7 @@ export interface paths {
         };
         /**
          * List a store's products
-         * @description Public, no session. The paged active products a store sells, ordered by name, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them. Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match, not just this page. An unknown store answers 404 not_found; a bad q or categoryId answers 400 naming the field.
+         * @description Public, no session. The paged active products a store sells, filtered by q (name or brand) and categoryId (with its children) exactly as the admin list filters them, and by inStock. Ordered by name, or by price with sort (equal prices by name, then id). Inactive products are never listed. Each product carries inStock and quantity at this store; quantity is capped at 10 for display. total counts every match after every filter, not just this page. An unknown store answers 404 not_found; a bad q, categoryId, inStock or sort answers 400 naming the parameter.
          */
         get: operations["getStoreProducts"];
         put?: never;
@@ -972,6 +972,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /**
+             * @description The city the store is in, for the customer's header ("560034, Bengaluru"). Omitted when the store has none.
+             * @example Bengaluru
+             */
+            city?: string;
             isOpen: boolean;
             /** Format: int64 */
             deliveryFeeCents: number;
@@ -987,6 +992,8 @@ export interface components {
         StoreCreate: {
             /** @description 1 to 100 characters after trimming. */
             name: string;
+            /** @description At most 100 characters after trimming. Absent or empty: no city. */
+            city?: string;
             /** @description 1 to 200 characters after trimming. */
             addressLine: string;
             /** @description Six digits, the first from 1 to 9. */
@@ -1015,6 +1022,8 @@ export interface components {
         /** @description The fields to change. Absent fields stay; null is refused. */
         StorePatch: {
             name?: string;
+            /** @description At most 100 characters after trimming; empty clears the city. */
+            city?: string;
             addressLine?: string;
             pincode?: string;
             isOpen?: boolean;
@@ -1146,6 +1155,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /**
+             * @description The city the store is in, for the customer's header ("560034, Bengaluru"). Omitted when the store has none.
+             * @example Bengaluru
+             */
+            city?: string;
             /** @description false when the store is closed; it still appears in serviceability answers. */
             isOpen: boolean;
             /**
@@ -3823,6 +3837,7 @@ export interface operations {
                      *         {
                      *           "id": "00000000-0000-4000-8000-000000000401",
                      *           "name": "Koramangala",
+                     *           "city": "Bengaluru",
                      *           "addressLine": "80 Feet Rd, Koramangala",
                      *           "pincode": "560034",
                      *           "isOpen": true,
@@ -3834,6 +3849,7 @@ export interface operations {
                      *         {
                      *           "id": "00000000-0000-4000-8000-000000000402",
                      *           "name": "Indiranagar",
+                     *           "city": "Bengaluru",
                      *           "addressLine": "100 Feet Rd, Indiranagar",
                      *           "pincode": "560038",
                      *           "isOpen": true,
@@ -3917,6 +3933,7 @@ export interface operations {
                 /**
                  * @example {
                  *       "name": "HSR Layout",
+                 *       "city": "Bengaluru",
                  *       "addressLine": "27th Main, HSR Layout",
                  *       "pincode": "560102",
                  *       "promisedMinutes": 12,
@@ -3939,6 +3956,7 @@ export interface operations {
                      * @example {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
+                     *       "city": "Bengaluru",
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4030,6 +4048,7 @@ export interface operations {
                      * @example {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
+                     *       "city": "Bengaluru",
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4221,6 +4240,7 @@ export interface operations {
                      * @example {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
+                     *       "city": "Bengaluru",
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4945,6 +4965,7 @@ export interface operations {
                      *       "store": {
                      *         "id": "00000000-0000-4000-8000-000000000401",
                      *         "name": "Koramangala",
+                     *         "city": "Bengaluru",
                      *         "isOpen": true,
                      *         "deliveryFeeCents": 2500,
                      *         "freeDeliveryAboveCents": 19900,
@@ -5018,6 +5039,7 @@ export interface operations {
                      * @example {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
+                     *       "city": "Bengaluru",
                      *       "isOpen": true,
                      *       "deliveryFeeCents": 2500,
                      *       "freeDeliveryAboveCents": 19900,
@@ -5125,6 +5147,16 @@ export interface operations {
                  */
                 categoryId?: string;
                 /**
+                 * @description true lists only products whose quantity at this store is above 0. false, empty or absent means no filter. Any other value answers 400 naming inStock.
+                 * @example true
+                 */
+                inStock?: boolean;
+                /**
+                 * @description price_asc: cheapest first; price_desc: dearest first; equal prices by name, then id. Empty or absent: by name, then id. Any other value answers 400 naming sort.
+                 * @example price_asc
+                 */
+                sort?: "price_asc" | "price_desc";
+                /**
                  * @description Page number, from 1. Default 1.
                  * @example 1
                  */
@@ -5177,7 +5209,7 @@ export interface operations {
                     "application/json": components["schemas"]["StoreProductList"];
                 };
             };
-            /** @description A q or categoryId is invalid. The field names it. */
+            /** @description A q, categoryId, inStock or sort is invalid. The field names it. */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -73,6 +73,7 @@ returning *;
 delete from products where id = $1;
 
 -- name: StoreProducts :many
+-- in_stock keeps quantity above 0 at the store; sort 'price_asc' or 'price_desc' orders by price first, anything else by name.
 select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
        p.category_id, p.image_key, coalesce(s.quantity, 0)::integer as quantity
 from products p
@@ -82,16 +83,21 @@ where p.is_active
   and (sqlc.narg(category_id)::uuid is null
        or p.category_id = sqlc.narg(category_id)
        or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)))
-order by p.name, p.id
+  and (not @in_stock::boolean or coalesce(s.quantity, 0) > 0)
+order by case when @sort::text = 'price_asc' then p.price_cents end asc,
+         case when @sort::text = 'price_desc' then p.price_cents end desc,
+         p.name, p.id
 limit @page_size offset @page_offset;
 
 -- name: CountStoreProducts :one
 select count(*) from products p
+left join store_stock s on s.product_id = p.id and s.store_id = @store_id
 where p.is_active
   and (sqlc.narg(pattern)::text is null or p.name ilike sqlc.narg(pattern) or p.brand ilike sqlc.narg(pattern))
   and (sqlc.narg(category_id)::uuid is null
        or p.category_id = sqlc.narg(category_id)
-       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)));
+       or p.category_id in (select c.id from categories c where c.parent_id = sqlc.narg(category_id)))
+  and (not @in_stock::boolean or coalesce(s.quantity, 0) > 0);
 
 -- name: StoreProductBySlug :one
 select p.id, p.name, p.slug, p.description, p.brand, p.unit_label, p.mrp_cents, p.price_cents,
