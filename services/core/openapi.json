@@ -5895,6 +5895,7 @@
                   "out_of_stock",
                   "not_serviceable",
                   "rate_limited",
+                  "method_not_allowed",
                   "internal"
                 ]
               },

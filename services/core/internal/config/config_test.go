@@ -117,6 +117,27 @@ func TestLoadLogLevel(t *testing.T) {
 	}
 }
 
+// TestLoadTrustProxy: unset, empty and "false" load false, "true" loads true
+// (surrounding spaces ignored), anything else refuses naming the variable.
+func TestLoadTrustProxy(t *testing.T) {
+	for value, want := range map[string]bool{"": false, "false": false, " true ": true, "true": true} {
+		vars := valid()
+		vars["SHOPPERSTOP_CORE_TRUST_PROXY"] = value
+		cfg, err := config.Load(env(vars))
+		if err != nil || cfg.TrustProxy != want {
+			t.Fatalf("Load with %q: TrustProxy %v, err %v; want %v and no error", value, cfg.TrustProxy, err, want)
+		}
+	}
+	for _, value := range []string{"yes", "1", "TRUE"} {
+		vars := valid()
+		vars["SHOPPERSTOP_CORE_TRUST_PROXY"] = value
+		_, err := config.Load(env(vars))
+		if err == nil || !strings.Contains(err.Error(), "SHOPPERSTOP_CORE_TRUST_PROXY must be true or false") {
+			t.Fatalf("Load with %q: %v, want an error naming SHOPPERSTOP_CORE_TRUST_PROXY", value, err)
+		}
+	}
+}
+
 // TestLoadServiceTokens: the Makefile's dev and e2e values load as service rider;
 // unset, empty or only separators load none.
 func TestLoadServiceTokens(t *testing.T) {

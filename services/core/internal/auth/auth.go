@@ -130,8 +130,14 @@ func (a *Auth) tokenHash(token string) []byte {
 	return sum[:]
 }
 
-// startSession stores a new session for the subject and returns its token.
+// startSession deletes every expired session, then stores a new session for
+// the subject and returns its token.
+// ponytail: the sweep scans sessions on every sign-in (no index on expires_at);
+// add the index or a periodic sweep if sign-ins or live sessions grow large.
 func (a *Auth) startSession(ctx context.Context, subjectType, subjectID string) (string, error) {
+	if err := a.q.DeleteExpiredSessions(ctx); err != nil {
+		return "", err
+	}
 	token, err := newToken()
 	if err != nil {
 		return "", err

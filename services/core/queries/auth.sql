@@ -36,6 +36,11 @@ select s.id as session_id, u.id, u.email, u.name, u.role, u.store_id, u.is_activ
 from sessions s join staff_users u on u.id = s.subject_id
 where s.token_hash = $1 and s.subject_type = 'staff' and s.expires_at > now() and u.is_active;
 
+-- name: DeleteExpiredSessions :exec
+-- A session at or past its expiry can never be used again: CustomerSession and
+-- StaffSession admit only expires_at > now().
+delete from sessions where expires_at <= now();
+
 -- name: DeleteSession :exec
 delete from sessions where id = $1;
 

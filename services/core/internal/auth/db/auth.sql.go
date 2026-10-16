@@ -189,6 +189,17 @@ func (q *Queries) CustomerSession(ctx context.Context, tokenHash []byte) (Custom
 	return i, err
 }
 
+const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
+delete from sessions where expires_at <= now()
+`
+
+// A session at or past its expiry can never be used again: CustomerSession and
+// StaffSession admit only expires_at > now().
+func (q *Queries) DeleteExpiredSessions(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredSessions)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 delete from sessions where id = $1
 `
