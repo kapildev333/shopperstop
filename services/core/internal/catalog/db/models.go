@@ -255,6 +255,7 @@ type Store struct {
 	PromisedMinutes        int32
 	CreatedAt              pgtype.Timestamptz
 	UpdatedAt              pgtype.Timestamptz
+	City                   string
 }
 
 type StoreServiceArea struct {

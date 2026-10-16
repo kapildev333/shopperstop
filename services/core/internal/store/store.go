@@ -20,6 +20,7 @@ import (
 type Store struct {
 	ID                     string `json:"id"`
 	Name                   string `json:"name"`
+	City                   string `json:"city,omitempty"`
 	IsOpen                 bool   `json:"isOpen"`
 	DeliveryFeeCents       int64  `json:"deliveryFeeCents"`
 	FreeDeliveryAboveCents int64  `json:"freeDeliveryAboveCents"`
@@ -72,7 +73,7 @@ func All(ctx context.Context, q db.DBTX) ([]Store, error) {
 
 func public(row db.Store) Store {
 	return Store{
-		ID: row.ID, Name: row.Name, IsOpen: row.IsOpen,
+		ID: row.ID, Name: row.Name, City: row.City, IsOpen: row.IsOpen,
 		DeliveryFeeCents: row.DeliveryFeeCents, FreeDeliveryAboveCents: row.FreeDeliveryAboveCents,
 		MinOrderCents: row.MinOrderCents, PromisedMinutes: row.PromisedMinutes,
 	}
@@ -90,6 +91,7 @@ const maxMoney = 10_000_000
 // stays unchanged; on create withDefaults fills every nil member first.
 type fields struct {
 	Name                   *string `json:"name"`
+	City                   *string `json:"city"`
 	AddressLine            *string `json:"addressLine"`
 	Pincode                *string `json:"pincode"`
 	IsOpen                 *bool   `json:"isOpen"`
@@ -103,6 +105,7 @@ type fields struct {
 // with no fee and no minimum, and the blank text and zero minutes that check refuses.
 func (f *fields) withDefaults() {
 	f.Name = orZero(f.Name)
+	f.City = orZero(f.City)
 	f.AddressLine = orZero(f.AddressLine)
 	f.Pincode = orZero(f.Pincode)
 	f.IsOpen = orZero(f.IsOpen)
@@ -119,7 +122,7 @@ func orZero[T any](p *T) *T {
 	return p
 }
 
-// check trims Name and AddressLine in place, then checks each present member in
+// check trims Name, City and AddressLine in place, then checks each present member in
 // order; the first failure is the answer. Every failure is 400 validation
 // naming the field, and nothing is written.
 func check(f *fields) error {
@@ -127,6 +130,12 @@ func check(f *fields) error {
 		*f.Name = strings.TrimSpace(*f.Name)
 		if n := utf8.RuneCountInString(*f.Name); n < 1 || n > 100 {
 			return invalid("name", "name must be 1 to 100 characters")
+		}
+	}
+	if f.City != nil {
+		*f.City = strings.TrimSpace(*f.City)
+		if utf8.RuneCountInString(*f.City) > 100 {
+			return invalid("city", "city must be at most 100 characters")
 		}
 	}
 	if f.AddressLine != nil {

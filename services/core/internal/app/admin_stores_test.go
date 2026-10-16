@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,7 @@ const adminStoresPath = "/api/core/v1/admin/stores"
 type adminStore struct {
 	ID                     string `json:"id"`
 	Name                   string `json:"name"`
+	City                   string `json:"city"`
 	AddressLine            string `json:"addressLine"`
 	Pincode                string `json:"pincode"`
 	IsOpen                 bool   `json:"isOpen"`
@@ -98,6 +100,8 @@ func TestCreateStoreValidation(t *testing.T) {
 		{"promisedMinutes", missing},
 		{"promisedMinutes", with("promisedMinutes", 0)},
 		{"promisedMinutes", with("promisedMinutes", 241)},
+		{"city", with("city", strings.Repeat("x", 101))},
+		{"city", with("city", nil)},
 	}
 	var before int
 	if err := testPool.QueryRow(t.Context(), "select count(*) from stores").Scan(&before); err != nil {
@@ -260,5 +264,39 @@ func TestStoreStaffOnStores403(t *testing.T) {
 		if e := decodeError(t, raw); status != http.StatusForbidden || e.Error.Code != "forbidden" {
 			t.Fatalf("store staff GET %s: got %d %s, want 403 forbidden", id, status, raw)
 		}
+	}
+}
+
+func TestCreateStoreCity(t *testing.T) {
+	token := adminToken(t)
+	with := newStoreBody("City Layout", "561211")
+	with["city"] = "  Bengaluru "
+	if s := createStore(t, token, with); s.City != "Bengaluru" || getAdminStore(t, token, s.ID).City != "Bengaluru" {
+		t.Fatalf("create with city: got %q, want Bengaluru stored trimmed", s.City)
+	}
+	status, raw := call(t, http.MethodPost, adminStoresPath, token, newStoreBody("No City Layout", "561212"))
+	if status != http.StatusCreated || strings.Contains(string(raw), `"city"`) {
+		t.Fatalf("create without city: got %d %s, want 201 without a city member", status, raw)
+	}
+}
+
+func TestPatchStoreCity(t *testing.T) {
+	token := adminToken(t)
+	id := insertStore(t, true, "561213")
+	patch := func(body map[string]any) (int, []byte) {
+		return call(t, http.MethodPatch, adminStoresPath+"/"+id, token, body)
+	}
+	if status, raw := patch(map[string]any{"city": " Bengaluru "}); status != http.StatusOK || getAdminStore(t, token, id).City != "Bengaluru" {
+		t.Fatalf("set city: got %d %s, want 200 and city Bengaluru", status, raw)
+	}
+	if status, raw := patch(map[string]any{"name": "Renamed"}); status != http.StatusOK || getAdminStore(t, token, id).City != "Bengaluru" {
+		t.Fatalf("patch without city: got %d %s, want the city unchanged", status, raw)
+	}
+	status, raw := patch(map[string]any{"city": strings.Repeat("x", 101)})
+	if e := decodeError(t, raw); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "city" || getAdminStore(t, token, id).City != "Bengaluru" {
+		t.Fatalf("101-character city: got %d %s, want 400 validation field city and the city unchanged", status, raw)
+	}
+	if status, raw := patch(map[string]any{"city": ""}); status != http.StatusOK || strings.Contains(string(raw), `"city"`) {
+		t.Fatalf("clear city: got %d %s, want 200 without a city member", status, raw)
 	}
 }

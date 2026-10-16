@@ -15,6 +15,7 @@ const rupees = 'Enter 0 to 100000 rupees, at most two decimals.'
 // One message per field: for a value the form cannot send, and for core's 400 naming the field (core's messages speak in cents).
 const messages: Record<Field, string> = {
   name: 'Enter 1 to 100 characters.',
+  city: 'Enter at most 100 characters.',
   addressLine: 'Enter 1 to 200 characters.',
   pincode: 'Enter a 6-digit pincode.',
   isOpen: 'Choose open or closed.',
@@ -27,6 +28,7 @@ const messages: Record<Field, string> = {
 function initial(store?: AdminStore): Values {
   return {
     name: store?.name ?? '',
+    city: store?.city ?? '',
     addressLine: store?.addressLine ?? '',
     pincode: store?.pincode ?? '',
     isOpen: store?.isOpen ? 'open' : 'closed',
@@ -49,6 +51,7 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
   if (minutes === undefined) errors.promisedMinutes = messages.promisedMinutes
   const body: StoreCreate = {
     name: values.name,
+    city: values.city,
     addressLine: values.addressLine,
     pincode: values.pincode.trim(),
     isOpen: values.isOpen === 'open',
@@ -62,7 +65,7 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
 
 // PATCH sends only what differs from the loaded store; never null.
 function changed(body: StoreCreate, store: AdminStore) {
-  return Object.fromEntries(Object.entries(body).filter(([key, value]) => store[key as Field] !== value))
+  return Object.fromEntries(Object.entries(body).filter(([key, value]) => (store[key as Field] ?? '') !== value))
 }
 
 // Create when there is no store (then open it), change it otherwise.
@@ -113,6 +116,7 @@ export function StoreForm({ store }: { store?: AdminStore }) {
       {save.error && !serverField && <ErrorBanner message="Could not save the store. Try again." />}
       {text('name', 'Name')}
       {text('addressLine', 'Address')}
+      {text('city', 'City', { hint: 'Optional.' })}
       {text('pincode', 'Pincode', { inputMode: 'numeric' })}
       {text('deliveryFeeCents', 'Delivery fee (₹)', { inputMode: 'decimal' })}
       {text('freeDeliveryAboveCents', 'Free delivery above (₹)', { inputMode: 'decimal', hint: '0 means delivery is always free.' })}

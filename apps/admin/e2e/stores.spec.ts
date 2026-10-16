@@ -40,6 +40,7 @@ test('admin edits a store and meets the pincode conflict', async ({ page }) => {
   await stores.getByRole('link', { name: 'Koramangala' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Koramangala' })).toBeVisible()
   await expect(page.getByLabel('Promised minutes')).toHaveValue('10')
+  await expect(page.getByLabel('City')).toHaveValue('Bengaluru')
   await expectNoAxeViolations(page)
 
   await savePromisedMinutes(page, '11')

@@ -1,5 +1,7 @@
+import { View } from 'react-native'
 import { House, LayoutGrid, ReceiptText } from 'lucide-react-native'
 import { Tabs } from 'expo-router'
+import { BottomTabBar } from 'expo-router/js-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text } from '../../ui/text'
 import { colors, fontFamily } from '../../ui/tokens'
@@ -9,6 +11,12 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets()
   return (
     <Tabs
+      // The bar sits in a navigation landmark named "Main" (axe `region`); the router's own bar keeps its roles and state.
+      tabBar={(props) => (
+        <View role="navigation" accessibilityLabel="Main">
+          <BottomTabBar {...props} />
+        </View>
+      )}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,

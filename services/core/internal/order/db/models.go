@@ -296,6 +296,7 @@ type Store struct {
 	PromisedMinutes        int32
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
+	City                   string
 }
 
 type StoreServiceArea struct {

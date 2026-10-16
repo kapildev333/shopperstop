@@ -268,11 +268,12 @@ func TestResetTwiceLeavesDemoStores(t *testing.T) {
 		var s struct {
 			Store struct {
 				ID     string `json:"id"`
+				City   string `json:"city"`
 				IsOpen bool   `json:"isOpen"`
 			} `json:"store"`
 		}
-		if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Store.ID != want || !s.Store.IsOpen {
-			t.Fatalf("serviceability %s: got %d %s, want 200 open store %s", pincode, status, body, want)
+		if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Store.ID != want || !s.Store.IsOpen || s.Store.City != "Bengaluru" {
+			t.Fatalf("serviceability %s: got %d %s, want 200 open store %s in Bengaluru", pincode, status, body, want)
 		}
 	}
 	if status, body := getJSON(t, base+"/api/core/v1/serviceability?pincode=110001"); status != http.StatusNotFound {

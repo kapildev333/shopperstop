@@ -36,13 +36,14 @@ func (q *Queries) CountStores(ctx context.Context) (int64, error) {
 }
 
 const createStore = `-- name: CreateStore :one
-insert into stores (name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes)
-values ($1, $2, $3, $4, $5, $6, $7, $8)
-returning id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at
+insert into stores (name, city, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+returning id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at, city
 `
 
 type CreateStoreParams struct {
 	Name                   string
+	City                   string
 	AddressLine            string
 	Pincode                string
 	IsOpen                 bool
@@ -55,6 +56,7 @@ type CreateStoreParams struct {
 func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (Store, error) {
 	row := q.db.QueryRow(ctx, createStore,
 		arg.Name,
+		arg.City,
 		arg.AddressLine,
 		arg.Pincode,
 		arg.IsOpen,
@@ -76,6 +78,7 @@ func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (Store
 		&i.PromisedMinutes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.City,
 	)
 	return i, err
 }
@@ -102,7 +105,7 @@ func (q *Queries) DeleteStore(ctx context.Context, id string) (int64, error) {
 }
 
 const getStore = `-- name: GetStore :one
-select id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at from stores where id = $1
+select id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at, city from stores where id = $1
 `
 
 func (q *Queries) GetStore(ctx context.Context, id string) (Store, error) {
@@ -120,6 +123,7 @@ func (q *Queries) GetStore(ctx context.Context, id string) (Store, error) {
 		&i.PromisedMinutes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.City,
 	)
 	return i, err
 }
@@ -149,7 +153,7 @@ func (q *Queries) ListServiceAreas(ctx context.Context, storeID string) ([]strin
 }
 
 const listStores = `-- name: ListStores :many
-select id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at from stores order by name, id limit $1 offset $2
+select id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at, city from stores order by name, id limit $1 offset $2
 `
 
 type ListStoresParams struct {
@@ -178,6 +182,7 @@ func (q *Queries) ListStores(ctx context.Context, arg ListStoresParams) ([]Store
 			&i.PromisedMinutes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.City,
 		); err != nil {
 			return nil, err
 		}
@@ -224,7 +229,7 @@ func (q *Queries) PincodeHolder(ctx context.Context, arg PincodeHolderParams) (P
 }
 
 const storeForPincode = `-- name: StoreForPincode :one
-select s.id, s.name, s.address_line, s.pincode, s.is_open, s.delivery_fee_cents, s.free_delivery_above_cents, s.min_order_cents, s.promised_minutes, s.created_at, s.updated_at
+select s.id, s.name, s.address_line, s.pincode, s.is_open, s.delivery_fee_cents, s.free_delivery_above_cents, s.min_order_cents, s.promised_minutes, s.created_at, s.updated_at, s.city
 from store_service_areas a join stores s on s.id = a.store_id
 where a.pincode = $1
 `
@@ -244,6 +249,7 @@ func (q *Queries) StoreForPincode(ctx context.Context, pincode string) (Store, e
 		&i.PromisedMinutes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.City,
 	)
 	return i, err
 }
@@ -251,19 +257,21 @@ func (q *Queries) StoreForPincode(ctx context.Context, pincode string) (Store, e
 const updateStore = `-- name: UpdateStore :one
 update stores
 set name = coalesce($1, name),
-    address_line = coalesce($2, address_line),
-    pincode = coalesce($3, pincode),
-    is_open = coalesce($4, is_open),
-    delivery_fee_cents = coalesce($5, delivery_fee_cents),
-    free_delivery_above_cents = coalesce($6, free_delivery_above_cents),
-    min_order_cents = coalesce($7, min_order_cents),
-    promised_minutes = coalesce($8, promised_minutes)
-where id = $9
-returning id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at
+    city = coalesce($2, city),
+    address_line = coalesce($3, address_line),
+    pincode = coalesce($4, pincode),
+    is_open = coalesce($5, is_open),
+    delivery_fee_cents = coalesce($6, delivery_fee_cents),
+    free_delivery_above_cents = coalesce($7, free_delivery_above_cents),
+    min_order_cents = coalesce($8, min_order_cents),
+    promised_minutes = coalesce($9, promised_minutes)
+where id = $10
+returning id, name, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, created_at, updated_at, city
 `
 
 type UpdateStoreParams struct {
 	Name                   *string
+	City                   *string
 	AddressLine            *string
 	Pincode                *string
 	IsOpen                 *bool
@@ -277,6 +285,7 @@ type UpdateStoreParams struct {
 func (q *Queries) UpdateStore(ctx context.Context, arg UpdateStoreParams) (Store, error) {
 	row := q.db.QueryRow(ctx, updateStore,
 		arg.Name,
+		arg.City,
 		arg.AddressLine,
 		arg.Pincode,
 		arg.IsOpen,
@@ -299,6 +308,7 @@ func (q *Queries) UpdateStore(ctx context.Context, arg UpdateStoreParams) (Store
 		&i.PromisedMinutes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.City,
 	)
 	return i, err
 }
