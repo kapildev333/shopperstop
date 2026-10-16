@@ -7,6 +7,7 @@ export * from './form-field'
 export * from './select'
 export * from './price'       // Price, formatInr
 export * from './stepper'
+export * from './choice-group'
 export * from './badge'
 export * from './chip'
 export * from './card'
