@@ -37,7 +37,7 @@ async function openSheet() {
       <PincodeSheet />
     </QueryClientProvider>,
   )
-  act(() => {
+  await act(async () => {
     openPincodeSheet()
   })
 }
@@ -100,7 +100,7 @@ test('same store or empty cart', async () => {
   expect(screen.queryByText(/^Switch to the/)).toBeNull()
 
   await clearCart()
-  act(() => {
+  await act(async () => {
     openPincodeSheet()
   })
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
