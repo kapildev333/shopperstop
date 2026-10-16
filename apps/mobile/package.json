@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "sh -c 'jest --ci' --",
-    "build": "expo export --platform web"
+    "build": "expo export --platform web",
+    "e2e": "EXPO_PUBLIC_CORE_URL=http://localhost:18080 expo export --platform web --output-dir dist-e2e && playwright test"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
