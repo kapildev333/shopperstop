@@ -77,8 +77,7 @@ test('footer stays below the scroll', async () => {
     if (node.type === 'RCTScrollView') insideScroll = true
   }
   expect(insideScroll).toBe(false)
-  let content = screen.getByText('Cart line')
-  let scroll = content
+  let scroll = screen.getByText('Cart line')
   while (scroll.type !== 'RCTScrollView' && scroll.parent) scroll = scroll.parent
   expect(scroll.type).toBe('RCTScrollView')
 })
