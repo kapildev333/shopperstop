@@ -1,0 +1,13 @@
+# mobile-P4-L4b - mobile-checkout: checkout screen (artboard 5), address choice, cash on delivery, placing, refusals (team lead)
+Status: started (proposal written; workers wait for L3 on main and task 0)
+## Doing
+Proposal done; waiting for mobile-P4-L3 to merge and the manager to merge origin/main into lane/mobile-P4-L4b-checkout, then task 0.
+## Found
+- Change `openspec/changes/mobile-checkout/`: proposal; `specs/mobile-app/spec.md` (14 ADDED requirements, 34 scenarios); design.md (web-app mirror table, decisions, contract audit, files, scenario-to-test map); tasks.md (task 0 team lead, workers 1 to 6, acceptance 7; groups A 1,2 / B 3 / C 4 / D 5 / E 6). `docs/design/mobile-P4-L4b.md` carries artboard 5 and the module interfaces.
+- Contract audit (core openapi on main 2e06911): no gap. `POST /orders` (`OrderCreate` `{addressId}`) answers 201 `Order`; 400 `validation` no field (cart empty), field `addressId` or `subtotal`; 409 `not_serviceable` with or without field `addressId`; 409 `out_of_stock` with `productIds`; 409 `conflict` (retry). `GET /stores/{id}` gives `name` and `promisedMinutes`; `GET /me/addresses` the list. Notes, not requests: `Address` has no city (the canvas prints "Bengaluru" in the address line; omitted); payment method is always `cod` (no field to send).
+- Written against L3's interfaces as proposed (`docs/design/mobile-P4-L3.md` on lane/mobile-P4-L3-cart f442651). Two things the checkout needs that L3's interface list does not name; see Requests.
+- e2e picks: indices 2 to 5 of web's `orderPick` rule (L4a took 0 and 1).
+## Requests
+- to mobile-P4-L3 (via mobile manager): (1) export `queued` from `src/cart.ts`, as `apps/web/src/cart.ts` does: placing an order runs inside the cart's write queue so a Stepper tap before the press is placed too. (2) cache the whole `Store` under `['store', id]` (an exported `storeOptions(id)`; `useStoreName` = `useQuery({ ...storeOptions(id), select: (store) => store.name, enabled: !!id })`), so checkout reads `promisedMinutes` from the same cache entry. If either is not in L3 as merged, task 0 records it and task 1 adds the `export` (one word) / task 3 uses its own key; named in design.md Decision 4 and 6.
+## Blockers
+- Workers wait for mobile-P4-L3 on main (D42 order).
