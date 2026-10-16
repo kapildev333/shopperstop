@@ -53,7 +53,7 @@ The app SHALL call the core and rider services only by relative `/api/...` URLs.
 - **THEN** the web suite's Playwright starts the admin preview, and `http://localhost:15174/admin/sign-in` opens the admin sign-in page
 
 ### Requirement: Customer session token
-The customer site SHALL keep the session token returned by `POST /auth/sign-in` (or register) in memory and in `localStorage` under `shopperstop:customer-token`, SHALL read it from `localStorage` when the app loads, and SHALL attach it as `Authorization: Bearer <token>` to every core request while it is held. The token SHALL be removed from memory and `localStorage` on sign-out and when core answers with status 401 a request that carried the token held when the answer arrives; a 401 to a request sent with another token or none SHALL leave the held token in place. No cookie SHALL be set or read.
+The customer site SHALL keep the session token returned by `POST /auth/sign-in` (or register) in memory and in `localStorage` under `shopperstop:customer-token`, SHALL read it from `localStorage` when the app loads, and SHALL attach it as `Authorization: Bearer <token>` to every core request while it is held. The token SHALL be removed from memory and `localStorage` on sign-out. No cookie SHALL be set or read.
 
 #### Scenario: Token persisted and cleared
 - **WHEN** the session store is given the token `t-1` and later cleared
@@ -66,6 +66,9 @@ The customer site SHALL keep the session token returned by `POST /auth/sign-in` 
 #### Scenario: Bearer attached
 - **WHEN** the store holds `t-3` and the site's client sends `GET /me`
 - **THEN** the request to `/api/core/v1/me` carries the header `Authorization: Bearer t-3`
+
+### Requirement: Customer session token on 401
+The token SHALL be removed from memory and `localStorage` when core answers with status 401 a request that carried the token held when the answer arrives; a 401 to a request sent with another token or none SHALL leave the held token in place.
 
 #### Scenario: Expired session dropped
 - **WHEN** the store holds a token and core answers 401 to a request the site's client sent with it
