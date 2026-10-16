@@ -17,6 +17,8 @@ test('forgot-password link on sign-in', async () => {
   const router = await renderRouter(appDir, { initialUrl: '/sign-in' })
   await screen.findByRole('heading', { name: 'Sign in' })
 
+  // 12 pt padding above and below a 20 pt line: the row is the 44 pt tap target.
+  expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveStyle({ lineHeight: 20, paddingVertical: 12 })
   await fireEvent.press(screen.getByRole('link', { name: 'Forgot password?' }))
 
   expect(await screen.findByRole('heading', { name: 'Forgot password' })).toBeTruthy()

@@ -70,7 +70,10 @@ test('expired code while signed out', async () => {
   await renderRouter(routes, { initialUrl: '/verify-email?token=old' })
 
   expect(await screen.findByText('This code is invalid or has expired.')).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Sign in to get a new code' })).toHaveProp('href', '/sign-in?returnTo=%2Faccount')
+  const link = screen.getByRole('link', { name: 'Sign in to get a new code' })
+  expect(link).toHaveProp('href', '/sign-in?returnTo=%2Faccount')
+  // 12 pt padding above and below a 20 pt line: the row is the 44 pt tap target.
+  expect(link).toHaveStyle({ lineHeight: 20, paddingVertical: 12 })
 })
 
 test('verification unreachable then retried', async () => {
