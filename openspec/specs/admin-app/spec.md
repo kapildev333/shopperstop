@@ -228,22 +228,25 @@ While the stores list loads, `/stores` SHALL show a loading status under its hea
 - **THEN** the alert "Could not load the stores." is shown first, then the store's link and no alert
 
 ### Requirement: Store create
-`/stores/new` SHALL show "New store" as the level-1 heading and the store form: "Name", "Address", "City" (optional), "Pincode", "Delivery fee (₹)", "Free delivery above (₹)", "Minimum order (₹)", "Promised minutes" and "Status" (Open or Closed), amounts starting at 0 and status at Closed. Amounts SHALL be typed in rupees with at most two decimals and sent as integer paise. "Create store" SHALL send `POST /admin/stores` with every field, the city as typed (empty meaning none), and on success open the new store's page.
+`/stores/new` SHALL show "New store" as the level-1 heading and the store form: "Name", "Address", "City" (optional), "Pincode", "Delivery fee (₹)", "Free delivery above (₹)", "Minimum order (₹)", "Promised minutes" and "Status" (Open or Closed), amounts starting at 0 and status at Closed. "Create store" SHALL send `POST /admin/stores` with every field, the city as typed (empty meaning none), and on success open the new store's page.
 
 #### Scenario: Create a store
 - **WHEN** an admin on `/stores/new` enters name "HSR Layout", address "27th Main, HSR Layout", city "Bengaluru", pincode `560102`, delivery fee `25`, free delivery above `199.50`, promised minutes `12`, leaves the rest, and presses "Create store", and core answers 201 with the new store
 - **THEN** the status started at Closed, the request body is `{"name":"HSR Layout","city":"Bengaluru","addressLine":"27th Main, HSR Layout","pincode":"560102","isOpen":false,"deliveryFeeCents":2500,"freeDeliveryAboveCents":19950,"minOrderCents":0,"promisedMinutes":12}` and the new store's page opens at `/stores/<new id>`
 
+### Requirement: Store form amounts
+Amounts on the store form SHALL be typed in rupees with at most two decimals and sent as integer paise.
+
+#### Scenario: Rupees become paise
+- **WHEN** an admin types "199.50" into "Free delivery above (₹)" and saves
+- **THEN** the request carries `freeDeliveryAboveCents: 19950`
+
 ### Requirement: Store change
-`/stores/{id}` SHALL show the store's name as the level-1 heading and the store form filled from `GET /admin/stores/{id}`, amounts in rupees and "City" empty when the store has none. "Save changes" SHALL send `PATCH /admin/stores/{id}` with only the fields whose value differs from the loaded store (an empty "City" equals no city; emptying a set city sends `"city":""`), never `null`, and on success show "Store saved.", keep the saved values as the base of the next change, and show them in the stores table. An id core answers with 404 SHALL show the not-found page.
+`/stores/{id}` SHALL show the store's name as the level-1 heading and the store form filled from `GET /admin/stores/{id}`, amounts in rupees and "City" empty when the store has none. "Save changes" SHALL send `PATCH /admin/stores/{id}` with only the fields whose value differs from the loaded store, never `null`, and on success show "Store saved.", keep the saved values as the base of the next change, and show them in the stores table. An id core answers with 404 SHALL show the not-found page.
 
 #### Scenario: Change sends only the changed fields
 - **WHEN** an admin on Koramangala's page (no city, fee 2500, free above 19900) sees "City" empty, "Delivery fee (₹)" `25` and "Free delivery above (₹)" `199`, sets "Promised minutes" to `11` and "Status" to Closed, and presses "Save changes"
 - **THEN** the `PATCH` body is `{"promisedMinutes":11,"isOpen":false}`, "Store saved." is shown, and "Promised minutes" still reads `11`
-
-#### Scenario: Set and clear the city
-- **WHEN** an admin on the page of Koramangala with city `Bengaluru` sees "City" `Bengaluru`, clears it and saves, then types `Bangalore` and saves again
-- **THEN** the first `PATCH` body is exactly `{"city":""}` and the second exactly `{"city":"Bangalore"}`
 
 #### Scenario: A second save sends only its own change
 - **WHEN** an admin saves "Promised minutes" `11`, then changes only "Status" to Closed and saves again
@@ -260,6 +263,13 @@ While the stores list loads, `/stores` SHALL show a loading status under its hea
 #### Scenario: Demo store city from core
 - **WHEN** an admin opens the seeded Koramangala's page against a real core
 - **THEN** "City" reads `Bengaluru`
+
+### Requirement: Store change city
+On the store change form an empty "City" SHALL equal no city, and emptying a city the store had SHALL send `"city":""`.
+
+#### Scenario: Set and clear the city
+- **WHEN** an admin on the page of Koramangala with city `Bengaluru` sees "City" `Bengaluru`, clears it and saves, then types `Bangalore` and saves again
+- **THEN** the first `PATCH` body is exactly `{"city":""}` and the second exactly `{"city":"Bangalore"}`
 
 ### Requirement: Store form errors
 An amount or a number of minutes the store form cannot convert SHALL be flagged on its field without a request. A core `validation` error naming a form field SHALL be shown on that field with the form's own message for it (core's messages speak in paise and JSON names; for `city` "Enter at most 100 characters."); any other failure SHALL show the alert "Could not save the store. Try again.".
