@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Link } from 'expo-router'
 import { ShoppingBag } from 'lucide-react-native'
@@ -39,6 +39,14 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
   const addresses = useAddresses()
   const [value, setValue] = useState(getPincode() ?? '')
   const [pending, setPending] = useState(false)
+  // False once the sheet closes: a lookup that finishes after a dismissal saves nothing.
+  const open = useRef(true)
+  useEffect(() => {
+    open.current = true
+    return () => {
+      open.current = false
+    }
+  }, [])
 
   async function next() {
     setPending(true)
@@ -48,6 +56,7 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
       () => undefined,
     )
     setPending(false)
+    if (!open.current) return
     const cart = getCartSummary()
     if (store && cart.count > 0 && cart.storeId && store.id !== cart.storeId) {
       const from = queryClient.getQueryData<{ store?: Store }>(['serviceability', getPincode()])?.store?.name ?? 'another store'
@@ -73,7 +82,7 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
         value={value}
         // Digits only, six at most: a pasted "560 034" or "56a00349" keeps what it can.
         onChangeText={(text) => setValue(text.replace(/\D/g, '').slice(0, 6))}
-        onSubmitEditing={() => isPincode(value) && next()}
+        onSubmitEditing={() => !pending && isPincode(value) && next()}
         hint="We currently deliver in parts of Bengaluru."
         error={invalid ? 'That is not a valid pincode.' : undefined}
       />
