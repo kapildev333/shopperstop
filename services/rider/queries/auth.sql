@@ -43,6 +43,11 @@ where s.token_hash = $1 and s.expires_at > now() and r.is_active;
 update sessions set last_seen_at = now(), expires_at = now() + interval '30 days'
 where id = $1 and last_seen_at < now() - interval '1 hour';
 
+-- name: DeleteExpiredSessions :exec
+-- A session at or past its expiry can never be used again: RiderSession
+-- admits only expires_at > now().
+delete from sessions where expires_at <= now();
+
 -- name: DeleteSession :exec
 delete from sessions where id = $1;
 

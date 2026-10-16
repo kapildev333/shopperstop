@@ -20,6 +20,9 @@ type Config struct {
 	CoreURL          string     // SHOPPERSTOP_RIDER_CORE_URL, required, http or https, trailing slash dropped
 	CoreServiceToken string     // SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN, required
 	LogLevel         slog.Level // SHOPPERSTOP_RIDER_LOG_LEVEL, optional, default info
+	// TrustProxy is SHOPPERSTOP_RIDER_TRUST_PROXY: "true" or "false", optional,
+	// default false. True makes the rate limiter key on X-Forwarded-For.
+	TrustProxy bool
 }
 
 // Load reads the configuration through getenv and reports every problem
@@ -84,6 +87,14 @@ func Load(getenv func(string) string) (Config, error) {
 		default:
 			problems = append(problems, fmt.Errorf("SHOPPERSTOP_RIDER_LOG_LEVEL must be one of debug, info, warn, error (got %q)", level))
 		}
+	}
+
+	switch v := strings.TrimSpace(getenv("SHOPPERSTOP_RIDER_TRUST_PROXY")); v {
+	case "", "false":
+	case "true":
+		cfg.TrustProxy = true
+	default:
+		problems = append(problems, fmt.Errorf("SHOPPERSTOP_RIDER_TRUST_PROXY must be true or false (got %q)", v))
 	}
 
 	if len(problems) > 0 {
