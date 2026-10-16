@@ -22,6 +22,7 @@ Workers cannot open the canvas: `docs/design/mobile-P4-L2.md` carries the artboa
 | Mobile search | Customer search | own screen with the box in its header; heading counts results |
 | Mobile product screen | Customer product page | breadcrumb, "N% off" instead of "Save ₹N", "Product details", "More in", bottom price bar (canvas); `/product/<slug>` |
 | Mobile store change confirm | Customer store change confirm, Customer store change outcome | canvas copy ("Switch to the <store> store?", "Keep cart" / "Switch store"); clear is the L2 stub |
+| Mobile category filters | (none: web has no filters; artboard 2) | D44 |
 | Mobile dialogs | `Dialog` + `DialogFooter` of `@shopperstop/ui` | `Modal`, fade, no backdrop dismissal; pending state belongs to the caller |
 
 ## Goals / Non-Goals
@@ -50,7 +51,7 @@ The sheet's open state lives in the same module (`openPincodeSheet`, `closePinco
 
 ### 4. Home heading
 
-The header's level-1 heading is a `Text` with `accessibilityLabel` "ShopperStop in <N> minutes" holding the two visual lines (the eyebrow "SHOPPERSTOP IN" with `textTransform: 'uppercase'`, and "<N> minutes" in `display`), so the name is the same in Jest and on the web export whatever the line break or text transform. Without an open store the heading is "ShopperStop" (eyebrow only, artboard 8). Notice titles are level-2 headings, so every screen has exactly one level-1 heading. The L1 tests and e2e line that look for "Groceries in minutes" move to the new heading (task 11 and task 15).
+The header's level-1 heading is a `Text` with `accessibilityLabel` "ShopperStop in <N> minutes" holding the two visual lines (the eyebrow "SHOPPERSTOP IN" with `textTransform: 'uppercase'`, and "<N> minutes" in `display`), so the name is the same in Jest and on the web export whatever the line break or text transform. Without an open store the heading is "ShopperStop" (eyebrow only, artboard 8). Notice titles are level-2 headings, so every screen has exactly one level-1 heading. The L1 tests and e2e line that look for "Groceries in minutes" move to the new heading (task 11 and task 16).
 
 The canvas's Home row "Dairy, bread & eggs · see all" is replaced by web's "Picked for you" (first 12 in stock of page one), which the area plan names; the row shape (horizontal, 148 wide cards) is the canvas's.
 
@@ -98,12 +99,16 @@ L5a (release config) lands first and owns two `package.json` edits: `expo-splash
 - The `e2e` script exports `EXPO_PUBLIC_RIDER_URL=http://localhost:18081` beside `EXPO_PUBLIC_CORE_URL` (task 6), for L4a's rider card. If L4a reaches its e2e first, the manager may land that one line in L4a instead; task 6 then keeps it as it is.
 - `focusManager` wired to `AppState` in the root layout (task 10): on iOS and Android TanStack Query has no window focus, so queries refetch on return only with this (`AppState` `change` → `focusManager.setFocused(state === 'active')`, skipped on web, which has its own focus events).
 
+### 14. Follow-up after D44 (task 15)
+
+Core-P4-L1 (#272, D44) answered audit gaps 1 and 2: the category screen gets artboard 2's two chips as server-side parameters (`inStock=true`, `sort=price_asc`) so paging stays right, and Home's pincode button adds ", <city>" when the store has one. The canvas's "Home · 560034, Bengaluru" puts a saved address's label first; L2 keeps "Delivering to" because a guest has no label and a signed-in customer's pincode need not match any address (ceiling: show the matching default address's label when asked). `price_desc` is not offered: the canvas has one sort chip. `src/orders-cancel.tsx` (L4a) swaps its `Sheet` fallback for `Dialog` and `DialogFooter`, the one-import change L4a's design named.
+
 ## Contract audit (core and rider openapi, 2026-10-16)
 
 Every field these screens show exists: `Store` (`id`, `name`, `isOpen`, `promisedMinutes`), `CategoryTree` / `CategoryNode` (`name`, `slug`, `imageUrl`, `children`, `parentId`), `StoreProductList` (`items`, `page`, `pageSize`, `total`), `StoreProduct` (`name`, `slug`, `unitLabel`, `priceCents`, `mrpCents`, `imageUrl`, `inStock`, `quantity` capped at 10, `categoryId`, `brand`, `description`), `Address` (`label`, `pincode`). No rider route is needed. Gaps, none blocking (the screens leave the element out):
 
-1. Artboard 2 filter chips "In stock" and "Price: low to high": `GET /stores/{id}/products` has no `inStock` filter and no `sort` (it orders by name). Filtering or sorting the loaded pages on the phone would be wrong across pages. Request to core (optional): `inStock=true` and `sort=price` on that route.
-2. Artboard 1 pincode line "Home · 560034, Bengaluru": no store or serviceability field carries a city or locality. The app shows "Delivering to 560034". Request to core (optional): a `city` (or `area`) on `Store`.
+1. (Answered by D44, task 15.) Artboard 2 filter chips "In stock" and "Price: low to high": `GET /stores/{id}/products` has no `inStock` filter and no `sort` (it orders by name). Filtering or sorting the loaded pages on the phone would be wrong across pages. Request to core (optional): `inStock=true` and `sort=price` on that route.
+2. (Answered by D44, task 15.) Artboard 1 pincode line "Home · 560034, Bengaluru": no store or serviceability field carries a city or locality. The app shows "Delivering to 560034". Request to core (optional): a `city` (or `area`) on `Store`.
 3. Artboard 3 image carousel: `StoreProduct` has one `imageUrl`. Not requested (one image is the catalog's model); dots left out.
 
 ## Files
@@ -141,14 +146,16 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L2.md`, the l
 | Count follows the product across screens | `src/catalog-product-count.test.tsx`: `count follows the product across screens` | 13 |
 | Search submits | `src/catalog-search-submit.test.tsx`: `search submits` | 14 |
 | No results suggests categories; Clear search | `src/catalog-search.test.tsx`: the scenario names | 14 |
-| Register with a field error (heading line) | `e2e/accounts.spec.ts`: `register with a field error` | 15 |
-| Pincode resolves against core; Notices against core; Home against core; Browse a category against core; Search and load more against core; Product pages against core; Store change against core | `e2e/catalog.spec.ts`: the scenario names | 15 |
+| Filters sent to core | `src/catalog-category-filters.test.tsx`: `filters sent to core` | 15 |
+| Header names the city | `src/catalog-home-city.test.tsx`: `header names the city` | 15 |
+| Register with a field error (heading line) | `e2e/accounts.spec.ts`: `register with a field error` | 16 |
+| Pincode resolves against core; Notices against core; Home against core; Browse a category against core; Search and load more against core; Product pages against core; Store change against core; Category filters against core | `e2e/catalog.spec.ts`: the scenario names | 16 |
 
 Tasks 1, 4 and 5 test primitives and cleanups no scenario names directly; their tests are listed in tasks.md.
 
 ## Risks / Trade-offs
 
-- [axe on the tab rail] `role="tab"` without `aria-controls` / a `tabpanel` is valid ARIA; if axe still objects on react-native-web markup, task 15 stops and reports (no rule switched off).
+- [axe on the tab rail] `role="tab"` without `aria-controls` / a `tabpanel` is valid ARIA; if axe still objects on react-native-web markup, task 16 stops and reports (no rule switched off).
 - [Modal over the tabs in Jest] RNTL hides elements behind an open `Modal` with `accessibilityViewIsModal`; tests that query Home with no pincode find the sheet, and tests that query the tabs set a pincode first (`setPincode` before render, serviceability faked).
 - [Static export and dynamic routes] Decision 7: in-app navigation only in e2e (ceiling).
 - [axe `region` on the tab bar] mobile-P4-L4a gives the tab bar a navigation landmark named "Main" in `src/app/(tabs)/_layout.tsx` and lands first; L2 merges main before task 11 and does not edit that file.

@@ -10,10 +10,11 @@ The mobile app (Phase 4, D36 to D42) signs customers in but shows nothing to buy
 - `src/cart.ts`: a stub of the cart hook holding Stepper counts in memory per store (L3 replaces its body; D42).
 - `src/catalog.ts` and `src/catalog-*.tsx`: category, product-page and product queries, the product card, the category tile grid and the paged product grid.
 - Screens: Home (header with the delivery promise, pincode control, account, search field; "Shop by category"; "Picked for you"), the Categories tab, `/category/<slug>`, `/product/<slug>`, `/search`.
+- After core's D44 (#272): the category screen's "In stock" and "Price: low to high" chips as server-side filters, the store's city on Home's pincode button, and L4a's cancel dialog moved from its `Sheet` fallback to `Dialog` (task 15).
 - For mobile-P4-L4a: `Dialog` / `DialogFooter` in its requested shape, `EXPO_PUBLIC_RIDER_URL=http://localhost:18081` in the `e2e` script, and TanStack `focusManager` wired to `AppState` in the root layout.
 - `e2e/catalog.spec.ts`: pincode, notices, home, category, product, search and store change against core with axe.
 
-Out of scope: the cart sheet, the cart bar, the guest cart in storage, the merge at sign-in and `DELETE /me/cart` (L3, which replaces `src/cart.ts`; the "Could not empty your cart." path is specified here but can only fail once L3's clear calls core); orders (L4a); icon, splash, EAS, `expo-splash-screen` and the `test` script's `node --test` step (L5a); the category filter chips "In stock" and "Price: low to high" and the city on the pincode line (core has no such parameters or field, design.md "Contract audit"); live search while typing; native device e2e.
+Out of scope: the cart sheet, the cart bar, the guest cart in storage, the merge at sign-in and `DELETE /me/cart` (L3, which replaces `src/cart.ts`; the "Could not empty your cart." path is specified here but can only fail once L3's clear calls core); orders (L4a); icon, splash, EAS, `expo-splash-screen` and the `test` script's `node --test` step (L5a); the descending price sort; live search while typing; native device e2e.
 
 ## Capabilities
 

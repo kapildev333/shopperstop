@@ -90,7 +90,7 @@ Signed in, the pincode sheet SHALL show one choice per saved address, named "<la
 - **THEN** the sign-in screen is shown with `returnTo` `/`
 
 ### Requirement: Mobile store resolution
-While a pincode is stored the app SHALL resolve it with `GET /api/core/v1/serviceability?pincode=<pincode>` when it is first known and whenever it changes. While an open store is resolved Home's header SHALL show the level-1 heading "ShopperStop in <N> minutes" with N its `promisedMinutes`, and a search field; otherwise the heading SHALL read "ShopperStop". The header SHALL hold a button "Delivering to <pincode>", or "Choose pincode" with no pincode stored, that opens the pincode sheet.
+While a pincode is stored the app SHALL resolve it with `GET /serviceability?pincode=<pincode>` when it is first known and when it changes. While an open store is resolved Home's header SHALL show the level-1 heading "ShopperStop in <N> minutes" (N its `promisedMinutes`) and a search field; otherwise the heading SHALL read "ShopperStop". The header SHALL hold a button "Delivering to <pincode>", or "Choose pincode" with no pincode stored, that opens the pincode sheet.
 
 #### Scenario: Header shows the delivery promise
 - **WHEN** `560034` is stored and resolves to an open store with `promisedMinutes` 10
@@ -98,7 +98,14 @@ While a pincode is stored the app SHALL resolve it with `GET /api/core/v1/servic
 
 #### Scenario: Pincode resolves against core
 - **WHEN** a browser on `/` continues with `560034` in the pincode sheet against core with the demo seed, then reloads
-- **THEN** the heading "ShopperStop in 10 minutes" and the button "Delivering to 560034" are shown before and after the reload, the sheet is not open after the reload, and axe reports no violations on `/` with the sheet open and with it closed
+- **THEN** the heading "ShopperStop in 10 minutes" and the button "Delivering to 560034, Bengaluru" are shown before and after the reload, the sheet is not open after the reload, and axe reports no violations on `/` with the sheet open and with it closed
+
+### Requirement: Mobile header names the city
+When the resolved store has a `city`, Home's pincode button SHALL read "Delivering to <pincode>, <city>".
+
+#### Scenario: Header names the city
+- **WHEN** `560034` is stored and resolves to an open store with `city` "Bengaluru"
+- **THEN** the header's pincode button is named "Delivering to 560034, Bengaluru"
 
 ### Requirement: Mobile store notices
 Home, Categories, Category, Product and Search SHALL show, instead of their content, while no open store is resolved: with no pincode, "Set your pincode" and a "Choose pincode" button; until the lookup answers, a skeleton labelled "Loading"; on 404 `not_serviceable`, "We don't deliver here yet" and a "Change pincode" button; on any other failure, the error state with "Try again". Notice titles SHALL be level-2 headings and the pincode buttons SHALL open the pincode sheet.
@@ -210,6 +217,17 @@ The category screen SHALL show down its left a tab list "Subcategories" with "Al
 - **WHEN** a browser with `560034` chosen opens the "Dairy, Bread & Eggs" tile on Home and then a child tab
 - **THEN** the location is `/category/<the child's slug>`, products are listed, and axe reports no violations on both
 
+### Requirement: Mobile category filters
+The category screen SHALL show above its products the chips "In stock" and "Price: low to high", each marked selected while on and toggled by a press. While "In stock" is on the products SHALL be read with `inStock=true`, and while "Price: low to high" is on with `sort=price_asc`, from page one; the filters SHALL stay while the customer changes tabs on the same screen.
+
+#### Scenario: Filters sent to core
+- **WHEN** the category screen shows "Dairy, Bread & Eggs", "In stock" is chosen, then "Price: low to high", then "In stock" again
+- **THEN** the products are read with `inStock=true`, then with `inStock=true&sort=price_asc`, then with `sort=price_asc` and no `inStock`, each from `page=1`, and only "Price: low to high" is selected at the end
+
+#### Scenario: Category filters against core
+- **WHEN** a browser with `560034` chosen opens a category and chooses "In stock" and "Price: low to high"
+- **THEN** no "Out of stock" button is listed, the first two prices are in ascending order, and axe reports no violations
+
 ### Requirement: Mobile paged product lists
 The category and search screens SHALL load products in pages of 24; while `page × pageSize` is below `total` a "Load more" button SHALL end the list and load the next page, and reaching the end of the list SHALL also load it.
 
@@ -289,7 +307,7 @@ When "Continue" in the pincode sheet resolves to a store other than the one the 
 
 #### Scenario: Store change against core
 - **WHEN** a browser with `560034` chosen adds a product on Home, continues with `560038` in the sheet, keeps the cart, continues with `560038` again, and switches
-- **THEN** after "Keep cart" the header still reads "Delivering to 560034" and the product's count is 1; after "Switch store" the heading reads "ShopperStop in 12 minutes" and the header "Delivering to 560038", and axe reports no violations with the dialog open
+- **THEN** after "Keep cart" the header still reads "Delivering to 560034, Bengaluru" and the product's count is 1; after "Switch store" the heading reads "ShopperStop in 12 minutes" and the header "Delivering to 560038, Bengaluru", and axe reports no violations with the dialog open
 
 ### Requirement: Mobile dialogs
 A dialog SHALL open as a modal centred on a dimmed backdrop that does not close it, named by its title, which SHALL be a level-2 heading. The Android back gesture and Escape on the web export SHALL call its close action. Its footer SHALL lay its buttons in one row of equal widths, the cancel button first by convention.

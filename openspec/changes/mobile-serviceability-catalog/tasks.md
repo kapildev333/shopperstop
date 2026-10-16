@@ -23,7 +23,7 @@ Order and parallel groups (parallel tasks touch disjoint files):
 - Group B, after A: 8 (needs 5, 6) and 9 (needs 1, 2, 4, 5, 7).
 - Group C: 10 after 3, 6, 7, 8.
 - Group D, in parallel: 11 after 9 and 10; 12, 13 and 14 after 8 and 9.
-- Then 15 (e2e, needs the manager's e2e slot), then 16 (team lead).
+- Then 15 (follow-up: core D44 filters and city, cancel dialog swap; after the manager merges origin/main), then 16 (e2e, needs the manager's e2e slot), then 17 (team lead).
 
 ## 1. Price
 
@@ -126,7 +126,7 @@ Starts from: `src/pincode-sheet.test.tsx` (render `PincodeSheet` in `QueryClient
 Sign-in link (decision 2026-10-16, after T10 found `router.push` from the sheet leaving the path at `/` in Jest), in this order, stopping at the first that turns the test green:
 1. The link is `<Link href={{ pathname: '/sign-in', params: { returnTo: '/' } }} asChild>` around the `Pressable` (`accessibilityRole="link"`), whose `onPress` calls `closePincodeSheet()`; no `router.push`. The mount stays in the root layout, beside the `Stack` (the sheet must cover the stack screens Category, Product and Search too).
 2. If still red: in the test, `await screen.findByRole('heading', { level: 1, name: /^ShopperStop/ })` (or the current Home heading) before `openPincodeSheet()`, so the Stack has its first state before the press. A test-only change; say so in the log.
-3. If still red: stop, commit nothing further on the link, and report the minimal repro. The manager checks the link on the iOS simulator; if it navigates there, the team lead moves the scenario's test to task 15's e2e (web export) and records the Jest gap as a harness ceiling; if it does not, the team lead moves the mount.
+3. If still red: stop, commit nothing further on the link, and report the minimal repro. The manager checks the link on the iOS simulator; if it navigates there, the team lead moves the scenario's test to task 16's e2e (web export) and records the Jest gap as a harness ceiling; if it does not, the team lead moves the mount.
 
 - [x] 10.1 Red
 - [x] 10.2 `PincodeSheet` per design.md Decision 6 and the design file sections 7 and 17; mount in `_layout.tsx`
@@ -173,16 +173,30 @@ Starts from: `src/catalog-search-submit.test.tsx`: `search submits` (type " milk
 - [x] 14.2 The screen per design.md Decision 10 and the design file "13 · Search"
 - [x] 14.3 Gates green
 
-## 15. e2e
+## 15. Follow-up: category filters, store city, cancel dialog
+
+Before the task starts the manager merges origin/main into the branch (L4a's orders screens #276; core-P4-L1 #272, D44: `GET /stores/{id}/products` takes `inStock=true` and `sort=price_asc|price_desc`, other `sort` values 400; `Store.city` optional, "Bengaluru" in the demo seed; `packages/ui/src/api/core.d.ts` regenerated). The worker checks `grep -n "inStock\|sort\|city" packages/ui/src/api/core.d.ts` shows the three before starting, else stops.
+
+Scope: `apps/mobile/src/app/category/[slug].tsx`, `apps/mobile/src/{catalog.ts,catalog-grid.tsx}` (the filter type only), `apps/mobile/src/app/(tabs)/index.tsx` (the pincode button's text only), `apps/mobile/src/orders-cancel.tsx` (the dialog swap only), new tests `apps/mobile/src/{catalog-category-filters.test.tsx,catalog-home-city.test.tsx}`.
+Scenarios: Filters sent to core, Header names the city.
+Starts from: `src/catalog-category-filters.test.tsx`: `filters sent to core` (`renderRouter({ 'category/[slug]': Category }, { initialUrl: '/category/dairy-bread-eggs' })`, fake `GET /stores/s-1/products` recording `searchParams`; no navigation, so one file is enough); `src/catalog-home-city.test.tsx`: `header names the city` (as `catalog-home.test.tsx`, serviceability answering `city: 'Bengaluru'`: a button named "Delivering to 560034, Bengaluru").
+
+- [ ] 15.1 Red: the two tests
+- [ ] 15.2 `feat:` filters: `useProductPages` filter becomes `{ categoryId?: string; q?: string; inStock?: boolean; sort?: 'price_asc' }`, sent only when set (`inStock: true`, `sort`), the whole filter in the query key (a change starts again at page one). Category screen: under the header, above the grid, a horizontal row (padding 8 8 0, gap 8) of two L1 `Chip`s "In stock" and "Price: low to high" (`selected` while on, press toggles), state in the screen so it survives `setParams` on a tab change. Design file "2 · Category", chips: height 36 visually per the canvas but the `Chip` keeps its 44 minimum; no new primitive
+- [ ] 15.3 `feat:` city: Home's pincode button reads "Delivering to <pincode>, <city>" when the resolved store has `city`, else unchanged. The canvas's "Home · 560034, Bengaluru" shows a saved address's label; the label is not used (design.md Decision 14)
+- [ ] 15.4 `refactor:` `src/orders-cancel.tsx`: `import { Dialog, DialogFooter } from './ui/dialog'` instead of `Sheet as Dialog`; the button row becomes `DialogFooter` (Keep order first); remove the fallback comment. No new test: behaviour is unchanged and `src/orders-cancel.test.tsx` and `src/orders-tracking-cancel.test.tsx` must stay green unchanged (the commit names this). If either needs a change (for example a query that relied on the sheet's "Close" button or its padding), stop and report
+- [ ] 15.5 Gates green
+
+## 16. e2e
 
 Scope: `apps/mobile/e2e/catalog.spec.ts` (new), `apps/mobile/e2e/accounts.spec.ts` (the one "Groceries in minutes" line becomes `getByRole('heading', { level: 1, name: /shopperstop/i })`), `apps/mobile/playwright.config.ts` only if a timeout must change (say why).
-Scenarios: Register with a field error (heading line), Pincode resolves against core, Notices against core, Home against core, Browse a category against core, Search and load more against core, Product pages against core, Store change against core.
+Scenarios: Register with a field error (heading line), Pincode resolves against core (with the city), Category filters against core, Notices against core, Home against core, Browse a category against core, Search and load more against core, Product pages against core, Store change against core.
 Starts from: `e2e/catalog.spec.ts` with the seven scenario names, committed red before any fix. Helpers as `apps/web/e2e/browse.spec.ts`: `ensureClosedStore` (admin sign-in, `POST /admin/stores` "E2E Closed" at `560076`, `PUT .../service-areas`; core's URL is `http://localhost:18080`), `expectNoViolations` (AxeBuilder, every rule). Wait for `getByRole('dialog', { name: 'Where should we deliver?' })` before axe or Escape (L1 Decision 8). Each test sets its pincode through the sheet in a fresh context. The out-of-stock product: `GET /api/core/v1/stores/<Koramangala id>/products?pageSize=100` and take the first `inStock: false`. Reach `/category/...` and `/product/...` only by in-app navigation: a direct load 404s on the static export (design.md Decision 7, ceiling). Product scenario: search "banana" and open Banana Robusta from the results; then search the out-of-stock product's name and open it. Start from a branch that has main merged (mobile-P4-L4a's "Main" navigation landmark on the tab bar fixes axe `region`); do not edit `src/app/(tabs)/_layout.tsx`.
 
-- [ ] 15.1 Red: the spec committed; `npm run e2e --workspace apps/mobile` output in the log (core env from the Makefile's e2e target; ask the manager for the e2e slot first)
-- [ ] 15.2 Fixes inside the scopes of tasks 1 to 14 only, each `fix:` naming the scenario; an axe failure on markup the app does not control stops the worker (no rule switched off)
-- [ ] 15.3 `make e2e` exits 0 (with the slot); mobile suite all green
+- [ ] 16.1 Red: the spec committed; `npm run e2e --workspace apps/mobile` output in the log (core env from the Makefile's e2e target; ask the manager for the e2e slot first)
+- [ ] 16.2 Fixes inside the scopes of tasks 1 to 15 only, each `fix:` naming the scenario; an axe failure on markup the app does not control stops the worker (no rule switched off)
+- [ ] 16.3 `make e2e` exits 0 (with the slot); mobile suite all green
 
-## 16. Acceptance (team lead)
+## 17. Acceptance (team lead)
 
-- [ ] 16.1 `/opsx:verify mobile-serviceability-catalog`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run
+- [ ] 17.1 `/opsx:verify mobile-serviceability-catalog`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run

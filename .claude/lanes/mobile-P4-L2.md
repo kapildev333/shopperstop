@@ -11,8 +11,9 @@ Proposal committed; waiting for the manager to launch group A (tasks 1 to 7).
 - For L5a: L2 touches package.json only in task 6 (async-storage 2.2.0, rider URL in e2e); the test script and expo-splash-screen stay L5a's.
 - 2026-10-16 manager FYI taken: dynamic routes 404 on direct load of the static export, so task 15 reaches them in-app only (design.md Decision 7, ceiling); L4a's "Main" tab-bar landmark lands first and L2 does not edit `(tabs)/_layout.tsx`.
 - 2026-10-16 T10 blockers decided (tasks.md task 10, design.md Decision 6): (1) first visit moves to task 11 with `src/pincode-first-visit.test.tsx`; the sheet stays passive. (2) sign-in link becomes an expo-router `Link` (onPress closes the sheet), mount stays in the root layout; ordered fallback: wait for Home's first render in the test; else stop, the manager checks on the iOS simulator, and the team lead moves the test to e2e (harness ceiling) or moves the mount.
+- 2026-10-16 manager request: task 15 added (D44 category filters and city, `orders-cancel.tsx` to `Dialog`); e2e is now task 16, acceptance 17. Spec: new requirement "Mobile category filters" (2 scenarios), store resolution names the city (1 new scenario, two e2e scenarios now expect ", Bengaluru").
 ## Requests
-- to mobile manager: contract gaps (optional, non-blocking) in design.md "Contract audit": core `inStock`/`sort` on `GET /stores/{id}/products`; `city` on `Store`.
+- (answered) contract gaps 1 and 2 landed as D44 (#272); taken in task 15.
 - to mobile manager: archive order: L2's change archives after a rebase onto main (L1's spec on main).
 ## Blockers
 None.
