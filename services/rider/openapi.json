@@ -18,6 +18,10 @@
     {
       "name": "rider-service",
       "description": "Rider sign-in, sessions and the signed-in rider."
+    },
+    {
+      "name": "deliveries",
+      "description": "Ready orders, claims, deliveries, rider location and the customer's view of a delivery."
     }
   ],
   "paths": {
@@ -766,6 +770,228 @@
           }
         }
       }
+    },
+    "/me/ready-orders": {
+      "get": {
+        "operationId": "listReadyOrders",
+        "summary": "Ready orders of the rider's store",
+        "description": "Answers the orders core holds as ready at the signed-in rider's store that no delivery holds, oldest placed first. Orders of other stores never appear. The answer is one core page of 100 orders, a working set rather than a browsable list.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ready orders of the rider's store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyOrderList"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "orderId": "00000000-0000-4000-8000-000000000701",
+                      "number": "SS-DEMOAAAB",
+                      "placedAt": "2026-10-15T09:00:00Z",
+                      "itemCount": 3,
+                      "totalCents": 33900,
+                      "pincode": "560034",
+                      "customerName": "Demo Customer"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/deliveries": {
+      "post": {
+        "operationId": "claimOrder",
+        "summary": "Claim a ready order",
+        "description": "Gives the signed-in rider a ready order of their store. The order's details are copied into a new delivery with status assigned, and core moves the order to out_for_delivery with the rider as actor. The delivery and the move happen in one transaction: when core refuses or fails, no delivery is left behind. An order that already has a delivery is 409 \"order already claimed\"; an order core holds in another status is 409 \"order is not ready for pickup\". An unknown order and another store's order are 404, and core is not asked to move them.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryClaim"
+              },
+              "example": {
+                "orderId": "00000000-0000-4000-8000-000000000701"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new delivery, status assigned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000901",
+                  "orderId": "00000000-0000-4000-8000-000000000701",
+                  "orderNumber": "SS-DEMOAAAB",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "assigned",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "totalCents": 33900,
+                  "paymentMethod": "cod",
+                  "itemCount": 3,
+                  "items": [
+                    {
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "quantity": 2
+                    },
+                    {
+                      "name": "Shimla Apple",
+                      "unitLabel": "1 kg",
+                      "quantity": 1
+                    }
+                  ],
+                  "assignedAt": "2026-10-15T09:05:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The orderId is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a uuid",
+                    "field": "orderId"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order with this id, or the order is another store's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The order already has a delivery, or core does not hold it as ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "order is not ready for pickup"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer or to move the order (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -978,6 +1204,195 @@
           "total": {
             "type": "integer",
             "description": "Every rider the caller may see, not just this page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadyOrder": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "number",
+          "placedAt",
+          "itemCount",
+          "totalCents",
+          "pincode",
+          "customerName"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Core's order id."
+          },
+          "number": {
+            "type": "string",
+            "description": "The order number the customer and the store see."
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "itemCount": {
+            "type": "integer",
+            "description": "Units carried: the sum of the line quantities."
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "pincode": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadyOrderList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Oldest placed first; never null.",
+            "items": {
+              "$ref": "#/components/schemas/ReadyOrder"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliveryClaim": {
+        "type": "object",
+        "required": [
+          "orderId"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ready order to claim."
+          }
+        }
+      },
+      "DeliveryItem": {
+        "type": "object",
+        "required": [
+          "name",
+          "unitLabel",
+          "quantity"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "unitLabel": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeliveryAddress": {
+        "type": "object",
+        "required": [
+          "line1",
+          "pincode"
+        ],
+        "properties": {
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string",
+            "description": "Omitted when the order has none."
+          },
+          "pincode": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Delivery": {
+        "type": "object",
+        "required": [
+          "id",
+          "orderId",
+          "orderNumber",
+          "storeId",
+          "status",
+          "customerName",
+          "address",
+          "totalCents",
+          "paymentMethod",
+          "itemCount",
+          "items",
+          "assignedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The store the order belongs to (core's store id)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "assigned",
+              "delivered"
+            ]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "description": "Omitted when the order has none."
+          },
+          "address": {
+            "$ref": "#/components/schemas/DeliveryAddress"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "cod"
+          },
+          "itemCount": {
+            "type": "integer",
+            "description": "Units carried: the sum of the line quantities."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryItem"
+            }
+          },
+          "assignedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Omitted until the delivery is delivered."
           }
         },
         "additionalProperties": false

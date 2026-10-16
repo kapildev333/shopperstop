@@ -2192,6 +2192,580 @@
           }
         }
       ]
+    },
+    {
+      "name": "deliveries",
+      "description": "Ready orders, claims, deliveries, rider location and the customer's view of a delivery.",
+      "item": [
+        {
+          "name": "Ready orders of the rider's store",
+          "request": {
+            "name": "Ready orders of the rider's store",
+            "description": {
+              "content": "Answers the orders core holds as ready at the signed-in rider's store that no delivery holds, oldest placed first. Orders of other stores never appear. The answer is one core page of 100 orders, a working set rather than a browsable list.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "ready-orders"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The ready orders of the rider's store.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "ready-orders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n      \"number\": \"SS-DEMOAAAB\",\n      \"placedAt\": \"2026-10-15T09:00:00Z\",\n      \"itemCount\": 3,\n      \"totalCents\": 33900,\n      \"pincode\": \"560034\",\n      \"customerName\": \"Demo Customer\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "ready-orders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer (a 500, a timeout, no connection, or core refused the service token).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "ready-orders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Claim a ready order",
+          "request": {
+            "name": "Claim a ready order",
+            "description": {
+              "content": "Gives the signed-in rider a ready order of their store. The order's details are copied into a new delivery with status assigned, and core moves the order to out_for_delivery with the rider as actor. The delivery and the move happen in one transaction: when core refuses or fails, no delivery is left behind. An order that already has a delivery is 409 \"order already claimed\"; an order core holds in another status is 409 \"order is not ready for pickup\". An unknown order and another store's order are 404, and core is not asked to move them.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "deliveries"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The new delivery, status assigned.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The orderId is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be a uuid\",\n    \"field\": \"orderId\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No order with this id, or the order is another store's.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The order already has a delivery, or core does not hold it as ready.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"order is not ready for pickup\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer or to move the order (a 500, a timeout, no connection, or core refused the service token).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
     }
   ],
   "event": [],

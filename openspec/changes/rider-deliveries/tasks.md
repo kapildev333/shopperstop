@@ -20,10 +20,10 @@ Scenarios: "Riders see their store's ready orders" (both), "Riders claim a ready
 Starts from: `services/rider/internal/app/deliveries_test.go` `TestReadyOrdersOwnStoreOnly`, `TestReadyOrdersDropClaimed`, `TestClaim`, `TestClaimBadOrderID` (400 `orderId`), `TestClaimOtherStore` (404, no row, `Calls("POST /api/core/v1/admin/orders/{id}/status") == 0`), `TestConcurrentClaims`, `TestClaimRolledBackOnCoreConflict`, `TestClaimRolledBackOnCoreFailure`, `TestReadyOrdersWrongServiceToken`; plus `TestContract` and `TestContractSecurity` failing on the new routes once they are served.
 Commits: `test: ready orders and exclusive claims`, then `feat: deliveries table, ready orders and claims`.
 
-- [ ] 2.1 Write the tests (design.md Test strategy); red run pasted into the log; commit `test: ...`
-- [ ] 2.2 `0003_deliveries.sql` exactly per design.md Data model; `sqlc.yaml` second entry; `queries/deliveries.sql` (all queries named in design.md, so tasks 3 and 4 add none); `make gen`
-- [ ] 2.3 `internal/delivery`: `New`, types, `ReadyOrders` (Decision 9), `Claim` (Decisions 3 and 8); `app.New(pool, origins, a, d)` with the two routes (Decision 14); `cmd/rider` builds `delivery.New(pool, c)`
-- [ ] 2.4 `openapi.json`: tag `deliveries`, schemas `ReadyOrder`, `ReadyOrderList`, `DeliveryClaim`, `Delivery`, `DeliveryItem`, `DeliveryAddress`, the two operations with every code of the routes table and examples
+- [x] 2.1 Write the tests (design.md Test strategy); red run pasted into the log; commit `test: ...`
+- [x] 2.2 `0003_deliveries.sql` exactly per design.md Data model; `sqlc.yaml` second entry; `queries/deliveries.sql` (all queries named in design.md, so tasks 3 and 4 add none); `make gen`
+- [x] 2.3 `internal/delivery`: `New`, types, `ReadyOrders` (Decision 9), `Claim` (Decisions 3 and 8); `app.New(pool, origins, a, d)` with the two routes (Decision 14); `cmd/rider` builds `delivery.New(pool, c)`
+- [x] 2.4 `openapi.json`: tag `deliveries`, schemas `ReadyOrder`, `ReadyOrderList`, `DeliveryClaim`, `Delivery`, `DeliveryItem`, `DeliveryAddress`, the two operations with every code of the routes table and examples
 - [ ] 2.5 Gates green, `make gen postman` clean after the commit; commit `feat: ...`
 
 ## 3. A rider's deliveries and marking delivered (worker, after 2)
