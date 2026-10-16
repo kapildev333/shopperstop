@@ -3,7 +3,7 @@ Lane rider-P4-L3, area rider. Every task: worktree `/Users/kapilsoni/KapilProjec
 ## 1. Shared client and token store (design 1 to 5, 7)
 Scope: `apps/rider/src/api.ts`, `apps/rider/src/session.ts`, `apps/rider/src/api.test.ts`, `apps/rider/src/session.test.ts`, `apps/rider/src/shell.test.tsx`, `apps/rider/src/sign-in.test.tsx`. Scenarios: "A failure answer without an envelope reaches the caller as internal", "401 mid-session returns to sign-in"; unchanged and still green: "Expired session on load", "401 to a replaced token keeps the new session", "Service unreachable on load", "Token survives a reload", "Blocked storage keeps the token in memory", "Core never gets the rider token". Failing tests: `apps/rider/src/api.test.ts` › `a failure answer with an error envelope without a message reaches the caller as an internal error with its status`, `a 401 mid-session returns to sign-in`, `expired session on load returns to sign-in`; `session.test.ts` › `blocked storage keeps the token in memory`; `shell.test.tsx` › `sign out ends the session`; `sign-in.test.tsx` › four tests (8 red in all). Commits: `test: rider envelope rule and mid-session 401 against the shared client`, then `feat: rider uses createApiClient and createTokenStore from @shopperstop/ui/app`.
 
-- [x] 1.1 Apply "Task 1: tests"; see 8 failed / 52 passed; commit `test:` (the four test files)
+- [x] 1.1 Apply "Task 1: tests"; see 9 failed / 52 passed; commit `test:` (the four test files)
 - [x] 1.2 Apply "Task 1: code"; 61 passed; gates green; commit `feat:` (`api.ts`, `session.ts`)
 
 ## 2. Shared time helpers (design 6)
