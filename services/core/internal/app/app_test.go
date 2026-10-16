@@ -26,6 +26,9 @@ const testPepper = "test-pepper-test-pepper-test-pepper-00"
 // testServiceToken is the rider service's token on the shared test server.
 const testServiceToken = "test-rider-service-token-test-rider-00"
 
+// testPaymentToken is the payment service's token on the shared test server.
+const testPaymentToken = "test-payment-service-token-test-pay-00"
+
 // srv is the shared test server every route test in this package uses. Its
 // limiter is too large to trip, so only the rate-limit test sees a 429.
 var (
@@ -50,7 +53,7 @@ func TestMain(m *testing.M) {
 		testStoreID); err != nil {
 		panic(err)
 	}
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken})
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken, "payment": testPaymentToken})
 	a.Mailer = mails
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
