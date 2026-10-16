@@ -76,6 +76,11 @@ test('committed icons match the generator', () => {
   assert.equal(pixelAt(adaptive, 0, 0)[3], 0, 'adaptive corner is transparent')
 })
 
+test('brandColors rejects a token that is not #RRGGBB', () => {
+  assert.throws(() => brandColors(':root { --brand: red; --on-brand: #ffffff; }'), /--brand must be #RRGGBB/)
+  assert.throws(() => brandColors(':root { --brand: #fbcf33; --on-brand: #fff; }'), /--on-brand must be #RRGGBB/)
+})
+
 test('app config points at the icons', () => {
   const colors = brandColors(tokensCss)
   assert.equal(expo.icon, './assets/icon.png')
