@@ -176,6 +176,30 @@ func TestStoreWithOrderCannotBeDeleted(t *testing.T) {
 	}
 }
 
+// TestPaymentStatusMatchesMethod: a cash order has no payment status, an online
+// order always has one, and no other payment method exists.
+func TestPaymentStatusMatchesMethod(t *testing.T) {
+	ctx := context.Background()
+	customerID, storeID, _ := fixture(t)
+	id, err := insertOrder(customerID, storeID, newNumber(), 1000, 0, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct{ set, constraint string }{
+		{"payment_status = 'pending'", "orders_payment_status"},
+		{"payment_method = 'online'", "orders_payment_status"},
+		{"payment_method = 'card'", "orders_payment_method_check"},
+	} {
+		_, err := testPool.Exec(ctx, "update orders set "+row.set+" where id = $1", id)
+		if code, constraint := pgErr(t, err); code != "23514" || constraint != row.constraint {
+			t.Fatalf("set %s: got %s %s, want 23514 %s", row.set, code, constraint, row.constraint)
+		}
+	}
+	if _, err := testPool.Exec(ctx, "update orders set payment_method = 'online', payment_status = 'pending' where id = $1", id); err != nil {
+		t.Fatalf("online and pending: %v", err)
+	}
+}
+
 // TestBackfillStoreSnapshot: migration 0008 fills an existing order's store_name
 // and promised_minutes from its store, and both columns are NOT NULL after it.
 func TestBackfillStoreSnapshot(t *testing.T) {
