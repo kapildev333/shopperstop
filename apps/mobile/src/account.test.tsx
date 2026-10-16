@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import Account from './app/account'
 import { queryClient } from './api'
 import { apiError, fakeCore, json } from './fake-core'
@@ -214,4 +214,48 @@ test('delete is not sent twice while pending', async () => {
   hold.release()
 
   await waitFor(() => expect(calls.filter((request) => request.method === 'DELETE')).toHaveLength(1))
+})
+
+// Both presses land before React renders the disabled state, so only the in-flight ref can stop the second one.
+test('set default is not sent twice when pressed twice in one tick', async () => {
+  setToken('t-acct')
+  let defaultId = home.id
+  const listed = () => [home, work].map((address) => ({ ...address, isDefault: address.id === defaultId }))
+  const calls = fakeCore({
+    'GET /me': () => json(200, customer),
+    'GET /me/addresses': () => json(200, { items: listed() }),
+    [`PATCH /me/addresses/${work.id}`]: () => {
+      defaultId = work.id
+      return json(200, { ...work, isDefault: true })
+    },
+  })
+  await renderAccount()
+
+  const button = await screen.findByRole('button', { name: 'Set Work as default' })
+  await act(async () => {
+    void fireEvent.press(button)
+    void fireEvent.press(button)
+  })
+
+  await waitFor(() => expect(calls.filter((request) => request.method === 'PATCH')).toHaveLength(1))
+  // Wait for the refetch the write triggers, so the test does not end with a request in flight.
+  expect(await screen.findByRole('button', { name: 'Set Home as default' })).toBeTruthy()
+})
+
+test('a row request that rejects leaves the row buttons enabled', async () => {
+  setToken('t-acct')
+  fakeCore({
+    'GET /me': () => json(200, customer),
+    'GET /me/addresses': () => json(200, { items: [home, work] }),
+    [`PATCH /me/addresses/${work.id}`]: () => {
+      throw new TypeError('Network request failed')
+    },
+  })
+  await renderAccount()
+
+  await fireEvent.press(await screen.findByRole('button', { name: 'Set Work as default' }))
+
+  expect(await screen.findByText('Could not reach ShopperStop. Try again.')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Set Work as default' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Delete Work' })).toBeEnabled()
 })
