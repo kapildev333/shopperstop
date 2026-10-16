@@ -91,7 +91,7 @@ function SearchResults({ storeId, q, links }: { storeId: string; q: string; link
       storeId={storeId}
       filter={{ q }}
       header={
-        <Text variant="body" tone="inkMuted" heading={1} style={styles.count}>
+        <Text variant="body" heading={1} style={styles.count}>
           {count}
         </Text>
       }
