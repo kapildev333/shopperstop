@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native'
 import { renderRouter } from 'expo-router/testing-library'
 import { openPincodeSheet } from './pincode'
 
@@ -11,12 +11,12 @@ jest.mock('@expo-google-fonts/inter', () => ({
 const appDir = `${__dirname}/app`
 
 test('sign-in link when signed out', async () => {
-  await renderRouter(appDir, { initialUrl: '/' })
+  const router = await renderRouter(appDir, { initialUrl: '/' })
   act(() => {
     openPincodeSheet()
   })
   await fireEvent.press(await screen.findByRole('link', { name: 'Have an account? Sign in to use a saved address' }))
+  await waitFor(() => expect(router.getPathname()).toBe('/sign-in'))
+  expect(router.getSearchParams()).toEqual({ returnTo: '/' })
   expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeTruthy()
-  expect(screen).toHavePathname('/sign-in')
-  expect(screen).toHaveSearchParams({ returnTo: '/' })
 })
