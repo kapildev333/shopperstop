@@ -123,9 +123,9 @@ Scope: `apps/mobile/src/{pincode-sheet.tsx,pincode-sheet.test.tsx,pincode-first-
 Scenarios: First visit opens the pincode sheet, Only digits six at most, Invalid pincode refused, Pincode saved from the sheet, Saved address fills the pincode, Sign-in link when signed out, Same store or empty cart, Store change confirmed, Store change kept.
 Starts from: `src/pincode-sheet.test.tsx` (render `PincodeSheet` in `QueryClientProvider` after `openPincodeSheet()`): `only digits, six at most`, `invalid pincode refused`, `pincode saved from the sheet`, `saved address fills the pincode` (`setToken`, fake `GET /me/addresses`), `same store or empty cart`, `store change confirmed`, `store change kept` (counts via `setQuantity`, both pincodes faked); `src/pincode-first-visit.test.tsx`: `first visit opens the pincode sheet` (`renderRouter(appDir, { initialUrl: '/' })` with no pincode; wait for the dialog title; the Home placeholder is fine until task 11, which then must keep this test green); `src/pincode-sign-in.test.tsx`: `sign-in link when signed out` (`renderRouter` with `index`, `sign-in` screens and the sheet in the layout; location `/sign-in`, `returnTo` `/`).
 
-- [ ] 10.1 Red
-- [ ] 10.2 `PincodeSheet` per design.md Decision 6 and the design file sections 7 and 17; mount in `_layout.tsx`
-- [ ] 10.3 `src/app-focus.ts` (mobile-P4-L4a's request, design.md Decision 13): `wireAppFocus()` subscribes `AppState` `change` to `focusManager.setFocused(state === 'active')` unless `Platform.OS === 'web'`, returns the unsubscribe; called from an effect in `_layout.tsx`. Red first: `src/app-focus.test.ts`: `background pauses focus` (emit `background` through `jest.spyOn(AppState, 'addEventListener')`'s captured listener: `focusManager.isFocused()` is false; `active`: true)
+- [x] 10.1 Red
+- [x] 10.2 `PincodeSheet` per design.md Decision 6 and the design file sections 7 and 17; mount in `_layout.tsx`
+- [x] 10.3 `src/app-focus.ts` (mobile-P4-L4a's request, design.md Decision 13): `wireAppFocus()` subscribes `AppState` `change` to `focusManager.setFocused(state === 'active')` unless `Platform.OS === 'web'`, returns the unsubscribe; called from an effect in `_layout.tsx`. Red first: `src/app-focus.test.ts`: `background pauses focus` (emit `background` through `jest.spyOn(AppState, 'addEventListener')`'s captured listener: `focusManager.isFocused()` is false; `active`: true)
 - [ ] 10.4 Gates green
 
 ## 11. Home and Categories tab
