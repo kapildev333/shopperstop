@@ -130,9 +130,9 @@ Scope: `apps/mobile/src/{profile-sheet.tsx,profile-sheet.test.tsx}`.
 Scenarios: Mobile edit profile sheet (Profile saved: the sheet half; Bad phone from the envelope); the empty-name check.
 Starts from: `src/profile-sheet.test.tsx`: `profile saved` (`PATCH /me` body `{"name":"Asha Rao","phone":"9876543210"}`, `onClose` called, `['me', token]` cache holds the answer), `bad phone from the envelope`, `empty name checked` ("Enter your name", nothing sent).
 
-- [ ] 12.1 Red
-- [ ] 12.2 `ProfileSheet({ open, customer, onClose })` per the Edit profile section
-- [ ] 12.3 Gates green
+- [x] 12.1 Red
+- [x] 12.2 `ProfileSheet({ open, customer, onClose })` per the Edit profile section
+- [x] 12.3 Gates green
 
 ## 13. Address sheet
 
