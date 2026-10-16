@@ -9,7 +9,7 @@ Scope: `apps/rider/src/api.ts`, `apps/rider/src/session.ts`, `apps/rider/src/api
 ## 2. Shared time helpers (design 6)
 Scope: `apps/rider/src/format.ts`, `apps/rider/src/format.test.ts`, `apps/rider/src/ready.tsx`, `apps/rider/src/routes/_rider/history.tsx`. Scenario: none new; "Ready orders list" (`ready.test.tsx`, "12 min ago") and "Delivery history" stay green. No failing test: the task moves two imports to `@shopperstop/ui/app` and deletes the copies, whose behaviour is tested in `packages/ui/src/app/time.test.tsx`. Commit: `refactor: rider takes since, useSince and when from @shopperstop/ui/app`.
 
-- [ ] 2.1 Apply "Task 2"; gates green (61 passed); `grep -rn "useSyncExternalStore\|Intl.DateTimeFormat\|openapi-fetch'" apps/rider/src` finds nothing; commit `refactor:`
+- [x] 2.1 Apply "Task 2"; gates green (61 passed); `grep -rn "useSyncExternalStore\|Intl.DateTimeFormat\|openapi-fetch'" apps/rider/src` finds nothing; commit `refactor:`
 
 ## 3. Acceptance (team lead) and verification (manager)
 - [ ] 3.1 Team lead `/opsx:verify`: every delta scenario has a passing test, tasks 1 and 2 ticked, `test:` before `feat:` in task 1, diff against the base only in design.md's files, this change and the rider-P4-L3 lane logs

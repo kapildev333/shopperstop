@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, PageHeader, Price, Skeleton, StatusMessage, buttonClass } from '@shopperstop/ui'
+import { useSince } from '@shopperstop/ui/app'
 import { deliveryQuery, rider, type ApiError, type Delivery, type ReadyOrder } from './api'
-import { itemCount, useSince } from './format'
+import { itemCount } from './format'
 
 const readyKey = ['rider', 'ready'] as const
 const assignedKey = ['rider', 'deliveries', 'assigned'] as const

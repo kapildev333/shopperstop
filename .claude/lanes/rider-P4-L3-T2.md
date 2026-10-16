@@ -1,5 +1,5 @@
 # rider-P4-L3-T2 - rider takes the shared time helpers (task 2 of rider-app-shared-swap)
-Status: not started (starts after T1's feat commit)
+Status: done (2.1 ticked; refactor commit on lane branch, not pushed)
 
 ## Brief
 - LANE-ID: rider-P4-L3 (task T2). Area: `rider`.
@@ -17,5 +17,13 @@ Status: not started (starts after T1's feat commit)
 Stop and write under Blockers on anything design.md does not settle. Never edit `packages/ui/`, other apps or the lane log `rider-P4-L3.md`.
 
 ## Gates
+- Baseline before the swap: rider Vitest 10 files / 61 passed (Node 22.23.3 on PATH; `packages/ui` built).
+- After the swap: `lint` exit 0; `typecheck` exit 0; `test --run` 10 files / 61 passed; `build` exit 0; `grep -rn "useSyncExternalStore\|Intl.DateTimeFormat\|openapi-fetch'" apps/rider/src` no output.
+- `make test-web` from the worktree root exit 0. Per workspace: ui 35 files / 104 tests; admin 27 files / 326 tests; mobile jest 68 suites / 237 tests (plus node --test scripts); rider 10 files / 61 tests; web 26 files / 163 tests.
+
 ## Found
+- Diff applied with `git apply` from a scratch copy of design.md "Task 2"; `git apply --check` clean first. Only the four scoped files changed plus tasks.md and this file.
+- `format.test.ts` now holds only `itemCount wording`; `since` and `when` wording is covered by `packages/ui/src/app/time.test.tsx` and rider's `ready.test.tsx` ("12 min ago").
+
 ## Blockers
+None.
