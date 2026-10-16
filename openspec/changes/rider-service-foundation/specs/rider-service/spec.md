@@ -148,6 +148,10 @@ Every `/api/rider/v1/admin/*` route SHALL forward the request's bearer token to 
 - **WHEN** a staff user posts a 7-byte password, a store core answers 404 for, and an email already taken in another case
 - **THEN** the responses are 400 on `password`, 400 on `storeId`, and 409 `conflict` on `email`
 
+#### Scenario: Fields are checked before the store
+- **WHEN** a staff user posts an invalid email with a `storeId` core does not know
+- **THEN** the response is 400 on `email` and core receives no store request
+
 #### Scenario: Store staff create only for their store
 - **WHEN** store staff of store A post a rider for store B
 - **THEN** the response is 403 with code `forbidden` and no rider is created
