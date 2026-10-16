@@ -74,10 +74,14 @@ The address card SHALL show the chosen address, which is the one chosen on this 
 - **THEN** the address sheet is closed and the card shows "Delivering to Work"
 
 ### Requirement: Mobile checkout place order bar
-Below its scrolling content the checkout screen SHALL show a "Place order" button with the amount to pay or, in its place, a block naming why the order cannot be placed: "Remove the marked products to continue." while a line is marked, else "Minimum order is ₹<min>. Add ₹<missing> more to place the order." while the subtotal is below `minOrderCents`, else "Add an address to place the order." while there is no address.
+Below its scrolling content the checkout screen SHALL show a "Place order" button with the amount to pay or, in its place, a block naming why the order cannot be placed: "Remove the marked products to continue." while a line is marked, else "Minimum order is ₹<min>. Add ₹<missing> more to place the order." while the server cart's subtotal is below its `minOrderCents`, else "Add an address to place the order." while there is no address.
 
 #### Scenario: Checkout below the minimum
 - **WHEN** the cart's subtotal is 5400, `minOrderCents` 9900, and the customer has a default address
+- **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
+
+#### Scenario: Minimum from the cart when the pincode is not served
+- **WHEN** the stored pincode resolves to no store, and the server cart at Koramangala has subtotal 5400 with `minOrderCents` 9900
 - **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
 
 #### Scenario: No address blocks placing

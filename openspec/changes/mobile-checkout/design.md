@@ -57,6 +57,8 @@ On 201 the answered order is put in `orderKey(token, id)` (L4a), the cart cache 
 
 The lines card reads `GET /stores/{cart.storeId}` (web's rule: the cart may be at another store than the pincode resolves to). It shares the query key `['store', id]` with L3's `useStoreName`, so the replaced notice and checkout read one cache entry; that needs the whole `Store` cached under the key (request to L3: `storeOptions(id)`). If L3 lands caching only the name there, task 3 uses its own key `['store', id, 'checkout']` and task 0 records it.
 
+Fees and the minimum come only from the server cart (`GET /me/cart`, which core prices at the cart's own store), never from `useStore()` (the pincode's store). Checkout is signed-in only, so L3's guest pricing (zero fees and minimum 0 while no store resolves, L3 review R1 finding 2) never reaches it: the guest cart is merged at sign-in and the screen shows core's answer. Core re-checks the minimum at placement; its 400 `subtotal` refusal is the "Placement fails" scenario. Scenario "Minimum from the cart when the pincode is not served" pins it.
+
 ### 7. Marks are text, not badges; the block names marked products
 
 The canvas marks a line with danger text in place of its unit ("Out of stock") and swaps its price for "Remove". Web's three texts are kept ("Out of stock", "Only N left", "Not enough stock"). The canvas block reads "Remove out-of-stock product to continue"; a line can be marked for being short, not out, so the block reads "Remove the marked products to continue.", and the alert's second line "Remove them to place your order.". The canvas dims a marked line to 75% opacity; dropped, as it pulls `danger` and `inkMuted` text under 4.5:1.
@@ -94,7 +96,7 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L4b.md` and t
 |---|---|---|
 | Order placed after a pending cart change; Order number collision retried once | `src/checkout.test.ts`: the scenario names | 1 |
 | Default address shown; No address yet; Choice sheet lists the addresses; Another address chosen; Address added at checkout | `src/checkout-address.test.tsx`: the scenario names | 2 |
-| Checkout summary from the cart; Summary names the cart's store; Cash on delivery and bill; Free delivery at checkout; Empty checkout; Loading and failed checkout; Checkout below the minimum; No address blocks placing; Place order shows the amount | `src/checkout-screen.test.tsx`: the scenario names | 3 |
+| Checkout summary from the cart; Summary names the cart's store; Cash on delivery and bill; Free delivery at checkout; Empty checkout; Loading and failed checkout; Checkout below the minimum; Minimum from the cart when the pincode is not served; No address blocks placing; Place order shows the amount | `src/checkout-screen.test.tsx`: the scenario names | 3 |
 | Signed-out checkout redirect | `src/checkout-redirect.test.tsx`: `Signed-out checkout redirect` | 3 |
 | Back to cart opens the cart sheet | `src/checkout-back.test.tsx`: `Back to cart opens the cart sheet` | 3 |
 | Place order sent once; Address not served; Store closed at placement; Placement fails; Choosing another address clears the alert; Core cannot be reached at placement | `src/checkout-place.test.tsx`: the scenario names | 4 |
