@@ -84,3 +84,19 @@ test('app config points at the icons', () => {
   assert.ok(existsSync(join(appDir, 'assets', 'adaptive-icon.png')), 'adaptive-icon.png exists')
   assert.equal(expo.android.adaptiveIcon.backgroundColor, colors.brand)
 })
+
+test('splash uses the brand surface and the mark', () => {
+  const colors = brandColors(tokensCss)
+  const plugin = expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-splash-screen')
+  assert.ok(plugin, 'expo-splash-screen is in expo.plugins')
+  const options = plugin[1]
+  assert.equal(options.image, './assets/splash-icon.png')
+  assert.equal(options.backgroundColor, colors.brand)
+  assert.equal(options.imageWidth, 200)
+  assert.equal(options.resizeMode, 'contain')
+  assert.ok(existsSync(join(appDir, 'assets', 'splash-icon.png')), 'splash-icon.png exists')
+  assert.ok(
+    IMAGES.some((e) => e.file === 'splash-icon.png' && e.opaque === false && e.scale === 1),
+    'IMAGES holds splash-icon.png (transparent, scale 1)',
+  )
+})
