@@ -49,8 +49,8 @@ LANE-ID `mobile-P4-L4a-T5`. Scope: `src/rider-card.tsx`, `src/rider-card.test.ts
 
 LANE-ID `mobile-P4-L4a-T6`. Scope: `src/orders-cancel.tsx`, `src/orders-cancel.test.tsx`. Scenarios: Cancel dialog contents; Keep order; Order cancelled without a reason; Cancel refused. Start from `src/orders-cancel.test.tsx` test `Cancel dialog contents` (red). Render `<CancelOrderDialog order={placed} open onClose={onClose} />` in `QueryClientProvider`. Use `Dialog` from `src/ui/dialog.tsx` if it is on the lane branch when you start, else `Sheet` from `src/ui/sheet.tsx` (design.md Decision 6); say which in your log. "Buttons are Keep order and then Cancel order": the order of `getAllByRole('button')` filtered to those two names. "Cancel refused" with 409 also asserts a later `GET /orders/<id>` in the recorded calls. The confirm is guarded against a second press while pending (a `useRef`, as `src/app/account.tsx` row actions). Drawing: §4.
 
-- [ ] 6.1 `test:` the four scenarios, red
-- [ ] 6.2 `feat:` `CancelOrderDialog`; gates green
+- [x] 6.1 `test:` the four scenarios, red
+- [x] 6.2 `feat:` `CancelOrderDialog`; gates green
 
 ## 7. Rider card and cancel on the tracking screen — group C, after 4, 5 and 6
 
