@@ -42,3 +42,13 @@ test('medium controls reach a 44 point touch area', async () => {
   // hitSlop grows the touch area around the visible 36 point control to 44 by 44.
   expect(screen.getByRole('button', { name: 'Add Toned milk' }).props.hitSlop).toEqual({ top: 4, bottom: 4, left: 4, right: 4 })
 })
+
+test('medium remove and add one reach a 44 point touch area', async () => {
+  await render(<Harness max={2} />)
+  await fireEvent.press(screen.getByRole('button', { name: 'Add Toned milk' }))
+  // The 28 point wide controls take 8 points of slop on each side: 28 + 16 = 44 wide, 36 + 8 = 44 tall.
+  const remove = screen.getByRole('button', { name: 'Remove one Toned milk' })
+  const addOne = screen.getByRole('button', { name: 'Add one Toned milk' })
+  expect(remove.props.hitSlop).toEqual({ top: 4, bottom: 4, left: 8, right: 8 })
+  expect(addOne.props.hitSlop).toEqual({ top: 4, bottom: 4, left: 8, right: 8 })
+})
