@@ -32,3 +32,14 @@ The nine named in `tasks.md` section 3 (seven on the request count, "a store wit
 - Keep your log in this file below `# Worker log` (format in `.claude/lanes/README.md`). Report the commit hashes, every Vitest summary, the `make test-web` exit code and `git status --short`.
 
 # Worker log
+
+- Step 0: `active?: "true"` at core.d.ts:4779 and `DashboardStore.isOpen` present; core-P3-L2 in the branch.
+- npm ci and `npm run build --workspace packages/ui` exit 0.
+- Base (apps/admin, before patches): `Test Files 25 passed (25)`, `Tests 297 passed (297)`.
+- 3.1 `git apply patches/3.1-board-dashboard-tests.diff` applied cleanly. Vitest: `Test Files 4 failed | 21 passed (25)`, `Tests 9 failed | 290 passed (299)`; the nine named tests failed. Commit 66f6c40 `test: one active-orders request per poll; Open or Closed on the dashboard` (ticks 3.1 with the patch files).
+- 3.2 `git apply patches/3.2-board-dashboard-code.diff` applied cleanly. Vitest: `Test Files 25 passed (25)`, `Tests 299 passed (299)`. Commit 73f19db `feat: the board polls core's active orders in one request; dashboard cards say Open or Closed` (ticks 3.2).
+- Gates: `make test-web` exit 0 (packages/ui 83, apps/admin 299, apps/web 153 passed); `openspec validate admin-riders --strict` valid.
+- `git status --short` after the commits: `?? .claude/lanes/admin-P3-L1-R1.md` only. That file was not created by this worker and is not committed here.
+
+## Blockers
+- None.
