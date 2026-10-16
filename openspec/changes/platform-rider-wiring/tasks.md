@@ -23,9 +23,9 @@ Scenarios: "Postman collection is generated from the contract" (Rider URLs read 
 Starts from: `scripts/postman.test.mjs` tests `rider URLs read the rider base URL`, `rider routes read their tokens`, `rider sign-in stores riderToken`, `rider and delivery ids read environment variables`, `rider collection follows the rider contract`, `postman CLI skips an absent rider contract`, `environment holds the eleven variables`, and the rider case of `two runs give identical bytes with no generated ids`, as design.md "scripts/postman.test.mjs" lists them.
 Commits: `test: rider postman collection and environment`, then `feat: postman collection per service with rider tokens and ids`.
 
-- [ ] 2.1 Write the tests and the `riderFixture` from design.md into `scripts/postman.test.mjs`; run `node --test scripts/postman.test.mjs`: the new rider tests and the environment test fail, the existing core tests pass. Paste the `# pass` / `# fail` lines and the failing test names into the log; commit `test: ...`
-- [ ] 2.2 Write `scripts/postman.mjs` exactly as design.md "scripts/postman.mjs" and append the four environment variables as design.md says
-- [ ] 2.3 Green: `node --test scripts/postman.test.mjs` all pass; `make postman` twice prints `postman: services/rider/openapi.json absent, skipping` and leaves `git diff -- docs/postman/shopperstop-core.postman_collection.json` empty; `ls docs/postman` shows no rider collection; `make test-core` passes (its seed test reads the environment file); `openspec validate --all --strict` passes. Paste the outputs; commit `feat: ...`
+- [x] 2.1 Write the tests and the `riderFixture` from design.md into `scripts/postman.test.mjs`; run `node --test scripts/postman.test.mjs`: the new rider tests and the environment test fail, the existing core tests pass. Paste the `# pass` / `# fail` lines and the failing test names into the log; commit `test: ...`
+- [x] 2.2 Write `scripts/postman.mjs` exactly as design.md "scripts/postman.mjs" and append the four environment variables as design.md says
+- [x] 2.3 Green: `node --test scripts/postman.test.mjs` all pass; `make postman` twice prints `postman: services/rider/openapi.json absent, skipping` and leaves `git diff -- docs/postman/shopperstop-core.postman_collection.json` empty; `ls docs/postman` shows no rider collection; `make test-core` passes (its seed test reads the environment file); `openspec validate --all --strict` passes. Paste the outputs; commit `feat: ...`
 
 ## 3. CI rider job, README and CLAUDE.md (worker, after task 1)
 
