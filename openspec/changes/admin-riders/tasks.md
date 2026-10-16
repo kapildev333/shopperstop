@@ -22,7 +22,7 @@ Scope: `apps/admin/src/orders-board.test.tsx`, `apps/admin/src/order-sheet.test.
 Scenarios: Orders board › Rider on the card; Order detail sheet › Rider and rider events.
 Failing tests: `src/orders-board.test.tsx` › "a card taken out by a rider names the rider; a card without one does not"; `src/order-sheet.test.tsx` › "the sheet names the order's rider, and the rider on the events the rider made".
 - [x] 2.1 `patches/2.1-rider-name-tests.diff` (`test: the rider's name on the card and the sheet`); `2 failed | 295 passed (297)`
-- [ ] 2.2 `patches/2.2-rider-name-code.diff` (`feat: board cards and the order sheet name the rider`); `297 passed (297)`; every gate green
+- [x] 2.2 `patches/2.2-rider-name-code.diff` (`feat: board cards and the order sheet name the rider`); `297 passed (297)`; every gate green
 
 ## 3. One active-orders poll; Open or Closed on the dashboard
 Waits on: task 2 and core-P3-L2 on main (#215: `active` on `listStoreOrders`, `DashboardStore.isOpen`).

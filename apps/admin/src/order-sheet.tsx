@@ -15,6 +15,7 @@ function Details({ order }: { order: Order }) {
         Placed {when(order.placedAt)}
       </p>
       {order.cancelReason && <p>Reason for cancelling: {order.cancelReason}</p>}
+      {order.riderName && <p>Rider: {order.riderName}</p>}
       <section aria-labelledby="order-items" className="flex flex-col gap-2">
         <h3 id="order-items" className="text-h3">Items</h3>
         <ul className="flex flex-col gap-1">
@@ -57,7 +58,7 @@ function Details({ order }: { order: Order }) {
         <ol className="flex flex-col gap-1">
           {order.events.map((event, i) => (
             <li key={i}>
-              {statusLabel[event.toStatus]} by {actor[event.actorType]}, {when(event.createdAt)}
+              {statusLabel[event.toStatus]} by {event.actorName ?? actor[event.actorType]}, {when(event.createdAt)}
               {event.note && `: ${event.note}`}
             </li>
           ))}

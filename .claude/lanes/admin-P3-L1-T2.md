@@ -32,3 +32,10 @@ Orders board › Rider on the card; Order detail sheet › Rider and rider event
 - Keep your log in this file below `# Worker log` (format in `.claude/lanes/README.md`). Report the commit hashes, every Vitest summary, the `make test-web` exit code and `git status --short`.
 
 # Worker log
+
+- Base (5f53bb8): `Tests  295 passed (295)`.
+- 2.1 applied cleanly; `Tests  2 failed | 295 passed (297)` (FAIL "the sheet names the order's rider, and the rider on the events the rider made"; FAIL "a card taken out by a rider names the rider; a card without one does not"). Committed `43307e2 test: the rider's name on the card and the sheet`.
+- 2.2 applied cleanly; `Tests  297 passed (297)`.
+- Gates: `make test-web` exit 0 (per-workspace: 71, 297 and 153 tests, all passed); `openspec validate admin-riders --strict` valid; `git status --short` lists only the task files (`order-board.tsx`, `order-sheet.tsx`, `tasks.md`, this file).
+- Ticks 2.1 and 2.2 set in `openspec/changes/admin-riders/tasks.md`.
+- ## Blockers: none.

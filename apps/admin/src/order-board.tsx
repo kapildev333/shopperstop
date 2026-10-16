@@ -24,6 +24,7 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
       <p className="text-small text-ink">
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
+      {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
       <Price cents={order.totalCents} />
       {isActive(order.status) && (
         // Named by its own text and the order's number: "Accept SS-…".
