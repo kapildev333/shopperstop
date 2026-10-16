@@ -131,7 +131,7 @@ Sign-in link (decision 2026-10-16, after T10 found `router.push` from the sheet 
 - [x] 10.1 Red
 - [x] 10.2 `PincodeSheet` per design.md Decision 6 and the design file sections 7 and 17; mount in `_layout.tsx`
 - [x] 10.3 `src/app-focus.ts` (mobile-P4-L4a's request, design.md Decision 13): `wireAppFocus()` subscribes `AppState` `change` to `focusManager.setFocused(state === 'active')` unless `Platform.OS === 'web'`, returns the unsubscribe; called from an effect in `_layout.tsx`. Red first: `src/app-focus.test.ts`: `background pauses focus` (emit `background` through `jest.spyOn(AppState, 'addEventListener')`'s captured listener: `focusManager.isFocused()` is false; `active`: true)
-- [ ] 10.4 Gates green (`src/pincode-first-visit.test.tsx` belongs to task 11 and may stay red until it lands)
+- [x] 10.4 Gates green (`src/pincode-first-visit.test.tsx` belongs to task 11 and may stay red until it lands)
 
 ## 11. Home and Categories tab
 
