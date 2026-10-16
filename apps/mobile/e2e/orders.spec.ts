@@ -101,12 +101,12 @@ test('History and a delivered order against core', async ({ page, request }) => 
 
   const cards = page.getByRole('link', { name: /^View order / })
   await expect(cards).toHaveCount(3)
-  await expect(page.getByRole('link', { name: 'View order SS-DEMOAAAD', exact: true })).toContainText('Placed')
-  await expect(page.getByRole('link', { name: 'View order SS-DEMOAAAC', exact: true })).toContainText('Cancelled')
-  await expect(page.getByRole('link', { name: 'View order SS-DEMOAAAB', exact: true })).toContainText('Delivered')
+  await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAD,/ })).toContainText('Placed')
+  await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAC,/ })).toContainText('Cancelled')
+  await expect(page.getByRole('link', { name: /^View order SS-DEMOAAAB,/ })).toContainText('Delivered')
   await expectNoViolations(page)
 
-  await page.getByRole('link', { name: 'View order SS-DEMOAAAB', exact: true }).click()
+  await page.getByRole('link', { name: /^View order SS-DEMOAAAB,/ }).click()
   await expect(page).toHaveURL(new RegExp(`/orders/${delivered}$`))
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { level: 1, name: 'Order SS-DEMOAAAB', exact: true })).toBeVisible()
@@ -130,7 +130,7 @@ test('Tracking follows the order against core', async ({ page, request }) => {
 
   await page.goto('/')
   await page.getByRole('tab', { name: 'Orders', exact: true }).click()
-  await page.getByRole('link', { name: `View order ${placed.number}`, exact: true }).click()
+  await page.getByRole('link', { name: new RegExp(`^View order ${placed.number},`) }).click()
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { level: 1, name: `Order ${placed.number}`, exact: true })).toBeVisible()
   await expect(main.getByText(/^Arriving in \d+ min$/)).toBeVisible()
@@ -158,7 +158,7 @@ test('Cancel against core', async ({ page, request }) => {
 
   await page.goto('/')
   await page.getByRole('tab', { name: 'Orders', exact: true }).click()
-  await page.getByRole('link', { name: `View order ${placed.number}`, exact: true }).click()
+  await page.getByRole('link', { name: new RegExp(`^View order ${placed.number},`) }).click()
   await expect(page).toHaveURL(new RegExp(`/orders/${placed.id}$`))
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { level: 1, name: `Order ${placed.number}`, exact: true })).toBeVisible()

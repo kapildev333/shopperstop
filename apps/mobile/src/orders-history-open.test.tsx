@@ -38,7 +38,7 @@ test('Card opens the order', async () => {
   })
   const router = await renderRouter(appDir, { initialUrl: '/orders' })
 
-  await fireEvent.press(await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' }))
+  await fireEvent.press(await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ }))
 
   await waitFor(() => expect(router.getPathname()).toBe(`/orders/${orderId}`))
   expect(await screen.findByRole('heading', { name: 'Order SS-DEMOAAAD' })).toBeTruthy()

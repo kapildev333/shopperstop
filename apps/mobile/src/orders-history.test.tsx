@@ -67,12 +67,12 @@ test('History lists orders', async () => {
   fakeCore(routes)
   await renderRouter(appDir, { initialUrl: '/orders' })
 
-  const placedLink = await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })
+  const placedLink = await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ })
   expect(within(placedLink).getByText('Placed')).toBeTruthy()
   expect(within(placedLink).getByText('Today, 10:02 · 4 items')).toBeTruthy()
   expect(within(placedLink).getByText('₹1,030')).toBeTruthy()
 
-  const cancelledLink = screen.getByRole('link', { name: 'View order SS-DEMOAAAC' })
+  const cancelledLink = screen.getByRole('link', { name: /^View order SS-DEMOAAAC,/ })
   expect(within(cancelledLink).getByText('Cancelled')).toBeTruthy()
   expect(within(cancelledLink).getByText('Today, 10:02 · 1 item')).toBeTruthy()
   expect(screen.queryByText(/Showing your latest/)).toBeNull()
@@ -81,7 +81,10 @@ test('History lists orders', async () => {
     .getAllByRole('link')
     .map((link) => link.props.accessibilityLabel)
     .filter((label) => typeof label === 'string' && label.startsWith('View order '))
-  expect(listed).toEqual(['View order SS-DEMOAAAD', 'View order SS-DEMOAAAC'])
+  expect(listed).toEqual([
+    'View order SS-DEMOAAAD, Placed, Today, 10:02 · 4 items, ₹1,030',
+    'View order SS-DEMOAAAC, Cancelled, Today, 10:02 · 1 item, ₹399',
+  ])
 
   // Core holds 30 orders and lists 2: the list says so after the next read.
   routes['GET /orders'] = () => json(200, { items: [placed, cancelled], total: 30 })
@@ -127,5 +130,5 @@ test('Orders fail to load', async () => {
   fakeCore({ 'GET /orders': () => json(200, { items: [placed], total: 1 }) })
   await fireEvent.press(within(alert).getByRole('button', { name: 'Try again' }))
 
-  expect(await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })).toBeTruthy()
+  expect(await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ })).toBeTruthy()
 })

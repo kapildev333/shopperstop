@@ -38,7 +38,7 @@ test('Failed read on return keeps the list', async () => {
   }
   const calls = fakeCore(routes)
   await renderRouter(appDir, { initialUrl: '/orders' })
-  await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })
+  await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ })
 
   // Core can no longer be reached when the customer comes back.
   routes['GET /orders'] = () => Promise.reject(new TypeError('Network request failed'))
@@ -47,6 +47,6 @@ test('Failed read on return keeps the list', async () => {
 
   await waitFor(() => expect(calls.filter((request) => new URL(request.url).pathname.endsWith('/orders'))).toHaveLength(2))
   await waitFor(() => expect(queryClient.isFetching()).toBe(0))
-  expect(screen.getByRole('link', { name: 'View order SS-DEMOAAAD' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: /^View order SS-DEMOAAAD,/ })).toBeTruthy()
   expect(screen.queryByRole('alert')).toBeNull()
 })

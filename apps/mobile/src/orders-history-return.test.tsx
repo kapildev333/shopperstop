@@ -37,7 +37,7 @@ test('Statuses current on return', async () => {
   }
   const calls = fakeCore(routes)
   await renderRouter(appDir, { initialUrl: '/orders' })
-  const card = await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })
+  const card = await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ })
   expect(within(card).getByText('Placed')).toBeTruthy()
 
   // Core moves the order on while the customer is on Home.
@@ -45,6 +45,6 @@ test('Statuses current on return', async () => {
   await testRouter.navigate('/')
   await testRouter.navigate('/orders')
 
-  expect(await within(await screen.findByRole('link', { name: 'View order SS-DEMOAAAD' })).findByText('Packing')).toBeTruthy()
+  expect(await within(await screen.findByRole('link', { name: /^View order SS-DEMOAAAD,/ })).findByText('Packing')).toBeTruthy()
   expect(calls.filter((request) => new URL(request.url).pathname.endsWith('/orders'))).toHaveLength(2)
 })
