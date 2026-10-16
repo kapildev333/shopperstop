@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const consumeCustomerToken = `-- name: ConsumeCustomerToken :one
+delete from customer_tokens
+where token_hash = $1 and purpose = $2 and expires_at > now()
+returning customer_id
+`
+
+type ConsumeCustomerTokenParams struct {
+	TokenHash []byte
+	Purpose   string
+}
+
+// Single use: a live token is deleted as it is read. An unknown, used or
+// expired token returns no row.
+func (q *Queries) ConsumeCustomerToken(ctx context.Context, arg ConsumeCustomerTokenParams) (string, error) {
+	row := q.db.QueryRow(ctx, consumeCustomerToken, arg.TokenHash, arg.Purpose)
+	var customer_id string
+	err := row.Scan(&customer_id)
+	return customer_id, err
+}
+
 const countStaff = `-- name: CountStaff :one
 select count(*) from staff_users
 `
@@ -23,7 +43,7 @@ func (q *Queries) CountStaff(ctx context.Context) (int64, error) {
 const createCustomer = `-- name: CreateCustomer :one
 insert into customers (email, password_hash, name)
 values ($1, $2, $3)
-returning id, email, name, phone
+returning id, email, name, phone, email_verified
 `
 
 type CreateCustomerParams struct {
@@ -33,10 +53,11 @@ type CreateCustomerParams struct {
 }
 
 type CreateCustomerRow struct {
-	ID    string
-	Email string
-	Name  string
-	Phone string
+	ID            string
+	Email         string
+	Name          string
+	Phone         string
+	EmailVerified bool
 }
 
 func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (CreateCustomerRow, error) {
@@ -47,6 +68,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.Email,
 		&i.Name,
 		&i.Phone,
+		&i.EmailVerified,
 	)
 	return i, err
 }
@@ -125,15 +147,16 @@ func (q *Queries) CreateStaffSession(ctx context.Context, arg CreateStaffSession
 }
 
 const customerByEmail = `-- name: CustomerByEmail :one
-select id, email, password_hash, name, phone from customers where email = $1
+select id, email, password_hash, name, phone, email_verified from customers where email = $1
 `
 
 type CustomerByEmailRow struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	Name         string
-	Phone        string
+	ID            string
+	Email         string
+	PasswordHash  string
+	Name          string
+	Phone         string
+	EmailVerified bool
 }
 
 func (q *Queries) CustomerByEmail(ctx context.Context, email string) (CustomerByEmailRow, error) {
@@ -145,19 +168,21 @@ func (q *Queries) CustomerByEmail(ctx context.Context, email string) (CustomerBy
 		&i.PasswordHash,
 		&i.Name,
 		&i.Phone,
+		&i.EmailVerified,
 	)
 	return i, err
 }
 
 const customerByID = `-- name: CustomerByID :one
-select id, email, name, phone from customers where id = $1
+select id, email, name, phone, email_verified from customers where id = $1
 `
 
 type CustomerByIDRow struct {
-	ID    string
-	Email string
-	Name  string
-	Phone string
+	ID            string
+	Email         string
+	Name          string
+	Phone         string
+	EmailVerified bool
 }
 
 func (q *Queries) CustomerByID(ctx context.Context, id string) (CustomerByIDRow, error) {
@@ -168,6 +193,7 @@ func (q *Queries) CustomerByID(ctx context.Context, id string) (CustomerByIDRow,
 		&i.Email,
 		&i.Name,
 		&i.Phone,
+		&i.EmailVerified,
 	)
 	return i, err
 }
@@ -206,6 +232,25 @@ delete from sessions where id = $1
 
 func (q *Queries) DeleteSession(ctx context.Context, id string) error {
 	_, err := q.db.Exec(ctx, deleteSession, id)
+	return err
+}
+
+const issueCustomerToken = `-- name: IssueCustomerToken :exec
+insert into customer_tokens (token_hash, customer_id, purpose, expires_at)
+values ($1, $2, $3, now() + interval '24 hours')
+on conflict (customer_id, purpose)
+do update set token_hash = excluded.token_hash, expires_at = excluded.expires_at
+`
+
+type IssueCustomerTokenParams struct {
+	TokenHash  []byte
+	CustomerID string
+	Purpose    string
+}
+
+// A customer holds one token per purpose: a new token replaces the earlier one.
+func (q *Queries) IssueCustomerToken(ctx context.Context, arg IssueCustomerTokenParams) error {
+	_, err := q.db.Exec(ctx, issueCustomerToken, arg.TokenHash, arg.CustomerID, arg.Purpose)
 	return err
 }
 
@@ -354,7 +399,7 @@ const updateCustomer = `-- name: UpdateCustomer :one
 update customers
 set name = coalesce($1, name), phone = coalesce($2, phone)
 where id = $3
-returning id, email, name, phone
+returning id, email, name, phone, email_verified
 `
 
 type UpdateCustomerParams struct {
@@ -364,10 +409,11 @@ type UpdateCustomerParams struct {
 }
 
 type UpdateCustomerRow struct {
-	ID    string
-	Email string
-	Name  string
-	Phone string
+	ID            string
+	Email         string
+	Name          string
+	Phone         string
+	EmailVerified bool
 }
 
 func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (UpdateCustomerRow, error) {
@@ -378,6 +424,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		&i.Email,
 		&i.Name,
 		&i.Phone,
+		&i.EmailVerified,
 	)
 	return i, err
 }
@@ -424,4 +471,13 @@ func (q *Queries) UpdateStaff(ctx context.Context, arg UpdateStaffParams) (Updat
 		&i.IsActive,
 	)
 	return i, err
+}
+
+const verifyCustomerEmail = `-- name: VerifyCustomerEmail :exec
+update customers set email_verified = true where id = $1
+`
+
+func (q *Queries) VerifyCustomerEmail(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, verifyCustomerEmail, id)
+	return err
 }

@@ -1,5 +1,5 @@
 # core-P4-L2-t1 - email verification (task 1 of core-accounts-security)
-Status: ready
+Status: done (1.1, 1.2)
 ## Brief
 - LANE-ID: core-P4-L2 (task 1 of 3). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L2. Branch: lane/core-P4-L2-accounts-security. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
@@ -15,3 +15,4 @@ Status: ready
 ## Found
 ## Requests
 ## Blockers
+Progress: 1.1 committed (red: build failures in app and auth, `customer_tokens` missing in seed). 1.2 applied, gates green: gofmt empty, vet clean, `go test -race -count=1 ./...` all ok, `make gen postman` 17/17, `make test-web` stops at the three mobile TS2741 lines; lint green everywhere, web/admin/ui/rider/mobile tests and build all green when run directly, openspec 20/20.

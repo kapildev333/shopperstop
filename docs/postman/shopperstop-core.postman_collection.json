@@ -269,7 +269,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"token\": \"Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM\",\n  \"customer\": {\n    \"id\": \"6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13\",\n    \"email\": \"new@example.com\",\n    \"name\": \"Asha\"\n  }\n}",
+              "body": "{\n  \"token\": \"Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM\",\n  \"customer\": {\n    \"id\": \"6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13\",\n    \"email\": \"new@example.com\",\n    \"name\": \"Asha\",\n    \"emailVerified\": false\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -520,7 +520,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"token\": \"Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM\",\n  \"customer\": {\n    \"id\": \"00000000-0000-4000-8000-000000000201\",\n    \"email\": \"demo@shopperstop.local\",\n    \"name\": \"Demo Customer\",\n    \"phone\": \"+919800000000\"\n  }\n}",
+              "body": "{\n  \"token\": \"Zq3v8nW1kR5tY7uI9oP2aS4dF6gH8jK0lZ1xC3vB5nM\",\n  \"customer\": {\n    \"id\": \"00000000-0000-4000-8000-000000000201\",\n    \"email\": \"demo@shopperstop.local\",\n    \"name\": \"Demo Customer\",\n    \"phone\": \"+919800000000\",\n    \"emailVerified\": true\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -806,6 +806,141 @@
           }
         },
         {
+          "name": "Verify a customer's email",
+          "request": {
+            "name": "Verify a customer's email",
+            "description": {
+              "content": "Spends the code from the verification mail (POST /me/email-verification) and marks its customer's email verified. Public: the code is the proof, so it works from any device. A code works once, for 24 hours, and only the newest one a customer was sent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "verify-email"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "name": "The email is verified. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "verify-email"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The token is empty, unknown, already used, expired (24 hours) or for another purpose; field token. Nothing changes.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "verify-email"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"invalid or expired token\",\n    \"field\": \"token\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Get the signed-in customer",
           "request": {
             "name": "Get the signed-in customer",
@@ -881,7 +1016,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000201\",\n  \"email\": \"demo@shopperstop.local\",\n  \"name\": \"Demo Customer\",\n  \"phone\": \"+919800000000\"\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000201\",\n  \"email\": \"demo@shopperstop.local\",\n  \"name\": \"Demo Customer\",\n  \"phone\": \"+919800000000\",\n  \"emailVerified\": true\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1035,7 +1170,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000201\",\n  \"email\": \"demo@shopperstop.local\",\n  \"name\": \"Asha R\",\n  \"phone\": \"+919800000001\"\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000201\",\n  \"email\": \"demo@shopperstop.local\",\n  \"name\": \"Asha R\",\n  \"phone\": \"+919800000001\",\n  \"emailVerified\": true\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1146,6 +1281,170 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Mail a verification code",
+          "request": {
+            "name": "Mail a verification code",
+            "description": {
+              "content": "Mails the signed-in customer a code for POST /auth/verify-email, valid for 24 hours; a new code replaces any earlier one. No body. In development the mail is written to core's log, not sent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "email-verification"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The mail is on its way. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "email-verification"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Accepted",
+              "code": 202,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "The token is missing, unknown, expired or a staff token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "email-verification"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The customer's email is already verified. No mail is sent.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "email-verification"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"email already verified\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -14534,7 +14833,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+              "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -14602,7 +14901,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -14671,7 +14970,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -14740,7 +15039,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -14809,7 +15108,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -14878,7 +15177,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -14947,7 +15246,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "raw": "{\n  \"status\": \"out_for_delivery\",\n  \"actor\": {\n    \"type\": \"rider\",\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"name\": \"Demo Rider\"\n  }\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",

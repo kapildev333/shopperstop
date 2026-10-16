@@ -1,19 +1,19 @@
 -- name: CreateCustomer :one
 insert into customers (email, password_hash, name)
 values ($1, $2, $3)
-returning id, email, name, phone;
+returning id, email, name, phone, email_verified;
 
 -- name: CustomerByEmail :one
-select id, email, password_hash, name, phone from customers where email = $1;
+select id, email, password_hash, name, phone, email_verified from customers where email = $1;
 
 -- name: CustomerByID :one
-select id, email, name, phone from customers where id = $1;
+select id, email, name, phone, email_verified from customers where id = $1;
 
 -- name: UpdateCustomer :one
 update customers
 set name = coalesce(sqlc.narg(name), name), phone = coalesce(sqlc.narg(phone), phone)
 where id = @id
-returning id, email, name, phone;
+returning id, email, name, phone, email_verified;
 
 -- name: CreateCustomerSession :exec
 insert into sessions (token_hash, subject_type, subject_id, expires_at)
@@ -43,6 +43,23 @@ delete from sessions where expires_at <= now();
 
 -- name: DeleteSession :exec
 delete from sessions where id = $1;
+
+-- name: IssueCustomerToken :exec
+-- A customer holds one token per purpose: a new token replaces the earlier one.
+insert into customer_tokens (token_hash, customer_id, purpose, expires_at)
+values ($1, $2, $3, now() + interval '24 hours')
+on conflict (customer_id, purpose)
+do update set token_hash = excluded.token_hash, expires_at = excluded.expires_at;
+
+-- name: ConsumeCustomerToken :one
+-- Single use: a live token is deleted as it is read. An unknown, used or
+-- expired token returns no row.
+delete from customer_tokens
+where token_hash = $1 and purpose = $2 and expires_at > now()
+returning customer_id;
+
+-- name: VerifyCustomerEmail :exec
+update customers set email_verified = true where id = $1;
 
 -- name: CreateStaff :one
 insert into staff_users (email, password_hash, name, role, store_id)

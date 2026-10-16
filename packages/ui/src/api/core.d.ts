@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a customer's email
+         * @description Spends the code from the verification mail (POST /me/email-verification) and marks its customer's email verified. Public: the code is the proof, so it works from any device. A code works once, for 24 hours, and only the newest one a customer was sent.
+         */
+        post: operations["postAuthVerifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -126,6 +146,26 @@ export interface paths {
          * @description Changes only the fields present. An empty phone clears it, and a cleared phone is omitted from responses. A null value is refused with 400 naming the field; an empty object changes nothing.
          */
         patch: operations["patchMe"];
+        trace?: never;
+    };
+    "/me/email-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a verification code
+         * @description Mails the signed-in customer a code for POST /auth/verify-email, valid for 24 hours; a new code replaces any earlier one. No body. In development the mail is written to core's log, not sent.
+         */
+        post: operations["postMeEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/me/addresses": {
@@ -844,6 +884,8 @@ export interface components {
             name: string;
             /** @description Omitted when the customer has no phone. */
             phone?: string;
+            /** @description Whether the customer has proved they read this email: false on registration, true after POST /auth/verify-email or a password reset. */
+            emailVerified: boolean;
         };
         CustomerSession: {
             /** @description Bearer token for the customer routes. Shown once; the server keeps only a hash. */
@@ -1501,6 +1543,10 @@ export interface components {
         Dashboard: {
             items: components["schemas"]["DashboardStore"][];
         };
+        TokenRequest: {
+            /** @description The code from the mail, exactly as sent. */
+            token: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1609,7 +1655,8 @@ export interface operations {
                      *       "customer": {
                      *         "id": "6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13",
                      *         "email": "new@example.com",
-                     *         "name": "Asha"
+                     *         "name": "Asha",
+                     *         "emailVerified": false
                      *       }
                      *     }
                      */
@@ -1703,7 +1750,8 @@ export interface operations {
                      *         "id": "00000000-0000-4000-8000-000000000201",
                      *         "email": "demo@shopperstop.local",
                      *         "name": "Demo Customer",
-                     *         "phone": "+919800000000"
+                     *         "phone": "+919800000000",
+                     *         "emailVerified": true
                      *       }
                      *     }
                      */
@@ -1799,6 +1847,51 @@ export interface operations {
             };
         };
     };
+    postAuthVerifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k"
+                 *     }
+                 */
+                "application/json": components["schemas"]["TokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The email is verified. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is empty, unknown, already used, expired (24 hours) or for another purpose; field token. Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "invalid or expired token",
+                     *         "field": "token"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -1819,7 +1912,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000201",
                      *       "email": "demo@shopperstop.local",
                      *       "name": "Demo Customer",
-                     *       "phone": "+919800000000"
+                     *       "phone": "+919800000000",
+                     *       "emailVerified": true
                      *     }
                      */
                     "application/json": components["schemas"]["Customer"];
@@ -1874,7 +1968,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000201",
                      *       "email": "demo@shopperstop.local",
                      *       "name": "Asha R",
-                     *       "phone": "+919800000001"
+                     *       "phone": "+919800000001",
+                     *       "emailVerified": true
                      *     }
                      */
                     "application/json": components["schemas"]["Customer"];
@@ -1909,6 +2004,58 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postMeEmailVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail is on its way. No body. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The customer's email is already verified. No mail is sent. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "email already verified"
                      *       }
                      *     }
                      */
