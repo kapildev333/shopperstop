@@ -18,7 +18,7 @@ Scope: `apps/web/e2e/flows.spec.ts` (new), `apps/web/playwright.config.ts`, this
 Scenarios: web-app › "Customer site end-to-end suite with axe" › Admin preview served for the cross-app flows; "Customer cross-app end-to-end flows" › Customer order taken to delivered by store staff, Admin product found by customer search.
 Failing tests (`e2e/flows.spec.ts`): "customer order to delivered across both apps", "admin product found by customer search"; red because nothing serves port 15174 in the web suite.
 
-- [ ] 1.1 The spec file committed (`test: cross-app flows`); lint and typecheck green; `grep -c 15174 apps/web/playwright.config.ts` prints 0; manager's `make e2e` shows exactly the two new tests red at the admin origin
+- [x] 1.1 The spec file committed (`test: cross-app flows`); lint and typecheck green; `grep -c 15174 apps/web/playwright.config.ts` prints 0; manager's `make e2e` shows exactly the two new tests red at the admin origin
 - [ ] 1.2 The admin preview `webServer` (`feat: serve the admin preview in the web suite`); gates green; manager's `make e2e` admin 14, web 42
 
 ## Workflow follow-up
