@@ -12,7 +12,7 @@ Scope: `apps/admin/e2e/{riders,orders,auth,staff,stores}.spec.ts`, `apps/admin/s
 Scenarios: Order cancel with a reason › Order cancelled, Reason missing, Keep order. (Riders against the rider service, Orders against core, Role-based navigation in e2e: written here, run in task 5.)
 Failing tests: `src/order-sheet.test.tsx` › "a cancel needs a reason: without one nothing is sent, the field says so, and the message goes when a reason is typed", "Keep order and Escape close only the dialog, without sending, and the keyboard is back on the sheet", "a cancel sends the reason as the note once, takes the order off the board and shows it cancelled with the reason".
 - [x] 1.1 `patches/1.1-e2e-specs.diff` (`test: riders, the seeded order's rider and the dashboard's Open against the services`); lint and typecheck pass; not run
-- [ ] 1.2 `patches/1.2-sheet-tests.diff` (`test: the cancel dialog opens over the order sheet`); `3 failed | 292 passed (295)`
+- [x] 1.2 `patches/1.2-sheet-tests.diff` (`test: the cancel dialog opens over the order sheet`); `3 failed | 292 passed (295)`
 - [ ] 1.3 `patches/1.3-sheet-code.diff` (`feat: the cancel dialog stacks over the order sheet; the keyboard lands on the result`); `295 passed (295)`
 - [ ] 1.4 `patches/1.4-ui-swaps.diff` (`refactor: ui's ImageTile, aria-disabled styling, VisuallyHidden live and compact order buttons`); no new test, the existing ones pin the behaviour (design.md decision 13); `295 passed (295)`; every gate green
 
