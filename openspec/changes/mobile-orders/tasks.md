@@ -28,8 +28,8 @@ LANE-ID `mobile-P4-L4a-T2`. Scope: `src/rider.ts`, `src/rider.test.ts`. Scenario
 
 LANE-ID `mobile-P4-L4a-T3`. Scope: `src/app/(tabs)/orders.tsx`, `src/orders-history.test.tsx`, `src/orders-history-open.test.tsx`, `src/orders-history-sign-in.test.tsx`, `src/orders-history-start.test.tsx`, `src/orders-history-return.test.tsx`, `src/orders-history-return-failed.test.tsx`. Scenarios: History lists orders; Signed-out Orders tab; Orders loading; No orders yet; Orders fail to load (in `orders-history.test.tsx`, none of them navigating); Card opens the order; Sign in from the Orders tab; Start shopping opens Home; Statuses current on return; Failed read on return keeps the list (one per file, named above). Start from `src/orders-history.test.tsx` test `History lists orders` (red: the placeholder shows "Nothing here yet"). Every test renders through `renderRouter(`${__dirname}/app`, { initialUrl: '/orders' })` (the tab uses `useFocusEffect`, design.md Decision 4) with the fonts mock of `src/account-home.test.tsx`. "Card opens the order" needs the tracking route: if T4 has not landed, register `GET /orders/<id>` in the fake and assert the path only, then add the heading assertion once T4 is in (note it in your log). Drawing: `docs/design/mobile-P4-L4a.md` §1. If `/orders/<id>` does not resolve to `src/app/orders/[id].tsx` beside the tab, stop and report (design.md Risks).
 
-- [ ] 3.1 `test:` the ten scenarios, red
-- [ ] 3.2 `feat:` the Orders tab; gates green
+- [x] 3.1 `test:` the ten scenarios, red
+- [x] 3.2 `feat:` the Orders tab; gates green
 
 ## 4. Tracking screen (`src/app/orders/[id].tsx`, `src/orders-tracking.tsx`) — group B, after 1
 
