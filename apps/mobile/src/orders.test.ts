@@ -1,18 +1,27 @@
+import { createElement, type ReactNode } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor } from '@testing-library/react-native'
+import { queryClient } from './api'
+import { apiError, fakeCore } from './fake-core'
 import {
   canCancel,
   clockTime,
   headline,
   itemCountLabel,
+  orderOptions,
   placedLabel,
   pollInterval,
+  postCancel,
   productCountLabel,
   statusMessage,
   statusName,
   statusVariant,
   timeline,
+  useOrders,
   type Order,
   type OrderStatus,
 } from './orders'
+import { setToken } from './session'
 
 const local = (day: number, hour: number, minute: number) => new Date(2026, 9, day, hour, minute).toISOString()
 
@@ -170,5 +179,32 @@ describe('timeline and labels', () => {
   it('clockTime is local 24-hour with padding', () => {
     expect(clockTime(local(16, 9, 5))).toBe('09:05')
     expect(clockTime(local(16, 21, 40))).toBe('21:40')
+  })
+})
+
+// A failed read rejects with core's inner error (code and message), as useMe does, not the whole envelope.
+describe('failed order reads', () => {
+  const token = 't-orders'
+  const id = 'order-1'
+
+  it('a 500 on the order read rejects with the inner error', async () => {
+    setToken(token)
+    fakeCore({ [`GET /orders/${id}`]: () => apiError(500, 'internal', 'Something went wrong') })
+    await expect(queryClient.fetchQuery(orderOptions(token, id))).rejects.toMatchObject({ code: 'internal', message: 'Something went wrong' })
+  })
+
+  it('a 500 on the order list rejects with the inner error', async () => {
+    setToken(token)
+    fakeCore({ 'GET /orders': () => apiError(500, 'internal', 'Something went wrong') })
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children)
+    const { result } = renderHook(() => useOrders(), { wrapper })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toMatchObject({ code: 'internal', message: 'Something went wrong' })
+  })
+
+  it('a refused cancel answers the inner error', async () => {
+    setToken(token)
+    fakeCore({ [`POST /orders/${id}/cancel`]: () => apiError(409, 'conflict', 'This order can no longer be cancelled.') })
+    expect(await postCancel(id)).toEqual({ error: { code: 'conflict', message: 'This order can no longer be cancelled.' } })
   })
 })
