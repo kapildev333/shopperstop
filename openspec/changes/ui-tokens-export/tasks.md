@@ -10,9 +10,9 @@ Scope: `packages/ui/scripts/gen-tokens.mjs`, `packages/ui/scripts/gen-tokens.tes
 ## 2. DOM-free formatInr (design 4)
 Scope: `packages/ui/src/format.ts`, `packages/ui/src/format.test.ts`, `packages/ui/src/price.tsx`, `packages/ui/src/price.test.tsx`. Scenarios: "formatInr imports nothing", "The entry still exports formatInr" (and "Zero rupees", "Discounted price shows MRP", "No discount, no MRP" stay green unchanged). Failing tests: `packages/ui/src/format.test.ts` › `formatInr imports nothing`; `packages/ui/src/price.test.tsx` › `the entry still exports formatInr`. Commits: `test: formatInr imports nothing; the entry still exports formatInr`, then `feat: formatInr in a DOM-free module`.
 
-- [ ] 2.1 Add the failing tests (they fail on the missing `./format`); commit `test:`
-- [ ] 2.2 Move `formatInr` (body and comment unchanged) to `src/format.ts`; `price.tsx` imports it and re-exports it with `export { formatInr } from './format'`; `index.ts` unchanged; commit `feat:`
-- [ ] 2.3 Gates green; `dist/format.js` has no `import` line after the build
+- [x] 2.1 Add the failing tests (they fail on the missing `./format`); commit `test:`
+- [x] 2.2 Move `formatInr` (body and comment unchanged) to `src/format.ts`; `price.tsx` imports it and re-exports it with `export { formatInr } from './format'`; `index.ts` unchanged; commit `feat:`
+- [x] 2.3 Gates green; `dist/format.js` has no `import` line after the build
 
 ## 3. Acceptance (team lead) and verification (manager)
 - [ ] 3.1 Team lead `/opsx:verify`: every scenario in the delta has a passing same-named test, tasks 1 and 2 ticked, diff only in the files design.md lists plus this change and the ui-P4-L1 lane logs
