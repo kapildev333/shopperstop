@@ -18,6 +18,6 @@ Scope: `Makefile`, `README.md`. Scenarios: "Rider sqlc between core sqlc and the
 
 ## 3. Acceptance
 
-- [ ] 3.1 Team lead: `/opsx:verify`: every scenario in the delta maps to a passing test or check line, tasks 1 and 2 ticked, `git diff --stat origin/main...HEAD` holds only the files in design.md
+- [x] 3.1 Team lead: `/opsx:verify`: every scenario in the delta maps to a passing test or check line, tasks 1 and 2 ticked, `git diff --stat origin/main...HEAD` holds only the files in design.md
 - [ ] 3.2 Manager: re-run the gates of 1.3 and 2.3 in the worktree; record in the lane status cell
 - [ ] 3.3 Manager: archive after merge
