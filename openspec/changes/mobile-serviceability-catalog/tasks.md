@@ -51,9 +51,9 @@ Scope: `apps/mobile/src/ui/{dialog.tsx,dialog.test.tsx}`.
 Scenarios: Dialog named and closed by the platform, Footer keeps the order.
 Starts from: `src/ui/dialog.test.tsx`: `dialog named and closed by the platform`, `footer keeps the order`, `closed dialog shows nothing`. API is mobile-P4-L4a's request (design.md Decision 1, Decision 13).
 
-- [ ] 3.1 Red
-- [ ] 3.2 `Dialog` and `DialogFooter` per the design file (`Modal` fade, named by the title, backdrop does not close, `onRequestClose={onClose}`)
-- [ ] 3.3 Gates green
+- [x] 3.1 Red
+- [x] 3.2 `Dialog` and `DialogFooter` per the design file (`Modal` fade, named by the title, backdrop does not close, `onRequestClose={onClose}`)
+- [x] 3.3 Gates green
 
 ## 4. StatusMessage and ImageTile
 

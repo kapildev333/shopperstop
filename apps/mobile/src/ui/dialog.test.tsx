@@ -13,11 +13,11 @@ test('dialog named and closed by the platform', async () => {
       <Button variant="secondary">Keep cart</Button>
     </Dialog>,
   )
-  expect(screen.getByRole('heading', { name: title, level: 2 })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: title }).props['aria-level']).toBe(2)
   let modal = screen.getByText(title)
   while (!('onRequestClose' in modal.props) && modal.parent) modal = modal.parent
   expect(modal.props.accessibilityLabel).toBe(title)
-  await fireEvent(screen.getByText(title), 'requestClose')
+  await fireEvent(modal, 'requestClose')
   expect(onClose).toHaveBeenCalledTimes(1)
 })
 
