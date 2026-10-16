@@ -24,7 +24,7 @@ function HomeScreen() {
 
 // Until the search screen lands (task 14) the route is a stub holding the box Home opens.
 function SearchStub() {
-  return <TextInput accessibilityLabel="Search products" />
+  return <TextInput accessibilityRole="search" accessibilityLabel="Search products" />
 }
 
 const storeId = '00000000-0000-4000-8000-000000000401'
@@ -49,8 +49,8 @@ test('search field opens search', async () => {
 
   const router = await renderRouter({ index: HomeScreen, search: SearchStub }, { initialUrl: '/' })
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Search products' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Search products' }))
 
   await waitFor(() => expect(router.getPathname()).toBe('/search'))
-  expect(await screen.findByRole('textbox', { name: 'Search products' })).toBeTruthy()
+  expect(await screen.findByRole('search', { name: 'Search products' })).toBeTruthy()
 })

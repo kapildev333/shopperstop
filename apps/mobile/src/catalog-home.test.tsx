@@ -56,7 +56,7 @@ test('home in the tabs', async () => {
 
   await renderRouter(appDir, { initialUrl: '/' })
 
-  expect(await screen.findByRole('heading', { name: 'ShopperStop in 10 minutes', level: 1 })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'ShopperStop in 10 minutes' })).toHaveProp('aria-level', 1)
   expect(screen.getAllByText(/^(Home|Categories|Orders)$/).map((label) => label.props.children)).toEqual([
     'Home',
     'Categories',
@@ -83,7 +83,7 @@ test('header control opens the sheet', async () => {
 
   await renderRouter(appDir, { initialUrl: '/' })
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Delivering to 560034' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Delivering to 560034' }))
 
   expect(await screen.findByText('Where should we deliver?')).toBeTruthy()
   expect(screen.getByLabelText('Pincode')).toHaveProp('value', '560034')
@@ -95,13 +95,13 @@ test('no pincode notice', async () => {
   await renderRouter(appDir, { initialUrl: '/' })
 
   // The first visit opens the sheet; closing it leaves the notice behind.
-  fireEvent.press(await screen.findByRole('button', { name: 'Close' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Close' }))
   await waitFor(() => expect(screen.queryByText('Where should we deliver?')).toBeNull())
-  expect(await screen.findByRole('heading', { name: 'Set your pincode', level: 2 })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'Set your pincode' })).toHaveProp('aria-level', 2)
 
   // The header and the notice both offer "Choose pincode"; the notice's button is the last one.
   const choose = screen.getAllByRole('button', { name: 'Choose pincode' })
-  fireEvent.press(choose[choose.length - 1])
+  await fireEvent.press(choose[choose.length - 1])
   expect(await screen.findByText('Where should we deliver?')).toBeTruthy()
 })
 

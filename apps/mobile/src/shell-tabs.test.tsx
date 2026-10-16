@@ -29,7 +29,7 @@ test('tab switch', async () => {
   })
   await renderRouter(`${__dirname}/app`, { initialUrl: '/' })
   expect(await screen.findByRole('heading', { name: /^ShopperStop/ })).toBeTruthy()
-  fireEvent.press(screen.getByRole('button', { name: 'Orders' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Orders' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Orders', selected: true })).toBeTruthy())
   expect(screen.queryByRole('heading', { name: /^ShopperStop/ })).toBeNull()
   expect(screen.getByRole('heading', { name: 'Your orders' })).toBeTruthy()

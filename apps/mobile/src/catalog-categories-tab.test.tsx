@@ -39,12 +39,12 @@ test('categories tab lists parents', async () => {
   const router = await renderRouter(appDir, { initialUrl: '/' })
   await screen.findByRole('heading', { name: /^ShopperStop/ })
 
-  fireEvent.press(screen.getByRole('button', { name: 'Categories' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Categories' }))
 
-  expect(await screen.findByRole('heading', { name: 'Categories', level: 1 })).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Fruits & Vegetables' })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'Categories' })).toHaveProp('aria-level', 1)
+  expect(await screen.findByRole('link', { name: 'Fruits & Vegetables' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Dairy, Bread & Eggs' })).toBeTruthy()
 
-  fireEvent.press(screen.getByRole('link', { name: 'Dairy, Bread & Eggs' }))
+  await fireEvent.press(screen.getByRole('link', { name: 'Dairy, Bread & Eggs' }))
   await waitFor(() => expect(router.getPathname()).toBe('/category/dairy-bread-eggs'))
 })

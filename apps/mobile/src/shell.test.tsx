@@ -49,6 +49,6 @@ test('unknown path', async () => {
   openStore()
   await renderRouter(appDir, { initialUrl: '/nope' })
   expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeTruthy()
-  fireEvent.press(screen.getByRole('link', { name: 'Go to Home' }))
+  await fireEvent.press(screen.getByRole('link', { name: 'Go to Home' }))
   expect(await screen.findByRole('heading', { name: /^ShopperStop/ })).toBeTruthy()
 })
