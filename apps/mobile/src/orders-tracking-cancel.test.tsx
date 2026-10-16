@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import { queryClient } from './api'
-import { apiError, fakeCore, json } from './fake-core'
+import { fakeCore, json } from './fake-core'
 import { orderKey, type Order } from './orders'
 import { OrderTracking } from './orders-tracking'
 import { setToken } from './session'
@@ -76,7 +76,9 @@ test('Order cancelled with a reason', async () => {
   expect(screen.getByText('Cancel this order?')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Keep order' })).toBeTruthy()
   await fireEvent.press(screen.getByRole('button', { name: 'Ordered by mistake' }))
-  await fireEvent.press(screen.getByRole('button', { name: 'Cancel order' }))
+  // The screen's own "Cancel order" stays in the tree under the open sheet; the sheet comes after it, so its button is the last.
+  const confirm = screen.getAllByRole('button', { name: 'Cancel order' })
+  await fireEvent.press(confirm[confirm.length - 1])
 
   expect(await screen.findByText('This order was cancelled. Reason: Ordered by mistake')).toBeTruthy()
   const post = calls.find((request) => request.method === 'POST')!
