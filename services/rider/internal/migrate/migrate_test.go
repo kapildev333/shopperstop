@@ -12,6 +12,7 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/migrate"
 	"github.com/kapildev333/shopperstop/services/rider/internal/testdb"
+	"github.com/kapildev333/shopperstop/services/rider/migrations"
 )
 
 var pool *pgxpool.Pool
@@ -196,5 +197,34 @@ func TestApplyRejectsDuplicateVersion(t *testing.T) {
 	}
 	if tableExists(t, "t1") {
 		t.Fatal("t1 exists: a file was applied before the refusal")
+	}
+}
+
+// TestEmbeddedMigrationsApplyOnce applies the rider's embedded files: the first
+// run records 0001_init and 0002_riders, the second applies nothing.
+func TestEmbeddedMigrationsApplyOnce(t *testing.T) {
+	reset(t, "riders", "sessions")
+	ctx := context.Background()
+	if _, err := pool.Exec(ctx, "drop function if exists set_updated_at() cascade"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"0001_init", "0002_riders"}
+
+	got, err := migrate.Apply(ctx, pool, migrations.FS)
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("applied %v, want %v", got, want)
+	}
+	again, err := migrate.Apply(ctx, pool, migrations.FS)
+	if err != nil {
+		t.Fatalf("second Apply: %v", err)
+	}
+	if len(again) != 0 {
+		t.Fatalf("second run applied %v, want nothing", again)
+	}
+	if !reflect.DeepEqual(recorded(t), want) {
+		t.Fatalf("recorded %v, want %v", recorded(t), want)
 	}
 }

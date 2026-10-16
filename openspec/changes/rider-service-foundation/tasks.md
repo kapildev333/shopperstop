@@ -22,7 +22,7 @@ Scenarios: "Rider schema migrations" ("Second run applies nothing", "updated_at 
 Starts from: `services/rider/internal/app/riders_test.go` `TestRiderSignIn`, `TestRiderSignInRefusalsLookTheSame`, `TestRiderSignInRefusesNUL`, `TestRiderBearerRefusals`, `TestRiderSignOutEndsOnlyThatSession`, `TestRiderSignInRateLimited`, `TestRiderRequestLogNamesSubject`; `services/rider/internal/auth/auth_test.go` `TestTokenStoredAsPepperedHash`, `TestRiderSessionExpired`, `TestRiderSessionSlides`, `TestRiderSessionWithinHourUnchanged`; copied `limit_test.go` and `password_test.go`; `services/rider/internal/migrate/migrate_test.go` `TestEmbeddedMigrationsApplyOnce`; `services/rider/internal/pg/pg_test.go` `TestMapUniqueIsConflict`, `TestMapForeignKeyIsConflict`, `TestMapNoRowsIsNotFound`, `TestMapPassesOtherErrors`, `TestUpdatedAtTrigger` (copies on rider tables).
 Commits: `test: rider sign-in, sessions, sign-out and me`, then `feat: rider accounts with peppered sliding sessions`.
 
-- [ ] 2.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 2.1 Write the tests; red run pasted into the log; commit `test: ...`
 - [ ] 2.2 `0002_riders.sql`, `sqlc.yaml` and `queries/auth.sql` per design.md Data model; `make gen` writes `internal/auth/db`
 - [ ] 2.3 `internal/auth`: `New(pool, pepper, limit)`, tokens and hashing as core's `auth.go`, `RequireRider` (subject `rider`), `CurrentRider`, `SignIn` (limiter first, dummy hash, inactive is the same 401), `SignOut`, `Me`; limiter and password copied; `golang.org/x/crypto` at core's version
 - [ ] 2.4 `app.New(pool, origins, a)` with the three routes; `cmd/rider` builds the limiter `NewLimiter(10, 100, time.Hour, time.Now)`; `openapi.json` gains tag `rider-service`, schemas `Rider`, `RiderSession`, `SignInRequest`, the three operations (sign-out and me with `security` and 401; sign-in with 400, 401, 429 examples; the 200 example has a string `token`)
@@ -35,8 +35,8 @@ Scenarios: "Staff authenticate through core" ("Core failure is 502" and "One cor
 Starts from: `services/rider/internal/core/core_test.go` (package `core_test`, against `coretest.New()`) `TestStaffFromTokenForwardsBearer`, `TestStaffFromTokenUnauthorized`, `TestStaffFromTokenCoreFailure` (fake `Fail(500)` and a closed fake both give a 502 `*httpx.Error` with code `internal`, and one `core call failed` log line carrying `requestId`), `TestStaffFromTokenCached` (fake clock: three calls within 30 s and one at 31 s give `Calls("GET /api/core/v1/admin/me") == 2`; a 401 is not cached), `TestStore`, `TestStoreNotFound`.
 Commits: `test: core client staff introspection and store read`, then `feat: core client and httptest fake`.
 
-- [ ] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 3.2 `internal/core` and `internal/coretest` exactly per design.md Interfaces (types, `New(baseURL, serviceToken, now)`, `do`, cache with the `ponytail:` pruning comment); the fake's 401, 404 and 500 bodies are core's envelope; stdlib only
+- [x] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 3.2 `internal/core` and `internal/coretest` exactly per design.md Interfaces (types, `New(baseURL, serviceToken, now)`, `do`, cache with the `ponytail:` pruning comment); the fake's 401, 404 and 500 bodies are core's envelope; stdlib only
 - [ ] 3.3 Gates green; commit `feat: ...`
 
 ## 4. Staff routes through core (worker, after 2 and 3)

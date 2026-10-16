@@ -14,10 +14,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
 	"github.com/kapildev333/shopperstop/services/rider/internal/testdb"
 )
 
 // srv is the shared test server every route test in this package uses.
+const testPepper = "test-pepper-test-pepper-test-pepper-00"
+
 var (
 	srv      *httptest.Server
 	testPool *pgxpool.Pool
@@ -26,7 +29,8 @@ var (
 func TestMain(m *testing.M) {
 	var cleanup func()
 	testPool, cleanup = testdb.Migrated("app")
-	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
+	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a))
 	code := m.Run()
 	srv.Close()
 	cleanup()
@@ -111,7 +115,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil)))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.
