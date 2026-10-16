@@ -4,8 +4,8 @@ Two worker tasks in sequence on `lane/platform-P4-L3-postman-tooling`, then acce
 
 Scope: `scripts/postman.mjs`, `scripts/postman.test.mjs`, `docs/postman/`. Scenarios: "Service route", "Core service routes", "Saved responses read the same ids", "Parameter without an example", "Default and enum fill a missing example", "Environment variables", "Service token is the dev token", "Two runs give identical bytes". Failing tests: `scripts/postman.test.mjs` `service routes read serviceToken`, `core service routes follow x-service-token`, `saved responses read environment ids`, `parameters without an example get a fixed value`, `environment holds the twelve variables`, `serviceToken is the Makefile dev service token` (design.md, Test strategy).
 
-- [ ] 1.1 `test:` the six tests; `node --test scripts/postman.test.mjs` fails on exactly them (record the red in the lane log)
-- [ ] 1.2 `feat:` `fillExamples`, the `originalRequest` id rewrite and `serviceOps` in `scripts/postman.mjs` (design.md 1 to 3); `serviceToken` appended to `docs/postman/local.postman_environment.json` (design.md 4); `make postman` regenerates both collections, committed in the same commit
+- [x] 1.1 `test:` the six tests; `node --test scripts/postman.test.mjs` fails on exactly them (record the red in the lane log)
+- [x] 1.2 `feat:` `fillExamples`, the `originalRequest` id rewrite and `serviceOps` in `scripts/postman.mjs` (design.md 1 to 3); `serviceToken` appended to `docs/postman/local.postman_environment.json` (design.md 4); `make postman` regenerates both collections, committed in the same commit
 - [ ] 1.3 Gates: `make postman` twice, `git status --porcelain` empty after the second; `make test-core` and `make test-rider` (their seed tests read the environment file); `openspec validate --all --strict`
 
 ## 2. make gen and README (worker T2)

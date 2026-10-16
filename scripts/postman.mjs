@@ -23,6 +23,25 @@ function tokenVar(path, svc) {
   return path[0] === 'auth' || path[0] === 'me' ? svc.ownToken : 'customerToken';
 }
 
+// ponytail: a filled value is deterministic, not valid; a contract that wants a runnable request gives an example.
+function fillExamples(spec) {
+  const lists = [
+    Object.values(spec.components?.parameters ?? {}),
+    ...Object.values(spec.paths ?? {}).flatMap((item) => [item.parameters ?? [], ...Object.values(item).map((op) => op?.parameters ?? [])]),
+  ];
+  for (const p of lists.flat()) {
+    if (p.$ref || 'example' in p || p.examples || p.schema?.example !== undefined || p.schema?.examples) continue;
+    p.example = p.schema?.default ?? p.schema?.enum?.[0] ?? `<${p.name}>`;
+  }
+}
+
+// The operations the contract marks x-service-token: true, as "METHOD path" with the converter's :id paths.
+function serviceOperations(spec) {
+  return new Set(Object.entries(spec.paths ?? {}).flatMap(([path, item]) =>
+    Object.entries(item).filter(([, op]) => op?.['x-service-token'] === true)
+      .map(([method]) => `${method.toUpperCase()} ${path.slice(1).replace(/{([^}]+)}/g, ':$1')}`)));
+}
+
 function returnsToken(item) {
   return item.response.some((r) => {
     if (r.code < 200 || r.code > 299) return false;
@@ -39,12 +58,16 @@ function stripIds(node) {
   }
 }
 
-function fixRequest(item, svc) {
+function fixRequest(item, svc, serviceOps) {
   const { url, auth } = item.request;
-  if (auth?.type === 'bearer') auth.bearer = [{ key: 'token', value: `{{${tokenVar(url.path, svc)}}}`, type: 'string' }];
-  for (const v of url.variable) {
-    const name = ID_VARS[url.path[url.path.indexOf(`:${v.key}`) - 1]];
-    if (name && (v.key === 'id' || v.key === name)) v.value = `{{${name}}}`;
+  const token = serviceOps.has(`${item.request.method} ${url.path.join('/')}`) ? 'serviceToken' : tokenVar(url.path, svc);
+  if (auth?.type === 'bearer') auth.bearer = [{ key: 'token', value: `{{${token}}}`, type: 'string' }];
+  // Saved example responses name the same environment ids as the request.
+  for (const u of [url, ...item.response.map((r) => r.originalRequest?.url).filter(Boolean)]) {
+    for (const v of u.variable ?? []) {
+      const name = ID_VARS[u.path[u.path.indexOf(`:${v.key}`) - 1]];
+      if (name && (v.key === 'id' || v.key === name)) v.value = `{{${name}}}`;
+    }
   }
   if (url.path.includes('auth') && returnsToken(item)) {
     item.event.push({
@@ -54,15 +77,17 @@ function fixRequest(item, svc) {
   }
 }
 
-function walk(items, svc) {
-  for (const item of items) (item.item ? walk(item.item, svc) : fixRequest(item, svc));
+function walk(items, svc, serviceOps) {
+  for (const item of items) (item.item ? walk(item.item, svc, serviceOps) : fixRequest(item, svc, serviceOps));
 }
 
 export async function generate(spec, service = 'core') {
   const svc = SERVICES[service];
+  const data = structuredClone(spec);
+  fillExamples(data);
   const result = await new Promise((resolve, reject) =>
     converter.convertV2(
-      { type: 'json', data: structuredClone(spec) },
+      { type: 'json', data },
       { folderStrategy: 'Tags', parametersResolution: 'Example' },
       (err, res) => (err ? reject(err) : resolve(res)),
     ),
@@ -70,7 +95,7 @@ export async function generate(spec, service = 'core') {
   if (!result.result) throw new Error(`openapi-to-postmanv2: ${result.reason}`);
   const collection = result.output[0].data;
   delete collection.variable; // the base URL comes from the environment
-  walk(collection.item, svc);
+  walk(collection.item, svc, serviceOperations(spec));
   stripIds(collection);
   // The converter roots every URL at {{baseUrl}}; each service reads its own variable.
   return `${JSON.stringify(collection, null, 2).replaceAll('"{{baseUrl}}"', `"{{${svc.baseUrl}}}"`)}\n`;
