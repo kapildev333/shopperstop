@@ -198,6 +198,15 @@ test('clear before the read settles wins', async () => {
   expect(await storage.getItem(key)).toBeNull()
 })
 
+test('a later load resolves the live cart, not the first read', async () => {
+  const { guest } = loadFresh()
+  await expect(guest.loadGuestCart()).resolves.toEqual({ items: [] })
+  guest.dispatchGuest({ type: 'set', storeId: storeA, product: p(), quantity: 2 })
+  await expect(guest.loadGuestCart()).resolves.toEqual({ storeId: storeA, items: [{ product: p(), quantity: 2 }] })
+  guest.clearGuestCart()
+  await expect(guest.loadGuestCart()).resolves.toEqual({ items: [] })
+})
+
 test('guest cart with blocked storage', async () => {
   const { guest, storage } = loadFresh()
   const blocked = new Error('storage blocked')
