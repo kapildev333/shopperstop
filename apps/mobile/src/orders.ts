@@ -58,7 +58,7 @@ export function orderOptions(token: string, id: string) {
     queryFn: async (): Promise<Order | null> => {
       const { data, error, response } = await api.GET('/orders/{id}', { params: { path: { id } } })
       if (response.status === 404) return null
-      if (error || !data) throw error ?? new Error('no answer')
+      if (error || !data) throw error?.error ?? new Error('no answer')
       return data
     },
   })
@@ -78,7 +78,7 @@ export function useOrders() {
     enabled: !!token,
     queryFn: async (): Promise<OrderList> => {
       const { data, error } = await api.GET('/orders')
-      if (error || !data) throw error ?? new Error('no answer')
+      if (error || !data) throw error?.error ?? new Error('no answer')
       return data
     },
   })
