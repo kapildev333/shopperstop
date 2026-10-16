@@ -73,6 +73,8 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 - Each manager verifies its own landings (suites, then real database / HTTP / browser) before the PR; the orchestrator verifies integration at phase close.
 - Only the orchestrator touches the root checkout and PLAN.md.
 
+- Archive PRs: after `openspec archive`, the merged requirements can exceed the 500-character rule; read `openspec validate --all --strict` in full and merge only on `0 failed` (three slips on 2026-10-16: admin #279, web #303, rider #340, each fixed by a split within minutes).
+
 ## Areas
 | Area | Scope | Depends on | Manager status |
 |------|-------|------------|----------------|
@@ -84,7 +86,7 @@ From Phase 3 on, specification and planning happen only in `openspec/` (D6).
 | mobile | `apps/mobile/` (D36) | core, ui, platform, rider (all done); payment (Phase 5) | Phase 4 complete (L1 #253, L5a #261, L4a #276, L2 #283, L3 #300, L4b #321, L5b #332, all archived); mobile-P5-L1 `mobile-account-security` proposing |
 | payment | `services/payment/` (D48) | platform (databases, ports, tokens: platform-P5-L1), core (core-P5-L1) | planned (Phase 5); work package in `.claude/areas/payment.md`; no session yet |
 | receipt | `services/receipt/` (D54) | platform (platform-P6-L1), core (core-P5-L1, core-P6-L1) | planned (Phase 6); work package in `.claude/areas/receipt.md`; no session yet |
-| rider | `services/rider/`, `apps/rider/` (D29) | platform, core, ui (all done) | rider-P4-L3 `rider-app-shared-swap` done (#304, archived #306, plan #308); rider-P4-L2 (#290, #292); Phase 3 complete; idle until the Phase 5 package |
+| rider | `services/rider/`, `apps/rider/` (D29) | platform, core, ui (all done) | rider-P5-L1 `rider-collect-cash` done (#339, archived #340 and split #341, plan #342): payment method and status on ready orders and deliveries, cash line and badge in the app; Phase 4 hygiene (#290, #304); idle |
 
 ## Phase 1 - Foundation and design system (closed 2026-10-12, tag v0.1.0)
 | Area | Plan tasks | Status |
@@ -165,7 +167,7 @@ Order: platform-P5-L1 first (databases, ports, tokens); then core-P5-L1, payment
 | mobile-P5-L1 | `mobile-account-security` | core-P4-L2 on main | the same four flows as web-P5-L1 as screens (profile sheet banner, verify, forgot, reset by code), jest and e2e on the web export |
 | mobile-P5-L2 | `mobile-checkout-payment` | payment-P5-L2, ui-P5-L1, mobile-P5-L1 | D53: the payment card becomes the choice (replacing "UPI and cards come with the payment service"), `Linking.openURL(payUrl)`, the `shopperstop://orders/{id}` return (Expo Router linking) and the web-export return, tracking polling and "Pay now", badges, e2e on the export through the fake gateway with axe |
 | admin-P5-L1 | `admin-payments` | core-P5-L1 (ui-P5-L1's badge-tone note is not needed to build; started early in the orchestrator session, D41) | board card and order sheet show the payment badge; "Accept <number>" is `aria-disabled` with "Awaiting payment" while `pending` (the 409 is also handled); the sheet shows the reference and refund; History filter by payment status; e2e with axe |
-| rider-P5-L1 | `rider-collect-cash` | core-P5-L1 | `paymentMethod` and `paymentStatus` passed through on the rider's delivery and ready-order reads (`rider.d.ts` regenerated), the delivery page's cash line becomes "Collect ₹x in cash" or "Paid online", the ready list marks cash orders |
+| rider-P5-L1 (done #339) | `rider-collect-cash` | core-P5-L1 | `paymentMethod` and `paymentStatus` passed through on the rider's delivery and ready-order reads (`rider.d.ts` regenerated), the delivery page's cash line becomes "Collect ₹x in cash" or "Paid online", the ready list marks cash orders |
 
 Close (orchestrator): the Spec 2 §13 gates plus three cross-app flows in `make e2e` (an online order paid through the fake gateway, accepted, delivered, with the payment badge on web, mobile and admin; a payment that times out cancels the order and restores stock; a paid order cancelled by staff is refunded), the three Postman collections top to bottom against `make dev`, a fresh-clone `make dev` with the fake gateway, then tag `v0.5.0`.
 
@@ -283,3 +285,4 @@ Lanes, in order: platform-P7-L1 `platform-shared-go-module` (`services/shared` e
 - 2026-10-16: web-P5-L1 merged (#324, archived; make e2e: admin 15, mobile 25, rider 7, web 47): verify-email banner and page, forgot and reset password, the e2e reads mailed codes from core's captured log. First Phase 5 app lane on main; mobile-P5-L1 mirrors it after L5b.
 - 2026-10-16: Phase 4 closed, tag v0.4.0 (GitHub release with notes). Close gates on main: `make test` green (mobile 356 jest tests), `make e2e` admin 15, mobile 26, rider 7, web 47, `openspec validate --all --strict` 19 passed, tree clean; fresh clone `make dev` reached core, rider, web, admin and the rider app in 12 s and the mobile web export built. mobile-P4-L5b merged (#332, archived). Phase 5 in flight: platform-P5-L1 at its gate (holds the e2e slot), core-P5-L1 at task 5, mobile-P5-L1 proposing; web-P5-L1 done (#324).
 - 2026-10-16: core-P5-L1 merged (#335, archived #336; the archive split one over-long platform requirement). rider-P5-L1 and admin-P5-L1 start (admin in the orchestrator session, D41; its ui-P5-L1 wait dropped since the badge tones are in D53). platform-P5-L1 is still at verify: its session shows a pending terminal prompt the owner must answer; the payment manager session waits on it.
+- 2026-10-16: rider-P5-L1 merged (#339, archived #340, split #341). admin-P5-L1 built (tasks 1 to 3b, 334 admin tests) and in its second review; mobile-P5-L1 on its hygiene task with the slot; platform-P5-L1 still at verify behind a terminal prompt. Method rule added for archive PRs (strict totals).
