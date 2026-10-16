@@ -230,7 +230,7 @@ func TestRiderSignOutEndsOnlyThatSession(t *testing.T) {
 // TestRiderSignInRateLimited uses its own server with the production limits:
 // ten attempts for one email pass (wrong passwords), the eleventh is refused.
 func TestRiderSignInRateLimited(t *testing.T) {
-	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a))
 	t.Cleanup(limited.Close)
 	email := uniqueEmail(t)

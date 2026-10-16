@@ -1,5 +1,6 @@
 // Package auth owns riders and their bearer sessions: password hashing, tokens,
-// the RequireRider middleware, sign-in and sign-out, and the sign-in rate limiter.
+// the RequireRider middleware, sign-in and sign-out, the sign-in rate limiter, and
+// the admin rider routes behind RequireStaff (staff introspected through core).
 // Copied from services/core/internal/auth at 5335efc (D31), adapted to riders.
 package auth
 
@@ -16,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth/db"
+	"github.com/kapildev333/shopperstop/services/rider/internal/core"
 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
 )
 
@@ -25,11 +27,13 @@ type Auth struct {
 	q      *db.Queries
 	pepper []byte
 	limit  *Limiter
+	core   *core.Client
 }
 
-// New returns the auth service over pool. pepper is mixed into every token hash.
-func New(pool *pgxpool.Pool, pepper string, limit *Limiter) *Auth {
-	return &Auth{pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit}
+// New returns the auth service over pool. pepper is mixed into every token hash;
+// c answers staff introspection for the admin routes.
+func New(pool *pgxpool.Pool, pepper string, limit *Limiter, c *core.Client) *Auth {
+	return &Auth{pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit, core: c}
 }
 
 // Rider is a rider as the API shows it. Phone is omitted when empty.

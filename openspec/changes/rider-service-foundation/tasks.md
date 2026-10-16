@@ -46,10 +46,10 @@ Scenarios: "Staff authenticate through core" ("Staff admitted, others refused", 
 Starts from: `services/rider/internal/app/admin_riders_test.go` `TestStaffAdmittedThroughCore`, `TestStaffRouteCoreFailureIs502`, `TestAdminListsAndFiltersRiders`, `TestStoreStaffListsOwnStore`, `TestListRidersRefusesBadStore`, `TestAdminCreatesRider`, `TestCreateRiderRefusalsNameTheField`, `TestStoreStaffCreatesOnlyForOwnStore`, `TestRiderOfAnotherStoreNotFound`, `TestDeactivationEndsSessions`, `TestPatchResetsPassword`, `TestPatchRefusesNull`.
 Commits: `test: staff manage riders through core`, then `feat: admin rider routes with core staff introspection`.
 
-- [ ] 4.1 Write the tests (a `coretest.Fake` in `TestMain` with stores A and B, an admin token and a store-staff token per store); red run pasted; commit `test: ...`
-- [ ] 4.2 `auth.New` gains `c *core.Client` (callers updated); `RequireStaff` (401 without a bearer before any core call; subject `staff`), `CurrentStaff`; `CreateRider` per design.md Decision 9 with core's field checks; `ListRiders`, `AdminCreateRider`, `AdminGetRider`, `AdminUpdateRider` per Decisions 7 and 10; the queries of design.md; `cmd/rider` builds `core.New(cfg.CoreURL, cfg.CoreServiceToken, time.Now)`
-- [ ] 4.3 `openapi.json`: schemas `RiderCreate`, `RiderPatch`, `RiderList`; the four operations with `security`, 401 and every other code they answer (400, 403, 404, 409, 502) with examples; `page`, `pageSize`, `store` parameters
-- [ ] 4.4 Gates green, `make gen postman` clean after the commit; commit `feat: ...`
+- [x] 4.1 Write the tests (a `coretest.Fake` in `TestMain` with stores A and B, an admin token and a store-staff token per store); red run pasted; commit `test: ...`
+- [x] 4.2 `auth.New` gains `c *core.Client` (callers updated); `RequireStaff` (401 without a bearer before any core call; subject `staff`), `CurrentStaff`; `CreateRider` per design.md Decision 9 with core's field checks; `ListRiders`, `AdminCreateRider`, `AdminGetRider`, `AdminUpdateRider` per Decisions 7 and 10; the queries of design.md; `cmd/rider` builds `core.New(cfg.CoreURL, cfg.CoreServiceToken, time.Now)`
+- [x] 4.3 `openapi.json`: schemas `RiderCreate`, `RiderPatch`, `RiderList`; the four operations with `security`, 401 and every other code they answer (400, 403, 404, 409, 502) with examples; `page`, `pageSize`, `store` parameters
+- [x] 4.4 Gates green, `make gen postman` clean after the commit; commit `feat: ...`
 
 ## 5. Operator commands and demo seed (worker, after 4)
 

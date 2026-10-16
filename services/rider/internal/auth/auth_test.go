@@ -96,7 +96,7 @@ func get(h http.Handler, path, authorization string) *httptest.ResponseRecorder 
 
 func TestTokenStoredAsPepperedHash(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	rider := newRider(t)
 	tok, err := a.startSession(ctx, rider)
 	if err != nil {
@@ -123,7 +123,7 @@ func TestTokenStoredAsPepperedHash(t *testing.T) {
 
 func TestRiderSessionExpired(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	tok, err := a.startSession(ctx, newRider(t))
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +138,7 @@ func TestRiderSessionExpired(t *testing.T) {
 
 func TestRiderSessionSlides(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	rider := newRider(t)
 	tok, err := a.startSession(ctx, rider)
 	if err != nil {
@@ -164,7 +164,7 @@ func TestRiderSessionSlides(t *testing.T) {
 
 func TestRiderSessionWithinHourUnchanged(t *testing.T) {
 	ctx := context.Background()
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	tok, err := a.startSession(ctx, newRider(t))
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func errCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 }
 
 func TestRiderProbeRefusesMissingToken(t *testing.T) {
-	a := New(testPool, testPepper, nil)
+	a := New(testPool, testPepper, nil, nil)
 	for _, authz := range []string{"", "Basic abc", "Bearer not-a-real-token"} {
 		rec := get(probeRouter(a), "/probe/rider", authz)
 		if rec.Code != http.StatusUnauthorized || errCode(t, rec) != "unauthorized" {

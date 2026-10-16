@@ -23,6 +23,10 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r.Post("/api/rider/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireRider).Post("/api/rider/v1/auth/sign-out", a.SignOut)
 	r.With(a.RequireRider).Get("/api/rider/v1/me", a.Me)
+	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders", a.ListRiders)
+	r.With(a.RequireStaff).Post("/api/rider/v1/admin/riders", a.AdminCreateRider)
+	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders/{id}", a.AdminGetRider)
+	r.With(a.RequireStaff).Patch("/api/rider/v1/admin/riders/{id}", a.AdminUpdateRider)
 	return r
 }
 

@@ -29,9 +29,9 @@ var (
 func TestMain(m *testing.M) {
 	var cleanup func()
 	testPool, cleanup = testdb.Migrated("app")
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
-	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a))
 	stopCore := startCore()
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), coreClient)
+	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a))
 	code := m.Run()
 	srv.Close()
 	stopCore()
@@ -117,7 +117,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil)))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil)))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.

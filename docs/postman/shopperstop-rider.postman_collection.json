@@ -681,6 +681,1515 @@
           "protocolProfileBehavior": {
             "disableBodyPruning": true
           }
+        },
+        {
+          "name": "List riders",
+          "request": {
+            "name": "List riders",
+            "description": {
+              "content": "One page of riders ordered by email. An admin sees every store's riders, or one store's with store. Store staff see their own store's riders; a store parameter naming another store is 403 forbidden. A store that is not a uuid is 400 on store. The staff token is checked with core, and the answer is cached for 30 seconds per token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "riders"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Page number from 1. Default 1.",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Riders per page, from 1 to 100. Default 24.",
+                    "type": "text/plain"
+                  },
+                  "key": "pageSize",
+                  "value": "24"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                    "type": "text/plain"
+                  },
+                  "key": "store",
+                  "value": "00000000-0000-4000-8000-000000000401"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "One page of riders.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Riders per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                        "type": "text/plain"
+                      },
+                      "key": "store",
+                      "value": "00000000-0000-4000-8000-000000000401"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000801\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"email\": \"rider1-koramangala@shopperstop.local\",\n      \"name\": \"Arjun Rao\",\n      \"phone\": \"+919000000001\",\n      \"isActive\": true\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "page or pageSize is out of range, or store is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Riders per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                        "type": "text/plain"
+                      },
+                      "key": "store",
+                      "value": "00000000-0000-4000-8000-000000000401"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be a store id\",\n    \"field\": \"store\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or core does not know the token as a staff user.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Riders per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                        "type": "text/plain"
+                      },
+                      "key": "store",
+                      "value": "00000000-0000-4000-8000-000000000401"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Store staff named another store.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Riders per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                        "type": "text/plain"
+                      },
+                      "key": "store",
+                      "value": "00000000-0000-4000-8000-000000000401"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"store staff list their own store only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Riders per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Only riders of this store (core's store id). Admins may name any store; store staff may name only their own, or get 403.",
+                        "type": "text/plain"
+                      },
+                      "key": "store",
+                      "value": "00000000-0000-4000-8000-000000000401"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Create a rider",
+          "request": {
+            "name": "Create a rider",
+            "description": {
+              "content": "Creates an active rider at a store core knows, and answers it. Email, name (1 to 100 characters), phone (optional: empty, or 10 to 15 digits after an optional +) and password (8 to 72 bytes) are checked as core checks a customer's. Store staff may create riders only at their own store. A store core does not know is 400 on storeId; an email taken in any case is 409 on email.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "riders"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The new rider, active.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000805\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"phone\": \"+919000000099\",\n  \"isActive\": true\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A field is malformed, or core does not know the store (then field is storeId).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be 8 to 72 bytes\",\n    \"field\": \"password\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or core does not know the token as a staff user.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Store staff named another store.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"store staff create riders at their own store only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The email is already a rider's, in any case.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"email already registered\",\n    \"field\": \"email\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"password\": \"rider12345\",\n  \"phone\": \"+919000000099\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Read a rider",
+          "request": {
+            "name": "Read a rider",
+            "description": {
+              "content": "Answers the rider in the path. Store staff get 404 for a rider of another store, as for an id that does not exist.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "riders",
+                ":id"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{riderId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The rider's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or core does not know the token as a staff user.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No rider with this id at a store the caller may see.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Update a rider",
+          "request": {
+            "name": "Update a rider",
+            "description": {
+              "content": "Changes name, phone (\"\" clears it), isActive and password; absent members stay as they are, and null is refused with 400 on the member. storeId and email cannot change. Setting isActive to false ends the rider's sessions in the same change, so the rider's token answers 401 and the rider cannot sign in. A new password does not end sessions.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "riders",
+                ":id"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{riderId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The rider's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The updated rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": false\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A member is null or malformed.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must not be null\",\n    \"field\": \"name\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or core does not know the token as a staff user.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No rider with this id at a store the caller may see.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer the staff check (a 500, a timeout or no connection).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "riders",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The rider's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000801",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi K.\",\n  \"phone\": \"\",\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
         }
       ]
     }
