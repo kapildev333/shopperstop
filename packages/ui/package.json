@@ -20,6 +20,10 @@
       "types": "./dist/format.d.ts",
       "default": "./dist/format.js"
     },
+    "./app": {
+      "types": "./dist/app/index.d.ts",
+      "default": "./dist/app/index.js"
+    },
     "./tokens.css": "./src/tokens.css",
     "./api": {
       "types": "./src/api/core.d.ts"
@@ -41,6 +45,7 @@
     "lucide-react": "1.55.0"
   },
   "peerDependencies": {
+    "openapi-fetch": "0.17.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -56,6 +61,7 @@
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react-hooks": "7.1.1",
     "jsdom": "27.0.0",
+    "openapi-fetch": "0.17.0",
     "openapi-typescript": "7.13.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
