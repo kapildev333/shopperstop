@@ -3,11 +3,12 @@ Scope: root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `REA
 Depends on: none
 Spec: Spec 1 §3, §5.1, §6, §7, §11, §12; plan tasks 1, 3, 4, 12, 13, 15 (tasks 1 and 2 done by the orchestrator)
 ## Doing
-platform-P4-L1 done 2026-10-16 (#212, archived #213); platform-P3-L1 done 2026-10-15 (#193, #194, #195). Nothing running; the orchestrator session runs the next platform chore when one is requested (backlog in PLAN.md).
-No platform lane running. Phase 1 platform tasks are all on main; the only open item is the first green CI run (account billing). No `make e2e` running.
+Nothing running; no `make e2e`. platform-P4-L2 done 2026-10-16 (#266, archived #267); README chores #259, #263. Next platform work comes by request from the orchestrator. CI jobs now start but run no steps (account billing), so local gates remain the only gate.
+
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
+| platform-P4-L2 | `platform-mobile-readme-spec`: platform spec README and CLAUDE.md scenarios describe a tree with `apps/mobile` | `openspec/changes/platform-mobile-readme-spec/` | done 2026-10-16: PR #266 (c0534a8); spec-only, no worker; review approve (two nits kept), acceptance pass; manager verified strict 20, the grep check ok on the branch and 6 failures on the pre-#259 docs; archived #267 (strict 19). Chores before it: #259 README and CLAUDE.md say `apps/mobile` is on main, #263 link to `apps/mobile/README.md` after #261 |
 | platform-P4-L1 | `platform-mobile-wiring`: core and rider origins for the mobile web export, README mobile section, CLAUDE.md, docs/figma.md | `Makefile`, `README.md`, `CLAUDE.md`, `docs/figma.md`, `openspec/changes/platform-mobile-wiring/` | done 2026-10-16: PR #212 (f0a8314); 1 task, review approve, acceptance pass; manager verified the three check scripts, strict 15, `make -n dev` and `make -n e2e`, and a real core on :18090 echoing `Access-Control-Allow-Origin` for 5176 and none for an unknown origin; archived #213 (two merged requirements split) |
 | platform-P3-L1 | `platform-rider-wiring`: rider databases, Caddy, Makefile, CI job, Postman per service, docs | `deploy/`, `Makefile`, `scripts/`, `docs/postman/`, `.github/workflows/ci.yml`, `README.md`, `CLAUDE.md`, `openspec/changes/platform-rider-wiring/` | done 2026-10-15: PR #193 (6dbfd05); 3 tasks, 3 reviews approve, acceptance pass; manager verified check-wiring ok, Postman 17 tests, `make test` (core ok, Vitest ui 54, admin 295, web 153), `make postman` x2 clean, strict 15, `make e2e` admin 14 and web 42 with the rider skip line, pgx as the rider role; archived #194 (three merged requirements split) and #195 (one shortened) |
 | platform-P1-L3 | Task 3 OpenSpec seed (`platform`, `design-system` specs) | `openspec/` | done 2026-10-12: reviewer approve, acceptance pass, manager verified (diff gate, validate); PR #3 merged; archived in #5 |
@@ -19,6 +20,7 @@ No platform lane running. Phase 1 platform tasks are all on main; the only open 
 ## Requests
 
 ## Found
+- 2026-10-16: CLAUDE.md intro still says "Phases 1 and 2 are on `main` (`v0.1.0`, `v0.2.0`)"; no scenario covers it; next docs chore. #266 was merged before its CI run finished; the run started no steps (billing), same as every run today.
 - 2026-10-12: chores landed: e2e guard on web or admin (#30), `make postman` runs the generator tests (#37), Node floor (#10), root build script (#13).
 - 2026-10-13: backlog chores landed in #97: the lane guard allows `git merge-base`; `make ui` (so `make dev`, `make test-web`) runs `npm ci` when `node_modules` is absent. sqlc was pinned in #58.
 - 2026-10-12: GitHub Actions blocked by account billing (PLAN.md Blockers); first `ci` run on PR #15 started no steps.

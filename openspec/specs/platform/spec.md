@@ -335,7 +335,7 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 
 #### Scenario: README has the quick start
 - **WHEN** `README.md` is read
-- **THEN** it has a `## Quick start` section with a code block containing `make dev`, names the prerequisites Docker (running), Go 1.27 and Node 22.12 or newer, names core on `:8080`, web on `:5173`, admin on `:5174/admin/`, the rider service on `:8081` and the rider app on `:5175/rider/`, and says which of those are not on `main` yet
+- **THEN** it has a `## Quick start` section with a code block containing `make dev`, names the prerequisites Docker (running), Go 1.27 and Node 22.12 or newer, names core on `:8080`, web on `:5173`, admin on `:5174/admin/`, the rider service on `:8081` and the rider app on `:5175/rider/`, and does not contain `` not on `main` yet ``
 
 #### Scenario: README has the step-by-step fold and the screenshots table
 - **WHEN** `README.md` is read
@@ -350,8 +350,8 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 - **THEN** it says that `deploy/initdb.sql` runs only when the Postgres volume is created and gives one command that applies the file's `shopperstop_rider` lines to the running `shopperstop-postgres-1` as `postgres` without `psql` on the host
 
 #### Scenario: README says how to run the mobile app
-- **WHEN** `README.md` is read on a tree without `apps/mobile`
-- **THEN** its `## Status` section names Phase 4, and it has a `## Mobile app` section containing `cd apps/mobile && npx expo start --port 5176`, `Expo Go`, `EXPO_PUBLIC_CORE_URL=http://<lan-ip>:8080`, `localhost:5176` and the words `` `apps/mobile` is not on `main` yet ``, with no Markdown link to `apps/mobile`
+- **WHEN** `README.md` is read on a tree with `apps/mobile`
+- **THEN** its `## Status` section names `v0.3.0` and says Phase 4 is in progress on `main`, and it has a `## Mobile app` section containing `cd apps/mobile && npx expo start --port 5176`, `Expo Go`, `EXPO_PUBLIC_CORE_URL=http://<lan-ip>:8080`, `localhost:5176` and the link `[apps/mobile/README.md](apps/mobile/README.md)`
 
 #### Scenario: Relative links resolve
 - **WHEN** every Markdown link target in `README.md` and `CLAUDE.md` that does not start with `http` or `#` is resolved from the repository root, with any `#fragment` removed
@@ -371,7 +371,7 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 
 #### Scenario: CLAUDE.md names the mobile workspace
 - **WHEN** `CLAUDE.md` is read
-- **THEN** its layout block has a line starting `apps/mobile/`, it names Phase 4, `15176`, `5176` and `npx expo start`, and it says the mobile workspace rides on `make test-web` and `make e2e`
+- **THEN** its layout block has a line starting `apps/mobile/`, it names Phase 4, `15176`, `5176` and `npx expo start`, and it says the mobile workspace rides on `make test-web` and `make e2e`, and it does not contain `` once `apps/mobile` lands ``
 
 #### Scenario: docs/figma.md links the mobile design canvas
 - **WHEN** `docs/figma.md` is read
