@@ -33,10 +33,10 @@ Scenarios: "Riders list and read their deliveries" (both), "Riders mark a delive
 Starts from: `services/rider/internal/app/deliveries_test.go` `TestListDefaultsToAssigned`, `TestListDelivered`, `TestListBadStatus` (400 `status`), `TestGetOtherRidersDelivery` (and unknown id and `not-a-uuid` 404), `TestDeliveredOnce`, `TestDeliveredStaysAssignedWhenCoreFails`, `TestClaimAndDeliveredLogged`.
 Commits: `test: rider deliveries list, read and delivered`, then `feat: rider deliveries list, read and delivered`.
 
-- [ ] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 3.2 `List`, `Get`, `Delivered` (Decisions 4 and 11), both log lines (Decision 12; the claim log goes into `Claim` here); the three routes
-- [ ] 3.3 `openapi.json`: schema `DeliveryList`, the three operations with every code and examples
-- [ ] 3.4 Gates green, `make gen postman` clean; commit `feat: ...`
+- [x] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 3.2 `List`, `Get`, `Delivered` (Decisions 4 and 11), both log lines (Decision 12; the claim log goes into `Claim` here); the three routes
+- [x] 3.3 `openapi.json`: schema `DeliveryList`, the three operations with every code and examples
+- [x] 3.4 Gates green, `make gen postman` clean; commit `feat: ...`
 
 ## 4. Rider location and the customer's view (worker, after 3; parallel with 5)
 

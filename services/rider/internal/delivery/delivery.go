@@ -68,6 +68,7 @@ type ReadyOrder struct {
 }
 
 var errClaimed = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "order already claimed"}
+var errNotAssigned = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "delivery is not assigned"}
 var errNotReady = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "order is not ready for pickup"}
 
 // Deliveries serves the rider's deliveries. It is safe for concurrent use.
@@ -234,4 +235,111 @@ func toDelivery(row db.Delivery) (Delivery, error) {
 		out.DeliveredAt = &t
 	}
 	return out, nil
+}
+
+// List answers one page of the rider's deliveries in one status, newest claim
+// first. status is assigned (the default) or delivered; anything else is 400 on
+// status.
+func (d *Deliveries) List(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	page, pageSize, err := httpx.Page(r)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	status := db.DeliveryStatus(r.URL.Query().Get("status"))
+	switch status {
+	case "":
+		status = db.DeliveryStatusAssigned
+	case db.DeliveryStatusAssigned, db.DeliveryStatusDelivered:
+	default:
+		httpx.WriteError(w, r, &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Field: "status", Message: "must be assigned or delivered"})
+		return
+	}
+	rider := auth.CurrentRider(ctx)
+	total, err := d.q.CountRiderDeliveries(ctx, db.CountRiderDeliveriesParams{RiderID: rider.ID, Status: status})
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	rows, err := d.q.RiderDeliveries(ctx, db.RiderDeliveriesParams{
+		RiderID: rider.ID, Status: status, Limit: int32(pageSize), Offset: int32((page - 1) * pageSize),
+	})
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	items := make([]Delivery, 0, len(rows))
+	for _, row := range rows {
+		out, err := toDelivery(row)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		items = append(items, out)
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewList(items, page, pageSize, total))
+}
+
+// Get answers one of the rider's deliveries. Another rider's, an unknown id and
+// an id that is not a uuid are all 404.
+func (d *Deliveries) Get(w http.ResponseWriter, r *http.Request) {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	row, err := d.q.RiderDelivery(r.Context(), db.RiderDeliveryParams{ID: id, RiderID: auth.CurrentRider(r.Context()).ID})
+	if err != nil {
+		httpx.WriteError(w, r, pg.Map(err))
+		return
+	}
+	out, err := toDelivery(row)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+// Delivered marks the rider's assigned delivery delivered and answers 200 with
+// it. One transaction locks the row, moves the order to delivered in core with
+// the rider as actor, then stamps the row; a core refusal or failure rolls the
+// stamp back, so the delivery stays assigned.
+func (d *Deliveries) Delivered(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	rider := auth.CurrentRider(ctx)
+	var row db.Delivery
+	err = pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
+		q := d.q.WithTx(tx)
+		locked, err := q.LockRiderDelivery(ctx, db.LockRiderDeliveryParams{ID: id, RiderID: rider.ID})
+		if err != nil {
+			return err
+		}
+		if locked.Status != db.DeliveryStatusAssigned {
+			return errNotAssigned
+		}
+		if err := d.core.ChangeStatus(ctx, locked.OrderID, "delivered", core.Actor{Type: "rider", ID: rider.ID, Name: rider.Name}); err != nil {
+			return err
+		}
+		row, err = q.MarkDelivered(ctx, id)
+		return err
+	})
+	if err != nil {
+		httpx.WriteError(w, r, pg.Map(err))
+		return
+	}
+	slog.InfoContext(ctx, "delivery delivered", "deliveryId", row.ID, "orderId", row.OrderID,
+		"number", row.OrderNumber, "riderId", rider.ID, "requestId", httpx.RequestID(ctx))
+	out, err := toDelivery(row)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }

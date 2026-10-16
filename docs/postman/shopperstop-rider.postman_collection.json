@@ -2372,6 +2372,292 @@
           }
         },
         {
+          "name": "The rider's deliveries",
+          "request": {
+            "name": "The rider's deliveries",
+            "description": {
+              "content": "Answers the signed-in rider's deliveries in one status, newest claim first: assigned by default, or delivered. Another rider's deliveries never appear. A status other than assigned or delivered is 400 on status.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "deliveries"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "assigned (default) or delivered. (This can only be one of assigned,delivered)",
+                    "type": "text/plain"
+                  },
+                  "key": "status",
+                  "value": "delivered"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Page number from 1. Default 1.",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Deliveries per page, from 1 to 100. Default 24.",
+                    "type": "text/plain"
+                  },
+                  "key": "pageSize",
+                  "value": "24"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "One page of the rider's deliveries in the status.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "assigned (default) or delivered. (This can only be one of assigned,delivered)",
+                        "type": "text/plain"
+                      },
+                      "key": "status",
+                      "value": "delivered"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Deliveries per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000901\",\n      \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n      \"orderNumber\": \"SS-DEMOAAAB\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"assigned\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"totalCents\": 33900,\n      \"paymentMethod\": \"cod\",\n      \"itemCount\": 3,\n      \"items\": [\n        {\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 2\n        },\n        {\n          \"name\": \"Shimla Apple\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 1\n        }\n      ],\n      \"assignedAt\": \"2026-10-15T09:05:00Z\"\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "page or pageSize is out of range, or status is not assigned or delivered.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "assigned (default) or delivered. (This can only be one of assigned,delivered)",
+                        "type": "text/plain"
+                      },
+                      "key": "status",
+                      "value": "delivered"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Deliveries per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be assigned or delivered\",\n    \"field\": \"status\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "assigned (default) or delivered. (This can only be one of assigned,delivered)",
+                        "type": "text/plain"
+                      },
+                      "key": "status",
+                      "value": "delivered"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Deliveries per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Claim a ready order",
           "request": {
             "name": "Claim a ready order",
@@ -2746,6 +3032,566 @@
                     }
                   }
                 }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "One of the rider's deliveries",
+          "request": {
+            "name": "One of the rider's deliveries",
+            "description": {
+              "content": "Answers one delivery of the signed-in rider. Another rider's delivery, an unknown id and an id that is not a uuid are all 404.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "deliveries",
+                ":id"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{deliveryId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The delivery's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The delivery.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No delivery with this id, or it is another rider's, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Mark a delivery delivered",
+          "request": {
+            "name": "Mark a delivery delivered",
+            "description": {
+              "content": "Moves the order to delivered in core with the signed-in rider as actor, then stamps the delivery with deliveredAt and answers it. The two steps share one transaction: when core refuses or fails, the delivery stays assigned and core's answer passes through (409, 404 or 502). A delivery that is already delivered is 409 \"delivery is not assigned\".",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "deliveries",
+                ":id",
+                "delivered"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{deliveryId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The delivery's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The delivery, status delivered with deliveredAt.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id",
+                    "delivered"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"delivered\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\",\n  \"deliveredAt\": \"2026-10-15T09:40:00Z\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id",
+                    "delivered"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No delivery with this id, or it is another rider's, or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id",
+                    "delivered"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The delivery is not assigned, or core refused the move (the order is not out for delivery).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id",
+                    "delivered"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"delivery is not assigned\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed to answer or to move the order (a 500, a timeout, no connection, or core refused the service token).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "deliveries",
+                    ":id",
+                    "delivered"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The delivery's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000901",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
               },
               "status": "Bad Gateway",
               "code": 502,
