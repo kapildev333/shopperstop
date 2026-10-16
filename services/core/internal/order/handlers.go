@@ -36,7 +36,7 @@ func customerScope(ctx context.Context) scope {
 // store. Any other role is scoped to its store, so a future role fails closed.
 func staffScope(ctx context.Context) scope {
 	s := auth.CurrentStaff(ctx)
-	if s.Role == "admin" {
+	if s.Role == "admin" || auth.Service(ctx) != "" {
 		return scope{}
 	}
 	return scope{storeID: &s.StoreID}

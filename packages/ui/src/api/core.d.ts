@@ -293,7 +293,7 @@ export interface paths {
         };
         /**
          * Read one order of a store
-         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token.
+         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["getAdminOrder"];
         put?: never;
@@ -315,7 +315,7 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token.
+         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted; see the actor member.
          */
         post: operations["setOrderStatus"];
         delete?: never;
@@ -457,7 +457,7 @@ export interface paths {
         };
         /**
          * List stores
-         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page.
+         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["listStores"];
         put?: never;
@@ -481,7 +481,7 @@ export interface paths {
         };
         /**
          * Get a store, admin view
-         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found.
+         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["getAdminStore"];
         put?: never;
@@ -557,7 +557,7 @@ export interface paths {
         };
         /**
          * List a store's orders
-         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.
+         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
          */
         get: operations["listStoreOrders"];
         put?: never;
@@ -3226,6 +3226,23 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     postAdminAuthSignIn: {
@@ -3355,6 +3372,23 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getAdminMe: {
@@ -3395,6 +3429,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
                      *       }
                      *     }
                      */
@@ -3491,7 +3542,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3586,7 +3637,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3700,7 +3751,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Staff users are admin-only. */
+            /** @description The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3949,7 +4000,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4097,7 +4148,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4231,7 +4282,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4316,7 +4367,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4431,7 +4482,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. */
+            /** @description The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4584,6 +4635,23 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid. */
             404: {
                 headers: {
@@ -4668,6 +4736,23 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A service token: services reach only the routes marked x-service-token. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "staff only"
                      *       }
                      *     }
                      */
@@ -5254,7 +5339,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5346,7 +5431,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5421,7 +5506,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5552,7 +5637,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5687,7 +5772,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5786,7 +5871,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5876,7 +5961,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5951,7 +6036,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6086,7 +6171,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6194,7 +6279,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6307,7 +6392,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. */
+            /** @description The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only. */
             403: {
                 headers: {
                     [name: string]: unknown;

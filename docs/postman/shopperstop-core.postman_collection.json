@@ -2315,6 +2315,49 @@
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A service token: services reach only the routes marked x-service-token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"staff only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
             }
           ],
           "event": [],
@@ -2695,6 +2738,50 @@
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A service token: services reach only the routes marked x-service-token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "auth",
+                    "sign-out"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"staff only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
             }
           ],
           "event": [],
@@ -2824,6 +2911,49 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A service token: services reach only the routes marked x-service-token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"staff only\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -3078,7 +3208,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Staff users are admin-only.",
+              "name": "The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -3366,7 +3496,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Staff users are admin-only.",
+              "name": "The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -3752,7 +3882,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Staff users are admin-only.",
+              "name": "The signed-in staff user is store staff. Staff users are admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -4294,7 +4424,7 @@
           "request": {
             "name": "List stores",
             "description": {
-              "content": "Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page.",
+              "content": "Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
               "type": "text/plain"
             },
             "url": {
@@ -4822,7 +4952,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -4888,7 +5018,7 @@
           "request": {
             "name": "Get a store, admin view",
             "description": {
-              "content": "Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found.",
+              "content": "Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
               "type": "text/plain"
             },
             "url": {
@@ -5429,7 +5559,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -5722,7 +5852,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -6057,7 +6187,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -6447,7 +6577,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names.",
+              "name": "The signed-in staff user is store staff. Store administration is admin-only, whichever store it names. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -6791,7 +6921,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -7060,7 +7190,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -7446,7 +7576,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -7739,7 +7869,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -8262,7 +8392,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -8577,7 +8707,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -8856,7 +8986,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9240,7 +9370,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9533,7 +9663,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9988,7 +10118,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -10422,7 +10552,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The signed-in staff user is store staff. Catalog administration is admin-only.",
+              "name": "The signed-in staff user is store staff. Catalog administration is admin-only. A service token gets the same 403 with message staff only.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11823,6 +11953,99 @@
               "_postman_previewlanguage": "json"
             },
             {
+              "name": "A service token: services reach only the routes marked x-service-token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Case-insensitive part of the name or brand; % and _ match literally. Empty or absent means no filter.",
+                        "type": "text/plain"
+                      },
+                      "key": "q",
+                      "value": "milk"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "true keeps the products whose quantity is below 5, zero included. Absent or false keeps all.",
+                        "type": "text/plain"
+                      },
+                      "key": "lowStock",
+                      "value": "true"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Page number, from 1. Default 1.",
+                        "type": "text/plain"
+                      },
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Items per page, from 1 to 100. Default 24.",
+                        "type": "text/plain"
+                      },
+                      "key": "pageSize",
+                      "value": "24"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"staff only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
               "name": "The signed-in staff user is store staff of another store, or no store has this id, or the id is not a uuid.",
               "originalRequest": {
                 "url": {
@@ -12180,6 +12403,75 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A service token: services reach only the routes marked x-service-token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "stores",
+                    ":id",
+                    "stock"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The store id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000401",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rows\": [\n    {\n      \"productId\": \"00000000-0000-4000-8000-000000000601\",\n      \"quantity\": 25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"staff only\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -13908,7 +14200,7 @@
           "request": {
             "name": "Read one order of a store",
             "description": {
-              "content": "Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token.",
+              "content": "Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
               "type": "text/plain"
             },
             "url": {
@@ -14130,7 +14422,7 @@
           "request": {
             "name": "Move an order to another status",
             "description": {
-              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token.",
+              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted; see the actor member.",
               "type": "text/plain"
             },
             "url": {
@@ -14546,7 +14838,7 @@
           "request": {
             "name": "List a store's orders",
             "description": {
-              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401.",
+              "content": "Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.",
               "type": "text/plain"
             },
             "url": {
