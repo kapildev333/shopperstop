@@ -173,6 +173,8 @@ type Order struct {
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	RiderName        *string
+	StoreName        string
+	PromisedMinutes  int32
 }
 
 type OrderEvent struct {

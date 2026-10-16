@@ -14,6 +14,7 @@ const dashboardPath = "/api/core/v1/admin/dashboard"
 type dashboardStoreView struct {
 	StoreID           string           `json:"storeId"`
 	StoreName         string           `json:"storeName"`
+	IsOpen            bool             `json:"isOpen"`
 	OrdersToday       map[string]int64 `json:"ordersToday"`
 	LowStockCount     int64            `json:"lowStockCount"`
 	RevenueTodayCents int64            `json:"revenueTodayCents"`
@@ -218,4 +219,19 @@ func TestDashboardCustomerToken401(t *testing.T) {
 	c := newCustomer(t)
 	status, body := call(t, http.MethodGet, dashboardPath, c.Token, nil)
 	expectError(t, "customer on the dashboard", status, body, http.StatusUnauthorized, "unauthorized", "", "")
+}
+
+// TestDashboardIsOpen: each entry carries the store's open switch.
+func TestDashboardIsOpen(t *testing.T) {
+	s := newShop(t)
+	token := adminToken(t)
+	if e := dashboardEntry(t, token, s.ID); !e.IsOpen {
+		t.Fatalf("open store: isOpen false, want true")
+	}
+	if status, body := call(t, http.MethodPatch, adminStoresPath+"/"+s.ID, token, map[string]any{"isOpen": false}); status != http.StatusOK {
+		t.Fatalf("close store: got %d %s, want 200", status, body)
+	}
+	if e := dashboardEntry(t, token, s.ID); e.IsOpen {
+		t.Fatalf("closed store: isOpen true, want false")
+	}
 }

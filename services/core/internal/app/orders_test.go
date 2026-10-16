@@ -69,7 +69,10 @@ type orderView struct {
 	ID      string `json:"id"`
 	Number  string `json:"number"`
 	StoreID string `json:"storeId"`
-	Status  string `json:"status"`
+	// StoreName and PromisedMinutes are the store's values at placement.
+	StoreName       string `json:"storeName"`
+	PromisedMinutes int32  `json:"promisedMinutes"`
+	Status          string `json:"status"`
 	// CustomerName is the snapshot of the customer's name at placement.
 	CustomerName  string `json:"customerName"`
 	CustomerPhone string `json:"customerPhone"`
@@ -743,4 +746,37 @@ func TestOrdersStaffToken401(t *testing.T) {
 	expectError(t, "staff on the list", status, body, http.StatusUnauthorized, "unauthorized", "", "")
 	status, body = call(t, http.MethodGet, ordersPath+"/"+missingOrderID, token, nil)
 	expectError(t, "staff on one order", status, body, http.StatusUnauthorized, "unauthorized", "", "")
+}
+
+// TestOrderStoreSnapshot: an order keeps the store's name and promised minutes
+// from placement, on the customer's and the staff's reads, after the store changes.
+func TestOrderStoreSnapshot(t *testing.T) {
+	s := newShop(t)
+	p := cartProduct(t, s.ID, stockName(t), 5000)
+	stockTo(t, s.ID, p, 5)
+	b := newBuyer(t, s.Pincode)
+	setLine(t, b.Token, s.ID, p, 1)
+	placed := mustPlace(t, b)
+	if placed.StoreName != "Test store" || placed.PromisedMinutes != 10 {
+		t.Fatalf("placement: storeName %q, promisedMinutes %d; want Test store, 10", placed.StoreName, placed.PromisedMinutes)
+	}
+
+	token := adminToken(t)
+	if status, body := call(t, http.MethodPatch, adminStoresPath+"/"+s.ID, token, map[string]any{"name": "Renamed store", "promisedMinutes": 25}); status != http.StatusOK {
+		t.Fatalf("PATCH store: got %d %s, want 200", status, body)
+	}
+
+	for _, read := range []struct{ path, token string }{
+		{ordersPath + "/" + placed.ID, b.Token},
+		{adminOrderPath(placed.ID), token},
+	} {
+		if o := readOrder(t, read.path, read.token); o.StoreName != "Test store" || o.PromisedMinutes != 10 {
+			t.Fatalf("GET %s: storeName %q, promisedMinutes %d; want Test store, 10", read.path, o.StoreName, o.PromisedMinutes)
+		}
+	}
+	status, body := call(t, http.MethodGet, ordersPath, b.Token, nil)
+	var l orderListView
+	if status != http.StatusOK || json.Unmarshal(body, &l) != nil || len(l.Items) != 1 || l.Items[0].StoreName != "Test store" || l.Items[0].PromisedMinutes != 10 {
+		t.Fatalf("GET /orders: got %d %s, want the one order with Test store, 10", status, body)
+	}
 }
