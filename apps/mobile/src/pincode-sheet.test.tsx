@@ -154,26 +154,29 @@ function gatedServiceability() {
       return store ? json(200, { store }) : apiError(404, 'not_serviceable')
     },
   })
-  // Releases the lookup and lets the sheet's continuation run.
-  async function open() {
+  const lookups = () => calls.filter((request) => request.url.includes('/serviceability'))
+  // Lets the sheet's continuation run after the lookup answers.
+  async function answer() {
     await act(async () => {
       release()
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
   }
-  return { calls, release: open }
+  return { lookups, answer }
 }
 
 test('dismissed during the lookup saves nothing', async () => {
   const lookup = gatedServiceability()
   await openSheet()
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560038')
-  // Not awaited: the press resolves only when the gated lookup does.
-  void fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  // The press resolves only when the lookup does, so it is awaited after the answer.
+  const pressed = fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  await waitFor(() => expect(lookup.lookups()).toHaveLength(1))
   await act(async () => {
     closePincodeSheet()
   })
-  await lookup.release()
+  await lookup.answer()
+  await pressed
   expect(getPincode()).toBeUndefined()
   expect(await AsyncStorage.getItem(pincodeKey)).toBeNull()
   expect(screen.queryByRole('heading', { name: 'Switch to the Indiranagar store?' })).toBeNull()
@@ -183,10 +186,12 @@ test('a second submit while the lookup is pending makes no second lookup', async
   const lookup = gatedServiceability()
   await openSheet()
   await fireEvent.changeText(screen.getByLabelText('Pincode'), '560034')
-  // Not awaited: each submit resolves only when the gated lookup does.
-  void fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
-  void fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
-  await lookup.release()
-  await waitFor(() => expect(getPincode()).toBe('560034'))
-  expect(lookup.calls.filter((request) => request.url.includes('/serviceability'))).toHaveLength(1)
+  const pressed = fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
+  await waitFor(() => expect(lookup.lookups()).toHaveLength(1))
+  // The guarded second submit returns nothing to wait for.
+  await fireEvent(screen.getByLabelText('Pincode'), 'submitEditing')
+  await lookup.answer()
+  await pressed
+  expect(lookup.lookups()).toHaveLength(1)
+  expect(getPincode()).toBe('560034')
 })
