@@ -34,26 +34,40 @@ The built app SHALL be served under the `/admin/` path prefix, with its asset UR
 - **THEN** it lands on `/admin/sign-in?redirect=%2F` with the page's styles applied, and after signing in the "Dashboard" link points to `/admin/`
 
 ### Requirement: Core reached through a same-origin proxy
-The app SHALL call the core service only through one shared client whose base URL is the page's own origin followed by `/api/core/v1`, so every call is same-origin; the dev server SHALL proxy `/api` to `http://localhost:8080` and the preview server SHALL proxy `/api` to `http://localhost:18080`.
-
-#### Scenario: Preview proxies to core
-- **WHEN** core runs on port 18080 and a client requests `http://localhost:15174/api/core/v1/healthz`
-- **THEN** the response is 200 with body `{"status":"ok"}`
+The app SHALL call the core service only through one shared client whose base URL is the page's own origin followed by `/api/core/v1`, and the rider service only through a second client whose base URL is the page's own origin followed by `/api/rider/v1`, so every call is same-origin.
 
 #### Scenario: Client calls the page's origin
 - **WHEN** the shared client sends `GET /admin/me` from a page served at origin `O`
 - **THEN** the request URL is `O/api/core/v1/admin/me`
 
+#### Scenario: Rider client calls the page's origin
+- **WHEN** an admin opens `/riders` on a page served at origin `O`
+- **THEN** the riders list request URL is `O/api/rider/v1/admin/riders?pageSize=100`
+
+### Requirement: Dev and preview servers proxy the services
+The dev server SHALL proxy `/api/rider` to `http://localhost:8081` and every other `/api` path to `http://localhost:8080`; the preview server SHALL proxy `/api/rider` to `http://localhost:18081` and every other `/api` path to `http://localhost:18080`.
+
+#### Scenario: Preview proxies to core
+- **WHEN** core runs on port 18080 and a client requests `http://localhost:15174/api/core/v1/healthz`
+- **THEN** the response is 200 with body `{"status":"ok"}`
+
+#### Scenario: Preview proxies to the rider service
+- **WHEN** the rider service runs on port 18081 and a client requests `http://localhost:15174/api/rider/v1/healthz`
+- **THEN** the response is 200 with body `{"status":"ok"}`
+
 ### Requirement: End-to-end suite with axe
-`npm run e2e` in `apps/admin` SHALL run Playwright on Chromium only, starting core from `services/core` with the environment it is given and `vite preview` on port 15174, SHALL run `core-admin migrate` and `core-admin seed-demo --reset` from `services/core` with that environment before any test, and SHALL run `@axe-core/playwright` on every page it visits, failing on any violation.
+`npm run e2e` in `apps/admin` SHALL run Playwright on Chromium only, starting core from `services/core` and the rider service from `services/rider` with the environment it is given and `vite preview` on port 15174, and SHALL run `@axe-core/playwright` on every page it visits, failing on any violation.
 
 #### Scenario: Smoke pages pass axe
 - **WHEN** `make e2e` runs the admin suite
 - **THEN** the sign-in page, the Dashboard, the not-found page and the sign-in page after sign-out are each visited and axe reports no violations on any of them
 
+### Requirement: End-to-end suite seeds its own data
+Before any test, `npm run e2e` in `apps/admin` SHALL run `core-admin migrate` and `core-admin seed-demo --reset` from `services/core`, then `rider-admin migrate` and `rider-admin seed-demo --reset` from `services/rider`, with the environment it is given.
+
 #### Scenario: Suite seeds its own data
-- **WHEN** `npm run e2e --workspace apps/admin` runs against an e2e database that has never been seeded, with the `make e2e` environment exported
-- **THEN** the seeded admin can sign in during the suite
+- **WHEN** `npm run e2e --workspace apps/admin` runs against e2e databases that have never been seeded, with the `make e2e` environment exported
+- **THEN** the seeded admin can sign in and the four seeded riders are listed during the suite
 
 ### Requirement: Staff sign-in
 The app SHALL serve `/sign-in` without a session, with labelled "Email" and "Password" fields and a "Sign in" button. It SHALL send no request while a field is empty, keep the button disabled while `POST /admin/auth/sign-in` is pending, and on success store the token and open the `redirect` query path, or `/` without one. A `redirect` that is not an in-app path (`/` followed by neither `/` nor `\`) SHALL be ignored.
@@ -155,15 +169,15 @@ Every route except `/sign-in` and the not-found page SHALL require a session. Wi
 - **THEN** "Page not found" is the level-1 heading inside the banner, with no redirect
 
 ### Requirement: Role-based navigation
-The "Admin" navigation SHALL show only the sections the signed-in role can reach, in this order: for `admin`, Dashboard, Orders, Stock, Stores, Categories, Products, Staff; for `store_staff`, Dashboard, Orders, Stock.
+The "Admin" navigation SHALL show only the sections the signed-in role can reach, in this order: for `admin`, Dashboard, Orders, Stock, Riders, Stores, Categories, Products, Staff; for `store_staff`, Dashboard, Orders, Stock, Riders.
 
 #### Scenario: Admin sees every section
 - **WHEN** an admin with a valid session opens `/`
-- **THEN** the "Admin" navigation links are Dashboard, Orders, Stock, Stores, Categories, Products, Staff in that order
+- **THEN** the "Admin" navigation links are Dashboard, Orders, Stock, Riders, Stores, Categories, Products, Staff in that order
 
 #### Scenario: Store staff see their sections
 - **WHEN** a store staff member with a valid session opens `/`
-- **THEN** the "Admin" navigation links are Dashboard, Orders, Stock in that order
+- **THEN** the "Admin" navigation links are Dashboard, Orders, Stock, Riders in that order
 
 ### Requirement: Wrong-role deep link shows not found
 When a store staff member opens an admin-only path (`/stores`, `/categories`, `/products`, `/staff` and the paths under them), the app SHALL stay on that path and show the not-found page inside the shell, never the admin page and never a redirect. A 403 `forbidden` from core on any request SHALL show the same not-found page and keep the session. The not-found page SHALL show "Page not found" as the level-1 heading and a card with a "Go to Dashboard" link.
@@ -1053,20 +1067,34 @@ The admin e2e suite SHALL run Spec 2 §13's "admin creates a product and sets st
 - **THEN** the selector stood on Koramangala; the search listed one row with quantity 0, "Low stock" and an image whose source is `/api/core/v1/files/products/<id>.png`, with no axe violation; "Stock saved." was shown; after the reload the field holds 12 and "Low stock" is gone; and after the delete a search for the product shows "No products found"
 
 ### Requirement: Orders board
-`/orders` SHALL show one store's active orders as a column per status, in the order Placed, Accepted, Packing, Ready, Out for delivery, each headed by its name and its count. A card SHALL show the order's number, the time since it was placed, its item count (the quantities added up), its total and the pincode of its address; the longest waiting order is first in its column. Delivered and cancelled orders SHALL NOT be on the board. Core is asked once per status with `pageSize=100`.
+`/orders` SHALL show one store's active orders as a column per status, in the order Placed, Accepted, Packing, Ready, Out for delivery, each headed by its name and its count. Delivered and cancelled orders SHALL NOT be on the board. Core is asked once, with `active=true` and `pageSize=100`.
 
 #### Scenario: Board listed
 - **WHEN** an admin opens `/orders` and the first store has two placed orders, one accepted, one out for delivery placed 125 minutes ago, one delivered and one cancelled
 - **THEN** the columns read "Placed" 2, "Accepted" 1, "Packing" 0, "Ready" 0, "Out for delivery" 1, the placed column lists the older order first, a card reads "2 min ago", "1 item, pincode 560038" and "₹45.50", the oldest reads "2 h 5 min ago", the empty columns say "No orders", and neither finished order is shown
-- **THEN** core was asked five times, for `placed`, `accepted`, `packing`, `ready` and `out_for_delivery`, each with `pageSize=100`
+- **THEN** core was asked once, with `active=true` and `pageSize=100`, and no "Showing the newest" status shows
+
+#### Scenario: Column name
+- **WHEN** the board holds two placed orders and one accepted
+- **THEN** the column headings are named "Placed, 2 orders", "Accepted, 1 order", "Packing, 0 orders", "Ready, 0 orders" and "Out for delivery, 0 orders", and each column is a region of that name
+
+### Requirement: Orders board cards
+A card SHALL show the order's number, the time since it was placed, its item count (the quantities added up), its total, the pincode of its address and, once a rider took the order out (`riderName`), "Rider: <name>"; the longest waiting order is first in its column.
+
+#### Scenario: Rider on the card
+- **WHEN** the board holds a ready order, an order out for delivery with `riderName` "Arjun Rao" and one out for delivery without a rider
+- **THEN** the card of the second reads "Rider: Arjun Rao" and the other two cards name no rider
 
 #### Scenario: Orders placed in the same second
 - **WHEN** three placed orders carry the times `09:20:00Z`, `09:20:00.5Z` and `09:20:00.501Z`
 - **THEN** their cards are in that order
 
-#### Scenario: Column name
-- **WHEN** the board holds two placed orders and one accepted
-- **THEN** the column headings are named "Placed, 2 orders", "Accepted, 1 order", "Packing, 0 orders", "Ready, 0 orders" and "Out for delivery, 0 orders", and each column is a region of that name
+### Requirement: Orders board beyond one page
+When core's `total` is larger than the orders it answered, the status "Showing the newest <n> of <total> active orders." SHALL show above the columns.
+
+#### Scenario: More active orders than one page
+- **WHEN** core answers the board with one order and a `total` of 130
+- **THEN** the status "Showing the newest 1 of 130 active orders." shows and the order's card is on the board
 
 ### Requirement: Orders store for admins
 An admin SHALL choose the store with a "Store" selector of every store by name. The chosen store SHALL be in the URL as `store`; without it, or with a value that is no store, the first store is shown. Choosing a store SHALL keep the selector focused and SHALL never show, or announce as new, another store's orders: everything the page kept for the store before is dropped.
@@ -1095,7 +1123,7 @@ The board SHALL ask core again every 10 seconds and show each order where it the
 
 #### Scenario: Poll
 - **WHEN** the board shows a placed order, another staff member accepts it, and 10 seconds pass
-- **THEN** after 9 seconds core had not been asked again, after 10 it was asked the five lists again, and the card is in "Accepted" with "Placed" saying "No orders"
+- **THEN** after 9 seconds core had not been asked again, after 10 it was asked for the active orders a second time, and the card is in "Accepted" with "Placed" saying "No orders"
 
 #### Scenario: Hidden tab
 - **WHEN** the tab is hidden for 30 seconds and then shown
@@ -1103,7 +1131,7 @@ The board SHALL ask core again every 10 seconds and show each order where it the
 
 #### Scenario: Board left
 - **WHEN** an admin leaves `/orders` for another page and 30 seconds pass
-- **THEN** core is not asked for the lists again
+- **THEN** core is not asked for the active orders again
 
 ### Requirement: Orders board announcements
 The board SHALL carry one visually hidden `role="status"` region named "New orders". An answer from core that holds placed orders the answer before did not SHALL set it to "New order <number>", or "<n> new orders: <numbers>". The first answer since the board was opened, an equal answer and an order first seen in another status SHALL announce nothing; an equal answer SHALL NOT write the region again; a changed answer with no new placed order SHALL empty it.
@@ -1147,15 +1175,15 @@ A card's time since placed SHALL move on by itself, without core being asked and
 The board SHALL show a skeleton while its first answer loads; the alert "Could not load the orders." with "Try again" when it fails with nothing to show; and "No active orders" when the store has none. An admin with no stores SHALL see "No stores yet"; a stores list that fails with nothing to show SHALL show "Could not load the stores." with "Try again".
 
 #### Scenario: Board loading
-- **WHEN** core has not answered the lists yet
+- **WHEN** core has not answered the active orders yet
 - **THEN** a skeleton named "Loading" shows under the heading and the store selector, and the orders once core answers
 
 #### Scenario: Board load failure
-- **WHEN** core answers the first lists with 500 and the admin presses "Try again" after core recovers
+- **WHEN** core answers the first request for the active orders with 500 and the admin presses "Try again" after core recovers
 - **THEN** the alert "Could not load the orders." shows first, then the orders and no alert
 
 #### Scenario: One list fails on the first load
-- **WHEN** core answers four of the five lists and fails the fifth on the first load
+- **WHEN** core answers the one request for the active orders with 500 on the first load
 - **THEN** the alert "Could not load the orders." shows and no column
 
 #### Scenario: No active orders
@@ -1178,7 +1206,7 @@ When core fails to answer a refresh of something the orders pages already show, 
 - **THEN** after the failed poll the first order and its column are still shown with the notice, there is no alert, the second order is not shown and the announcement region is empty; after the good poll the second order shows, the notice is gone and the region reads "New order SS-TEST0002"
 
 #### Scenario: One list fails on a later poll
-- **WHEN** an order is accepted elsewhere and core fails only the list of ready orders at the next poll
+- **WHEN** an order is accepted elsewhere and core fails the one request for the active orders at the next poll
 - **THEN** every column is as it was before the poll, with the notice and no alert
 
 #### Scenario: Failed refresh keeps the history
@@ -1252,7 +1280,7 @@ A poll that core read before a status change and answers after it SHALL NOT move
 - **THEN** the card is in "Accepted" and stays there, "Placed" says "No orders", and core is asked the lists again at the next interval
 
 ### Requirement: Order detail sheet
-A card's number, and a History row's, SHALL be a button that opens a `Sheet` titled "Order <number>" with the status badge, when it was placed, the items with quantity, unit and line total, subtotal, delivery fee and total, the customer's name and phone as a `tel:` link (or "No phone number"), the address, and the events oldest first with who made them, when, and their note. Closing it SHALL return focus to the button.
+A card's number, and a History row's, SHALL be a button that opens a `Sheet` titled "Order <number>" with the status badge, when it was placed, the items with quantity, unit and line total, subtotal, delivery fee and total, the customer's name and phone as a `tel:` link (or "No phone number"), and the address. Closing it SHALL return focus to the button.
 
 #### Scenario: Order opened from its card
 - **WHEN** staff press "SS-TEST0001" on its card
@@ -1261,6 +1289,13 @@ A card's number, and a History row's, SHALL be a button that opens a `Sheet` tit
 #### Scenario: Sheet closed
 - **WHEN** staff press "Close" on the sheet
 - **THEN** no dialog is open and the card's "SS-TEST0001" button has focus
+
+### Requirement: Order sheet rider and events
+The sheet SHALL show "Rider: <name>" once a rider took the order out, and the events oldest first with who made them (the rider's name for an event a rider made, otherwise the customer, staff or the system), when, and their note.
+
+#### Scenario: Rider and rider events
+- **WHEN** staff open from History a delivered order with `riderName` "Arjun Rao" whose out-for-delivery and delivered events carry `actorType` `rider` and `actorName` "Arjun Rao"
+- **THEN** the sheet shows "Rider: Arjun Rao" and the events read "Placed by the customer, …", "Accepted by staff, …", "Out for delivery by Arjun Rao, 13 Oct 2026, 2:55 pm" and "Delivered by Arjun Rao, 13 Oct 2026, 3:01 pm"
 
 ### Requirement: Order sheet follows core
 The sheet SHALL show the opened order at once as the card or row held it, read it from `GET /admin/orders/{id}`, and show what core answers. While the order is active the sheet SHALL read it again every 10 seconds; a delivered or cancelled order is read once and not again.
@@ -1278,7 +1313,7 @@ The sheet SHALL show the opened order at once as the card or row held it, read i
 - **THEN** the order was read once and the list was not asked again
 
 ### Requirement: Order cancel with a reason
-The sheet SHALL offer "Cancel order" only while the order is placed or accepted. It SHALL open a `Dialog` "Cancel order <number>?" in place of the sheet, with a "Reason" field of at most 500 characters and the buttons "Keep order" then "Cancel order". A reason is required. Confirming SHALL send one `POST` with `{"status":"cancelled","note":"<reason, trimmed>"}`; the sheet then shows "Order cancelled.", the order cancelled with its reason, and the order leaves the board.
+The sheet SHALL offer "Cancel order" only while the order is placed or accepted. It SHALL open a `Dialog` "Cancel order <number>?" with a "Reason" field of at most 500 characters and the buttons "Keep order" then "Cancel order". A reason is required. Confirming SHALL send one `POST` with `{"status":"cancelled","note":"<reason, trimmed>"}`; the dialog closes, the sheet shows "Order cancelled." and the order cancelled with its reason, and the order leaves the board.
 
 #### Scenario: Cancel offered
 - **WHEN** staff open a placed, an accepted and a packing order in turn
@@ -1286,15 +1321,18 @@ The sheet SHALL offer "Cancel order" only while the order is placed or accepted.
 
 #### Scenario: Order cancelled
 - **WHEN** staff open SS-TEST0001, press "Cancel order", type " Out of stock " and confirm
-- **THEN** one `POST` with `{"status":"cancelled","note":"Out of stock"}` was sent, the sheet shows "Order cancelled." as a status, "Cancelled", "Reason for cancelling: Out of stock" and the event with its note, and has no "Cancel order" button; after closing, the order is off the board and the other order is still on it
+- **THEN** one `POST` with `{"status":"cancelled","note":"Out of stock"}` was sent, the sheet is the only dialog, the group "Cancel result" has focus, the sheet shows "Order cancelled." as a status, "Cancelled", "Reason for cancelling: Out of stock" and the event with its note, and has no "Cancel order" button; after closing, the order is off the board and the other order is still on it
 
 #### Scenario: Reason missing
 - **WHEN** staff confirm with a reason of spaces only, then type a letter
-- **THEN** nothing was sent and the field is invalid with "Enter a reason."; after the letter the message is gone and the field is valid
+- **THEN** the sheet "Order SS-TEST0001" is still open under the dialog, nothing was sent and the field is invalid with "Enter a reason."; after the letter the message is gone and the field is valid
+
+### Requirement: Order cancel dialog over the sheet
+The cancel dialog SHALL open over the sheet, which stays open under it. "Keep order" and Escape SHALL close only the dialog and put the keyboard back on the sheet's "Cancel order". After a confirmed cancel the keyboard SHALL be on the result, a group "Cancel result" in the sheet.
 
 #### Scenario: Keep order
 - **WHEN** staff open the cancel dialog and press "Keep order", then open it again and press Escape
-- **THEN** both times the sheet "Order SS-TEST0001" is the open dialog again and nothing was sent
+- **THEN** both times the sheet "Order SS-TEST0001" is the only dialog, its "Cancel order" button has focus, and nothing was sent
 
 ### Requirement: Order cancel in progress and refused
 While a cancel runs its button SHALL read "Cancelling…", keep focus and be `aria-disabled`, never `disabled`; a second press sends nothing and the dialog cannot be closed. A failure SHALL show "Could not cancel the order. Try again." in the dialog and keep the reason. A 409 SHALL close the dialog and show on the sheet "Someone else changed this order first: it is now <Status>.", with the order where it stands on the sheet and on the board.
@@ -1396,6 +1434,13 @@ Choosing a store on History SHALL keep the tab, start at page 1 with one request
 - **WHEN** store staff open `/` and core answers their one store
 - **THEN** one card shows, and its "Low stock" link holds their store
 
+### Requirement: Dashboard store open or closed
+Each dashboard card SHALL show the badge "Open" (`success`) or "Closed" (`neutral`) from the store's `isOpen`.
+
+#### Scenario: Open or closed
+- **WHEN** core answers Indiranagar with `isOpen` false and Koramangala with `isOpen` true
+- **THEN** the Indiranagar card shows "Closed" on the neutral surface and the Koramangala card shows "Open" on the success surface and no "Closed"
+
 ### Requirement: Dashboard states
 The dashboard SHALL show a skeleton while its first answer loads; the alert "Could not load the dashboard." with "Try again" when it fails with nothing to show; "No stores yet" when core answers no store. A refresh that fails SHALL keep the cards, with the app's notice "Could not refresh. Showing what was loaded last." and no alert, until the next good answer.
 
@@ -1423,8 +1468,8 @@ The admin e2e suite SHALL cover the orders pages and the dashboard against the r
 - **THEN** "Store: Koramangala" shows with no selector; the card read "4 items, pincode 560034" and ₹1,030; the sheet showed the customer, phone, address and items; after each press the status message named the new status and the card stood in that column; after the last the card is gone; History lists SS-DEMOAAAD and SS-DEMOAAAB, the sheet of SS-DEMOAAAD shows "Delivered by staff" and no cancel, "Cancelled" lists SS-DEMOAAAC alone, also after a reload; axe finds no violation anywhere
 
 #### Scenario: Admin sees the dashboard and a store's orders
-- **WHEN** the seeded admin signs in and presses "Orders at Koramangala"
-- **THEN** the dashboard headed its cards "Indiranagar" and "Koramangala", the "Low stock" link of Koramangala pointed to `/admin/stock?store=<Koramangala>&lowStock=true`, the orders page opens with the selector on Koramangala and "Board" current, History lists SS-DEMOAAAB, and axe finds no violation
+- **WHEN** the seeded admin signs in, presses "Orders at Koramangala", opens History and opens SS-DEMOAAAB
+- **THEN** the dashboard headed its cards "Indiranagar" and "Koramangala", the Koramangala card showed "Open", its "Low stock" link pointed to `/admin/stock?store=<Koramangala>&lowStock=true`, the orders page opened with the selector on Koramangala and "Board" current, History lists SS-DEMOAAAB, its sheet shows "Rider: Arjun Rao" and "Delivered by Arjun Rao", and axe finds no violation
 
 ### Requirement: Ordered product against core
 The admin e2e suite SHALL cover, against the real core and the demo seed, that deleting a product that was ordered offers to deactivate it instead. The offer is not taken, so the product stays active for the other suites.
