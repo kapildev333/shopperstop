@@ -125,6 +125,9 @@ test('Place order sends nothing while the address list is unread', async () => {
 
   await flush()
   expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+  // The button says it is waiting: busy and disabled until the list answers.
+  expect(screen.getByRole('button', { name: 'Place order' })).toBeBusy()
+  expect(screen.getByRole('button', { name: 'Place order' })).toBeDisabled()
 
   release(addresses([home]))
   expect(await screen.findByText('Delivering to Home')).toBeTruthy()
