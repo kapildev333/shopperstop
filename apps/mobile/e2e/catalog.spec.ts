@@ -1,51 +1,14 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { admin, core, expectNoViolations, koramangala, openSearch, pincodeSheet, savePincode, searchFor, section } from './support'
 
 // The catalog screens on the web export at 390×844, against core on 18080. Dynamic routes 404 on a direct load of the static export, so
 // /category/<slug> and /product/<slug> are reached only by in-app navigation.
-const core = 'http://localhost:18080/api/core/v1'
-const koramangala = '00000000-0000-4000-8000-000000000401'
-const admin = { email: 'admin@shopperstop.local', password: 'admin12345' }
 const closedPincode = '560076'
 const closedName = 'E2E Closed'
-
-function sheet(page: Page) {
-  return page.getByRole('dialog', { name: 'Where should we deliver?' })
-}
-
-// The sheet's field and Continue; the sheet's dialog is waited for first (its slide ends before the field takes input).
-async function savePincode(page: Page, pincode: string) {
-  await expect(sheet(page)).toBeVisible()
-  await sheet(page).getByLabel('Pincode', { exact: true }).fill(pincode)
-  await sheet(page).getByRole('button', { name: 'Continue', exact: true }).click()
-}
-
-async function expectNoViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze()
-  expect(results.violations).toEqual([])
-}
-
-// The section's heading and the links, buttons and groups inside it (the section is the heading's parent view).
-function section(page: Page, heading: string): Locator {
-  return page.getByRole('heading', { level: 2, name: heading, exact: true }).locator('xpath=..')
-}
 
 // Every visible product link: the screens under the one shown stay mounted at 0×0 (Home's picks, for one).
 function productLinks(page: Page): Locator {
   return page.locator('a[href^="/product/"]:visible')
-}
-
-// From Home's search control; the search screen's own box takes over after that.
-async function openSearch(page: Page) {
-  await page.getByRole('button', { name: 'Search products', exact: true }).click()
-  await expect(page).toHaveURL(/\/search$/)
-}
-
-async function searchFor(page: Page, text: string) {
-  const box = page.getByRole('textbox', { name: 'Search products', exact: true })
-  await box.fill(text)
-  await box.press('Enter')
-  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(text)
 }
 
 // Core answers 200 for a closed store's pincode too, so a re-run without a reset finds it and creates nothing.
@@ -69,7 +32,7 @@ async function ensureClosedStore(request: APIRequestContext) {
 test('pincode resolves against core', async ({ page }) => {
   await page.goto('/')
   await savePincode(page, '560034')
-  await expect(sheet(page)).toHaveCount(0)
+  await expect(pincodeSheet(page)).toHaveCount(0)
   await expect(page.getByRole('heading', { level: 1, name: 'ShopperStop in 10 minutes', exact: true })).toBeVisible()
   const pincode = page.getByRole('button', { name: 'Delivering to 560034, Bengaluru', exact: true })
   await expect(pincode).toBeVisible()
@@ -77,11 +40,11 @@ test('pincode resolves against core', async ({ page }) => {
 
   await page.reload()
   await expect(pincode).toBeVisible()
-  await expect(sheet(page)).toHaveCount(0)
+  await expect(pincodeSheet(page)).toHaveCount(0)
   await expectNoViolations(page)
 
   await pincode.click()
-  await expect(sheet(page)).toBeVisible()
+  await expect(pincodeSheet(page)).toBeVisible()
   await expectNoViolations(page)
 })
 

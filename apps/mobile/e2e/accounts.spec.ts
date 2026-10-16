@@ -1,21 +1,10 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { expectNoViolations, freshEmail, tokenKey } from './support'
 
-// The customer token lives in localStorage on the web export (session.ts uses the same key as the secure store).
-const tokenKey = 'shopperstop.customer-token'
 const demo = { email: 'demo@shopperstop.local', password: 'demo12345' }
-
-function freshEmail() {
-  return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
-}
 
 function storedToken(page: Page) {
   return page.evaluate((key) => localStorage.getItem(key), tokenKey)
-}
-
-async function expectNoViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze()
-  expect(results.violations).toEqual([])
 }
 
 // Registers through the form, so the browser ends signed in on '/'.
