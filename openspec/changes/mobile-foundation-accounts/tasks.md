@@ -163,8 +163,11 @@ Starts from: `e2e/accounts.spec.ts` with the four scenario names, written before
 - [x] 15.1 Red recorded; then the `e2e` script (Decision 4) and `playwright.config.ts` (Decision 13)
 - [x] 15.2 With the e2e slot announced by the manager: `make e2e` exits 0, the mobile suite 4 of 4; an axe violation on markup the app does not control stops the task (report, no rule switched off)
 - [x] 15.3 Gates green
+- [ ] 15.4 Router tests pass on a cold Jest cache (found at 16.1). Scope: `apps/mobile/jest.config.js` only. Red: `cd apps/mobile && npx jest --ci --no-cache` fails with `Exceeded timeout of 5000 ms` in the router suites (`account-sign-in`, `account-sign-out`, and on a loaded machine also `shell`, `shell-tabs`, `account-home`, `account-redirect`); paste it into the log. Fix: `testTimeout: 60_000` in `jest.config.js` with a one-line comment (expo-router is transformed inside the first test of each file; a cold CI runner has no cache). One commit `fix: router tests pass on a cold jest cache`. Gates, plus `npx jest --ci --no-cache` twice in a row, both 91 of 91
 
 ## 16. Acceptance
 
 - [ ] 16.1 Team lead: `/opsx:verify`: every scenario maps to a passing named test (design.md table), every task ticked, nothing outside the scope lists landed
+
+  Scope reconciliation (16.1): files that landed outside the task scope lists, each recorded in design.md and accepted: `apps/mobile/eslint.config.mjs` (renamed from `.js` in T4, Decision 18); `apps/mobile/e2e/global-setup.ts` (T15, Decision 18); `src/app/+html.tsx`, the `Head` titles in every route and `src/html-shell.test.tsx` (T15, Decision 15); `src/ui/toggle.tsx` and `toggle.test.tsx`, and the switch assertions in `src/address-sheet.test.tsx` (T15, Decision 14); `src/ui/sheet.tsx` scroll and dialog name (T15, Decision 8); `src/screen-support.ts`, `src/auth-forms-enter.test.tsx` and the row guard in `src/app/account.tsx` (T15, Decision 16); the split router test files (T10, T11, T14, Decision 18). Outside `apps/mobile`: only this change, `docs/design/mobile-P4-L1.md`, the lane logs and the root `package-lock.json` (task 1, mechanical).
 - [ ] 16.2 Manager: re-run the gates and `make e2e`; walk sign in, register, account, address add and default, sign out at 390×844 on the web export against core with the demo seed; record in the lane status cell

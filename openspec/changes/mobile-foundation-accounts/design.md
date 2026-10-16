@@ -55,18 +55,18 @@ Runtime (D37 plus the peers Expo Router and the web export require):
 
 ```
 apps/mobile/
-  package.json  app.json  tsconfig.json  eslint.config.js  jest.config.js  jest.setup.ts  playwright.config.ts  .gitignore
-  e2e/accounts.spec.ts
+  package.json  app.json  tsconfig.json  eslint.config.mjs  jest.config.js  jest.setup.ts  playwright.config.ts  .gitignore
+  e2e/accounts.spec.ts  e2e/global-setup.ts
   src/
     env.d.ts                     /// <reference types="expo/types" /> (typed process.env without `expo start`)
     app/                         Expo Router routes
       _layout.tsx                fonts, QueryClientProvider, SafeAreaProvider, Stack (no headers)
       (tabs)/_layout.tsx         Tabs: index (Home), categories, orders
       (tabs)/index.tsx  (tabs)/categories.tsx  (tabs)/orders.tsx
-      sign-in.tsx  register.tsx  account.tsx  +not-found.tsx
+      sign-in.tsx  register.tsx  account.tsx  +not-found.tsx  +html.tsx (static shell, Decision 15)
     api.ts  session.ts  auth.ts  addresses.ts  fake-core.ts (tests only)
-    auth-forms.tsx  address-sheet.tsx  profile-sheet.tsx
-    ui/ tokens.ts text.tsx button.tsx form-field.tsx badge.tsx chip.tsx card.tsx sheet.tsx empty-state.tsx error-banner.tsx skeleton.tsx
+    auth-forms.tsx  address-sheet.tsx  profile-sheet.tsx  screen-support.ts (useBack, splitError)
+    ui/ tokens.ts text.tsx button.tsx form-field.tsx badge.tsx chip.tsx card.tsx sheet.tsx toggle.tsx empty-state.tsx error-banner.tsx skeleton.tsx
     *.test.ts(x), ui/*.test.tsx
 ```
 
@@ -94,7 +94,7 @@ No `metro.config.js`: Expo SDK 52 and later configure Metro for npm workspaces t
 - `session.ts` mirrors web's: a module-level token read once at load, `setToken`, `useToken` (`useSyncExternalStore` with a server snapshot of `undefined`, since the static export renders in Node). Storage: on iOS and Android `expo-secure-store`'s synchronous `getItem` and `setItem`, and `deleteItemAsync` to clear (there is no synchronous delete); on the web export (`Platform.OS === 'web'`) `localStorage`, because `expo-secure-store` has no web implementation. Every storage call sits in `try`/`catch`: blocked storage keeps the token in memory only, as on web. Ponytail ceiling: a sign-out followed within milliseconds by a sign-in could let the late delete remove the new token from storage (memory keeps it); chain the writes if that is ever seen.
 - `api.ts` is web's `api.ts` with two changes: `baseUrl` is `coreUrl` (Decision 3 of the proposal: `EXPO_PUBLIC_CORE_URL`, default `http://localhost:8080`), and the 401 rule is admin's: clear only when `request.headers.get('Authorization') === 'Bearer ' + getToken()`. The non-envelope rewrite keeps web's message and builds the new answer with only `Content-Type` (web's note on `Content-Length: 0`).
 - Queries throw `error.error` (the `ApiError`), as admin's do, so `errorKind` can tell an answer (`code` is a string) from a thrown network error.
-- `auth.ts` is web's without the guest-cart merge (L3 adds it) and without `signOutAndGoHome`: the account screen replaces the route with `/` first and then calls `signOut()`, so the account guard never sees the dropped token.
+- `auth.ts` is web's without the guest-cart merge (L3 adds it) and without `signOutAndGoHome`; the account screen owns the navigation (Decision 17).
 
 ### 6. Primitives: what is built now
 
@@ -115,6 +115,11 @@ Not built here, each by the lane that first shows it: `Stepper` and `Price` (L2,
 ### 8. Sheets
 
 React Native `Modal`, not a router presentation: one component works the same on iOS, Android and the web export (react-native-web renders it as a modal dialog with focus kept inside and calls `onRequestClose` on Escape; Android's back gesture calls it too; iOS VoiceOver stays inside through `accessibilityViewIsModal`). Ceiling: focus is not moved to the title on open; the platform puts it inside the modal.
+
+Settled in T15 (react-native-web 0.21.4 source read and probed in the browser):
+- The dialog is named by its title: `accessibilityLabel={title}` on the `Modal` reaches the dialog root on the web export (axe `aria-dialog-name`).
+- `role="dialog"`, `aria-modal` and the Escape listener arrive only when the 250 ms slide ends (react-native-web's `ModalContent` is `active` from `onAnimationEnd`); the dialog shows about 0.8 s after the tap. Escape pressed earlier does nothing. Accepted: a person cannot press Escape on a sheet before seeing it; the e2e waits for `getByRole('dialog')` before axe and Escape. Ceiling: if a user ever reports a dropped Escape, set `animationType="none"` on web or add a `keydown` listener in `sheet.tsx`.
+- The content sits in a `ScrollView` (`keyboardShouldPersistTaps="handled"`) capped at 80% of the window height (`useWindowDimensions`), so the address form and the keyboard fit an iPhone SE class phone with the header in view (R1 finding 1; 80 rather than 90 so the header and keyboard both fit).
 
 ### 9. Register without phone; profile in a sheet
 
@@ -141,22 +146,60 @@ typescript-eslint recommended plus `react-hooks`, as in `apps/web`, without `jsx
 
 `playwright.config.ts`: `testDir: 'e2e'`, Chromium, viewport 390×844, `baseURL` `http://localhost:15176/`, web servers `go run ./cmd/core` in `../../services/core` (health URL on 18080) and `npx expo serve dist-e2e --port 15176`, both `reuseExistingServer: !process.env.CI`, as `apps/web` does. `AxeBuilder({ page }).analyze()` with every rule, as web. Registrations use fresh emails (`e2e-<time>-<random>@example.com`); the demo customer is only signed in.
 
+### 14. Toggle instead of React Native's Switch
+
+`src/ui/toggle.tsx`: a `Pressable` with `accessibilityRole="switch"`, `accessibilityLabel`, `accessibilityState={{ checked }}` and `aria-checked={checked}`, a 44 px row with the label, and a track (`lineStrong` off, `accent` on) and thumb (`surface`) from tokens. React Native's `Switch` on the web export nests an `<input role="switch">` inside a `div role="switch"` with no `aria-checked` (axe `nested-interactive`, `aria-required-attr`), and no axe rule is switched off. `aria-checked` is passed as well as `accessibilityState` because react-native-web 0.21.4 reads only `aria-checked` for a `Pressable`. Jest cannot see the web attribute (the host does not forward it), so the e2e axe run on the open address sheet is its test; `toggle.test.tsx` covers the role, state and flip. Every later on/off control uses `Toggle`.
+
+### 15. Document titles
+
+- `src/app/+html.tsx` is the static shell of every exported page: `<html lang="en">`, `<title>ShopperStop</title>`, and `useServerDocumentContext()`'s head and body nodes (without them the export does not hydrate). The static title is needed because the root layout renders nothing until the fonts load, so the static renderer never reaches a screen's `Head`.
+- Each screen sets `<Head><title>{screen} · ShopperStop</title></Head>` from `expo-router/head` (Home, Categories, Your orders, Sign in, Create account, My account, Page not found); the client applies it after hydration. Later screens follow the same pattern. `apps/web` titles stay `ShopperStop`; aligning them is web's call.
+
+### 16. Enter submits; row actions guarded
+
+R1 findings 2 and 3, fixed in T15: Password carries `returnKeyType="go"` and `onSubmitEditing={submit}` on both forms; the account screen disables Edit, Set as default and Delete on every row while one row action is pending (one state for the list, not per row: there is one customer and seldom more than a few addresses). `useBack` and `splitError` moved to `src/screen-support.ts` (R1 finding 4).
+
+### 17. Sign-out navigation
+
+`router.replace('/')` before `signOut()` did not hold: the token clears while `/account` is still mounted and its `<Redirect>` to sign-in wins (T15 e2e red). The account route keeps a `leaving` state set by Sign out; while it is set and no token is held the route renders nothing instead of the redirect, so the replace to `/` lands. The redirect still applies to every other signed-out visit.
+
+### 18. e2e reseed and lint config name
+
+- `e2e/global-setup.ts` runs `core-admin migrate` and `seed-demo --reset` before the suite, as `make e2e` does before every workspace, so a standalone `npm run e2e` starts from the demo customer; it refuses any `SHOPPERSTOP_CORE_DATABASE_URL` whose database name does not end in `_e2e`.
+- `eslint.config.mjs`, not `.js`: the workspace has no `"type"` (Expo's entry), and the `.js` name made Node print `MODULE_TYPELESS_PACKAGE_JSON` on every lint run (T1, renamed in T4).
+- Router scenarios that navigate are split one per file (`account-home`, `account-sign-in`, `account-sign-out`, `account-redirect`, `auth-forms-register-home`, `auth-forms-sign-in-screen`, `shell-tabs`): expo-router keeps module-level navigation state between tests in one file. Do not merge them.
+
 ## Scenario to test
+
+Acceptance (16.1) map: every test named below passed in `npm run test --workspace apps/mobile -- --run` (25 suites, 91 tests) and in the T15 `make e2e` run (mobile 4 of 4).
 
 | Scenario | Test file: test name | Task |
 |---|---|---|
-| Root test arguments ignored; Web export built | gate commands | 1 |
+| Root test arguments ignored; Web export built | gate commands (`npm run test ... -- --run` exits 0; `npm run build` writes `dist/index.html`, `sign-in.html`, `register.html`, `account.html`) | 1 |
 | No literal colours in the app | `src/no-literal-colors.test.ts`: `no literal colours in src`, `scanner finds literal colours` | 1 |
 | Default core URL; Bearer attached; 401 to the current token; 401 without a token keeps a new session; 401 to a replaced token keeps the new session; Empty failed answer becomes internal; HTML failed answer becomes internal; Enveloped failure passes through; Bare 401 ends the session and becomes internal; No content answer untouched; Failed write reports an error; Unreachable core reports an error | `src/api.test.ts`: the scenario names | 2 |
 | Token persisted and cleared; Token restored on load | `src/session.test.ts`: the scenario names | 2 |
 | Unsafe returnTo ignored | `src/auth.test.ts`: `unsafe returnTo ignored` | 3 |
-| Sheet closed | `src/ui/sheet.test.tsx`: `sheet closed` | 7 |
-| Home in the tabs; Tab switch; Unknown path | `src/shell.test.tsx`: the scenario names | 10 |
-| Sign-in screen; Password shown on request; Required fields checked; Short password on register; Field error from the envelope; Non-field error in an alert; Register lands on Home | `src/auth-forms.test.tsx`: the scenario names | 11 |
-| Profile saved (sheet half: body sent, sheet closed, cache updated); Bad phone from the envelope | `src/profile-sheet.test.tsx`: the scenario names | 12 |
+| Sheet closed | `src/ui/sheet.test.tsx`: `sheet closed`, `sheet closed title is hidden` | 7 |
+| Sheet content scrolls; Sheet dialog named by its title | `src/ui/sheet.test.tsx`: `sheet content scrolls`, `sheet dialog is named by its title` | 15 |
+| Home in the tabs; Unknown path | `src/shell.test.tsx`: `home in the tabs`, `unknown path` | 10 |
+| Tab switch | `src/shell-tabs.test.tsx`: `tab switch` | 10 |
+| Sign-in screen | `src/auth-forms-sign-in-screen.test.tsx`: `sign-in screen` | 11 |
+| Password shown on request; Required fields checked; Short password on register; Field error from the envelope; Non-field error in an alert | `src/auth-forms.test.tsx`: the scenario names (plus `required fields checked on register`) | 11 |
+| Register lands on Home | `src/auth-forms-register-home.test.tsx`: `register lands on Home` | 11 |
+| Enter in Password submits | `src/auth-forms-enter.test.tsx`: `enter in password signs in`, `enter in password registers` | 15 |
+| Profile saved (sheet half: body sent, sheet closed, cache updated); Bad phone from the envelope | `src/profile-sheet.test.tsx`: `profile saved`, `bad phone from the envelope` (plus `empty name checked`) | 12 |
 | Address added; Edit sheet prefilled; Address sheet checks fields; Envelope field error in the sheet | `src/address-sheet.test.tsx`: the scenario names | 13 |
-| Profile shown; Profile saved (card half); Sign out; Addresses and default; Address deleted; No addresses; Signed-out account redirect; Sign in returns to the account; Account button opens the account; Loading account; Core unreachable with nothing held; Core failure with nothing held; Failed refetch keeps the account | `src/account.test.tsx`: the scenario names | 14 |
-| Demo customer signs in; Register with a field error; Addresses against core; Sign out against core | `e2e/accounts.spec.ts`: the scenario names | 15 |
+| Default switch reports its state | `src/ui/toggle.test.tsx`: `toggle is a switch with its checked state and reports the flip`, `checked toggle reports off on press`; web `aria-checked` by axe in `e2e/accounts.spec.ts`: `addresses against core` | 15 |
+| Profile shown; Profile saved (card half); Addresses and default; Address deleted; No addresses; Loading account; Core unreachable with nothing held; Core failure with nothing held; Failed refetch keeps the account | `src/account.test.tsx`: the scenario names | 14 |
+| Row action not sent twice | `src/account.test.tsx`: `set default is not sent twice while pending`, `delete is not sent twice while pending` | 15 |
+| Account button opens the account | `src/account-home.test.tsx`: `Account button opens the account` | 14 |
+| Sign in returns to the account | `src/account-sign-in.test.tsx`: `Sign in returns to the account` | 14 |
+| Sign out | `src/account-sign-out.test.tsx`: `Sign out` | 14 |
+| Signed-out account redirect | `src/account-redirect.test.tsx`: `Signed-out account redirect` | 14 |
+| Static shell title | `src/html-shell.test.tsx`: `exported pages carry the app title in the static shell` | 15 |
+| Screen title | `e2e/accounts.spec.ts`: `demo customer signs in` (`toHaveTitle('Sign in · ShopperStop')`) | 15 |
+| Demo customer signs in; Register with a field error; Addresses against core; Sign out against core | `e2e/accounts.spec.ts`: the scenario names (Addresses also waits for the dialog, runs axe on the open sheet and closes it with Escape) | 15 |
 
 Tasks 4, 5, 6, 8 and 9 test primitives no scenario names directly (their tests are listed in tasks.md); the scenarios above exercise them through the screens.
 
@@ -167,3 +210,12 @@ Tasks 4, 5, 6, 8 and 9 test primitives no scenario names directly (their tests a
 - [Jest and the hoisted monorepo] -> `@shopperstop/ui` resolves to `packages/ui` through the workspace link and is transformed by Babel; the `make test-web` order (ui build first) gives `dist/` for `@shopperstop/ui/tokens` and `/testing`; a worker running the mobile gates alone builds `packages/ui` first.
 - [Static rendering runs screen modules in Node] -> no module touches `window`, `localStorage` or the secure store outside `try`/`catch` or effects.
 - [`expo export` in CI time] -> first export is the slowest step of `make test-web`; measured in task 1's log.
+- [Cold Jest cache] -> on a cold transform cache (`jest --no-cache`, as on a fresh CI runner) the router tests transform expo-router inside the test and exceed Jest's 5 s default (16.1 saw 2 to 6 timeouts; warm runs pass 91 of 91). Task 15.4 raises `testTimeout`.
+
+## Deferred to later lanes
+
+- L2: inline style objects and raw numbers in `ui/error-banner.tsx`, `ui/chip.tsx`, `ui/skeleton.tsx` and `app/(tabs)/index.tsx` move to `StyleSheet.create` and `spacing`; `ErrorBanner`'s "Try again" reuses `Button` instead of its own recipe (R1 finding 5).
+- L2 (pincode entry on Home): `FormField` takes no `style`, so the address sheet's Pincode is not in `tabular-nums` as `docs/design/mobile-P4-L1.md` section 12 asks (T13); L2 adds an input-style prop to `FormField` and uses it on both pincode inputs.
+- L3: the sign-in copy "Your cart stays as it is." (`auth-forms.tsx`) is true only once the cart exists; L3 keeps or rewrites it with the merge (R1 finding 10).
+- Any lane next touching `jest.config.js`: the lucide mapping hard-codes `<rootDir>/../../node_modules/lucide-react-native/...`; use `require.resolve('lucide-react-native/dist/cjs/lucide-react-native.js')` so it survives a change in hoisting (R1 finding 8).
+- Watch (R1 finding 7): `/account` is exported as the signed-out redirect and hydrates as the account when a token is held; Expo recovers by client render and the T15 reload in `addresses against core` passed axe. Revisit if a hydration warning shows in the walk.

@@ -119,6 +119,13 @@ A path no route matches SHALL show the level-1 heading "Page not found" and a "G
 - **WHEN** the customer types into Password and chooses "Show password"
 - **THEN** the Password input no longer hides its text and the toggle is now named "Hide password"
 
+### Requirement: Mobile forms submit from Password
+Submitting from the Password input of sign-in or register (Enter on the web export, the keyboard's Go key on a device) SHALL submit the form as its button does.
+
+#### Scenario: Enter in Password submits
+- **WHEN** the customer fills the sign-in or the register form and submits from the Password input
+- **THEN** exactly one `POST /auth/sign-in` or `POST /auth/register` is sent and its answer is shown
+
 ### Requirement: Mobile sign-in and register checks
 Before calling core, the screens SHALL show "Enter your name", "Enter your email" or "Enter your password" under an empty required field and, on register, "Use 8 to 72 characters" for a password outside 8 to 72 bytes. An envelope error naming a shown field SHALL show under that field; any other failure SHALL show in an alert above the form.
 
@@ -194,8 +201,15 @@ The account screen SHALL list `GET /me/addresses` under "Saved addresses", each 
 - **WHEN** core lists no addresses
 - **THEN** "No saved addresses. Add one to check out faster." and an "Add address" button are shown
 
+### Requirement: Mobile address row actions sent once
+While an address row action is waiting for core, the row actions SHALL be disabled, so a second tap sends nothing.
+
+#### Scenario: Row action not sent twice
+- **WHEN** the customer chooses "Set as default" or "Delete" on "Work" twice before core answers the first
+- **THEN** one `PATCH` or one `DELETE` was sent
+
 ### Requirement: Mobile address sheet
-Adding and editing SHALL use one sheet titled "Add address" or "Edit address" with "Save as" chips Home, Work and Other (plus the address's own label when it is none of these), "House, flat, floor", "Street and area" (optional), "Pincode", a "Make this my default address" switch, and "Save address", which sends `POST /me/addresses` or `PATCH /me/addresses/{id}` and closes the sheet only on success.
+Adding and editing SHALL use one sheet titled "Add address" or "Edit address" with "Save as" chips Home, Work and Other (plus the address's own label when it is none of these), "House, flat, floor", "Street and area" (optional), "Pincode", a "Make this my default address" switch that announces its on or off state, and "Save address", which sends `POST /me/addresses` or `PATCH /me/addresses/{id}` and closes the sheet only on success.
 
 #### Scenario: Address added
 - **WHEN** the customer chooses the "Work" chip, enters `1 Park St` and `560038`, turns on the default switch and saves, and core answers 201
@@ -204,6 +218,10 @@ Adding and editing SHALL use one sheet titled "Add address" or "Edit address" wi
 #### Scenario: Edit sheet prefilled
 - **WHEN** the sheet opens for the address "Gym", `5 Lake Rd`, `560001`, not default
 - **THEN** the title is "Edit address", the "Gym" chip is selected, the inputs hold `5 Lake Rd` and `560001`, the switch is off, and saving sends `PATCH /me/addresses/<id>`
+
+#### Scenario: Default switch reports its state
+- **WHEN** the "Make this my default address" switch is off and the customer chooses it
+- **THEN** it is found by the role switch and its label, its state is checked false before the press, and the sheet is told it is now on
 
 ### Requirement: Mobile address sheet checks
 The address sheet SHALL show "Enter house, flat or floor" for an empty first line and "Enter a 6-digit pincode" unless the pincode is six digits, and send nothing then; an envelope error naming `label`, `line1`, `line2` or `pincode` SHALL show under that field and keep the sheet open; any other failure SHALL show in an alert inside the sheet.
@@ -217,11 +235,30 @@ The address sheet SHALL show "Enter house, flat or floor" for an empty first lin
 - **THEN** "Pincode is not valid" shows under Pincode and the sheet stays open
 
 ### Requirement: Mobile sheets
-A sheet SHALL open as a modal from the bottom of the screen on a dimmed backdrop, with its title as a heading and a "Close" icon button; the close button, a tap on the backdrop, the Android back gesture and Escape on the web export SHALL each close it.
+A sheet SHALL open as a modal from the bottom of the screen on a dimmed backdrop, with its title as a heading and a "Close" icon button, and SHALL be a dialog named by its title. Its content SHALL scroll inside the sheet once it is taller than 80% of the window. The close button, a tap on the backdrop, the Android back gesture and Escape on the web export SHALL each close it.
 
 #### Scenario: Sheet closed
 - **WHEN** a sheet titled "Edit profile" is open and the customer chooses "Close", or the platform asks the modal to close
 - **THEN** the sheet's title is no longer shown
+
+#### Scenario: Sheet content scrolls
+- **WHEN** a sheet titled "Add address" is open
+- **THEN** its content sits in a scroll view that keeps taps while the keyboard is up
+
+#### Scenario: Sheet dialog named by its title
+- **WHEN** a sheet titled "Add address" is open
+- **THEN** its modal carries the name "Add address"
+
+### Requirement: Mobile document titles
+Every page of the web export SHALL carry `<title>ShopperStop</title>` and `<html lang="en">` in its static shell, and each screen SHALL set the document title to "<screen> · ShopperStop" when it renders.
+
+#### Scenario: Static shell title
+- **WHEN** the static shell of the export is rendered with no screen
+- **THEN** the markup holds `<title>ShopperStop</title>` and `<html lang="en">`
+
+#### Scenario: Screen title
+- **WHEN** a browser on the web export is sent from `/account` to the sign-in screen
+- **THEN** the document title is "Sign in · ShopperStop"
 
 ### Requirement: Mobile screens keep data when a refetch fails
 Every screen that shows a read from core SHALL show a skeleton labelled "Loading" while it holds no answer and no error, an error state while it holds no answer and the read failed, and otherwise the last answer it holds, also when a later read fails. The error state SHALL be an alert titled "You're offline" (core unreachable) or "Something went wrong on our side" (core answered a failure) with a "Try again" button that repeats the read.
