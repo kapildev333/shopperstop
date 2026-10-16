@@ -1,8 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { configure } from '@testing-library/react-native'
 import { queryClient } from './src/api'
 import { clearCart } from './src/cart'
 import { closePincodeSheet, setPincode } from './src/pincode'
 import { setToken } from './src/session'
+
+// findBy waits 1000 ms by default; a cold expo-router render under parallel load can exceed that, so waits get 5 s.
+configure({ asyncUtilTimeout: 5000 })
 
 // Query's gc timers (5 minutes each) would outlive the test and keep Jest from exiting; no test needs cache eviction.
 queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } })
