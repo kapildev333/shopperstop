@@ -73,7 +73,7 @@ function Details({ order }: { order: Order }) {
             <li key={i}>
               {/* A payment event leaves the status where it was: its note says what happened. */}
               {event.fromStatus === event.toStatus ? (
-                `${event.note}, by ${event.actorName ?? actor[event.actorType]}, ${when(event.createdAt)}`
+                `${event.note ?? ''}, by ${event.actorName ?? actor[event.actorType]}, ${when(event.createdAt)}`
               ) : (
                 <>
                   {statusLabel[event.toStatus]} by {event.actorName ?? actor[event.actorType]}, {when(event.createdAt)}

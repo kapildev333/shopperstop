@@ -25,8 +25,8 @@ Scope: `apps/admin/src/order-history.tsx`, `orders-history.test.tsx`, `apps/admi
 
 Scope: `apps/admin/src/orders.ts`, `order-sheet.tsx`, `order-sheet.test.tsx`, `orders-history.test.tsx`. Scenario: "Orders payment badge" > "Cancelled before it was paid"; "Orders history payment" (the `Select` gains "Not paid").
 
-- [ ] 3b.1 `test:` apply `patches/3b.1-not-paid-tests.diff`: `order-sheet.test.tsx` "an order cancelled before it was paid shows Not paid, never Awaiting payment, in History and on the sheet"; the History filter test expects the option "Not paid"; see 2 fail (334 total)
-- [ ] 3b.2 `feat:` apply `patches/3b.2-not-paid.diff`: `payment()` answers `unpaid` for a cancelled order whose payment is `pending`, `paymentBadge.unpaid` is `neutral` "Not paid" (`orders.ts`); a payment event's missing note reads as empty (`order-sheet.tsx`); 334 pass
+- [x] 3b.1 `test:` apply `patches/3b.1-not-paid-tests.diff`: `order-sheet.test.tsx` "an order cancelled before it was paid shows Not paid, never Awaiting payment, in History and on the sheet"; the History filter test expects the option "Not paid"; see 2 fail (334 total)
+- [x] 3b.2 `feat:` apply `patches/3b.2-not-paid.diff`: `payment()` answers `unpaid` for a cancelled order whose payment is `pending`, `paymentBadge.unpaid` is `neutral` "Not paid" (`orders.ts`); a payment event's missing note reads as empty (`order-sheet.tsx`); 334 pass
 
 ## 4. e2e against core (area manager)
 

@@ -79,9 +79,11 @@ export const orderQuery = (id: string) =>
 export const statusBadge = (status: OrderStatus) => (status === 'delivered' ? 'success' : status === 'cancelled' ? 'neutral' : 'accent')
 
 // D53: how an order is paid. Core sets `paymentStatus` on online orders only, so its absence is cash. The badge always
-// carries the words; a pending payment is the one `warning`.
-export type Payment = NonNullable<Order['paymentStatus']> | 'cod'
-export const payment = (order: Order): Payment => order.paymentStatus ?? 'cod'
+// carries the words; a pending payment is the one `warning`, and a cancelled order whose payment never came (core's
+// payment timeout) is `unpaid`: nothing is awaited any more.
+export type Payment = NonNullable<Order['paymentStatus']> | 'cod' | 'unpaid'
+export const payment = (order: Order): Payment =>
+  order.status === 'cancelled' && order.paymentStatus === 'pending' ? 'unpaid' : (order.paymentStatus ?? 'cod')
 // Core refuses to accept an online order until it is paid (409 payment_pending).
 export const awaitsPayment = (order: Order) => order.status === 'placed' && order.paymentStatus === 'pending'
 export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: string }> = {
@@ -89,6 +91,7 @@ export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: strin
   pending: { variant: 'warning', label: 'Awaiting payment' },
   paid: { variant: 'success', label: 'Paid' },
   refunded: { variant: 'neutral', label: 'Refunded' },
+  unpaid: { variant: 'neutral', label: 'Not paid' },
 }
 
 // A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
