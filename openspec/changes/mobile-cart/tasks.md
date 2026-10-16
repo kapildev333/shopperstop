@@ -95,8 +95,8 @@ Scope: `src/pincode-sheet.tsx` (`PincodeForm.next()` and the alert only), `src/c
 Scenarios: Failed lookup keeps the cart's pincode; Unread server cart is fetched before comparing; Failed lookup with an empty cart.
 Starts from: `src/cart-pincode-check.test.tsx` test `failed lookup keeps the cart's pincode` (red: L2 stores the pincode). Render `PincodeSheet` as `src/pincode-sheet.test.tsx` does after `openPincodeSheet()`; a guest line at Koramangala with `560034` stored; `GET /serviceability` for `560038` throwing. Build per design.md Decision 9 and the design file "Pincode sheet: a store change needs an answer". Keep L2's two guards as they are: the `open` ref (after the awaits, `if (!open.current) return`: a dismissed sheet saves nothing and shows no alert) and the `pending` check on `onSubmitEditing`. Every test in `src/pincode-sheet.test.tsx` stays green unchanged (task 3 only changes its `setQuantity` arguments).
 
-- [ ] 8.1 `test:` the three scenarios, red
-- [ ] 8.2 `feat:` the rule; gates green
+- [x] 8.1 `test:` the three scenarios, red
+- [x] 8.2 `feat:` the rule; gates green
 
 ## 9. e2e (`e2e/cart.spec.ts`) — group D, after 1 to 8
 
