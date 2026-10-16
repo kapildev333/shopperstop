@@ -54,7 +54,7 @@ test('committed icons match the generator', () => {
   const colors = brandColors(tokensCss)
   assert.deepEqual(
     IMAGES.map((e) => e.file),
-    ['icon.png', 'adaptive-icon.png'],
+    ['icon.png', 'adaptive-icon.png', 'splash-icon.png'],
   )
   for (const entry of IMAGES) {
     const file = join(appDir, 'assets', entry.file)
