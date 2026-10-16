@@ -78,7 +78,7 @@ test('customer order to delivered across both apps', async ({ page, request, bro
   await expectNoViolations(page)
   await drawer.getByRole('button', { name: 'Close', exact: true }).click()
 
-  // 6. Sign out; the cart goes with the session.
+  // 6. Sign out; the cart goes with the session. The guest-line merge itself is covered by cart.spec.ts › "guest cart merges against core"; this step checks the cart survives sign-out and sign-in.
   await banner.getByRole('link', { name: 'E2E Flow Customer', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await expectNoViolations(page)
