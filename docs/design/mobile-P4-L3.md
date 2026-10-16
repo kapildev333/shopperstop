@@ -89,7 +89,7 @@ Body, column, gap 12, padding top 12:
 
 Footer (the `Sheet`'s new `footer`, only with lines), padding top 12:
 - `subtotalCents >= minOrderCents`: a `Link` (`asChild`) to `/checkout` with a token, else `{ pathname: '/sign-in', params: { returnTo: '/checkout' } }`, around a `Pressable` `accessibilityRole="link"` `accessibilityLabel="Proceed to checkout"` whose `onPress` calls `closeCartSheet()` (the pattern of L2's pincode sheet sign-in link): height 52, `radius.card`, `accent`, row space-between, centred, padding horizontal 16; left a column: `formatInr(totalCents)` (`body` 700 `onAccent` tabular) and "TOTAL" (`small` `onAccent`); right "Proceed" (`button` `onAccent`) and `ChevronRight` 16 `onAccent`.
-- Below the minimum: a `View` min height 52, `radius.card`, `canvas`, padding 12, centred: "Minimum order is <formatInr(minOrderCents)>. Add <formatInr(minOrderCents - subtotalCents)> more to check out." (`body` 600 `ink`, centred). (The canvas draws it in `inkMuted`; `ink` keeps 4.5:1 on `canvas`.)
+- Below the minimum: a `View` min height 52, `radius.card`, `canvas`, padding 12, centred: "Minimum order is <formatInr(minOrderCents)>. Add <formatInr(minOrderCents - subtotalCents)> more to check out." (`body` 600 `ink`, centred). (The canvas draws it in `inkMuted`; L2's axe run showed `inkMuted` fails 4.5:1 on `canvas`, so `ink`. Muted text goes only on `surface`.)
 
 States, in place of the body: signed in and no `view` yet: `Skeleton count={3}` (label "Loading"); no `view` and `isError`: L1's `ErrorBanner` with `error` and `onRetry` = `refetch`; a `view` with no lines (and the notices above it when set): artboard 14 below.
 
@@ -132,5 +132,5 @@ In `openSession`, after `startSession(opened.session)`: `await mergeGuestCart()`
 
 `PincodeForm.next()` today reads `getCartSummary()` and stores the pincode when the lookup fails. It becomes, in order:
 1. `const [answer, cart] = await Promise.all([resolvePincode(value).then((a) => a, () => undefined), loadCartSummary()])`.
-2. When `!cart || cart.count > 0` and (`!answer` or `!cart`): stop the pending state, keep the sheet open, show under the field an alert `View accessibilityRole="alert"` styled like the dialog's ("Could not empty your cart." box: `dangerSoft`, `radius.control`, padding 12) with `Text tone="danger"` "Could not check this pincode. Try again."; store nothing. The alert goes on the next Continue or field change.
+2. If `!open.current` (L2's dismissal guard), return. When `!cart || cart.count > 0` and (`!answer` or `!cart`): stop the pending state, keep the sheet open, show under the field an alert `View accessibilityRole="alert"` styled like the dialog's ("Could not empty your cart." box: `dangerSoft`, `radius.control`, padding 12) with `Text tone="danger"` "Could not check this pincode. Try again."; store nothing. The alert goes on the next Continue or field change.
 3. Otherwise L2's rule with `cart` instead of `getCartSummary()`: another store with lines opens the dialog; anything else stores and closes.

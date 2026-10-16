@@ -235,3 +235,9 @@ When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or the 
 #### Scenario: Replaced notice against core
 - **WHEN** a signed-in customer whose cart holds a product at Koramangala opens Home with `560038` chosen and chooses "Add" on a card
 - **THEN** the sheet opens with "Your cart from Koramangala was replaced. A cart holds products from one store.", after closing it the bar reads "1 item" with the same status, and axe reports no violations with the sheet open and closed
+
+## REMOVED Requirements
+
+### Requirement: Mobile cart counts before the cart
+**Reason**: Superseded by this change's cart requirements: Stepper counts are now the guest cart (async storage) or the server cart, no longer in-memory counts.
+**Migration**: None for users; "Count follows the product across screens" is still true and covered by "Mobile cart behind every Stepper", and "Counts belong to one store" by "Another store replaces the guest cart".

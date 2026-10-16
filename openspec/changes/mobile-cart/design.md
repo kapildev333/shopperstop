@@ -77,7 +77,7 @@ L2's sheet stores the pincode when the lookup fails, and reads the cart synchron
 
 ### 11. The REMOVED requirement waits for L2's archive
 
-L2's "Mobile cart counts before the cart" (in-memory counts) is superseded. A `REMOVED` delta needs it in `openspec/specs/mobile-app`, which happens only when L2's change is archived on main; until then this change validates with `ADDED` requirements only. Task 0 adds the `REMOVED` entry after the manager merges origin/main with L2 archived. L2's tests of it (`src/cart.test.ts` `counts belong to one store`) are replaced by task 1's and task 3's tests.
+L2's "Mobile cart counts before the cart" (in-memory counts) is superseded. A `REMOVED` delta needs it in `openspec/specs/mobile-app`, which happens only when L2's change is archived on main; until then this change validates with `ADDED` requirements only. Task 0 added the `REMOVED` entry once L2 was archived (#284). L2's tests of it (`src/cart.test.ts` `counts belong to one store`) are replaced by task 1's and task 3's tests.
 
 ## Contract audit (core openapi, 2026-10-16)
 
@@ -115,7 +115,7 @@ Task 2 (`Sheet` footer) and the summary and clear tests of task 3 (`src/cart.tes
 - [Store change before the server cart is read] Decision 9 closes it by awaiting the read; a Continue now waits for both answers (both cached in the common case).
 - [`useQuantity` per card calls `useStore()` and `useCart()`] Both read cached queries; dozens of cards subscribe to the same keys. Fine at the grid sizes here (24 per page).
 - [axe on the sheet] The sheet adds `StatusMessage`s (role `status`) and a link with a label; on react-native-web the dialog role arrives after the slide, so e2e waits for `getByRole('dialog', { name: 'My cart' })` before axe. An axe failure on markup the app does not control stops the worker (no rule switched off).
-- [`inkMuted` on `canvas`] The minimum-order block uses `ink` instead of the canvas's `inkMuted` to keep 4.5:1 with certainty.
+- [`inkMuted` on `canvas`] Fails axe color-contrast (found by L2, whose store notices moved to `surface`); the minimum-order block uses `ink`, and muted text stays on `surface`.
 - [`/checkout` absent until L4b] Proceed lands on the not-found screen until then (Decision 6).
 - [Parallel workers] Tasks of one group touch disjoint files; workers never amend, reset or rebase, and stage by explicit path.
-- [L2's names] L2 is not merged when this change is written. If L2's final `src/cart.ts`, `src/pincode-sheet.tsx` or the screens differ from what is named here (read from L2's branch on 2026-10-16), task 0 reconciles this change before any worker starts.
+- [L2's names] Reconciled in task 0 against L2 as merged (#283, archived #284): names, callers and mount points as named here; L2's late pincode-sheet guards (dismissal ref, `pending`) are kept by task 8.
