@@ -17,5 +17,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     { command: 'vite preview', url: 'http://localhost:15173/', reuseExistingServer },
+    // The cross-app flows (e2e/flows.spec.ts) drive the admin app too: its build, as `make e2e` made it, served as admin's own config does.
+    { command: 'npx vite preview', cwd: '../admin', url: 'http://localhost:15174/admin/', reuseExistingServer },
   ],
 })

@@ -19,7 +19,7 @@ Scenarios: web-app › "Customer site end-to-end suite with axe" › Admin previ
 Failing tests (`e2e/flows.spec.ts`): "customer order to delivered across both apps", "admin product found by customer search"; red because nothing serves port 15174 in the web suite.
 
 - [x] 1.1 The spec file committed (`test: cross-app flows`); lint and typecheck green; `grep -c 15174 apps/web/playwright.config.ts` prints 0; manager's `make e2e` shows exactly the two new tests red at the admin origin
-- [ ] 1.2 The admin preview `webServer` (`feat: serve the admin preview in the web suite`); gates green; manager's `make e2e` admin 14, web 42
+- [x] 1.2 The admin preview `webServer` (`feat: serve the admin preview in the web suite`); gates green; manager's `make e2e` admin 14, web 42
 
 ## Workflow follow-up
 - [ ] Team lead runs `/opsx:verify web-e2e-flows` after 1.2 lands and the manager's green run is recorded.
