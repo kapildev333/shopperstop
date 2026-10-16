@@ -327,7 +327,7 @@ After the core variables, `docs/postman/local.postman_environment.json` SHALL ho
 
 ### Requirement: Repository documentation matches the tree
 
-The repository SHALL have a `README.md` whose quick start runs the stack with `make dev` and whose sign-in table lists the Spec 2 §11 demo accounts and the Phase 3 demo riders, and a `CLAUDE.md` that names every developer `make` target and states the CI, end-to-end and Figma rules as PLAN.md D11, D14, D15, D17 and D29 decided. Every `make` target either file names SHALL exist in the `Makefile`, and every relative link in either file SHALL resolve to a path in the tree.
+The repository SHALL have a `README.md` whose quick start runs the stack with `make dev`, whose sign-in table lists the Spec 2 §11 demo accounts and the Phase 3 demo riders, and whose "Mobile app" section says how to run the customer mobile app with Expo. Every `make` target the README or `CLAUDE.md` names SHALL exist in the `Makefile`, and every relative link in either file SHALL resolve to a path in the tree.
 
 #### Scenario: README has the quick start
 - **WHEN** `README.md` is read
@@ -345,6 +345,18 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 - **WHEN** `README.md` is read
 - **THEN** it says that `deploy/initdb.sql` runs only when the Postgres volume is created and gives one command that applies the file's `shopperstop_rider` lines to the running `shopperstop-postgres-1` as `postgres` without `psql` on the host
 
+#### Scenario: README says how to run the mobile app
+- **WHEN** `README.md` is read on a tree without `apps/mobile`
+- **THEN** its `## Status` section names Phase 4, and it has a `## Mobile app` section containing `cd apps/mobile && npx expo start --port 5176`, `Expo Go`, `EXPO_PUBLIC_CORE_URL=http://<lan-ip>:8080`, `localhost:5176` and the words `` `apps/mobile` is not on `main` yet ``, with no Markdown link to `apps/mobile`
+
+#### Scenario: Relative links resolve
+- **WHEN** every Markdown link target in `README.md` and `CLAUDE.md` that does not start with `http` or `#` is resolved from the repository root, with any `#fragment` removed
+- **THEN** each one exists in the tree
+
+### Requirement: CLAUDE.md and docs/figma.md describe the tree
+
+`CLAUDE.md` SHALL name every developer `make` target, the `apps/mobile/` workspace and how it is run, and state the CI, end-to-end and Figma rules as PLAN.md D11, D14, D15, D17, D29, D36 and D39 decided; `docs/figma.md` SHALL name the design canvas holding the mobile screens.
+
 #### Scenario: CLAUDE.md names every developer make target
 - **WHEN** `CLAUDE.md` is read
 - **THEN** it contains `make db`, `make dev`, `make test`, `make test-core`, `make test-rider`, `make test-web`, `make e2e`, `make gen`, `make postman` and `make prod-local`, and `make -n <target>` exits 0 for each of them and for every other `make <target>` named in `README.md` or `CLAUDE.md`
@@ -353,9 +365,13 @@ The repository SHALL have a `README.md` whose quick start runs the stack with `m
 - **WHEN** `CLAUDE.md` is read
 - **THEN** it does not contain `sqlc diff` or "No product code yet", and it contains `make gen postman`, `shopperstop_core_e2e`, `shopperstop_rider_e2e`, `18080`, `18081`, `15173`, `15174`, `15175`, `22.12`, the CI job name `rider`, and the three Figma page names `Tokens & Components`, `Customer web` and `Admin web`
 
-#### Scenario: Relative links resolve
-- **WHEN** every Markdown link target in `README.md` and `CLAUDE.md` that does not start with `http` or `#` is resolved from the repository root, with any `#fragment` removed
-- **THEN** each one exists in the tree
+#### Scenario: CLAUDE.md names the mobile workspace
+- **WHEN** `CLAUDE.md` is read
+- **THEN** its layout block has a line starting `apps/mobile/`, it names Phase 4, `15176`, `5176` and `npx expo start`, and it says the mobile workspace rides on `make test-web` and `make e2e`
+
+#### Scenario: docs/figma.md links the mobile design canvas
+- **WHEN** `docs/figma.md` is read
+- **THEN** it contains `ShopperStop App Design`, `https://claude.ai/artifact/75BFgGxUe3viRFjgvn8Ywy`, `19 artboards`, `390×844` and `tokens.css`, says the Figma file has no `Mobile` page, and does not contain `add it when the mobile app spec lands`
 
 ### Requirement: PATCH bodies refuse explicit null
 A PATCH body SHALL be a JSON object, and a member whose value is `null` SHALL be refused with 400 `validation` naming that member in `field`; members that are absent leave their value unchanged.
@@ -456,11 +472,19 @@ The Makefile targets `rider`, `rider-app` and `test-rider`, and the rider steps 
 
 #### Scenario: Rider dev defaults
 - **WHEN** `make -n rider` runs with `services/rider` present and no rider variable in the environment
-- **THEN** the command carries `SHOPPERSTOP_RIDER_DATABASE_URL` for `shopperstop_rider` as `shopperstop_rider`, `SHOPPERSTOP_RIDER_ADDR=':8081'`, a `SHOPPERSTOP_RIDER_SESSION_PEPPER` of at least 32 bytes, `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175'`, `SHOPPERSTOP_RIDER_CORE_URL='http://localhost:8080'` and a non-empty `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN`
+- **THEN** the command carries `SHOPPERSTOP_RIDER_DATABASE_URL` for `shopperstop_rider` as `shopperstop_rider`, `SHOPPERSTOP_RIDER_ADDR=':8081'`, a `SHOPPERSTOP_RIDER_SESSION_PEPPER` of at least 32 bytes, `SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'`, `SHOPPERSTOP_RIDER_CORE_URL='http://localhost:8080'` and a non-empty `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN`
 
 #### Scenario: A rider variable is overridden
 - **WHEN** `make -n rider SHOPPERSTOP_RIDER_ADDR=:9091` runs with `services/rider` present
 - **THEN** the printed rider command carries `SHOPPERSTOP_RIDER_ADDR=':9091'`
+
+### Requirement: Dev origins include the mobile web export
+
+Core's and the rider service's dev web origins SHALL include the mobile app's web export origin `http://localhost:5176` (D39). The mobile app has no make target: it runs from `apps/mobile` with Expo.
+
+#### Scenario: Core accepts the mobile web export's dev origin
+- **WHEN** `make -n core` runs with `SHOPPERSTOP_CORE_WEB_ORIGINS` unset in the environment
+- **THEN** the core command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176'`, the `Makefile` names `localhost:5176` exactly twice (core's and the rider's dev defaults), and no `Makefile` line names `apps/mobile` or `expo`
 
 ### Requirement: make test runs the rider gates
 
@@ -476,7 +500,7 @@ The Makefile targets `rider`, `rider-app` and `test-rider`, and the rider steps 
 
 ### Requirement: make e2e gives the rider an isolated environment
 
-`make e2e` SHALL, when `services/rider` exists, migrate and reseed `shopperstop_rider_e2e` after core's e2e database and before building the workspaces, and SHALL run every core, rider and `npm run e2e` command with one fixed environment holding both services' e2e values. Values from the developer's shell or the dev defaults SHALL NOT reach it.
+`make e2e` SHALL, when `services/rider` exists, migrate and reseed `shopperstop_rider_e2e` after core's e2e database and before building the workspaces, and SHALL run every core, rider and `npm run e2e` command with one fixed environment holding both services' e2e values. Values from the developer's shell or the dev defaults SHALL NOT reach it. Both services' e2e web origins SHALL include the mobile app's web export preview, `http://localhost:15176` (D39).
 
 #### Scenario: Dev rider variables do not leak into e2e
 - **WHEN** the shell exports `SHOPPERSTOP_RIDER_DATABASE_URL=leak` and `SHOPPERSTOP_CORE_DATABASE_URL=leak` and `make -n e2e` runs with `services/core`, `services/rider` and `apps/web` present
@@ -484,7 +508,11 @@ The Makefile targets `rider`, `rider-app` and `test-rider`, and the rider steps 
 
 #### Scenario: e2e core accepts the e2e rider token
 - **WHEN** `make -n e2e` runs with `services/core`, `services/rider` and `apps/web` present
-- **THEN** the `npm run e2e` command carries `SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:` followed by exactly its `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN` value, that value differs from the dev default, and both services' web origins are `http://localhost:15173,http://localhost:15174,http://localhost:15175`
+- **THEN** the `npm run e2e` command carries `SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:` followed by exactly its `SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN` value, that value differs from the dev default, both services' web origins are `http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176`
+
+#### Scenario: e2e services accept the mobile web export preview
+- **WHEN** the shell exports `SHOPPERSTOP_CORE_WEB_ORIGINS=leak` and `SHOPPERSTOP_RIDER_WEB_ORIGINS=leak` and `make -n e2e` runs
+- **THEN** the printed `npm run e2e` command carries `SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176'` and `SHOPPERSTOP_RIDER_WEB_ORIGINS` with the same value, no printed line contains `leak`, and the `Makefile` names `localhost:15176` exactly twice
 
 ### Requirement: make gen runs the rider sqlc
 
