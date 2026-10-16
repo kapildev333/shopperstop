@@ -139,19 +139,22 @@ The "Sign out" button SHALL send `POST /auth/sign-out` with the token, then, wha
 - **THEN** `POST /auth/sign-out` was sent with the bearer token, the sign-in page shows, `shopperstop:rider-token` is gone, no cached answer remains and there is no "Rider" navigation
 
 ### Requirement: Ready orders list
-`/` SHALL show "Ready to pick up" as the level-1 heading and a list named "Ready orders" with `aria-live="polite"`, one card per order from `GET /me/ready-orders` in the service's order, each showing the number in `tabular-nums`, the time since it was placed ("12 min ago"), the item count ("3 items"), the total in rupees and the pincode; a card whose `paymentMethod` is `cod` SHALL also show a neutral badge "Cash" beside the total, and no other card SHALL. The list SHALL be read again every 10 seconds while the page is open.
+`/` SHALL show "Ready to pick up" as the level-1 heading and a list named "Ready orders" with `aria-live="polite"`, one card per order from `GET /me/ready-orders` in the service's order, each showing the number in `tabular-nums`, the time since it was placed ("12 min ago"), the item count ("3 items"), the total in rupees and the pincode. The list SHALL be read again every 10 seconds while the page is open.
 
 #### Scenario: Ready orders listed
 - **WHEN** the service answers two ready orders, `SS-AAAA0001` placed 12 minutes ago with 3 items, ₹339 and pincode `560034`, then `SS-AAAA0002`
 - **THEN** the "Ready orders" list has `aria-live="polite"` and two cards in that order, the first showing `SS-AAAA0001`, "12 min ago", "3 items", ₹339 and `560034`
 
-#### Scenario: Cash orders marked
-- **WHEN** the service answers a `cod` ready order and then an `online` ready order whose `paymentStatus` is `paid`
-- **THEN** the first card shows "Cash" and the second does not
-
 #### Scenario: New order appears without a reload
 - **WHEN** the page shows one ready order and the service lists a second one at the next read
 - **THEN** 10 seconds later the second card is in the list without any user action
+
+### Requirement: Cash orders marked on the ready list
+A ready card whose `paymentMethod` is `cod` SHALL show a neutral badge "Cash" beside the total, and no other card SHALL.
+
+#### Scenario: Cash orders marked
+- **WHEN** the service answers a `cod` ready order and then an `online` ready order whose `paymentStatus` is `paid`
+- **THEN** the first card shows "Cash" and the second does not
 
 ### Requirement: Ready orders states
 While the first read is pending `/` SHALL show a skeleton; with no ready orders it SHALL show "No orders ready" with "New orders show here as the store packs them."; when the read fails with no cards shown it SHALL show "Could not load ready orders." with "Try again"; when a later read fails it SHALL keep the cards shown.
