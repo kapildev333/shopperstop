@@ -4,8 +4,8 @@ import { Link } from 'expo-router'
 import { formatInr } from '@shopperstop/ui/format'
 import { ChevronRight, ShoppingBag, Timer } from 'lucide-react-native'
 import { imageUri } from './catalog'
-import { CartWriteAlert } from './cart-alert'
-import { useCart, useLineQuantity, useLineWrite, useStoreName, openCartSheet, closeCartSheet, useCartSheetOpen } from './cart'
+import { CartWriteAlert, ReplacedNotice } from './cart-alert'
+import { useCart, useLineQuantity, useLineWrite, openCartSheet, closeCartSheet, useCartSheetOpen } from './cart'
 import { itemCount, maxQuantity, mrpTotalCents, type CartLine, type CartView } from './cart-guest'
 import { useStore, type Store } from './serviceability'
 import { useToken } from './session'
@@ -26,7 +26,6 @@ export function CartSheet() {
   const open = useCartSheetOpen()
   const { view, isError, error, refetch } = useCart()
   const store = useStore()
-  const replacedFrom = useStoreName(view?.replacedStoreId) ?? 'another store'
   // A replaced answer opens the sheet once per answer: closing it keeps it closed until the next answer.
   const answer = view?.replaced ? view : undefined
   useEffect(() => {
@@ -42,7 +41,6 @@ export function CartSheet() {
           error={error}
           onRetry={refetch}
           store={store.kind === 'open' ? store.store : undefined}
-          replacedFrom={replacedFrom}
         />
       ) : null}
     </Sheet>
@@ -55,19 +53,14 @@ type BodyProps = {
   error: unknown
   onRetry: () => void
   store?: Store
-  replacedFrom: string
 }
 
-function CartBody({ view, isError, error, onRetry, store, replacedFrom }: BodyProps) {
+function CartBody({ view, isError, error, onRetry, store }: BodyProps) {
   // Nothing held yet: the read is loading, or it failed and the customer can read again.
   if (!view) return isError ? <ErrorBanner error={error} onRetry={onRetry} /> : <Skeleton count={3} />
   return (
     <View style={styles.body}>
-      {view.replaced ? (
-        <StatusMessage tone="warning">
-          {`Your cart from ${replacedFrom} was replaced. A cart holds products from one store.`}
-        </StatusMessage>
-      ) : null}
+      {view.replaced ? <ReplacedNotice view={view} /> : null}
       {view.clamped ? <StatusMessage>Some quantities were lowered to what the store has.</StatusMessage> : null}
       {view.items.length === 0 ? <EmptyCart /> : <Lines view={view} store={store} />}
     </View>
