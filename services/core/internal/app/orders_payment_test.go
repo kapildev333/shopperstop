@@ -342,3 +342,45 @@ func TestPaymentServiceActorRules(t *testing.T) {
 		}
 	}
 }
+
+// TestSystemCancelNeedsPendingPayment: the payment service cancels only an order
+// awaiting payment. A paid online order and a cash order are refused with 409
+// conflict and keep their status, events and stock; the pending timeout still cancels.
+func TestSystemCancelNeedsPendingPayment(t *testing.T) {
+	system := map[string]any{"status": "cancelled", "note": "not paid in 15 minutes", "actor": map[string]string{"type": "system", "name": "payment timeout"}}
+
+	o, s := onlineOrder(t)
+	mustPay(t, o.ID, "paid", "pay_1")
+	status, body := setStatus(t, testPaymentToken, o.ID, system)
+	expectError(t, "system cancels a paid order", status, body, http.StatusConflict, "conflict", "", "")
+	if got, n := orderStatus(t, o.ID), eventCount(t, o.ID); got != "placed" || n != 2 {
+		t.Fatalf("after the refused cancel: status %s with %d events, want placed with 2", got, n)
+	}
+	if got := quantityAt(t, s.ID, o.Items[0].ProductID); got != 3 {
+		t.Fatalf("stock after the refused cancel %d, want 3", got)
+	}
+
+	c := newShop(t)
+	p := cartProduct(t, c.ID, stockName(t), 5000)
+	stockTo(t, c.ID, p, 5)
+	b := newBuyer(t, c.Pincode)
+	setLine(t, b.Token, c.ID, p, 2)
+	status, body = placePaid(t, b, "cod")
+	var cash orderView
+	if status != http.StatusCreated || json.Unmarshal(body, &cash) != nil {
+		t.Fatalf("place cod: got %d %s, want 201", status, body)
+	}
+	status, body = setStatus(t, testPaymentToken, cash.ID, system)
+	expectError(t, "system cancels a cash order", status, body, http.StatusConflict, "conflict", "", "")
+	if got := orderStatus(t, cash.ID); got != "placed" {
+		t.Fatalf("cash order after the refused cancel: status %s, want placed", got)
+	}
+	if got := quantityAt(t, c.ID, p); got != 3 {
+		t.Fatalf("stock after the refused cash cancel %d, want 3", got)
+	}
+
+	pending, _ := onlineOrder(t)
+	if got := mustStatus(t, testPaymentToken, pending.ID, system); got.Status != "cancelled" {
+		t.Fatalf("timeout of a pending order: status %s, want cancelled", got.Status)
+	}
+}
