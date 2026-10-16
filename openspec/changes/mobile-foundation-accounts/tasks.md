@@ -53,9 +53,9 @@ Scope: `apps/mobile/src/ui/{tokens.ts,text.tsx,text.test.tsx}`.
 Behaviour: Decision 6 (Text) and Decision 7 (tokens).
 Starts from: `src/ui/text.test.tsx`: `body text by default` (style `fontFamily` `Inter_400Regular`, `fontSize` 14, `lineHeight` 20, `color` `colors.ink`), `variant picks the family by weight` (`display` gives `Inter_700Bold` 28/34; `h3` `Inter_600SemiBold`), `tone` (`inkMuted`, `danger`, `accent`, `onBrand`, `onAccent`), `heading is announced` (`heading={1}` is found by `getByRole('heading', { name })`), `tabular numbers` (`fontVariant` `['tabular-nums']`).
 
-- [ ] 4.1 Red
-- [ ] 4.2 `tokens.ts` re-exports `colors, radius, spacing, type, motion, shadows` from `@shopperstop/ui/tokens` and adds `fontFamily(weight: 400 | 600 | 700)`; `text.tsx` per Decision 6 (`role="heading"`, `aria-level` through the one cast)
-- [ ] 4.3 Gates green
+- [x] 4.1 Red
+- [x] 4.2 `tokens.ts` re-exports `colors, radius, spacing, type, motion, shadows` from `@shopperstop/ui/tokens` and adds `fontFamily(weight: 400 | 600 | 700)`; `text.tsx` per Decision 6 (`role="heading"`, `aria-level` through the one cast)
+- [x] 4.3 Gates green
 
 ## 5. Button and IconButton
 

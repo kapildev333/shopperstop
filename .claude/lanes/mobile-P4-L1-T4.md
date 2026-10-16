@@ -32,3 +32,20 @@ Cause: `@testing-library/react-native` 14.1.0 `render` is async (`await render(.
 ## Found, deviation
 
 Running `npx jest` from the worktree root uses no jest config and fails to parse JSX; run the app's suite from `apps/mobile` (`npx jest --ci src/ui`) when a single file is needed. `npm run test` has no way to pass a file filter (the script ignores arguments).
+
+## Green (4.2, 4.3)
+
+`src/ui/tokens.ts` re-exports `colors, radius, spacing, type, motion, shadows` from `@shopperstop/ui/tokens` and adds `fontFamily(weight)` (400, 600, 700 to the three Inter faces). `src/ui/text.tsx`: `Text({ variant, tone, heading, tabular, ...TextProps })`; the family follows the variant's weight, never `fontWeight`; `heading` sets `role="heading"` and `aria-level` through the one cast; `tabular` adds `fontVariant: ['tabular-nums']`. The `tabular` prop name is my choice (Decision 6 names no prop for tabular numbers); it is the only API addition beyond the brief.
+
+Gates (last lines):
+
+```
+npm run build --workspace packages/ui                 exit 0
+npm run lint --workspace apps/mobile                  no MODULE_TYPELESS warning (2 errors left are in T2's api.test.ts and session.test.ts, not in scope)
+npm run typecheck --workspace apps/mobile             tsc exit 0
+npm run test --workspace apps/mobile -- --run         (see the feat-commit run; 5 Text tests pass)
+npm run build --workspace apps/mobile                 Exported: dist (sitemap, +not-found, index, ...)
+openspec validate mobile-foundation-accounts --strict Change 'mobile-foundation-accounts' is valid
+```
+
+`tasks.md`: task 4 boxes ticked (4.1, 4.2, 4.3); no other task touched.
