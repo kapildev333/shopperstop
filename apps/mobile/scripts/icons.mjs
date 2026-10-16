@@ -33,8 +33,15 @@ function declaration(css, name) {
   return match[1].trim()
 }
 
+// A non-hex token would make rgb() yield NaN, which encodes as 0: fail here instead.
+function hexToken(css, name) {
+  const value = declaration(css, name)
+  if (!/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`tokens.css --${name} must be #RRGGBB, got ${value}`)
+  return value
+}
+
 export function brandColors(css) {
-  return { brand: declaration(css, 'brand'), onBrand: declaration(css, 'on-brand') }
+  return { brand: hexToken(css, 'brand'), onBrand: hexToken(css, 'on-brand') }
 }
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
