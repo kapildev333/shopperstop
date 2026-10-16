@@ -77,7 +77,7 @@ The two stores are Koramangala (pincodes 560034 and 560095) and Indiranagar (pin
 
 ## Mobile app
 
-The customer mobile app is an Expo (React Native) app in `apps/mobile`, from Phase 4; device runs and release builds are covered in `apps/mobile/README.md`. It uses the same core service as the customer web, so start the stack with `make dev` first, then in another terminal:
+The customer mobile app is an Expo (React Native) app in `apps/mobile`, from Phase 4; device runs and release builds are covered in [apps/mobile/README.md](apps/mobile/README.md). It uses the same core service as the customer web, so start the stack with `make dev` first, then in another terminal:
 
 ```sh
 cd apps/mobile && npx expo start --port 5176
