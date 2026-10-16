@@ -1,5 +1,5 @@
 # rider-P5-L1-T2 - rider app cash badge and amount line (task 2 of rider-collect-cash)
-Status: red committed (test commit); code next
+Status: done (red in test commit, green in feat commit)
 
 ## Brief
 - LANE-ID: rider-P5-L1 (task T2). Area: `rider`.
@@ -20,6 +20,14 @@ If a diff does not apply, the red/green counts differ or a gate fails, stop and 
 ## Red run
 `npm run test --workspace apps/rider -- --run`: 2 files failed, **5 failed / 59 passed (64)**. Failing: `ready.test.tsx` cash orders marked; `delivery.test.tsx` assigned delivery shown, cash on delivery, paid online, awaiting payment (`Unable to find` the `Collect ₹339 in cash` / `Paid online` / `Awaiting payment` text; the cash badge `getByText('Cash')` misses on the ready card). `delivered cod/online shows no payment line` pass already (no line is the current behaviour).
 ## Green run
+rider Vitest: 10 files, **64 passed (64)**.
 ## Gates
+- `npm run lint --workspace apps/rider`: exit 0 (eslint, no output).
+- `npm run typecheck --workspace apps/rider`: exit 0.
+- `npm run test --workspace apps/rider -- --run`: exit 0, 64 passed.
+- `npm run build --workspace apps/rider`: exit 0.
+- `make test-web` (root): exit 0. Per workspace: ui 35 files/104 tests; admin 27 files/327 tests; mobile 90 suites/356 tests (jest, plus scripts node --test); rider 10 files/64 tests; web 29 files/183 tests. Builds of ui, admin, rider, web all green.
+- Go tests not run (per brief).
+- `e2e/flow.spec.ts` changed but not run (manager's `make e2e`).
 ## Found
 ## Blockers

@@ -17,8 +17,8 @@ Scope: `services/rider/migrations/0004_delivery_payment_status.sql` (new), `serv
 
 Scope: `apps/rider/src/ready.tsx`, `apps/rider/src/delivery.tsx`, `apps/rider/src/ready.test.tsx`, `apps/rider/src/delivery.test.tsx`, `apps/rider/src/fake-api.ts`, `apps/rider/e2e/flow.spec.ts`; this file (ticks). Needs task 1 committed (`rider.d.ts`). Scenarios: rider-app "Ready orders list" / Cash orders marked (`ready.test.tsx` `cash orders marked`); "Cash to collect" / Cash on delivery (`cash on delivery`), Paid online (`paid online`), Awaiting payment (`awaiting payment`), Delivered shows no collection (`delivered cod shows no payment line`, `delivered online shows no payment line`); "Cross-app delivery flow" / Customer to rider to delivered (`e2e/flow.spec.ts` `customer to rider to delivered`, run by the manager with `make e2e`). Starts from those Vitest tests: 5 failed / 59 passed (the four delivery tests including `assigned delivery shown`, whose status text changes, and `cash orders marked`). Commits: `test: rider cash badge and payment line`, `feat: rider marks cash orders and shows collect, paid online or awaiting payment`.
 
-- [ ] 2.1 Apply design.md "Task 2: tests"; `npm run build --workspace packages/ui`; `npm run test --workspace apps/rider -- --run` shows exactly the 5 failures; commit.
-- [ ] 2.2 Apply "Task 2: code"; gates `npm run lint|typecheck|test|build --workspace apps/rider` (64 tests), then `make test-web`; tick 2.1 and 2.2; commit.
+- [x] 2.1 Apply design.md "Task 2: tests"; `npm run build --workspace packages/ui`; `npm run test --workspace apps/rider -- --run` shows exactly the 5 failures; commit.
+- [x] 2.2 Apply "Task 2: code"; gates `npm run lint|typecheck|test|build --workspace apps/rider` (64 tests), then `make test-web`; tick 2.1 and 2.2; commit.
 
 ## 3. Acceptance (team lead) and verification (manager)
 
