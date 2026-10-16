@@ -16080,6 +16080,318 @@
           }
         },
         {
+          "name": "Tail order events",
+          "request": {
+            "name": "Tail order events",
+            "description": {
+              "content": "The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): every order event with seq above after, ascending by seq, at most limit of them, each with its order's id, number, store, customer and current payment state. Services learn about orders by polling this feed with the last seq they handled (D51); core never calls out. seq follows commit order, so a caller that moves its cursor to the last seq it read never skips an event. A cursor list, not a page: the answer is {items} with no page, pageSize or total. after (default 0) must be a whole number at least 0 and limit (default 100) a whole number from 1 to 500, else 400 naming the parameter. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "order-events"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                    "type": "text/plain"
+                  },
+                  "key": "after",
+                  "value": "40"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "At most this many events. Default 100.",
+                    "type": "text/plain"
+                  },
+                  "key": "limit",
+                  "value": "100"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{serviceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The next events, ascending by seq; empty when there are none.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"items\": [\n    {\n      \"seq\": 41,\n      \"orderId\": \"00000000-0000-4000-8000-000000000704\",\n      \"orderNumber\": \"SS-DEMOAAAE\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"toStatus\": \"placed\",\n      \"paymentMethod\": \"online\",\n      \"paymentStatus\": \"paid\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:20:00Z\"\n    },\n    {\n      \"seq\": 42,\n      \"orderId\": \"00000000-0000-4000-8000-000000000704\",\n      \"orderNumber\": \"SS-DEMOAAAE\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"placed\",\n      \"paymentMethod\": \"online\",\n      \"paymentStatus\": \"paid\",\n      \"actorType\": \"system\",\n      \"createdAt\": \"2026-10-13T09:21:00Z\"\n    },\n    {\n      \"seq\": 43,\n      \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n      \"orderNumber\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"customerId\": \"00000000-0000-4000-8000-000000000201\",\n      \"fromStatus\": \"placed\",\n      \"toStatus\": \"cancelled\",\n      \"paymentMethod\": \"cod\",\n      \"actorType\": \"customer\",\n      \"createdAt\": \"2026-10-13T09:25:00Z\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "after or limit is not a whole number in its range (field after or limit).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"must be a whole number from 1 to 500\",\n    \"field\": \"limit\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No token, an unknown token or a customer token.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A staff session or a service other than payment.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-events"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "Answer only events with a higher seq. Default 0, from the first event.",
+                        "type": "text/plain"
+                      },
+                      "key": "after",
+                      "value": "40"
+                    },
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "At most this many events. Default 100.",
+                        "type": "text/plain"
+                      },
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"services only\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "List a store's orders",
           "request": {
             "name": "List a store's orders",

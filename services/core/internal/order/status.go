@@ -87,7 +87,7 @@ func Transition(ctx context.Context, pool *pgxpool.Pool, id string, sc scope, to
 				return err
 			}
 		}
-		return q.AddEvent(ctx, db.AddEventParams{
+		return addEvent(ctx, q, db.AddEventParams{
 			OrderID: id, FromStatus: &row.Status, ToStatus: to,
 			ActorType: actor.Type, ActorID: actorID, ActorName: actorName, Note: note,
 		})

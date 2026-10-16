@@ -244,6 +244,67 @@ func (q *Queries) CustomerOrders(ctx context.Context, arg CustomerOrdersParams) 
 	return items, nil
 }
 
+const eventFeed = `-- name: EventFeed :many
+select e.seq, e.order_id, o.number, o.store_id, o.customer_id, e.from_status, e.to_status,
+       o.payment_method, o.payment_status, e.actor_type, e.created_at
+from order_events e join orders o on o.id = e.order_id
+where e.seq > $1
+order by e.seq
+limit $2
+`
+
+type EventFeedParams struct {
+	After int64
+	Lim   int32
+}
+
+type EventFeedRow struct {
+	Seq           int64
+	OrderID       string
+	Number        string
+	StoreID       string
+	CustomerID    string
+	FromStatus    *OrderStatus
+	ToStatus      OrderStatus
+	PaymentMethod string
+	PaymentStatus *PaymentStatus
+	ActorType     string
+	CreatedAt     time.Time
+}
+
+// The events after seq @after, ascending, with the order's current payment state.
+func (q *Queries) EventFeed(ctx context.Context, arg EventFeedParams) ([]EventFeedRow, error) {
+	rows, err := q.db.Query(ctx, eventFeed, arg.After, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventFeedRow
+	for rows.Next() {
+		var i EventFeedRow
+		if err := rows.Scan(
+			&i.Seq,
+			&i.OrderID,
+			&i.Number,
+			&i.StoreID,
+			&i.CustomerID,
+			&i.FromStatus,
+			&i.ToStatus,
+			&i.PaymentMethod,
+			&i.PaymentStatus,
+			&i.ActorType,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrder = `-- name: GetOrder :one
 select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes, payment_status, payment_reference from orders
 where id = $1
@@ -290,6 +351,19 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 		&i.PaymentReference,
 	)
 	return i, err
+}
+
+const lockEvents = `-- name: LockEvents :exec
+select pg_advisory_xact_lock(hashtext('order_events'))
+`
+
+// Every event insert takes this lock first and holds it to commit, so seq is
+// handed out in commit order and a reader of the feed never sees seq n+1
+// committed while n is still in flight.
+// ponytail: one lock serialises every event write; per-store streams if order volume needs it.
+func (q *Queries) LockEvents(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockEvents)
+	return err
 }
 
 const lockOrder = `-- name: LockOrder :one

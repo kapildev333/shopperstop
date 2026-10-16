@@ -125,7 +125,7 @@ func Place(ctx context.Context, pool *pgxpool.Pool, customerID, addressID, metho
 		if err := q.AddItems(ctx, arg); err != nil {
 			return err
 		}
-		if err := q.AddEvent(ctx, db.AddEventParams{OrderID: id, ToStatus: db.OrderStatusPlaced, ActorType: "customer", ActorID: &customerID}); err != nil {
+		if err := addEvent(ctx, q, db.AddEventParams{OrderID: id, ToStatus: db.OrderStatusPlaced, ActorType: "customer", ActorID: &customerID}); err != nil {
 			return err
 		}
 		return cart.Clear(ctx, tx, customerID)

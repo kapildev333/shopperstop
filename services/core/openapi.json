@@ -2491,6 +2491,152 @@
         }
       }
     },
+    "/admin/order-events": {
+      "get": {
+        "operationId": "getAdminOrderEvents",
+        "summary": "Tail order events",
+        "description": "The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): every order event with seq above after, ascending by seq, at most limit of them, each with its order's id, number, store, customer and current payment state. Services learn about orders by polling this feed with the last seq they handled (D51); core never calls out. seq follows commit order, so a caller that moves its cursor to the last seq it read never skips an event. A cursor list, not a page: the answer is {items} with no page, pageSize or total. after (default 0) must be a whole number at least 0 and limit (default 100) a whole number from 1 to 500, else 400 naming the parameter. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-service-token": true,
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Answer only events with a higher seq. Default 0, from the first event.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0,
+              "default": 0
+            },
+            "example": 40
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "At most this many events. Default 100.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "example": 100
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The next events, ascending by seq; empty when there are none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderEventFeed"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "seq": 41,
+                      "orderId": "00000000-0000-4000-8000-000000000704",
+                      "orderNumber": "SS-DEMOAAAE",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "customerId": "00000000-0000-4000-8000-000000000201",
+                      "toStatus": "placed",
+                      "paymentMethod": "online",
+                      "paymentStatus": "paid",
+                      "actorType": "customer",
+                      "createdAt": "2026-10-13T09:20:00Z"
+                    },
+                    {
+                      "seq": 42,
+                      "orderId": "00000000-0000-4000-8000-000000000704",
+                      "orderNumber": "SS-DEMOAAAE",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "customerId": "00000000-0000-4000-8000-000000000201",
+                      "fromStatus": "placed",
+                      "toStatus": "placed",
+                      "paymentMethod": "online",
+                      "paymentStatus": "paid",
+                      "actorType": "system",
+                      "createdAt": "2026-10-13T09:21:00Z"
+                    },
+                    {
+                      "seq": 43,
+                      "orderId": "00000000-0000-4000-8000-000000000703",
+                      "orderNumber": "SS-DEMOAAAD",
+                      "storeId": "00000000-0000-4000-8000-000000000401",
+                      "customerId": "00000000-0000-4000-8000-000000000201",
+                      "fromStatus": "placed",
+                      "toStatus": "cancelled",
+                      "paymentMethod": "cod",
+                      "actorType": "customer",
+                      "createdAt": "2026-10-13T09:25:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "after or limit is not a whole number in its range (field after or limit).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a whole number from 1 to 500",
+                    "field": "limit"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, an unknown token or a customer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A staff session or a service other than payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "forbidden",
+                    "message": "services only"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/dashboard": {
       "get": {
         "operationId": "getDashboard",
@@ -8230,6 +8376,113 @@
             "minLength": 1,
             "maxLength": 100,
             "description": "The payment service's reference for this change, trimmed; kept as the order's paymentReference and in the event's note."
+          }
+        }
+      },
+      "OrderEventFeed": {
+        "type": "object",
+        "description": "A cursor list, not a page: no page, pageSize or total. Ask again with after set to the last seq handled; an empty items means the caller is up to date.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderFeedEvent"
+            }
+          }
+        }
+      },
+      "OrderFeedEvent": {
+        "type": "object",
+        "description": "One order event as services tail it. seq increases in commit order: an event with a higher seq never commits before one with a lower seq. A payment change is an event whose fromStatus equals its toStatus.",
+        "required": [
+          "seq",
+          "orderId",
+          "orderNumber",
+          "storeId",
+          "customerId",
+          "toStatus",
+          "paymentMethod",
+          "actorType",
+          "createdAt"
+        ],
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string",
+            "pattern": "^SS-[A-Z2-7]{8}$"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "placed",
+              "accepted",
+              "packing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "cancelled"
+            ],
+            "description": "Omitted on the placement event."
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "placed",
+              "accepted",
+              "packing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "cancelled"
+            ]
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cod",
+              "online"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "refunded"
+            ],
+            "description": "The order's payment status when the feed is read, not when the event was written. Online orders only."
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "staff",
+              "system",
+              "rider"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

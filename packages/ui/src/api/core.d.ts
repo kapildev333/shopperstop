@@ -424,6 +424,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/order-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tail order events
+         * @description The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): every order event with seq above after, ascending by seq, at most limit of them, each with its order's id, number, store, customer and current payment state. Services learn about orders by polling this feed with the last seq they handled (D51); core never calls out. seq follows commit order, so a caller that moves its cursor to the last seq it read never skips an event. A cursor list, not a page: the answer is {items} with no page, pageSize or total. after (default 0) must be a whole number at least 0 and limit (default 100) a whole number from 1 to 500, else 400 naming the parameter. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.
+         */
+        get: operations["getAdminOrderEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/dashboard": {
         parameters: {
             query?: never;
@@ -1644,6 +1664,40 @@ export interface components {
             status: "paid" | "refunded";
             /** @description The payment service's reference for this change, trimmed; kept as the order's paymentReference and in the event's note. */
             reference: string;
+        };
+        /** @description A cursor list, not a page: no page, pageSize or total. Ask again with after set to the last seq handled; an empty items means the caller is up to date. */
+        OrderEventFeed: {
+            items: components["schemas"]["OrderFeedEvent"][];
+        };
+        /** @description One order event as services tail it. seq increases in commit order: an event with a higher seq never commits before one with a lower seq. A payment change is an event whose fromStatus equals its toStatus. */
+        OrderFeedEvent: {
+            /** Format: int64 */
+            seq: number;
+            /** Format: uuid */
+            orderId: string;
+            orderNumber: string;
+            /** Format: uuid */
+            storeId: string;
+            /** Format: uuid */
+            customerId: string;
+            /**
+             * @description Omitted on the placement event.
+             * @enum {string}
+             */
+            fromStatus?: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+            /** @enum {string} */
+            toStatus: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+            /** @enum {string} */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description The order's payment status when the feed is read, not when the event was written. Online orders only.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @enum {string} */
+            actorType: "customer" | "staff" | "system" | "rider";
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;
@@ -3677,6 +3731,132 @@ export interface operations {
                      *       "error": {
                      *         "code": "conflict",
                      *         "message": "the payment is not pending"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminOrderEvents: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Answer only events with a higher seq. Default 0, from the first event.
+                 * @example 40
+                 */
+                after?: number;
+                /**
+                 * @description At most this many events. Default 100.
+                 * @example 100
+                 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The next events, ascending by seq; empty when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "seq": 41,
+                     *           "orderId": "00000000-0000-4000-8000-000000000704",
+                     *           "orderNumber": "SS-DEMOAAAE",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "toStatus": "placed",
+                     *           "paymentMethod": "online",
+                     *           "paymentStatus": "paid",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         },
+                     *         {
+                     *           "seq": 42,
+                     *           "orderId": "00000000-0000-4000-8000-000000000704",
+                     *           "orderNumber": "SS-DEMOAAAE",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "placed",
+                     *           "paymentMethod": "online",
+                     *           "paymentStatus": "paid",
+                     *           "actorType": "system",
+                     *           "createdAt": "2026-10-13T09:21:00Z"
+                     *         },
+                     *         {
+                     *           "seq": 43,
+                     *           "orderId": "00000000-0000-4000-8000-000000000703",
+                     *           "orderNumber": "SS-DEMOAAAD",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "cancelled",
+                     *           "paymentMethod": "cod",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:25:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["OrderEventFeed"];
+                };
+            };
+            /** @description after or limit is not a whole number in its range (field after or limit). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a whole number from 1 to 500",
+                     *         "field": "limit"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No token, an unknown token or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A staff session or a service other than payment. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "services only"
                      *       }
                      *     }
                      */

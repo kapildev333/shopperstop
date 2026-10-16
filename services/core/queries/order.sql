@@ -13,6 +13,13 @@ insert into order_items (order_id, product_id, name, unit_label, image_url, pric
 select @order_id::uuid, unnest(@product_ids::uuid[]), unnest(@names::text[]), unnest(@unit_labels::text[]),
        unnest(@image_urls::text[]), unnest(@price_cents::bigint[]), unnest(@mrp_cents::bigint[]), unnest(@quantities::integer[]);
 
+-- name: LockEvents :exec
+-- Every event insert takes this lock first and holds it to commit, so seq is
+-- handed out in commit order and a reader of the feed never sees seq n+1
+-- committed while n is still in flight.
+-- ponytail: one lock serialises every event write; per-store streams if order volume needs it.
+select pg_advisory_xact_lock(hashtext('order_events'));
+
 -- name: AddEvent :exec
 insert into order_events (order_id, from_status, to_status, actor_type, actor_id, actor_name, note)
 values (@order_id, sqlc.narg(from_status), @to_status, @actor_type, sqlc.narg(actor_id), sqlc.narg(actor_name), @note);
@@ -73,6 +80,15 @@ order by order_id, name, product_id;
 select order_id, from_status, to_status, actor_type, actor_name, note, created_at
 from order_events where order_id = any(@order_ids::uuid[])
 order by order_id, created_at, id;
+
+-- name: EventFeed :many
+-- The events after seq @after, ascending, with the order's current payment state.
+select e.seq, e.order_id, o.number, o.store_id, o.customer_id, e.from_status, e.to_status,
+       o.payment_method, o.payment_status, e.actor_type, e.created_at
+from order_events e join orders o on o.id = e.order_id
+where e.seq > @after
+order by e.seq
+limit @lim;
 
 -- name: CountsToday :many
 -- Orders placed since midnight in Bengaluru, by current status.

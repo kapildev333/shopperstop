@@ -24,8 +24,8 @@ Scope: `services/core/queries/order.sql` (`LockOrder`, `SetPayment`), sqlc outpu
 
 Scope: `services/core/queries/order.sql` (`LockEvents`, `EventFeed`), sqlc output (`services/core/internal/order/db/order.sql.go`; regenerated only), `services/core/internal/order/{order.go,place.go,status.go,payment.go,events.go}` (`events.go` new), `services/core/internal/app/{app.go,order_events_test.go}` (test new), `services/core/openapi.json` (Task 3 script), generated `core.d.ts` and the Postman collection, this file (ticks). Scenarios: orders "Services tail order events" (all three), "Event numbers follow commit order". Starts from `internal/app/order_events_test.go` `TestEventFeedTailsPlacements`, `TestEventFeedValidation`, `TestEventFeedForServicesOnly` (red: 404) and `TestEventWritesWaitForTheEventsLock` (red: the status change answers 200 while the lock is held). Commits: `test: events feed and commit-ordered seq`, `feat: GET /admin/order-events under the events lock`.
 
-- [ ] 3.1 `git apply --include='*_test.go'` the Task 3 block; run `go test -race -count=1 -run 'EventFeed|EventWrites' ./internal/app` and see the four fail; commit.
-- [ ] 3.2 `git apply --exclude='*_test.go'` the Task 3 block; `make gen`; run the Task 3 `openapi.json` script; `make gen postman`; run the gates; tick 3.1 and 3.2; commit.
+- [x] 3.1 `git apply --include='*_test.go'` the Task 3 block; run `go test -race -count=1 -run 'EventFeed|EventWrites' ./internal/app` and see the four fail; commit.
+- [x] 3.2 `git apply --exclude='*_test.go'` the Task 3 block; `make gen`; run the Task 3 `openapi.json` script; `make gen postman`; run the gates; tick 3.1 and 3.2; commit.
 
 ## 4. Demo order paid online
 

@@ -145,6 +145,16 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 	return out, nil
 }
 
+// addEvent appends one order event under the events lock (queries/order.sql
+// LockEvents), held to the end of the caller's transaction, so events are
+// numbered (seq) in the order they commit.
+func addEvent(ctx context.Context, q *db.Queries, arg db.AddEventParams) error {
+	if err := q.LockEvents(ctx); err != nil {
+		return err
+	}
+	return q.AddEvent(ctx, arg)
+}
+
 // newNumber is "SS-" and the 8 characters of base32 of 5 random bytes: A-Z and 2-7, no padding.
 func newNumber() (string, error) {
 	var b [5]byte

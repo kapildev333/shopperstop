@@ -86,6 +86,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, files blob.Store) c
 	r.With(a.OrService(a.RequireStaff, "rider", "payment")).Get("/api/core/v1/admin/orders/{id}", order.AdminGet(pool))
 	r.With(a.OrService(a.RequireStaff, "rider", "payment")).Post("/api/core/v1/admin/orders/{id}/status", order.SetStatus(pool))
 	r.With(a.RequireService("payment")).Post("/api/core/v1/admin/orders/{id}/payment", order.SetPayment(pool))
+	r.With(a.RequireService("payment")).Get("/api/core/v1/admin/order-events", order.Feed(pool))
 	r.With(a.RequireStaff).Get("/api/core/v1/admin/dashboard", staff.Dashboard(pool))
 	return r
 }

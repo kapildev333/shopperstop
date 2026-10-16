@@ -71,7 +71,7 @@ func SetPayment(pool *pgxpool.Pool) http.HandlerFunc {
 			if err := q.SetPayment(ctx, db.SetPaymentParams{PaymentStatus: &to, PaymentReference: ref, ID: id}); err != nil {
 				return err
 			}
-			return q.AddEvent(ctx, db.AddEventParams{
+			return addEvent(ctx, q, db.AddEventParams{
 				OrderID: id, FromStatus: &row.Status, ToStatus: row.Status,
 				ActorType: "system", ActorName: &service, Note: "Payment " + string(to) + ", reference " + ref,
 			})
