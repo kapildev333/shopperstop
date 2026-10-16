@@ -107,10 +107,14 @@ function AddressesCard() {
   // null = sheet closed; {} = adding; { address } = editing that address.
   const [sheet, setSheet] = useState<{ address?: Address } | null>(null)
   const [actionError, setActionError] = useState<string>()
+  // A row action is in flight: its buttons are disabled so a second press sends nothing.
+  const [busy, setBusy] = useState(false)
 
   // Row actions report their failure in one line at the top of the card.
   async function rowAction(request: () => Promise<ApiError | undefined>) {
+    setBusy(true)
     const error = await request()
+    setBusy(false)
     setActionError(error?.message)
   }
 
@@ -152,6 +156,7 @@ function AddressesCard() {
                 variant="ghost"
                 size="compact"
                 accessibilityLabel={`Edit ${address.label}`}
+                disabled={busy}
                 onPress={() => setSheet({ address })}
               >
                 Edit
@@ -161,6 +166,7 @@ function AddressesCard() {
                   variant="ghost"
                   size="compact"
                   accessibilityLabel={`Set ${address.label} as default`}
+                  disabled={busy}
                   onPress={() => void rowAction(() => setDefaultAddress(address.id))}
                 >
                   Set as default
@@ -170,6 +176,7 @@ function AddressesCard() {
                 variant="ghostDanger"
                 size="compact"
                 accessibilityLabel={`Delete ${address.label}`}
+                disabled={busy}
                 onPress={() => void rowAction(() => deleteAddress(address.id))}
               >
                 Delete
