@@ -199,4 +199,5 @@ Starts from: `e2e/catalog.spec.ts` with the seven scenario names, committed red 
 
 ## 17. Acceptance (team lead)
 
-- [ ] 17.1 `/opsx:verify mobile-serviceability-catalog`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run
+- [x] 17.1 `/opsx:verify mobile-serviceability-catalog`: every scenario mapped to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scopes; gates re-run
+  - Accepted 2026-10-16 (head fb10e06): ui build, mobile lint, typecheck, `npm run test --workspace apps/mobile -- --run` (Jest 68 suites, 237 tests, plus `node --test` 7), `npm run build --workspace apps/mobile`, `openspec validate --all --strict` 20 passed; every scenario mapped in design.md "Scenario to test"; tasks 1 to 16 ticked; changed files inside the task scopes plus the manager-approved extensions (`e2e/orders.spec.ts` pincode preset, `src/orders-cancel.tsx` on `Dialog`; the e2e rider URL arrived through main) and the mechanical root `package-lock.json`. Deferred items in design.md "Deferred".

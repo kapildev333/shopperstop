@@ -149,9 +149,19 @@ All inside `apps/mobile/` plus this change, `docs/design/mobile-P4-L2.md`, the l
 | Filters sent to core | `src/catalog-category-filters.test.tsx`: `filters sent to core` | 15 |
 | Header names the city | `src/catalog-home-city.test.tsx`: `header names the city` | 15 |
 | Register with a field error (heading line) | `e2e/accounts.spec.ts`: `register with a field error` | 16 |
+| Demo customer signs in; Addresses against core; Sign out against core (L1 scenarios restated in the MODIFIED requirement, unchanged) | `e2e/accounts.spec.ts`: the scenario names | L1 |
 | Pincode resolves against core; Notices against core; Home against core; Browse a category against core; Search and load more against core; Product pages against core; Store change against core; Category filters against core | `e2e/catalog.spec.ts`: the scenario names | 16 |
 
 Tasks 1, 4 and 5 test primitives and cleanups no scenario names directly; their tests are listed in tasks.md.
+
+Acceptance (17.1, 2026-10-16, head fb10e06, up to date with origin/main): every scenario above maps to a test of that name that passed: Jest `npx jest --ci` 68 suites, 237 tests, 0 failed; the e2e names exist in `e2e/catalog.spec.ts` and `e2e/accounts.spec.ts`, and the manager's `make e2e` at task 16.3 exited 0 (mobile 15 of 15). Review fixes (R1) added tests beyond the map: in `src/pincode-sheet.test.tsx`, a lookup that ends after the sheet is dismissed saves nothing (red before 98cf117) and a second "go" while pending makes one lookup (accepted as a guard: `fetchQuery` already dedupes the in-flight lookup, so it was not red on the old code; the observable rule, one request and one save, holds either way, and a stronger test would need an internal seam). The store-change title guard (7872640) has no test: the dialog content is hidden while closed, so the old `undefined` was not observable.
+
+## Deferred
+
+- Direct load of `/category/<slug>` and `/product/<slug>` on the static web export answers 404 (`expo serve` has no fallback); e2e reaches them in-app (Decision 7, ceiling). Upgrade: a host rewrite when the export is served for real.
+- The pincode lookup failure rule: L2 stores the pincode when the lookup fails (as web); mobile-P4-L3 (`mobile-cart`, Decision 9) makes the sheet stay open and store nothing when the cart has lines or cannot be read, and adds the "Could not empty your cart." test with `DELETE /me/cart`.
+- Inline layout values (paddings, gaps, sizes from `docs/design/mobile-P4-L2.md`) have no unit tests; they are checked by the manager's walk at 390x844 and on a device, and axe covers contrast and names.
+- Watch: the "Home · <label>" variant of the pincode line (Decision 14) and the descending price sort, when asked.
 
 ## Risks / Trade-offs
 
