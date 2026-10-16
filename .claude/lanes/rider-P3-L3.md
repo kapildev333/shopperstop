@@ -1,7 +1,7 @@
 # rider-P3-L3 - the rider app (OpenSpec change rider-app)
 Status: started (acceptance pass on 3e00629; 6.x is the manager's)
 ## Doing
-Team lead: re-verify on 3e00629 passed; waiting for R7's log to add it, and for the manager's 6.x.
+Team lead: re-verify on 3e00629 passed; R7 approve, its nit (failure text rounds 43.5 to 44) accepted: the comparison is unrounded, the rounded value is only the message, per task 7.3. Waiting for the manager's 6.x.
 ## Found
 - Change `openspec/changes/rider-app/`: proposal, `specs/rider-app/spec.md` (25 ADDED requirements, largest body 464 characters, each with WHEN/THEN scenarios), design.md (19 decisions, files per task, interfaces, test strategy, risks), tasks.md (5 worker tasks, 1 manager task). `openspec validate rider-app --strict` valid; `--all --strict` 17 passed. No `docs/design/rider-P3-L3.md`: design.md is enough.
 - Order: 1, then 2, 3, 4, 5 in parallel (disjoint files; task 1 creates every route file so `routeTree.gen.ts` is final), then 6 (manager). Task 2 (e2e) is test-only; its red run is the manager's `make e2e` (6.1).
