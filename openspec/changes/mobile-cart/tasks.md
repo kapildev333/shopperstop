@@ -106,7 +106,7 @@ Starts from: `e2e/cart.spec.ts` with the six scenario names, committed red befor
 
 - [x] 9.1 `test:` the spec, red; `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L3 && make e2e` output in the log
 - [x] 9.2 `fix:` commits until green; an axe failure on markup the app does not control stops the worker (no rule switched off)
-- [ ] 9.3 `make e2e` exits 0 (same command, with the slot); mobile suite all green
+- [x] 9.3 `make e2e` exits 0 (same command, with the slot); mobile suite all green
 
 ## 10. Acceptance (team lead)
 

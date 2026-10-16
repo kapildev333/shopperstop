@@ -1,6 +1,8 @@
 # mobile-P4-L3-T9 - e2e/cart.spec.ts, six scenarios against core (mobile-cart task 9)
-Status: blocked (9.3 open: `make e2e` exits non-zero on the mobile workspace, in L2's catalog test; cause and evidence under Found)
+Status: done (9.1 to 9.3 ticked; `make e2e` exit 0 twice; R1 manager items 1 to 4 landed)
 ## Doing
+Done. Manager items landed test-first: closing store-change dialog, search count ink, per-line sheet count, ReplacedNotice.
+## Doing (earlier)
 Task 9.1 and 9.2 done: `e2e/cart.spec.ts` committed red, then two test-side fixes; all six scenarios green; no app fix needed. 9.3 not met: `make e2e` from the worktree root fails once on the mobile workspace (catalog.spec.ts:186, "store change against core", axe color-contrast on the store-change dialog text, L2's code). Reported to the manager; not fixed here (outside L3's scope).
 ## Commits (branch lane/mobile-P4-L3-cart, in order)
 - `c8c27d7` `test: cart e2e scenarios against core` (red: first run 4 passed, 2 failed: Clamp strict-mode locator on a Home card and search; Replaced timed out on a Close click intercepted by the sheet panel)
@@ -16,3 +18,7 @@ Task 9.1 and 9.2 done: `e2e/cart.spec.ts` committed red, then two test-side fixe
 - to mobile manager: L2's search screen heading `1 product for ...` uses `inkMuted` on `canvas` (4.47:1, axe color-contrast). Outside L3's scope; L2 or a follow-up fix.
 ## Blockers
 - 9.3: `make e2e` must exit 0. Blocked on the L2 catalog test above.
+- Manager items (R1 and the L2 flake), all test-first: `124e0db`/`7163267` test, `178553c` fix (StoreChangeDialog keeps its last change while it closes; new file `src/pincode-store-change-close.test.tsx` stands in for the device's retained Modal children, since RN's Modal drops children at once under Jest); `b67e98f` fix (search count in ink); `5989797` fix (sheet lines use `useLineQuantity`, R1 #1); `fed7cc0` refactor (`ReplacedNotice` in `src/cart-alert.tsx`, R1 #3).
+- Gates: jest 3 of 3 green (80 suites, 302 tests), lint, typecheck, build, `openspec validate --all --strict` 20 passed.
+- `make e2e` from the worktree root, two runs, exit 0 both: admin 15 passed, mobile 21 passed, rider 7 passed, web 45 passed.
+- Manager note (20:47 pkill of cmd/core by another session): not caused here; both runs were after it, and the ports were free before run 1.
