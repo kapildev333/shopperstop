@@ -155,6 +155,9 @@ func TestLoadRefusesBadServiceTokens(t *testing.T) {
 		{":" + tok, tok, "name:token"},
 		{"rider:" + tok + ",rider:" + tok + "x", tok, "twice"},
 		{"rider:" + tok + ",payment:" + tok, tok, "another service"},
+		{"rider :" + tok, tok, "name:token"},
+		{"rider: " + tok, tok, "name:token"},
+		{"rider:" + tok[:16] + " " + tok[16:], tok[:16], "name:token"},
 	} {
 		vars := valid()
 		vars["SHOPPERSTOP_CORE_SERVICE_TOKENS"] = row.value
