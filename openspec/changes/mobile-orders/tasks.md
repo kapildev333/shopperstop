@@ -69,5 +69,5 @@ LANE-ID `mobile-P4-L4a-T8`. Scope: `e2e/orders.spec.ts`. Scenarios: History and 
 
 ## 9. Acceptance
 
-- [ ] 9.1 Team lead `/opsx:verify`: every scenario maps to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scope paths, `openspec validate --all --strict` green
+- [x] 9.1 Team lead `/opsx:verify`: every scenario maps to a passing test (design.md "Scenario to test"), every task ticked, nothing outside the scope paths, `openspec validate --all --strict` green
 - [ ] 9.2 Manager: gates, `make e2e`, the walk at 390×844 on the web export and once in Expo Go (history, a delivered order with the rider card, cancel), PR

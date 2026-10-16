@@ -159,3 +159,21 @@ Every field and route these screens use exists on main: `GET /orders` (`OrderLis
 - [Rider 401 ends the core session] -> only with a misconfigured rider URL; request 2 closes it for e2e.
 - [Fake timers with TanStack Query] -> only `Headline` is tested under fake timers, rendered alone with props, no query (T4 brief).
 - [Parallel with L2] -> no shared file is edited; if L2 restyles `Card`, `Badge` or `ErrorBanner`, these screens follow without change.
+
+## Acceptance (9.1, 2026-10-16)
+
+`/opsx:verify` at `8c7a160` (origin/main merged in), after the manager's `npm ci`:
+- Gates: ui build, mobile lint, typecheck exit 0; `npm run test --workspace apps/mobile -- --run` 41 suites, 154 tests passed; `npm run build --workspace apps/mobile` exit 0; `openspec validate --all --strict` 20 passed. `make e2e` per T8 (exit 0: admin 15, mobile 7, rider 7, web 45); the manager re-runs it in 9.2.
+- Scenarios: all 47 map to a test of the same name in the file this table names (checked by script against the `test`/`it` names).
+- Tasks: 1 to 8.2 ticked.
+- Scope: everything is inside the lane's paths except the two manager-approved extensions: `apps/mobile/package.json` `e2e` script, one line adding `EXPO_PUBLIC_RIDER_URL=http://localhost:18081` (`d4a613f`, the text requested from L2), and `src/app/(tabs)/_layout.tsx` the `tabBar` landmark wrapper only (`32e1626`, Decision 10) with its test `src/tabs-landmark.test.tsx`.
+- Cancel uses the `Sheet` fallback (`src/orders-cancel.tsx` imports `Sheet as Dialog`), Decision 6.
+
+## Deferred
+
+- Swap `Sheet` for `Dialog` in `src/orders-cancel.tsx` once L2's `src/ui/dialog.tsx` is on main (the one import line; same props).
+- History thumbnails (artboard 15) once L2's catalog image URL helper is on main (Decision 11).
+- Direct load of `/orders/<id>` on the static web export (404, Decision 9): backlog.
+- Native deep links into an order: untested; with D37's native e2e ceiling, backlog.
+- Optional: TanStack `focusManager` + `AppState` wiring in the root layout so the poll pauses in the Android background (Decision 8).
+- iOS VoiceOver does not announce the status live region; `AccessibilityInfo.announceForAccessibility` is the upgrade (Decision 5).
