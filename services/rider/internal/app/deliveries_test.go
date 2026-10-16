@@ -521,6 +521,35 @@ func TestGetOtherRidersDelivery(t *testing.T) {
 	}
 }
 
+func TestDeliveredOtherRidersDelivery(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	_, otherToken := riderAt(t, store)
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC))
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": o.ID})
+	var claimed deliveryJSON
+	if status != http.StatusCreated || json.Unmarshal(body, &claimed) != nil {
+		t.Fatalf("claim: got %d %s, want 201", status, body)
+	}
+	changes := len(coreFake.StatusChanges(o.ID))
+
+	status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), otherToken, nil)
+	if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+		t.Fatalf("delivered by another rider: got %d %s, want 404 not_found", status, body)
+	}
+	status, body = callAt(t, srv.URL, http.MethodGet, deliveryPath(claimed.ID), token, nil)
+	var kept deliveryJSON
+	if status != http.StatusOK || json.Unmarshal(body, &kept) != nil || kept.Status != "assigned" || kept.DeliveredAt != nil {
+		t.Fatalf("owner's delivery after another rider's attempt: got %d %s, want still assigned", status, body)
+	}
+	if got := len(coreFake.StatusChanges(o.ID)); got != changes {
+		t.Fatalf("core status changes %d, want %d: another rider's attempt must not move the order", got, changes)
+	}
+	if got := coreFake.OrderStatus(o.ID); got != "out_for_delivery" {
+		t.Fatalf("core status %q, want out_for_delivery", got)
+	}
+}
+
 func TestDeliveredOnce(t *testing.T) {
 	store := newID()
 	riderID, token := riderAt(t, store)
@@ -724,6 +753,7 @@ func TestPutLocationRefusals(t *testing.T) {
 		{"lat 91", map[string]any{"lat": 91.0, "lng": 77.5}, "lat"},
 		{"missing lng", map[string]any{"lat": 12.9}, "lng"},
 		{"lng -181", map[string]any{"lat": 12.9, "lng": -181.0}, "lng"},
+		{"null lat", map[string]any{"lat": nil, "lng": 77.6}, "lat"},
 	}
 	for _, c := range cases {
 		status, body := callAt(t, srv.URL, http.MethodPut, locationPath, token, c.body)
