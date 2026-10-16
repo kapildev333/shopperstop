@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,6 +38,12 @@ func newID() string {
 // addOrder adds a fake core order of store in status, placed at placed, with two lines.
 func addOrder(t *testing.T, store, status string, placed time.Time) core.Order {
 	t.Helper()
+	return addOrderFor(t, store, status, placed, "")
+}
+
+// addOrderFor is addOrder with customerToken as the bearer that reads the order as its customer.
+func addOrderFor(t *testing.T, store, status string, placed time.Time, customerToken string) core.Order {
+	t.Helper()
 	id := newID()
 	o := core.Order{
 		ID: id, Number: "SS-" + strings.ToUpper(id[len(id)-6:]), StoreID: store, Status: status,
@@ -48,7 +55,7 @@ func addOrder(t *testing.T, store, status string, placed time.Time) core.Order {
 			{Name: "Shimla Apple", UnitLabel: "1 kg", Quantity: 1},
 		},
 	}
-	coreFake.AddOrder(o, "")
+	coreFake.AddOrder(o, customerToken)
 	return o
 }
 
@@ -609,5 +616,238 @@ func TestClaimAndDeliveredLogged(t *testing.T) {
 			l["riderId"] != riderID || l["requestId"] == nil || l["requestId"] == "" {
 			t.Fatalf("%q line %v: want info with deliveryId, orderId, number, riderId and requestId", msg, l)
 		}
+	}
+}
+
+const locationPath = "/api/rider/v1/me/location"
+
+// customerRoute is the core route the customer's delivery read calls with the customer's bearer.
+const customerRoute = "GET /api/core/v1/orders/{id}"
+
+func customerDeliveryPath(orderID string) string {
+	return "/api/rider/v1/orders/" + orderID + "/delivery"
+}
+
+// customerDeliveryJSON is the customer's view of a delivery.
+type customerDeliveryJSON struct {
+	RiderName string `json:"riderName"`
+	Status    string `json:"status"`
+	Location  *struct {
+		Lat        float64   `json:"lat"`
+		Lng        float64   `json:"lng"`
+		RecordedAt time.Time `json:"recordedAt"`
+	} `json:"location"`
+}
+
+// claimOrder claims orderID for the rider with token and returns the 201 delivery.
+func claimOrder(t *testing.T, token, orderID string) deliveryJSON {
+	t.Helper()
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": orderID})
+	var d deliveryJSON
+	if status != http.StatusCreated || json.Unmarshal(body, &d) != nil {
+		t.Fatalf("claim of %s: got %d %s, want 201", orderID, status, body)
+	}
+	return d
+}
+
+// putPosition sends one position for the rider with token and fails unless it answers 204.
+func putPosition(t *testing.T, token string, lat, lng float64) {
+	t.Helper()
+	if status, body := callAt(t, srv.URL, http.MethodPut, locationPath, token, map[string]float64{"lat": lat, "lng": lng}); status != http.StatusNoContent {
+		t.Fatalf("location %v,%v: got %d %s, want 204", lat, lng, status, body)
+	}
+}
+
+// readCustomerDelivery reads orderID with the customer's bearer and fails unless it answers 200.
+func readCustomerDelivery(t *testing.T, customer, orderID string) (customerDeliveryJSON, []byte) {
+	t.Helper()
+	status, body := callAt(t, srv.URL, http.MethodGet, customerDeliveryPath(orderID), customer, nil)
+	var got customerDeliveryJSON
+	if status != http.StatusOK || json.Unmarshal(body, &got) != nil {
+		t.Fatalf("customer read of %s: got %d %s, want 200", orderID, status, body)
+	}
+	return got, body
+}
+
+// locationRows counts the rider_locations rows of riderID.
+func locationRows(t *testing.T, riderID string) int64 {
+	t.Helper()
+	var n int64
+	if err := testPool.QueryRow(context.Background(), "select count(*) from rider_locations where rider_id = $1", riderID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// keysOf returns the sorted keys of a JSON object body.
+func keysOf(t *testing.T, body []byte) []string {
+	t.Helper()
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(body, &m); err != nil {
+		t.Fatalf("body %s is not an object: %v", body, err)
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func TestPutLocationReplaces(t *testing.T) {
+	riderID, token := riderAt(t, newID())
+	putPosition(t, token, 12.9, 77.5)
+	putPosition(t, token, 13.1, 77.7)
+
+	if n := locationRows(t, riderID); n != 1 {
+		t.Fatalf("location rows for the rider: %d, want 1", n)
+	}
+	var lat, lng float64
+	var recorded time.Time
+	if err := testPool.QueryRow(context.Background(),
+		"select lat, lng, recorded_at from rider_locations where rider_id = $1", riderID).Scan(&lat, &lng, &recorded); err != nil {
+		t.Fatal(err)
+	}
+	if lat != 13.1 || lng != 77.7 || recorded.IsZero() {
+		t.Fatalf("stored location %v,%v at %v: want the second position, recorded", lat, lng, recorded)
+	}
+}
+
+func TestPutLocationRefusals(t *testing.T) {
+	riderID, token := riderAt(t, newID())
+	cases := []struct {
+		name  string
+		body  map[string]any
+		field string
+	}{
+		{"missing lat", map[string]any{"lng": 77.5}, "lat"},
+		{"lat 91", map[string]any{"lat": 91.0, "lng": 77.5}, "lat"},
+		{"missing lng", map[string]any{"lat": 12.9}, "lng"},
+		{"lng -181", map[string]any{"lat": 12.9, "lng": -181.0}, "lng"},
+	}
+	for _, c := range cases {
+		status, body := callAt(t, srv.URL, http.MethodPut, locationPath, token, c.body)
+		if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field {
+			t.Fatalf("%s: got %d %s, want 400 validation on %s", c.name, status, body, c.field)
+		}
+	}
+	if n := locationRows(t, riderID); n != 0 {
+		t.Fatalf("location rows after refusals: %d, want 0", n)
+	}
+}
+
+func TestCustomerFollowsRider(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	customer := "customer-" + newID()
+	o := addOrderFor(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC), customer)
+	claimOrder(t, token, o.ID)
+
+	before, _ := readCustomerDelivery(t, customer, o.ID)
+	if before.RiderName != "Asha Rao" || before.Status != "assigned" || before.Location != nil {
+		t.Fatalf("customer read after the claim %+v: want Asha Rao, assigned, no location yet", before)
+	}
+
+	putPosition(t, token, 12.9716, 77.5946)
+	got, body := readCustomerDelivery(t, customer, o.ID)
+	if got.Location == nil || got.Location.Lat != 12.9716 || got.Location.Lng != 77.5946 {
+		t.Fatalf("customer read %s: want the rider's position", body)
+	}
+	if d := time.Since(got.Location.RecordedAt); d < -time.Minute || d > time.Minute {
+		t.Fatalf("recordedAt %v is not the server's clock now", got.Location.RecordedAt)
+	}
+	if keys := keysOf(t, body); strings.Join(keys, ",") != "location,riderName,status" {
+		t.Fatalf("customer read keys %v: want location, riderName, status only", keys)
+	}
+	var loc map[string]json.RawMessage
+	if err := json.Unmarshal(keysBody(t, body, "location"), &loc); err != nil || len(loc) != 3 {
+		t.Fatalf("location %s: want lat, lng and recordedAt only", body)
+	}
+	if strings.Contains(string(body), riderID) {
+		t.Fatalf("customer read %s names the rider's id", body)
+	}
+}
+
+// keysBody returns the raw value of key in a JSON object body.
+func keysBody(t *testing.T, body []byte, key string) []byte {
+	t.Helper()
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(body, &m); err != nil {
+		t.Fatal(err)
+	}
+	return m[key]
+}
+
+func TestCustomerLocationHiddenAfterDelivery(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	customer := "customer-" + newID()
+	o := addOrderFor(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC), customer)
+	claimed := claimOrder(t, token, o.ID)
+	putPosition(t, token, 12.9716, 77.5946)
+	if got, _ := readCustomerDelivery(t, customer, o.ID); got.Location == nil {
+		t.Fatal("customer read while assigned: want the location")
+	}
+
+	if status, body := callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil); status != http.StatusOK {
+		t.Fatalf("delivered: got %d %s, want 200", status, body)
+	}
+	got, body := readCustomerDelivery(t, customer, o.ID)
+	if got.Status != "delivered" || got.Location != nil || got.RiderName != "Asha Rao" {
+		t.Fatalf("customer read after delivery %s: want delivered, rider name, no location", body)
+	}
+}
+
+// TestCustomerLocationBeforeClaimHidden: a position recorded before the claim is an earlier shift's, not the delivery's.
+func TestCustomerLocationBeforeClaimHidden(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	customer := "customer-" + newID()
+	o := addOrderFor(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC), customer)
+	putPosition(t, token, 12.9, 77.5)
+	claimOrder(t, token, o.ID)
+
+	if got, body := readCustomerDelivery(t, customer, o.ID); got.Status != "assigned" || got.Location != nil {
+		t.Fatalf("customer read %s: want assigned with no location from before the claim", body)
+	}
+	putPosition(t, token, 13.1, 77.7)
+	if got, body := readCustomerDelivery(t, customer, o.ID); got.Location == nil || got.Location.Lat != 13.1 {
+		t.Fatalf("customer read %s: want the position recorded after the claim", body)
+	}
+}
+
+func TestCustomerReadRefusals(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	t0 := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	owner, stranger := "customer-"+newID(), "customer-"+newID()
+	claimed := addOrderFor(t, store, "ready", t0, owner)
+	claimOrder(t, token, claimed.ID)
+	unclaimed := addOrderFor(t, store, "ready", t0, owner)
+	addOrderFor(t, store, "ready", t0, stranger) // gives the stranger a live customer token
+
+	cases := []struct {
+		name, path, bearer, code string
+		status                   int
+	}{
+		{"another customer's order", customerDeliveryPath(claimed.ID), stranger, "not_found", http.StatusNotFound},
+		{"order without a delivery", customerDeliveryPath(unclaimed.ID), owner, "not_found", http.StatusNotFound},
+		{"order id not a uuid", customerDeliveryPath("not-a-uuid"), owner, "not_found", http.StatusNotFound},
+		{"unknown token", customerDeliveryPath(claimed.ID), "customer-unknown", "unauthorized", http.StatusUnauthorized},
+	}
+	for _, c := range cases {
+		status, body := callAt(t, srv.URL, http.MethodGet, c.path, c.bearer, nil)
+		if e := decodeError(t, body); status != c.status || e.Error.Code != c.code {
+			t.Fatalf("%s: got %d %s, want %d %s", c.name, status, body, c.status, c.code)
+		}
+	}
+
+	before := coreFake.Calls(customerRoute)
+	status, body := callAt(t, srv.URL, http.MethodGet, customerDeliveryPath(claimed.ID), "", nil)
+	if e := decodeError(t, body); status != http.StatusUnauthorized || e.Error.Code != "unauthorized" {
+		t.Fatalf("no token: got %d %s, want 401 unauthorized", status, body)
+	}
+	if got := coreFake.Calls(customerRoute) - before; got != 0 {
+		t.Fatalf("core received %d customer reads for a request without a token, want 0", got)
 	}
 }
