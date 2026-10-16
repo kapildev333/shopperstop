@@ -25,6 +25,13 @@ function Probe() {
   return <Text>{usePincodeSheetOpen() ? 'sheet open' : 'sheet closed'}</Text>
 }
 
+// The title is a level-2 heading: the level rides on the element's aria-level prop.
+async function notice(name: string) {
+  const title = await screen.findByRole('heading', { name })
+  expect(title).toHaveProp('aria-level', 2)
+  return title
+}
+
 async function renderGate() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -60,7 +67,7 @@ test('not serviceable notice', async () => {
 
   await renderGate()
 
-  expect(await screen.findByRole('heading', { name: "We don't deliver here yet", level: 2 })).toBeTruthy()
+  await notice("We don't deliver here yet")
   expect(screen.getByText('sheet closed')).toBeTruthy()
   await fireEvent.press(screen.getByRole('button', { name: 'Change pincode' }))
   expect(screen.getByText('sheet open')).toBeTruthy()
@@ -74,7 +81,7 @@ test('closed store notice', async () => {
 
   await renderGate()
 
-  expect(await screen.findByRole('heading', { name: 'Koramangala store is closed', level: 2 })).toBeTruthy()
+  await notice('Koramangala store is closed')
   expect(screen.getByRole('button', { name: 'Change pincode' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'See your orders' })).toBeTruthy()
   expect(screen.queryByText('open Koramangala')).toBeNull()
@@ -96,7 +103,7 @@ test('store lookup fails', async () => {
 test('no pincode notice', async () => {
   await renderGate()
 
-  expect(await screen.findByRole('heading', { name: 'Set your pincode', level: 2 })).toBeTruthy()
+  await notice('Set your pincode')
   await fireEvent.press(screen.getByRole('button', { name: 'Choose pincode' }))
   expect(screen.getByText('sheet open')).toBeTruthy()
 })
