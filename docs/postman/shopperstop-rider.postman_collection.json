@@ -2505,7 +2505,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000901\",\n      \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n      \"orderNumber\": \"SS-DEMOAAAB\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"assigned\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"totalCents\": 33900,\n      \"paymentMethod\": \"cod\",\n      \"itemCount\": 3,\n      \"items\": [\n        {\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 2\n        },\n        {\n          \"name\": \"Shimla Apple\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 1\n        }\n      ],\n      \"assignedAt\": \"2026-10-15T09:05:00Z\"\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000910\",\n      \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n      \"orderNumber\": \"SS-DEMOAAAD\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"status\": \"assigned\",\n      \"customerName\": \"Demo Customer\",\n      \"customerPhone\": \"+919800000000\",\n      \"address\": {\n        \"line1\": \"12 80 Feet Rd, Koramangala\",\n        \"pincode\": \"560034\"\n      },\n      \"totalCents\": 103000,\n      \"paymentMethod\": \"cod\",\n      \"itemCount\": 4,\n      \"items\": [\n        {\n          \"name\": \"Banana Robusta\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 1\n        },\n        {\n          \"name\": \"Pomegranate Bhagwa\",\n          \"unitLabel\": \"1 kg\",\n          \"quantity\": 3\n        }\n      ],\n      \"assignedAt\": \"2026-10-15T09:05:00Z\"\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -2689,7 +2689,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+              "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -2744,7 +2744,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -2761,7 +2761,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000910\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n  \"orderNumber\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 4,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    },\n    {\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 3\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -2800,7 +2800,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -2856,7 +2856,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -2912,7 +2912,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -2968,7 +2968,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -3024,7 +3024,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\"\n}",
+                  "raw": "{\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -3153,7 +3153,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"delivered\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\",\n  \"deliveredAt\": \"2026-10-15T09:40:00Z\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -3377,7 +3377,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000901\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"orderNumber\": \"SS-DEMOAAAB\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"delivered\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 3,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 2\n    },\n    {\n      \"name\": \"Shimla Apple\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\",\n  \"deliveredAt\": \"2026-10-15T09:40:00Z\"\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000910\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n  \"orderNumber\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"delivered\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 4,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    },\n    {\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 3\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\",\n  \"deliveredAt\": \"2026-10-15T09:40:00Z\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
