@@ -32,7 +32,7 @@ Scenarios: "Ready orders list" (both), "Ready orders states" (both), "The rider'
 Starts from: `apps/rider/src/ready.test.tsx` `ready orders listed`, `new order appears without a reload`, `no ready orders`, `read fails`, `assigned delivery linked`, `none assigned`, `pick up succeeds`, `cancel sends nothing`, `claimed by someone else`, `service fails`.
 Commits: `test: ready orders and pick up`, then `feat: ready orders and pick up`.
 
-- [ ] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
 - [ ] 3.2 `ready.tsx` (`ReadyPage`: the "Your deliveries" section, the ready list, the claim dialog; design Decisions 6 to 9, 15) and the route file rendering it
 - [ ] 3.3 Gates green; commit `feat: ...`
 
