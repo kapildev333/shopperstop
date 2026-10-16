@@ -100,7 +100,7 @@ Scenario: "Mobile end-to-end picks read once" › Picks answer from the setup re
 
 No failing test first, and why: a refactor of the e2e suite with no app behaviour; the suite is its own test (it must stay green), and "picks read once" is proved by `orderPick` and `homePicks` being synchronous (typecheck fails on any leftover `await orderPick(request, …)`). One commit, `refactor: mobile e2e picks read once in global setup, shared helpers in e2e/support.ts`.
 
-- [ ] 5.1 Build Decision 6; `npm run lint --workspace apps/mobile` and `npm run typecheck --workspace apps/mobile` green; `grep -n "function freshEmail\|function expectNoViolations\|function orderPick\|function homePicks" apps/mobile/e2e/*.spec.ts` prints nothing; with the slot, `make e2e` with every mobile spec green (paste the mobile count: the previous count plus 2); run the gates; tick 5.1; commit.
+- [x] 5.1 Build Decision 6; `npm run lint --workspace apps/mobile` and `npm run typecheck --workspace apps/mobile` green; `grep -n "function freshEmail\|function expectNoViolations\|function orderPick\|function homePicks" apps/mobile/e2e/*.spec.ts` prints nothing; with the slot, `make e2e` with every mobile spec green (paste the mobile count: the previous count plus 2); run the gates; tick 5.1; commit.
 
 ## 6. Acceptance (team lead)
 
