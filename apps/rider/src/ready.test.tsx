@@ -150,7 +150,7 @@ test('pick up succeeds', async () => {
 
   await user.click(await screen.findByRole('button', { name: 'Pick up SS-AAAA0001' }))
   const dialog = screen.getByRole('dialog', { name: 'Pick up SS-AAAA0001?' })
-  await user.click(within(dialog).getByRole('button', { name: 'Pick up', exact: true }))
+  await user.click(within(dialog).getByRole('button', { name: 'Pick up' }))
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-AAAA0001' })).toBeInTheDocument()
   const claims = calls.filter((call) => call.method === 'POST')
@@ -186,7 +186,7 @@ test('claimed by someone else', async () => {
   renderApp('/')
 
   await user.click(await screen.findByRole('button', { name: 'Pick up SS-AAAA0001' }))
-  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Pick up', exact: true }))
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Pick up' }))
 
   expect(await screen.findByText('SS-AAAA0001 was taken by another rider or is no longer ready.')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -207,7 +207,7 @@ test('service fails', async () => {
 
   await user.click(await screen.findByRole('button', { name: 'Pick up SS-AAAA0001' }))
   const dialog = screen.getByRole('dialog', { name: 'Pick up SS-AAAA0001?' })
-  await user.click(within(dialog).getByRole('button', { name: 'Pick up', exact: true }))
+  await user.click(within(dialog).getByRole('button', { name: 'Pick up' }))
 
   expect(await within(screen.getByRole('dialog')).findByRole('alert')).toHaveTextContent(
     'Could not pick up the order. Try again.',

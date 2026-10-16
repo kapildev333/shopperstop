@@ -33,8 +33,8 @@ Starts from: `apps/rider/src/ready.test.tsx` `ready orders listed`, `new order a
 Commits: `test: ready orders and pick up`, then `feat: ready orders and pick up`.
 
 - [x] 3.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 3.2 `ready.tsx` (`ReadyPage`: the "Your deliveries" section, the ready list, the claim dialog; design Decisions 6 to 9, 15) and the route file rendering it
-- [ ] 3.3 Gates green; commit `feat: ...`
+- [x] 3.2 `ready.tsx` (`ReadyPage`: the "Your deliveries" section, the ready list, the claim dialog; design Decisions 6 to 9, 15) and the route file rendering it
+- [x] 3.3 Gates green; commit `feat: ...`
 
 ## 4. Delivery page, delivered and location (worker, after 1; parallel with 2, 3, 5)
 
