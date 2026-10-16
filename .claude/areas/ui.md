@@ -48,3 +48,10 @@ Spec: PLAN.md Phase 3, D34 (components) and D29/D19 (rider types); Spec 1 ยง8, ย
 | ui-P3-L2 | `ui-rider-api-types` | `gen:api` generates `src/api/rider.d.ts` from `services/rider/openapi.json` next to `core.d.ts` (`@shopperstop/ui/api/rider` export), the stale test covers both files, `make gen` (platform-P3-L1) runs both. Waits on rider-P3-L1 on main; from then on a rider lane that changes its `openapi.json` commits the regenerated file in its PR (D19 extended) |
 
 Gates per PR: `make test-web`, `openspec validate --all --strict`, `scripts/check-figma-tokens.mjs` unchanged unless tokens change.
+
+## Phase 4 work package (orchestrator, 2026-10-16)
+Spec: PLAN.md Phase 4, D37, D39. One small change, no dependencies, first in the phase because the mobile app imports it.
+
+| Lane | Change | Deliverable |
+|---|---|---|
+| ui-P4-L1 | `ui-tokens-export` (MODIFIED `design-system`) | `@shopperstop/ui/tokens`: a TypeScript module exporting the token values (`colors` by semantic name, `radius`, `spacing`, `type` scale with size, line height and weight, `motion`, `shadows`) generated from `src/tokens.css` by `scripts/gen-tokens.mjs` (run by `npm run gen:tokens`, output committed), with a test that fails when the module and `tokens.css` disagree; `formatInr` exported from a DOM-free entry so React Native can import it (`@shopperstop/ui/format` or the existing path if it has no DOM import). Tell mobile under `## Requests` when it is on main |
