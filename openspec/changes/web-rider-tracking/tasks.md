@@ -51,5 +51,5 @@ Failing tests: `e2e/smoke.spec.ts` "web preview proxies to rider"; `e2e/orders.s
 - [x] 4.2 Decision 8 (`feat: start and proxy the rider service for the web suite`); all gates green
 
 ## Workflow follow-up
-- [ ] Team lead runs `/opsx:verify web-rider-tracking` after 4.2 lands and the manager's `make e2e` is green.
+- [x] Team lead runs `/opsx:verify web-rider-tracking` after 4.2 lands and the manager's `make e2e` is green.
 - Area manager archives the change by PR after the feature PR merges.
