@@ -44,9 +44,9 @@ const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).
 
 test('Rider on the way with a position', async () => {
   setToken('t-rider')
+  const recordedAt = minutesAgo(3)
   const calls = fakeCore({
-    [`GET ${delivery}`]: () =>
-      json(200, { riderName: 'Asha', status: 'assigned', location: { lat: 12.9352, lng: 77.6245, recordedAt: minutesAgo(3) } }),
+    [`GET ${delivery}`]: () => json(200, { riderName: 'Asha', status: 'assigned', location: { lat: 12.9352, lng: 77.6245, recordedAt } }),
   })
   const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true)
 
@@ -85,7 +85,6 @@ test('No rider card before a rider', async () => {
 
   expect(screen.queryByRole('heading', { name: 'Your rider' })).toBeNull()
   expect(calls.some((request) => request.url.includes('/api/rider/'))).toBe(false)
-  ready.unmount()
 
   fakeCore({ [`GET ${delivery}`]: () => apiError(404, 'not_found') })
   await renderCard(order({ riderName: undefined }))
@@ -109,11 +108,12 @@ test('Delivered order names the rider from the rider read', async () => {
 test('Failed rider read keeps the card', async () => {
   setToken('t-rider')
   let down = false
+  const recordedAt = minutesAgo(3)
   fakeCore({
     [`GET ${delivery}`]: () =>
       down
         ? Promise.reject(new TypeError('Network request failed'))
-        : json(200, { riderName: 'Asha', status: 'assigned', location: { lat: 12.9352, lng: 77.6245, recordedAt: minutesAgo(3) } }),
+        : json(200, { riderName: 'Asha', status: 'assigned', location: { lat: 12.9352, lng: 77.6245, recordedAt } }),
   })
 
   await renderCard(order())
