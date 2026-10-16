@@ -9,12 +9,12 @@ Scenarios: "One database and owner role per service" (initdb holds four statemen
 Starts from: `sh openspec/changes/platform-rider-wiring/check-wiring.sh deploy make`, failing on the unchanged tree.
 Commit: `feat: rider databases, caddy routes and make targets`.
 
-- [ ] 1.1 Red: run `sh openspec/changes/platform-rider-wiring/check-wiring.sh deploy make` on the unchanged tree; paste the last line (`wiring check: N failures`) and the first five FAIL lines into the log
-- [ ] 1.2 Write the four files exactly as design.md "The files" (initdb: append the four lines; Caddyfile: whole file; compose: the two caddy app mounts become `- ../apps:/srv/apps:ro`; Makefile: whole file, tab-indented recipes); `git diff origin/main -- deploy/docker-compose.yml` shows only that mount change and `git diff origin/main -- Makefile` leaves the `db` target untouched
-- [ ] 1.3 Green: `sh openspec/changes/platform-rider-wiring/check-wiring.sh deploy make` prints `wiring check: ok`; paste it
-- [ ] 1.4 Database: from `services/core`, a throwaway pgx program (a `main.go` in the scratchpad, run with `go run <abs path>/main.go <url> <sql>`) prints `1` for `select 1` as `shopperstop_rider` on `shopperstop_rider_test`, and `shopperstop_rider`, `shopperstop_rider_e2e`, `shopperstop_rider_test` for `select datname from pg_database where pg_get_userbyid(datdba) = 'shopperstop_rider' order by 1`; paste both outputs
-- [ ] 1.5 Today's targets unchanged: `make test-core` passes; `make -n e2e` and `make -n dev` still print every core, web and admin command; `make gen` prints `gen: services/rider/sqlc.yaml absent, skipping` and leaves `git status --short` with only this task's files; `openspec validate --all --strict` passes. Paste the summaries
-- [ ] 1.6 `git status --short` before the commit shows only the four files, this file and the log
+- [x] 1.1 Red: run `sh openspec/changes/platform-rider-wiring/check-wiring.sh deploy make` on the unchanged tree; paste the last line (`wiring check: N failures`) and the first five FAIL lines into the log
+- [x] 1.2 Write the four files exactly as design.md "The files" (initdb: append the four lines; Caddyfile: whole file; compose: the two caddy app mounts become `- ../apps:/srv/apps:ro`; Makefile: whole file, tab-indented recipes); `git diff origin/main -- deploy/docker-compose.yml` shows only that mount change and `git diff origin/main -- Makefile` leaves the `db` target untouched
+- [x] 1.3 Green: `sh openspec/changes/platform-rider-wiring/check-wiring.sh deploy make` prints `wiring check: ok`; paste it
+- [x] 1.4 Database: from `services/core`, a throwaway pgx program (a `main.go` in the scratchpad, run with `go run <abs path>/main.go <url> <sql>`) prints `1` for `select 1` as `shopperstop_rider` on `shopperstop_rider_test`, and `shopperstop_rider`, `shopperstop_rider_e2e`, `shopperstop_rider_test` for `select datname from pg_database where pg_get_userbyid(datdba) = 'shopperstop_rider' order by 1`; paste both outputs
+- [x] 1.5 Today's targets unchanged: `make test-core` passes; `make -n e2e` and `make -n dev` still print every core, web and admin command; `make gen` prints `gen: services/rider/sqlc.yaml absent, skipping` and leaves `git status --short` with only this task's files; `openspec validate --all --strict` passes. Paste the summaries
+- [x] 1.6 `git status --short` before the commit shows only the four files, this file and the log
 
 ## 2. Postman collection per service (worker, after task 1)
 
