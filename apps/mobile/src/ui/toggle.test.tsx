@@ -21,3 +21,19 @@ test('checked toggle reports off on press', async () => {
   await fireEvent.press(control)
   expect(onChange).toHaveBeenCalledWith(false)
 })
+
+// react-native-web presses a switch on Enter but not on Space (its press responder maps Space only for buttons), so Space is handled here.
+test('Space flips the switch and stops the page scrolling; Enter is left to the press', async () => {
+  const onChange = jest.fn()
+  const preventDefault = jest.fn()
+  await render(<Toggle label="Make this my default address" checked={false} onChange={onChange} />)
+  const control = screen.getByRole('switch', { name: 'Make this my default address' })
+
+  await fireEvent(control, 'keyDown', { key: ' ', preventDefault })
+  expect(onChange).toHaveBeenCalledWith(true)
+  expect(preventDefault).toHaveBeenCalled()
+
+  onChange.mockClear()
+  await fireEvent(control, 'keyDown', { key: 'Enter', preventDefault })
+  expect(onChange).not.toHaveBeenCalled()
+})
