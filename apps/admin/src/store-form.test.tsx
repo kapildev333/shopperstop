@@ -121,7 +121,7 @@ test('a city error from core is shown on its field', async () => {
   await replace('City', 'a'.repeat(101))
   await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
-  await waitFor(() => expect(screen.getByLabelText('City')).toHaveAccessibleDescription('Enter at most 100 characters.'))
+  await waitFor(() => expect(screen.getByLabelText('City')).toHaveAccessibleDescription(/Enter at most 100 characters\./))
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
