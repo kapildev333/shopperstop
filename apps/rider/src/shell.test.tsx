@@ -47,6 +47,7 @@ test('store name shown', async () => {
 
   renderApp('/')
 
+  expect(await screen.findByRole('heading', { level: 1, name: 'Ready to pick up' })).toBeInTheDocument()
   expect(await within(screen.getByRole('banner')).findByText('Koramangala')).toBeInTheDocument()
   const store = calls.find((call) => call.url.endsWith(storePath))
   expect(store?.headers.has('Authorization')).toBe(false)

@@ -11,8 +11,8 @@ Commits: `test: rider shell, session and sign-in`, then `feat: rider app workspa
 
 - [x] 1.1 `package.json` (admin's pinned versions, name `@shopperstop/rider`, scripts `dev`, `build`, `typecheck`, `lint`, `test`, `e2e`), `tsconfig.json`, `eslint.config.js`, `index.html` (title "ShopperStop Rider"), `vite.config.ts` (design Decision 3, `base: '/rider/'`, test block as admin's), `src/test-setup.ts`, `src/fake-api.ts` (Decision 16); `npm install` at the worktree root
 - [x] 1.2 Write the tests; red run pasted into the log; commit `test: ...` with the files of 1.1
-- [ ] 1.3 `session.ts`, `api.ts` (Decisions 1, 2; Interfaces), `format.ts` (Decision 14), `router.ts`, `render-app.tsx`, `main.tsx`, `index.css`, `nav.ts`, `not-found.tsx` ("Go to Pick up"), `route-error.tsx`, the six route files (Decisions 4, 5, 15), `src/no-literal-colors.test.ts`
-- [ ] 1.4 Gates green; `routeTree.gen.ts` committed; commit `feat: ...`
+- [x] 1.3 `session.ts`, `api.ts` (Decisions 1, 2; Interfaces), `format.ts` (Decision 14), `router.ts`, `render-app.tsx`, `main.tsx`, `index.css`, `nav.ts`, `not-found.tsx` ("Go to Pick up"), `route-error.tsx`, the six route files (Decisions 4, 5, 15), `src/no-literal-colors.test.ts`
+- [x] 1.4 Gates green; `routeTree.gen.ts` committed; commit `feat: ...`
 
 ## 2. e2e suite: config, smoke, rider flow, cross-app flow, phone layout (worker, after 1)
 
