@@ -275,7 +275,7 @@ func TestSignOutEndsOnlyThatSession(t *testing.T) {
 // TestRegisterRateLimitedPerEmail uses its own server with the production
 // limits. Refused attempts count before validation, so short passwords are enough.
 func TestRegisterRateLimitedPerEmail(t *testing.T) {
-	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	email := uniqueEmail(t)
@@ -298,7 +298,7 @@ func TestRegisterRateLimitedPerEmail(t *testing.T) {
 // different X-Forwarded-For. Each request opens a new connection, so a new
 // client port: the key must drop the port, and X-Forwarded-For must not be trusted.
 func TestSignInRateLimitedPerIP(t *testing.T) {
-	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now), nil)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	t.Cleanup(limited.Close)
 	signIn := func(email, forwardedFor string) (int, []byte) {

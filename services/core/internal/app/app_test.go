@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		testStoreID); err != nil {
 		panic(err)
 	}
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now))
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), nil)
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
 	srv.Close()
@@ -171,7 +171,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil), blob.Disk{Dir: filesDir}))
+	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil), blob.Disk{Dir: filesDir}))
 	t.Cleanup(down.Close)
 
 	// healthz never touches the database, so it answers 200 with the pool down.
