@@ -113,9 +113,9 @@ Scope: `apps/mobile/src/{catalog.ts,catalog-card.tsx,catalog-grid.tsx,catalog.te
 Scenarios: Card links and prices, Add shows the count, Out-of-stock card, Load more while pages remain, End of the list loads the next page.
 Starts from: `src/catalog-card.test.tsx`: the three card scenario names (render inside `QueryClientProvider`; the link's `accessibilityLabel` and `href`); `src/catalog-grid.test.tsx`: `load more while pages remain` (fake `GET /stores/s-1/products` answering by `page`), `end of the list loads the next page` (`fireEvent(list, 'endReached')` twice: one `page=2` request), `no load more at the last page`; `src/catalog.test.ts`: `stockLabel`, `findCategory finds a child under its parent`, `imageUri prefixes the core origin`, `picks are the first 12 in stock`.
 
-- [ ] 9.1 Red
-- [ ] 9.2 `catalog.ts`, `ProductCard`, `CategoryGrid`, `ProductGrid` per design.md Decisions 8 and 9 and the design file
-- [ ] 9.3 Gates green
+- [x] 9.1 Red
+- [x] 9.2 `catalog.ts`, `ProductCard`, `CategoryGrid`, `ProductGrid` per design.md Decisions 8 and 9 and the design file
+- [x] 9.3 Gates green
 
 ## 10. Pincode sheet and store change
 
