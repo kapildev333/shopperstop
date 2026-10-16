@@ -7,7 +7,7 @@
     "start": "expo start --port 5176",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "sh -c 'jest --ci' --",
+    "test": "sh -c 'jest --ci && node --test scripts/*.test.mjs' --",
     "build": "expo export --platform web",
     "e2e": "EXPO_PUBLIC_CORE_URL=http://localhost:18080 expo export --platform web --output-dir dist-e2e && playwright test"
   },
@@ -20,6 +20,7 @@
     "expo-linking": "58.0.13",
     "expo-router": "58.0.20",
     "expo-secure-store": "58.0.2",
+    "expo-splash-screen": "58.0.10",
     "@expo/metro-runtime": "58.0.14",
     "lucide-react-native": "1.55.0",
     "openapi-fetch": "0.17.0",
