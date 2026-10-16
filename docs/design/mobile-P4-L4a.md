@@ -9,7 +9,7 @@ Workers cannot open the design canvas. This file carries what artboards 6 (Order
 - List: `ScrollView`, `contentContainerStyle` padding 12, gap 12.
 - Card = `Pressable accessibilityRole="link" accessibilityLabel={"View order " + number}`, `surface`, `radius.card`, padding 14, `boxShadow: shadows.card.boxShadow`, gap 10, `minHeight: 44`. `onPress`: `router.push('/orders/' + id)`.
   - Row 1 (`flexDirection: 'row'`, `justifyContent: 'space-between'`, `alignItems: 'center'`, gap 8): `Text variant="button" tabular` number (14/20 600, `ink`); `Badge variant={statusVariant(status)}` with `statusName(status)`.
-  - Row 2 (canvas thumbnails, 44 px squares): not built (design.md Decision 10).
+  - Row 2 (canvas thumbnails, 44 px squares): not built (design.md Decision 11).
   - Row 3 (row, space-between, centered): `Text tone="inkMuted" tabular` "`placedLabel(placedAt, now)` · `itemCountLabel(order)`" (for example "Today, 10:02 · 4 items"); `Text variant="button" tabular` `formatInr(totalCents)` (600, `ink`).
 - After the cards, when `total > items.length`: `Text variant="small" tone="inkMuted"`, centered, "Showing your latest N orders.".
 - Empty (`items.length === 0`): centered column, `paddingTop: 120`, using L1's `EmptyState` with `title="No orders yet"`, `description="Your past and current orders show up here."`, `icon` = an 88×88 `View` (`radius.pill`, `surface`, centered, `accessibilityElementsHidden`, `importantForAccessibility="no-hide-descendants"`) holding `ReceiptText` size 40 colour `ink`, and `action` = `Button size="lg"` "Start shopping" → `router.navigate('/')`.

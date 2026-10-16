@@ -235,12 +235,19 @@ The app SHALL read `GET /api/rider/v1/orders/{orderId}/delivery` from `EXPO_PUBL
 - **WHEN** the rider card shows "Asha" with "Last seen 3 minutes ago" and the next rider read fails because the rider service cannot be reached
 - **THEN** the card still shows "Asha" and "Last seen 3 minutes ago", and no alert is shown
 
+### Requirement: Mobile tab bar landmark
+The bottom tab bar SHALL sit inside a navigation landmark named "Main", so every tab label is inside a landmark on the web export (axe `region`) and screen readers can jump to it.
+
+#### Scenario: Tab bar in a navigation landmark
+- **WHEN** the app shows a tab screen
+- **THEN** the element holding the "Home", "Categories" and "Orders" tabs has the role `navigation` and the name "Main"
+
 ### Requirement: Mobile orders end-to-end suite
 The mobile Playwright suite SHALL drive the order screens on the web export at 390×844 against core with the demo seed, creating any order it changes through core's HTTP API as a customer registered for the run, and SHALL run axe on every screen it visits, the cancel dialog open included, with no violation allowed.
 
 #### Scenario: History and a delivered order against core
-- **WHEN** the demo customer is signed in, opens the Orders tab, then presses "View order SS-DEMOAAAB", then reloads the page
-- **THEN** three cards are listed, `SS-DEMOAAAD` with "Placed", `SS-DEMOAAAC` with "Cancelled" and `SS-DEMOAAAB` with "Delivered"; the tracking screen's heading is "Order SS-DEMOAAAB" with the headline "Delivered", the status "Your order was delivered.", six timeline steps, "Your rider" with "Arjun Rao" and no "Open in Maps"; after the reload the same heading is shown; and axe reports no violations on both screens
+- **WHEN** the demo customer is signed in, opens the Orders tab, then presses "View order SS-DEMOAAAB"
+- **THEN** three cards are listed, `SS-DEMOAAAD` with "Placed", `SS-DEMOAAAC` with "Cancelled" and `SS-DEMOAAAB` with "Delivered"; the tracking screen's heading is "Order SS-DEMOAAAB" with the headline "Delivered", the status "Your order was delivered.", six timeline steps, "Your rider" with "Arjun Rao" and no "Open in Maps"; and axe reports no violations on both screens
 
 #### Scenario: Tracking follows the order against core
 - **WHEN** a customer registered for the run has a `placed` order made through core's API open on its tracking screen, and store staff move it through core's API step by step to `delivered`

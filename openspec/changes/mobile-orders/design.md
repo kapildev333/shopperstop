@@ -6,7 +6,7 @@ L1 (`mobile-foundation-accounts`, merged) gave `apps/mobile` its client, session
 
 | mobile-app requirement | mirrors web-app | differs |
 |---|---|---|
-| Mobile order history | Customer order history | whole card is the link; canvas layout; placed time wording; no thumbnails (Decision 10) |
+| Mobile order history | Customer order history | whole card is the link; canvas layout; placed time wording; no thumbnails (Decision 11) |
 | Mobile order placed time | (web prints `Intl` medium date) | canvas wording "Today, 10:02", no `Intl` |
 | Mobile order history signed out | Customer checkout and order pages require sign-in | a prompt, not a redirect: a tab that redirects loops on Back (Decision 4) |
 | Mobile order history states | Customer order history states | canvas copy; `ErrorBanner` offline/server copy (L1) |
@@ -102,10 +102,14 @@ TanStack Query's `refetchInterval` pauses only while its `focusManager` says unf
 - Product picks use indices 0 and 1 of web's `orderPick` rule (stock exactly 10, price at least ₹20, page 2); the suite's global setup reseeds core, so no other mobile file shares that stock today. L4b's checkout e2e should take indices 2 and up.
 - The rider service is not started by the mobile Playwright config, so the e2e sees the rider card only through the seeded `riderName` "Arjun Rao" on `SS-DEMOAAAB`, and the rider read fails silently (which is itself the "failed rider read keeps the card" behaviour). Location and Maps are covered by Jest. Ceiling: add the rider web server to `playwright.config.ts` (L2's file) when the §13 flow (L5b) needs a live rider.
 - The export bakes `EXPO_PUBLIC_RIDER_URL`; under `make e2e` it must be `http://localhost:18081` (request to L2: `package.json` `e2e` script). With the default 8081, a developer's running `make dev` rider would answer 401 for the e2e token and end the session mid-test.
-- A reload on `/orders/<id>` checks the static export serves the dynamic route (L1 Decision 3 left this to L4). If it does not, the T8 worker stops and reports; there is no `generateStaticParams` for runtime ids.
+- Every scenario reaches its order from the Orders tab, never by loading `/orders/<id>` directly. T8 found that `expo serve` answers 404 for a dynamic route on the static export (the export writes a literal `orders/[id].html` and the server has no fallback); manager decision 2026-10-16. The web export is only the e2e target (D42), not a product surface; on a phone the route is reached in-app or by an Expo Router deep link. Ceiling: dynamic routes are not directly loadable on the static export, and native deep links into an order are untested; both go to the backlog (a serve fallback or `generateStaticParams` cannot cover runtime ids; device deep links come with the native e2e ceiling of D37).
 - Dialogs: wait for `getByRole('dialog')` before axe (L1 Decision 8).
 
-### 10. Canvas deviations
+### 10. Tab bar landmark (manager scope extension, 2026-10-16)
+
+T8's axe run on the Orders tab failed `region`: React Navigation's tab bar renders its labels outside any landmark. The canvas wraps the tab bar in `<nav aria-label="Main">`. `src/app/(tabs)/_layout.tsx` (L2's shared file; the manager extended this lane's scope to this one change and resolves any merge) passes `Tabs` a `tabBar` that wraps the router's own `BottomTabBar` in `<View role="navigation" accessibilityLabel="Main">`. `BottomTabBar` comes from `expo-router/js-tabs`, a public entry of the installed `expo-router`, so no dependency is added; the bar keeps its roles, selected state, safe area and styling. The wrapper is not `accessible` (that would merge the tabs into one element on iOS).
+
+### 11. Canvas deviations
 
 - History badges follow D28 (`accent`, `success`, `neutral`), not the canvas's warning/success/danger fills.
 - No product thumbnails on history cards: the served image path needs core's origin, a helper L2 builds for the catalog; follow-up once it is on main.
@@ -145,12 +149,13 @@ Every field and route these screens use exists on main: `GET /orders` (`OrderLis
 | Rider on the way with a position; Rider without a position; No rider card before a rider; Delivered order names the rider from the rider read; Failed rider read keeps the card | `src/rider-card.test.tsx`: the scenario names | 5 |
 | Cancel dialog contents; Keep order; Order cancelled without a reason; Cancel refused | `src/orders-cancel.test.tsx`: the scenario names | 6 |
 | Cancel offered while placed or accepted; Order cancelled with a reason | `src/orders-tracking-cancel.test.tsx`: the scenario names | 7 |
+| Tab bar in a navigation landmark | `src/tabs-landmark.test.tsx`: `tab bar in a navigation landmark` | 8.0 |
 | History and a delivered order against core; Tracking follows the order against core; Cancel against core | `e2e/orders.spec.ts`: the scenario names | 8 |
 
 ## Risks / Trade-offs
 
 - [Expo Router: `(tabs)/orders.tsx` beside `orders/[id].tsx`] -> expected to resolve `/orders` to the tab and `/orders/<id>` to the stack route; T3's "Card opens the order" proves it. If it does not, the worker stops and reports (fallback: the tracking route under `order/[id]`, a spec change).
-- [Static export of a dynamic route] -> Decision 9; checked by T8's reload.
+- [Static export of a dynamic route] -> not directly loadable (Decision 9); accepted as a ceiling.
 - [Rider 401 ends the core session] -> only with a misconfigured rider URL; request 2 closes it for e2e.
 - [Fake timers with TanStack Query] -> only `Headline` is tested under fake timers, rendered alone with props, no query (T4 brief).
 - [Parallel with L2] -> no shared file is edited; if L2 restyles `Card`, `Badge` or `ErrorBanner`, these screens follow without change.
