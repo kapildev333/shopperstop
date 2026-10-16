@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { TabNav } from './tab-nav'
 
 test('tab navigation landmark', () => {
@@ -37,4 +37,29 @@ test('tab navigation scrolls instead of wrapping', () => {
     '[&_a[aria-current=page]]:text-accent',
   )
   expect(within(nav).getAllByRole('link')).toHaveLength(7)
+})
+
+test('tab navigation reveals the current link', () => {
+  const original = Element.prototype.scrollIntoView
+  const scrollIntoView = vi.fn()
+  Element.prototype.scrollIntoView = scrollIntoView
+  try {
+    render(
+      <TabNav label="Admin">
+        <a href="/admin/orders">Orders</a>
+        <a href="/admin/live">Live</a>
+        <a href="/admin/stores">Stores</a>
+        <a href="/admin/products">Products</a>
+        <a href="/admin/stock">Stock</a>
+        <a href="/admin/staff">Staff</a>
+        <a href="/admin/reports" aria-current="page">Reports</a>
+      </TabNav>,
+    )
+    const current = screen.getByRole('link', { name: 'Reports' })
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.contexts[0]).toBe(current)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+  } finally {
+    Element.prototype.scrollIntoView = original
+  }
 })

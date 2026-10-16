@@ -46,4 +46,44 @@ describe('Button variants and loading', () => {
     expect(link.className).toBe(buttonClass({ variant: 'secondary' }))
     expect(link).toHaveClass('border-line-strong', 'bg-surface', 'text-ink')
   })
+
+  it('compact size keeps the phone tap target', () => {
+    render(
+      <>
+        <Button size="compact">Order</Button>
+        <ButtonLink href="/orders/1" size="compact">
+          Open
+        </ButtonLink>
+      </>,
+    )
+    for (const element of [screen.getByRole('button', { name: 'Order' }), screen.getByRole('link', { name: 'Open' })]) {
+      expect(element).toHaveClass('h-11', 'sm:h-8', 'px-2')
+      expect(element).not.toHaveClass('sm:h-10')
+      expect(element).not.toHaveClass('px-4')
+    }
+  })
+})
+
+describe('Unavailable buttons stay focusable', () => {
+  it('aria-disabled looks disabled and keeps focus', async () => {
+    render(
+      <>
+        <Button aria-disabled="true">Pack</Button>
+        <ButtonLink href="/print" aria-disabled="true">
+          Print
+        </ButtonLink>
+      </>,
+    )
+    const button = screen.getByRole('button', { name: 'Pack' })
+    const link = screen.getByRole('link', { name: 'Print' })
+    for (const element of [button, link]) {
+      expect(element).toHaveClass('aria-disabled:opacity-50', 'aria-disabled:cursor-not-allowed')
+    }
+    expect(button).not.toBeDisabled()
+    expect(button).not.toHaveAttribute('disabled')
+    await userEvent.tab()
+    expect(button).toHaveFocus()
+    await userEvent.tab()
+    expect(link).toHaveFocus()
+  })
 })

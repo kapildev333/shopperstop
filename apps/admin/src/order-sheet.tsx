@@ -6,7 +6,7 @@ import { orderQuery, statusBadge, statusLabel, useSetStatus, when, type Order } 
 
 // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
 const maxReason = 500
-const actor = { customer: 'the customer', staff: 'staff', system: 'the system' }
+const actor = { customer: 'the customer', staff: 'staff', system: 'the system', rider: 'the rider' }
 
 function Details({ order }: { order: Order }) {
   return (

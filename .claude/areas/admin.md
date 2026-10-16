@@ -3,7 +3,7 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-Admin's Phase 2 work is complete (2026-10-15): admin-P2-L1 to L7 merged and archived. No admin worktree, branch or PR is open; no admin `make e2e` running (the slot is with whoever announces it; web-P2-L5 `web-e2e-flows` is unblocked by #187). Next: nothing to continue until the orchestrator writes a Phase 3 work package here or hands back a gap from the Phase 2 close. Open requests below (ui, core backlog) are not blockers.
+Admin's Phase 2 work is complete (2026-10-15): admin-P2-L1 to L7 merged and archived. Phase 3: admin-P3-L1 `admin-riders` (package below) waits on core-P3-L1 and L2, rider-P3-L1 and ui-P3-L1 and L2 on `origin/main`; the signals are `services/rider/openapi.json`, `packages/ui/src/api/rider.d.ts` and ui's `ImageTile`, `VisuallyHidden` and stacking `Sheet` exports. Checked 2026-10-15 (core-P3-L1 running in its worktree, nothing else started): none on main yet. No admin worktree, branch or PR is open; no admin `make e2e` running. The admin manager session polls every 5 minutes and starts the lane the tick its dependencies land.
 
 ## Lanes
 | Lane | Task | Scope | Status |
