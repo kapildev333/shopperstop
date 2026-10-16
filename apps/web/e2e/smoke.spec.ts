@@ -31,3 +31,9 @@ test('web preview proxies to core', async ({ request }) => {
   expect(response.status()).toBe(200)
   expect(await response.json()).toEqual({ status: 'ok' })
 })
+
+test('web preview proxies to rider', async ({ request }) => {
+  const response = await request.get('/api/rider/v1/healthz')
+  expect(response.status()).toBe(200)
+  expect(await response.json()).toEqual({ status: 'ok' })
+})

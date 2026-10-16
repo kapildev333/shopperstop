@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Badge, Price } from '@shopperstop/ui'
+import { Badge, ImageTile, Price } from '@shopperstop/ui'
 import { arrival, statusName, statusVariant, type OrderStatus } from './orders'
-import { ImageTile } from './product-card'
 
 // One read-only line: picture, name, unit, quantity and its total. Cart lines and order items both fit it;
 // children go under the text (checkout puts its out-of-stock mark there), so they wrap instead of leaving the card.
@@ -23,7 +22,7 @@ export function LineRow({
   return (
     <li className="flex flex-wrap items-center gap-3 py-3">
       <div className="w-14 shrink-0">
-        <ImageTile src={imageUrl} />
+        <ImageTile src={imageUrl} alt="" className="w-full" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-body font-semibold text-ink">{name}</p>
@@ -41,12 +40,18 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
   return <Badge variant={statusVariant(status)}>{statusName(status)}</Badge>
 }
 
-// The minutes left, counted from Date.now() once a second. Outside the status message, so a minute changing is not announced.
-export function Countdown({ placedAt, promisedMinutes }: { placedAt: string; promisedMinutes: number }) {
+// Date.now(), refreshed once a second, so a sentence counted from it stays current.
+export function useNow(): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [])
+  return now
+}
+
+// The minutes left, counted from Date.now() once a second. Outside the status message, so a minute changing is not announced.
+export function Countdown({ placedAt, promisedMinutes }: { placedAt: string; promisedMinutes: number }) {
+  const now = useNow()
   return <p className="text-h3 text-ink">{arrival(placedAt, promisedMinutes, now)}</p>
 }

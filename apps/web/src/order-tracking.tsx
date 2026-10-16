@@ -1,7 +1,9 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+import { MapPin } from 'lucide-react'
 import {
   Button,
+  ButtonLink,
   Card,
   Dialog,
   DialogFooter,
@@ -10,17 +12,15 @@ import {
   PageHeader,
   Skeleton,
   StatusMessage,
+  VisuallyHidden,
   buttonClass,
 } from '@shopperstop/ui'
-import { useStore, type Store } from './catalog'
 import { Totals } from './cart-drawer'
-import { cancelOrder, canCancel, formatWhen, postCancel, statusMessage, statusName, underWay, useOrder, type Order } from './orders'
-import { Countdown, LineRow } from './order-parts'
+import { cancelOrder, canCancel, formatWhen, lastSeen, postCancel, riderStage, statusMessage, statusName, underWay, useDelivery, useOrder, type Order } from './orders'
+import { Countdown, LineRow, StatusBadge, useNow } from './order-parts'
 
 export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof postCancel }) {
   const { data: order, isError, refetch } = useOrder(id)
-  // The store's promised minutes drive the countdown; read before the early returns.
-  const store = useStore(order?.storeId)
 
   // A view checks its data before its error: a failed repeat keeps the order on screen.
   if (order === undefined) {
@@ -47,7 +47,7 @@ export function OrderPage({ id, send = postCancel }: { id: string; send?: typeof
       </Frame>
     )
   }
-  return <OrderContent id={id} order={order} store={store.data} send={send} />
+  return <OrderContent id={id} order={order} send={send} />
 }
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
@@ -59,7 +59,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function OrderContent({ id, order, store, send }: { id: string; order: Order; store?: Store; send: typeof postCancel }) {
+function OrderContent({ id, order, send }: { id: string; order: Order; send: typeof postCancel }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [cancelError, setCancelError] = useState<string>()
@@ -93,7 +93,7 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
       {/* The one status message: it stays at this place, so a change is announced in place. The countdown is beside it, not in it. */}
       <Card className="flex flex-col gap-4 p-4 sm:p-6">
         <StatusMessage tone={order.status === 'delivered' ? 'success' : 'neutral'}>{statusMessage(order)}</StatusMessage>
-        {underWay(order.status) && store && <Countdown placedAt={order.placedAt} promisedMinutes={store.promisedMinutes} />}
+        {underWay(order.status) && <Countdown placedAt={order.placedAt} promisedMinutes={order.promisedMinutes} />}
         {canCancel(order.status) && (
           <div>
             <Button variant="ghost-danger" onClick={open}>
@@ -102,6 +102,7 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
           </div>
         )}
       </Card>
+      <RiderCard order={order} />
       <History order={order} />
       <Section title="Items">
         <ul className="flex flex-col divide-y divide-line">
@@ -146,6 +147,43 @@ function OrderContent({ id, order, store, send }: { id: string; order: Order; st
   )
 }
 
+// From out for delivery on: who carries the order and where they were last seen. Nothing while no rider is known.
+function RiderCard({ order }: { order: Order }) {
+  const { data: delivery } = useDelivery(order)
+  const now = useNow()
+  // Core's snapshot first; the rider read names the rider when core has none (the demo seed's delivered order).
+  const name = order.riderName ?? delivery?.riderName
+  if (!riderStage(order.status) || !name) return null
+  const location = delivery?.location
+  return (
+    <Section title="Rider">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-h3 text-ink">{name}</p>
+        <StatusBadge status={order.status} />
+      </div>
+      {location && (
+        <>
+          <time dateTime={location.recordedAt} className="text-small text-ink-muted">
+            {lastSeen(location.recordedAt, now)}
+          </time>
+          <div>
+            <ButtonLink
+              variant="secondary"
+              href={`https://www.google.com/maps?q=${location.lat},${location.lng}`}
+              target="_blank"
+              rel="noopener"
+            >
+              <MapPin size={16} aria-hidden />
+              Open in Maps{" "}
+              <VisuallyHidden>(opens in a new tab)</VisuallyHidden>
+            </ButtonLink>
+          </div>
+        </>
+      )}
+    </Section>
+  )
+}
+
 // The events, oldest first; each names its status and its time.
 function History({ order }: { order: Order }) {
   const headingId = useId()
@@ -158,6 +196,11 @@ function History({ order }: { order: Order }) {
         {order.events.map((event) => (
           <li key={`${event.createdAt}-${event.toStatus}`} className="flex flex-col">
             <p className="text-body font-semibold text-ink">{statusName(event.toStatus)}</p>
+            {event.actorType === 'rider' && event.actorName && (
+              <p className="text-small text-ink">
+                {event.toStatus === 'out_for_delivery' ? 'Picked up' : 'Delivered'} by {event.actorName}
+              </p>
+            )}
             <time dateTime={event.createdAt} className="text-small text-ink-muted">
               {formatWhen(event.createdAt)}
             </time>

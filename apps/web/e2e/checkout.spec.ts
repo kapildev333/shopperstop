@@ -32,7 +32,7 @@ test('address added at checkout', async ({ page, request }) => {
   await dialog.getByRole('button', { name: 'Save address', exact: true }).click()
   await expect(dialog).toBeHidden()
 
-  await expect(addresses.getByRole('button', { name: 'Deliver to Home', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(addresses.getByRole('radio', { name: 'Deliver to Home', exact: true })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('button', { name: 'Place order (COD)', exact: true })).toBeEnabled()
   await expectNoViolations(page)
 })
@@ -124,7 +124,7 @@ test('address not served against core', async ({ page, request }) => {
 
   await page.goto('/checkout')
   const addresses = page.getByRole('region', { name: 'Delivery address', exact: true })
-  await expect(addresses.getByRole('button', { name: 'Deliver to Work', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(addresses.getByRole('radio', { name: 'Deliver to Work', exact: true })).toHaveAttribute('aria-checked', 'true')
   await page.getByRole('button', { name: 'Place order (COD)', exact: true }).click()
 
   await expect(
