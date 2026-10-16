@@ -11,3 +11,14 @@ Done: change proposed, validated, committed. Waiting for manager 2.2, reviewer, 
 - Stale on main, no scenario covers it: CLAUDE.md intro "Phases 1 and 2 are on `main` (`v0.1.0`, `v0.2.0`); Phase 3 adds ..." misses `v0.3.0`. For the platform backlog.
 ## Requests
 ## Blockers
+
+## Review (reviewer, Sonnet 5.5)
+Verdict: approve.
+- Requirement bodies and every unedited scenario in both MODIFIED requirements are byte-identical to `openspec/specs/platform/spec.md` (diffed by script); only the 3 intended scenario lines differ. Nothing dropped.
+- Refreshed scenarios are true of README.md and CLAUDE.md on this branch (Status names v0.3.0 and Phase 4 in progress on `main`; Mobile app section and link; no "not on `main` yet"; no "once `apps/mobile` lands"; CLAUDE.md layout line, Phase 4, 15176, 5176, npx expo start all present).
+- No sibling scenario still describes a tree without `apps/mobile` (grep of the living spec: the only hits are the 3 refreshed lines). Other mobile scenarios (5176 origin, 15176 e2e) already match.
+- No scope creep; no needless complexity. The check script is greps only.
+- Gates: `openspec validate --all --strict` 20 passed, 0 failed; `bash .../check-readme-mobile.sh` prints `readme mobile check: ok`.
+- Nit 1: no 500-character rule exists in `openspec/config.yaml`; if the manager means one, `proposal.md` line 3 (Why) is 542 characters, spec.md lines are all under 500 (longest ~398 plus prefix). The OpenSpec validator accepts it.
+- Nit 2: the check script has a `#!/bin/sh` header but mode 644, and `ok` uses `eval`; fine for a change-folder script run with `sh`/`bash`.
+- Nit 3 (spec-wide, not this change): CLAUDE.md intro still says "Phases 1 and 2 are on `main`", already logged for the backlog.
