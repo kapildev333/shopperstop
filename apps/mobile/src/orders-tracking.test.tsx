@@ -132,8 +132,9 @@ test('Status change announced in place', async () => {
   current = order({ status: 'accepted', events: [...order().events, { toStatus: 'accepted', actorType: 'staff', createdAt: placedAt }] })
   await act(() => queryClient.refetchQueries({ queryKey: orderKey(token, id) }))
 
+  // The repeat's answer reaches the screen a tick after the refetch settles, so wait for the text.
+  expect(await screen.findByText('The store accepted your order.')).toBeTruthy()
   expect(screen.getAllByRole('status')).toHaveLength(1)
-  expect(screen.getByRole('status').props.children).toBe('The store accepted your order.')
 })
 
 test('Cancelled order shows the reason', async () => {
@@ -218,7 +219,8 @@ test('Rider steps name the rider', async () => {
 
   expect(await screen.findByText('Picked up by Asha')).toBeTruthy()
   expect(screen.getByText('Delivered by Asha')).toBeTruthy()
-  expect(screen.getAllByText(/\bby\b/)).toHaveLength(2)
+  // "Accepted by store" is a step label too; only the rider's own lines name Asha.
+  expect(screen.getAllByText(/by Asha$/)).toHaveLength(2)
 })
 
 test('Failed poll keeps the order', async () => {
