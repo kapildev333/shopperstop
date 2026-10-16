@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
-import { itemCount, since } from './orders'
+import { since } from '@shopperstop/ui/app'
+import { itemCount } from './orders'
 import { order } from './orders-fake'
 
 const placed = '2026-10-13T09:20:00Z'

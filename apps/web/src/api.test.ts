@@ -1,128 +1,128 @@
 import { afterEach, expect, test } from 'vitest'
-import createClient from 'openapi-fetch'
-import type { paths } from '@shopperstop/ui/api'
-import { authMiddleware, call } from './api'
-import { setToken } from './session'
+import { api, call } from './api'
+import { getToken, setToken } from './session'
 
 const key = 'shopperstop:customer-token'
-const url = 'http://localhost/api/core/v1/me'
+const internal = { error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } }
 
-afterEach(() => setToken(undefined))
+// The network boundary: globalThis.fetch answers with a real Response; the shipped client runs as is.
+let sent: Request[] = []
+function answer(response: () => Response) {
+  sent = []
+  globalThis.fetch = async (request: RequestInfo | URL) => {
+    sent.push(request as Request)
+    return response()
+  }
+}
+
+afterEach(() => {
+  setToken(undefined)
+  globalThis.fetch = async () => {
+    throw new TypeError('fetch failed')
+  }
+})
 
 test('bearer attached', async () => {
   setToken('t-3')
-  const request = new Request(url)
-  const out = await authMiddleware.onRequest!({ request } as never)
-  expect((out as Request).headers.get('Authorization')).toBe('Bearer t-3')
+  answer(() => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  await api.GET('/me')
+  expect(sent[0].url).toBe(`${location.origin}/api/core/v1/me`)
+  expect(sent[0].headers.get('Authorization')).toBe('Bearer t-3')
 })
 
 test('expired session dropped', async () => {
   setToken('t-4')
-  await authMiddleware.onResponse!({ response: new Response(null, { status: 401 }) } as never)
+  answer(() => new Response(null, { status: 401 }))
+  await api.GET('/me')
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem(key)).toBeNull()
-  const request = new Request(url)
-  const out = await authMiddleware.onRequest!({ request } as never)
-  expect((out as Request).headers.get('Authorization')).toBeNull()
+  await api.GET('/me')
+  expect(sent[1].headers.get('Authorization')).toBeNull()
 })
 
-const internal = { error: { code: 'internal', message: 'Could not reach ShopperStop. Try again.' } }
+test('stale 401 keeps the newer session', async () => {
+  setToken('t-old')
+  answer(() => {
+    setToken('t-new')
+    return new Response(null, { status: 401 })
+  })
+  await api.GET('/me')
+  expect(sent[0].headers.get('Authorization')).toBe('Bearer t-old')
+  expect(getToken()).toBe('t-new')
+  expect(localStorage.getItem(key)).toBe('t-new')
+})
 
 test('empty failed answer becomes internal', async () => {
-  const response = new Response('', { status: 502 })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out.status).toBe(502)
-  expect(await out.json()).toEqual(internal)
+  answer(() => new Response('', { status: 502 }))
+  const { error, response } = await api.GET('/me')
+  expect(response.status).toBe(502)
+  expect(error).toEqual(internal)
 })
 
 test('HTML failed answer becomes internal', async () => {
-  const response = new Response('<html><body>Bad Gateway</body></html>', {
-    status: 502,
-    headers: { 'Content-Type': 'text/html' },
-  })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out.status).toBe(502)
-  expect(await out.json()).toEqual(internal)
+  answer(() => new Response('<html><body>Bad Gateway</body></html>', { status: 502, headers: { 'Content-Type': 'text/html' } }))
+  const { error, response } = await api.GET('/me')
+  expect(response.status).toBe(502)
+  expect(error).toEqual(internal)
 })
 
 test('other JSON failed answer becomes internal', async () => {
-  const response = new Response('{"message":"x"}', {
-    status: 500,
-    headers: { 'Content-Type': 'application/json' },
-  })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out.status).toBe(500)
-  expect(await out.json()).toEqual(internal)
+  answer(() => new Response('{"message":"x"}', { status: 500, headers: { 'Content-Type': 'application/json' } }))
+  const { error, response } = await api.GET('/me')
+  expect(response.status).toBe(500)
+  expect(error).toEqual(internal)
 })
 
 test('enveloped failure passes through', async () => {
   const envelope = { error: { code: 'conflict', message: 'Email already registered', field: 'email' } }
-  const response = new Response(JSON.stringify(envelope), {
-    status: 409,
-    headers: { 'Content-Type': 'application/json' },
-  })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out).toBe(response)
-  expect(await out.json()).toEqual(envelope)
+  answer(() => new Response(JSON.stringify(envelope), { status: 409, headers: { 'Content-Type': 'application/json' } }))
+  const { error, response } = await api.POST('/auth/register', { body: { name: 'A', email: 'a@example.com', password: 'password1' } })
+  expect(response.status).toBe(409)
+  expect(error).toEqual(envelope)
 })
 
 test('bare 401 drops the session and becomes internal', async () => {
   setToken('t-5')
-  const response = new Response(null, { status: 401 })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
+  answer(() => new Response(null, { status: 401 }))
+  const { error, response } = await api.GET('/me')
   expect(localStorage.getItem(key)).toBeNull()
-  expect(out.status).toBe(401)
-  expect(await out.json()).toEqual(internal)
+  expect(response.status).toBe(401)
+  expect(error).toEqual(internal)
 })
 
 test('no content answer untouched', async () => {
-  const response = new Response(null, { status: 204 })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out).toBe(response)
-  expect(out.status).toBe(204)
-  expect(await out.text()).toBe('')
+  setToken('t-6')
+  answer(() => new Response(null, { status: 204 }))
+  const { error, response } = await api.POST('/auth/sign-out')
+  expect(error).toBeUndefined()
+  expect(response.status).toBe(204)
+  expect(await response.text()).toBe('')
 })
 
 test('ok JSON answer untouched', async () => {
-  const response = new Response('{"items":[]}', {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out).toBe(response)
-  expect(await out.json()).toEqual({ items: [] })
+  answer(() => new Response('{"items":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  const { data, response } = await api.GET('/me/addresses')
+  expect(response.status).toBe(200)
+  expect(data).toEqual({ items: [] })
 })
 
 test('failed write reports an error', async () => {
-  // The fetch option is the network boundary: it returns a real Response; the client, middleware and call() run as shipped.
-  const client = createClient<paths>({
-    baseUrl: 'http://localhost/api/core/v1',
-    fetch: async () => new Response('', { status: 502 }),
-  })
-  client.use(authMiddleware)
-  const result = await call(() => client.PATCH('/me', { body: { name: 'A', phone: '' } }))
-  expect(result).toEqual({ code: 'internal', message: 'Could not reach ShopperStop. Try again.' })
+  answer(() => new Response('', { status: 502 }))
+  const result = await call(() => api.PATCH('/me', { body: { name: 'A', phone: '' } }))
+  expect(result).toEqual(internal.error)
 })
 
 test('failed answer with a zero content length becomes internal', async () => {
-  // The fetch option is the network boundary: it returns a real Response; the client, middleware and call() run as shipped.
-  const client = createClient<paths>({
-    baseUrl: 'http://localhost/api/core/v1',
-    fetch: async () => new Response('', { status: 502, headers: { 'Content-Length': '0' } }),
-  })
-  client.use(authMiddleware)
-  const result = await call(() => client.PATCH('/me', { body: { name: 'A', phone: '' } }))
-  expect(result).toEqual({ code: 'internal', message: 'Could not reach ShopperStop. Try again.' })
-
-  const response = new Response('', { status: 502, headers: { 'Content-Length': '0' } })
-  const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-  expect(out.headers.get('content-length')).not.toBe('0')
+  answer(() => new Response('', { status: 502, headers: { 'Content-Length': '0' } }))
+  const result = await call(() => api.PATCH('/me', { body: { name: 'A', phone: '' } }))
+  expect(result).toEqual(internal.error)
 })
 
 test('JSON that is not the envelope becomes internal', async () => {
   for (const body of ['null', '[]', '{"error":"x"}', '{"error":{"code":1}}']) {
-    const response = new Response(body, { status: 500, headers: { 'Content-Type': 'application/json' } })
-    const out = (await authMiddleware.onResponse!({ response } as never)) as Response
-    expect(out.status, body).toBe(500)
-    expect(await out.json(), body).toEqual(internal)
+    answer(() => new Response(body, { status: 500, headers: { 'Content-Type': 'application/json' } }))
+    const { error, response } = await api.GET('/me')
+    expect(response.status, body).toBe(500)
+    expect(error, body).toEqual(internal)
   }
 })

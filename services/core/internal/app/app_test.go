@@ -33,6 +33,8 @@ var (
 	testPool *pgxpool.Pool
 	// filesDir is the files directory every test server stores uploads in.
 	filesDir string
+	// mails captures the mail the shared server sends.
+	mails = &outbox{}
 )
 
 func TestMain(m *testing.M) {
@@ -49,6 +51,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken})
+	a.Mailer = mails
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
 	srv.Close()

@@ -20,7 +20,7 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"sessions", "addresses", "customers", "staff_users", "store_service_areas", "stores",
+var truncateTables = []string{"sessions", "customer_tokens", "addresses", "customers", "staff_users", "store_service_areas", "stores",
 	// catalog (core-P2-L3)
 	"products", "categories",
 	// stock and cart (core-P2-L4)
@@ -110,7 +110,7 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		return fmt.Errorf("insert demo admin: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
-		"insert into customers (id, email, password_hash, name, phone) values ($1, $2, $3, 'Demo Customer', '+919800000000')",
+		"insert into customers (id, email, password_hash, name, phone, email_verified) values ($1, $2, $3, 'Demo Customer', '+919800000000', true)",
 		customerID, customerEmail, h.customer); err != nil {
 		return fmt.Errorf("insert demo customer: %w", err)
 	}

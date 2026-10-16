@@ -104,7 +104,7 @@ test('sign out ends the session', async () => {
   const signOut = calls.find((call) => call.url.endsWith('/api/rider/v1/auth/sign-out'))
   expect(signOut?.method).toBe('POST')
   expect(signOut?.headers.get('Authorization')).toBe('Bearer tok')
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:rider-token')).toBeNull()
   expect(screen.queryByRole('navigation', { name: 'Rider' })).not.toBeInTheDocument()
   expect(router.options.context.queryClient.getQueryCache().getAll()).toEqual([])
