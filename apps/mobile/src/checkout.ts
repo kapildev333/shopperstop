@@ -25,14 +25,14 @@ export async function postOrder(addressId: string): Promise<OrderResult> {
 export const cartEmptied = (error: ApiError) => error.code === 'validation' && !error.field
 
 // Runs inside the cart's write queue, so a Stepper tap before the press is placed too.
-export function placeOrder(addressId: string, send = postOrder): Promise<OrderResult> {
+export function placeOrder(addressId: string): Promise<OrderResult> {
   const token = getToken()
   if (!token) return Promise.resolve({ error: { code: 'unauthorized', message: 'sign in required' } })
   return queued(async () => {
     if (getToken() !== token) return { error: { code: 'unauthorized', message: 'sign in required' } }
-    let result = await send(addressId)
+    let result = await postOrder(addressId)
     // An order-number collision is rare: one more try, then the page shows the failure.
-    if (result.error?.code === 'conflict') result = await send(addressId)
+    if (result.error?.code === 'conflict') result = await postOrder(addressId)
     const { order, error } = result
     if (order || (error && cartEmptied(error))) {
       await queryClient.cancelQueries({ queryKey: cartKey(token) })
