@@ -14,7 +14,7 @@ test('profile saved', async () => {
   })
   await render(<ProfileSheet open customer={customer} onClose={onClose} />)
 
-  fireEvent.changeText(screen.getByLabelText('Phone'), '9876543210')
+  await fireEvent.changeText(screen.getByLabelText('Phone'), '9876543210')
   await fireEvent.press(screen.getByRole('button', { name: 'Save' }))
 
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
@@ -31,7 +31,7 @@ test('bad phone from the envelope', async () => {
   })
   await render(<ProfileSheet open customer={customer} onClose={onClose} />)
 
-  fireEvent.changeText(screen.getByLabelText('Phone'), '123')
+  await fireEvent.changeText(screen.getByLabelText('Phone'), '123')
   await fireEvent.press(screen.getByRole('button', { name: 'Save' }))
 
   await waitFor(() => expect(screen.getByText('Phone is not valid')).toBeTruthy())
@@ -45,7 +45,7 @@ test('empty name checked', async () => {
   const calls = fakeCore({})
   await render(<ProfileSheet open customer={customer} onClose={onClose} />)
 
-  fireEvent.changeText(screen.getByLabelText('Name'), '   ')
+  await fireEvent.changeText(screen.getByLabelText('Name'), '   ')
   await fireEvent.press(screen.getByRole('button', { name: 'Save' }))
 
   expect(screen.getByText('Enter your name')).toBeTruthy()
