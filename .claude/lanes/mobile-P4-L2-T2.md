@@ -1,5 +1,5 @@
 # mobile-P4-L2-T2 - Stepper primitive (mobile-serviceability-catalog task 2)
-Status: started
+Status: done (tasks 2.1 to 2.3; escalated the large Stepper padding)
 
 ## Doing
 2.1 red: src/ui/stepper.test.tsx written (four tests: the three brief tests plus `medium controls reach a 44 point touch area` for the spec's touch-area rule), failing (module absent)
