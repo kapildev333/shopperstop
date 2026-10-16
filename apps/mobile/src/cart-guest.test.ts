@@ -178,6 +178,26 @@ test('guest change wins over a late read', async () => {
   expect(JSON.parse(String(await storage.getItem(key)))).toEqual(expected)
 })
 
+test('clear before the read settles wins', async () => {
+  const { guest, storage } = loadFresh()
+  const stored = JSON.stringify({ storeId: storeA, items: [{ product: p(), quantity: 1 }] })
+  await storage.setItem(key, stored)
+  let answer!: (value: string | null) => void
+  const pending = new Promise<string | null>((resolve) => {
+    answer = resolve
+  })
+  jest.spyOn(storage, 'getItem').mockReturnValueOnce(pending)
+
+  const read = guest.loadGuestCart()
+  guest.clearGuestCart()
+  answer(stored)
+
+  await expect(read).resolves.toEqual(emptyCart)
+  expect(guest.getGuestCart()).toEqual(emptyCart)
+  await flush()
+  expect(await storage.getItem(key)).toBeNull()
+})
+
 test('guest cart with blocked storage', async () => {
   const { guest, storage } = loadFresh()
   const blocked = new Error('storage blocked')
