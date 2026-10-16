@@ -8,7 +8,7 @@ export type StoreProduct = components['schemas']['StoreProduct']
 
 export type StoreProductList = components['schemas']['StoreProductList']
 
-export type ProductFilter = { categoryId?: string; q?: string }
+export type ProductFilter = { categoryId?: string; q?: string; inStock?: boolean; sort?: 'price_asc' }
 
 export const pageSize = 24
 const pickCount = 12

@@ -1,13 +1,15 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { ChevronLeft, Search } from 'lucide-react-native'
+import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { findCategory, imageUri, useCategories, type Category } from '../../catalog'
+import { findCategory, imageUri, useCategories, type Category, type ProductFilter } from '../../catalog'
 import { ProductGrid } from '../../catalog-grid'
 import { useBack } from '../../screen-support'
 import { StoreGate } from '../../serviceability-gate'
 import { useStore } from '../../serviceability'
+import { Chip } from '../../ui/chip'
 import { ErrorBanner } from '../../ui/error-banner'
 import { EmptyState } from '../../ui/empty-state'
 import { IconButton } from '../../ui/button'
@@ -48,6 +50,9 @@ export default function Category() {
 function CategoryBody({ storeId, slug }: { storeId: string; slug: string }) {
   const categories = useCategories(storeId)
   const router = useRouter()
+  // The filters live here, not in the URL: they survive a tab change (setParams keeps this component mounted).
+  const [inStock, setInStock] = useState(false)
+  const [cheapestFirst, setCheapestFirst] = useState(false)
   if (!categories.data) {
     if (categories.isError) return <ErrorBanner error={categories.error} onRetry={() => void categories.refetch()} />
     return <Skeleton count={4} />
@@ -72,6 +77,12 @@ function CategoryBody({ storeId, slug }: { storeId: string; slug: string }) {
   }
   const { parent, selected } = found
   const options: Category[] = [parent, ...parent.children]
+  // Only the filters that are on are sent; a change starts again at page one (the query key holds the filter).
+  const filter: ProductFilter = {
+    categoryId: selected.id,
+    ...(inStock ? { inStock: true } : {}),
+    ...(cheapestFirst ? { sort: 'price_asc' as const } : {}),
+  }
   return (
     <View style={styles.body}>
       <View role="tablist" accessibilityLabel="Subcategories" style={styles.rail}>
@@ -98,9 +109,17 @@ function CategoryBody({ storeId, slug }: { storeId: string; slug: string }) {
         </ScrollView>
       </View>
       <View style={styles.products}>
+        <View style={styles.filters}>
+          <Chip selected={inStock} onPress={() => setInStock(!inStock)}>
+            In stock
+          </Chip>
+          <Chip selected={cheapestFirst} onPress={() => setCheapestFirst(!cheapestFirst)}>
+            Price: low to high
+          </Chip>
+        </View>
         <ProductGrid
           storeId={storeId}
-          filter={{ categoryId: selected.id }}
+          filter={filter}
           empty={<EmptyState title="No products here yet" />}
         />
       </View>
@@ -128,6 +147,7 @@ const styles = StyleSheet.create({
   tabName: { textAlign: 'center' },
   tabNameSelected: { fontFamily: fontFamily(600) },
   products: { flex: 1, backgroundColor: colors.canvas },
+  filters: { flexDirection: 'row', gap: spacing.unit * 2, paddingHorizontal: spacing.unit * 2, paddingTop: spacing.unit * 2 },
   link: { minHeight: 44, justifyContent: 'center' },
   linkText: { fontFamily: fontFamily(600) },
 })
