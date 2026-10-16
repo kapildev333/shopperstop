@@ -5,6 +5,7 @@ import { Stack } from 'expo-router'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { queryClient } from '../api'
 import { wireAppFocus } from '../app-focus'
+import { CartSheet } from '../cart-sheet'
 import { PincodeSheet } from '../pincode-sheet'
 
 // Nothing renders until the bundled Inter faces are loaded, so no text ever falls back to the system font.
@@ -17,6 +18,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }} />
         <PincodeSheet />
+        <CartSheet />
       </SafeAreaProvider>
     </QueryClientProvider>
   )
