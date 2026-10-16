@@ -128,14 +128,15 @@ test('quick taps each count', async () => {
   })
   setToken('t-1')
   await render(card())
-  const group = await screen.findByLabelText('Quantity of Amul Taaza')
+  await screen.findByLabelText('Quantity of Amul Taaza')
 
-  await fireEvent.press(within(group).getByRole('button', { name: 'Add one Amul Taaza' }))
-  expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2')
-  await fireEvent.press(within(group).getByRole('button', { name: 'Add one Amul Taaza' }))
-  expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('3')
-  await fireEvent.press(within(group).getByRole('button', { name: 'Remove one Amul Taaza' }))
-  expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2')
+  // An awaited press does not return while its write is held, so each press is awaited through its count instead.
+  void fireEvent.press(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2'))
+  void fireEvent.press(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('3'))
+  void fireEvent.press(screen.getByRole('button', { name: 'Remove one Amul Taaza' }))
+  await waitFor(() => expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2'))
 
   // Only the first write has reached core; the next one waits for its answer.
   await waitFor(() => expect(held).toHaveLength(1))
@@ -158,10 +159,10 @@ test("failed write returns to the cart's count", async () => {
   })
   setToken('t-1')
   await render(card())
-  const group = await screen.findByLabelText('Quantity of Amul Taaza')
+  await screen.findByLabelText('Quantity of Amul Taaza')
 
-  await fireEvent.press(within(group).getByRole('button', { name: 'Add one Amul Taaza' }))
-  expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2')
+  void fireEvent.press(screen.getByRole('button', { name: 'Add one Amul Taaza' }))
+  await waitFor(() => expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('2'))
 
   fail()
   await waitFor(() => expect(countOf(screen.getByLabelText('Quantity of Amul Taaza'))).toBe('1'))
