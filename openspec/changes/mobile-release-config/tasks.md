@@ -24,9 +24,9 @@ Scope: `apps/mobile/eas.json`, `apps/mobile/README.md`, `apps/mobile/scripts/rel
 Scenarios: Two build profiles and no submit; No account in the app config; Device notes name the commands.
 Starts from: `apps/mobile/scripts/release-config.test.mjs` (`node:test`, `node:assert/strict`, files read relative to `import.meta.url`): `two build profiles and no submit` (`Object.keys(build)` deep-equals `['preview', 'production']`, `build.preview.distribution === 'internal'`, `build.preview.android.buildType === 'apk'`, no `submit` key), `no account in the app config` (`expo.owner` and `expo.extra?.eas` undefined in `app.json`), `device notes name the commands` (README includes each of the five strings in the scenario). The first and third fail red because the files are absent; the second passes from the start (it guards against `eas build` writing the project id in later).
 
-- [ ] 1.1 `test:` the three tests, red on the missing `eas.json` and `README.md`
-- [ ] 1.2 `eas.json` exactly as design.md Decision 4
-- [ ] 1.3 `README.md` per design.md Decision 5 (plain prose, no personal details, `<lan-ip>` stays a placeholder)
+- [x] 1.1 `test:` the three tests, red on the missing `eas.json` and `README.md`
+- [x] 1.2 `eas.json` exactly as design.md Decision 4
+- [x] 1.3 `README.md` per design.md Decision 5 (plain prose, no personal details, `<lan-ip>` stays a placeholder)
 
 ## 2. App icon and adaptive icon from the tokens
 
