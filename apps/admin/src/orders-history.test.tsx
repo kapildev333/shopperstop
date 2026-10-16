@@ -317,7 +317,7 @@ test('the Payment filter keeps the loaded page\'s orders of one payment, asks co
   renderApp('/orders?tab=history')
   await screen.findByRole('table', { name: 'Order history' })
   const filter = screen.getByLabelText('Payment')
-  expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual(['Any', 'Cash on delivery', 'Awaiting payment', 'Paid', 'Refunded'])
+  expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual(['Any', 'Cash on delivery', 'Awaiting payment', 'Paid', 'Refunded', 'Not paid'])
   expect(filter).toHaveValue('')
 
   await userEvent.selectOptions(filter, 'Paid')

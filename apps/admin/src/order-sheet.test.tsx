@@ -402,3 +402,33 @@ test('the sheet of a refunded order shows Refunded, the refund reference and the
     'Payment refunded, reference rfnd_9, by payment, 13 Oct 2026, 2:53 pm',
   ])
 })
+
+test('an order cancelled before it was paid shows Not paid, never Awaiting payment, in History and on the sheet', async () => {
+  setToken('tok')
+  const unpaid = order(1, 'cancelled', {
+    paymentMethod: 'online',
+    paymentStatus: 'pending',
+    cancelledAt: '2026-10-13T09:35:00Z',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T09:20:00Z' },
+      // A payment event without a note (core always sends one today) still reads cleanly.
+      { fromStatus: 'placed', toStatus: 'placed', actorType: 'system', actorName: 'payment', createdAt: '2026-10-13T09:20:30Z' },
+      { fromStatus: 'placed', toStatus: 'cancelled', actorType: 'system', actorName: 'payment timeout', createdAt: '2026-10-13T09:35:00Z' },
+    ],
+  })
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [unpaid]).routes })
+
+  renderApp('/orders?tab=history&status=cancelled')
+  const table = await screen.findByRole('table', { name: 'Order history' })
+  expect(within(table).getByText('Not paid')).toHaveClass('bg-canvas')
+  await userEvent.click(within(table).getByRole('button', { name: 'SS-TEST0001' }))
+  const sheet = screen.getByRole('dialog', { name: 'Order SS-TEST0001' })
+
+  expect(within(sheet).getByText('Not paid')).toHaveClass('bg-canvas')
+  expect(within(sheet).queryByText('Awaiting payment')).not.toBeInTheDocument()
+  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
+    'Placed by the customer, 13 Oct 2026, 2:50 pm',
+    ', by payment, 13 Oct 2026, 2:50 pm',
+    'Cancelled by payment timeout, 13 Oct 2026, 3:05 pm',
+  ])
+})
