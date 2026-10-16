@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Orders payment badge
-Each board card, the order sheet and each History row SHALL show the order's payment as a `Badge` in words (PLAN.md D53): "Cash on delivery" (`neutral`) for a cash order; for an online order, after its `paymentStatus`, "Awaiting payment" (`warning`), "Paid" (`success`) or "Refunded" (`neutral`).
+Each board card, the order sheet and each History row SHALL show the order's payment as a `Badge` in words (PLAN.md D53): "Cash on delivery" (`neutral`) for a cash order; for an online order, after its `paymentStatus`, "Awaiting payment" (`warning`), "Paid" (`success`) or "Refunded" (`neutral`). A cancelled order whose payment is still `pending` (never paid) SHALL read "Not paid" (`neutral`), never "Awaiting payment".
 
 #### Scenario: Payment on the cards
 - **WHEN** the board holds a placed cash order, a placed online order whose payment is `pending` and an accepted online order whose payment is `paid`
 - **THEN** their cards read "Cash on delivery" on the neutral surface, "Awaiting payment" on the warning surface and "Paid" on the success surface
+
+#### Scenario: Cancelled before it was paid
+- **WHEN** staff open from History's cancelled list an online order cancelled by `payment timeout` while its payment was `pending`
+- **THEN** its row and its sheet read "Not paid" on the neutral surface, the sheet shows no "Awaiting payment", and a payment event without a note reads ", by payment, <when>" with no placeholder text
 
 ### Requirement: Accept waits for the payment
 While a placed order's `paymentStatus` is `pending`, its "Accept <number>" button SHALL stay on the card, `aria-disabled` (never `disabled`) and described by the visible badge "Awaiting payment", and a press SHALL send nothing. Once a poll brings the order paid, the button SHALL work as for any placed order.
@@ -33,7 +37,7 @@ The sheet SHALL show the payment badge after the status badge, "Payment referenc
 - **THEN** the sheet shows "Refunded" on the neutral surface, "Payment reference: rfnd_9", and the events end with "Cancelled by staff, 13 Oct 2026, 2:52 pm: Out of stock" and "Payment refunded, reference rfnd_9, by payment, 13 Oct 2026, 2:53 pm"
 
 ### Requirement: Orders history payment
-History's table SHALL have a "Payment" column with the badge, before the delivered or cancelled time, and a "Payment" `Select` (Any, Cash on delivery, Awaiting payment, Paid, Refunded) that keeps only the loaded page's orders of that payment, asking core nothing. The pager SHALL still count the whole list; with no match on the page, "No orders on this page match" SHALL replace the table.
+History's table SHALL have a "Payment" column with the badge, before the delivered or cancelled time, and a "Payment" `Select` (Any, Cash on delivery, Awaiting payment, Paid, Refunded, Not paid) that keeps only the loaded page's orders of that payment, asking core nothing. The pager SHALL still count the whole list; with no match on the page, "No orders on this page match" SHALL replace the table.
 
 #### Scenario: Payment column
 - **WHEN** an admin opens History and the store has a delivered cash order

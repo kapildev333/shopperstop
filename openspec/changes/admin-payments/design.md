@@ -2,7 +2,7 @@
 
 core-P5-L1 (#335, archived into `openspec/specs/orders`) added online payment to orders. The admin board (`apps/admin/src/order-board.tsx`), the order sheet (`order-sheet.tsx`) and History (`order-history.tsx`) read `Order` from `@shopperstop/ui/api`, which already carries the new fields; nothing in the app uses them yet. The work package is in `.claude/areas/admin.md` "Phase 5 work package" > admin-P5-L1, with core's request (relayed there) to render a payment event by its note.
 
-The whole change was spiked on `lane/admin-P5-L1-payments` at 2fb56ed, cut into the six patches under `patches/`, re-applied in order on a clean tree (identical result) and the tree restored. Admin Vitest counts per step: base 327; 1.1 red 3 / 330; 1.2 330; 2.1 red 2 / 332; 2.2 332; 3.1 red 2 / 333; 3.2 333. Lint, typecheck and `vite build` clean on the final tree. The e2e test was not run (the manager holds the slot).
+The whole change was spiked on `lane/admin-P5-L1-payments` at 2fb56ed, cut into the six patches under `patches/`, re-applied in order on a clean tree (identical result) and the tree restored. Admin Vitest counts per step: base 327; 1.1 red 3 / 330; 1.2 330; 2.1 red 2 / 332; 2.2 332; 3.1 red 2 / 333; 3.2 333; task 3b, spiked on 101878f: 3b.1 red 2 / 334; 3b.2 334. Lint, typecheck and `vite build` clean on the final tree. The e2e test was not run (the manager holds the slot).
 
 ## Goals / Non-Goals
 
@@ -22,6 +22,8 @@ Non-goals: finding every order of one payment across pages (needs a core query p
 8. History: a "Payment" column before the finished time (keeps the existing "last column is Delivered/Cancelled" assertions), and the filter in component state (reset on a store change by the route's `key={storeId}`, kept across status and page changes), not in the URL, like the product filters (admin-P2-L3).
 9. e2e places the online order through core with Playwright's `request` against `http://localhost:18080/api/core/v1/` as `demo@shopperstop.local` (email verified in the seed): `DELETE /me/cart`, `PUT /me/cart/items` (Koramangala, Pomegranate Bhagwa `...0604`, 1, ₹320, above the ₹99 minimum, seeded stock 38), `POST /orders {addressId: Home, paymentMethod: online}`. It signs the panel in as the Koramangala store staff, not the admin, because admin@ is the email nearest core's 10 sign-ins per hour (admin area `## Found`). The test is the third in `orders.spec.ts`, so it runs after the first test in the same worker.
 
+10. (Task 3b, review R1, the manager's decision.) A cancelled order whose payment is still `pending` (core's payment timeout, or a cancel before paying) is `unpaid`, shown as `neutral` "Not paid": "Awaiting payment" would promise a payment that can no longer come. `payment()` decides it, so the card, the sheet, History and the History filter (which gains "Not paid", read from the same table) agree. A payment event with no note renders an empty note rather than "undefined"; core always sends one today.
+
 ## Simplifications and ceilings
 
 - History payment filter is client-side on the loaded page of 24: the pager and "n orders" count the unfiltered list, and a page can show "No orders on this page match" while other pages hold matches. Upgrade: a `paymentStatus` (or `payment`) query parameter on `GET /admin/stores/{id}/orders` in core, then the filter goes into the URL and the query key. Worth asking for only if stores search History by payment.
@@ -36,6 +38,7 @@ Non-goals: finding every order of one payment across pages (needs a core query p
 
 | Scenario | Test |
 |---|---|
+| Orders payment badge > Cancelled before it was paid | `order-sheet.test.tsx` "an order cancelled before it was paid shows Not paid, never Awaiting payment, in History and on the sheet" |
 | Orders payment badge > Payment on the cards | `orders-board.test.tsx` "each card carries its payment as a badge: cash on delivery, awaiting payment, paid" |
 | Accept waits for the payment > Accept held until paid | `orders-status.test.tsx` "Accept waits for the payment: aria-disabled and described by \"Awaiting payment\", a press sends nothing; once paid it accepts" |
 | Accept refused for a pending payment > Payment pending at core | `orders-status.test.tsx` "a 409 payment_pending reads the order again, keeps it in Placed awaiting payment and says so, with no alert" |
