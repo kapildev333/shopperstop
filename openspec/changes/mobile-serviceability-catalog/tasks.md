@@ -195,7 +195,7 @@ Starts from: `e2e/catalog.spec.ts` with the seven scenario names, committed red 
 
 - [x] 16.1 Red: the spec committed; `npm run e2e --workspace apps/mobile` output in the log (core env from the Makefile's e2e target; ask the manager for the e2e slot first)
 - [x] 16.2 Fixes inside the scopes of tasks 1 to 15 only, each `fix:` naming the scenario; an axe failure on markup the app does not control stops the worker (no rule switched off)
-- [ ] 16.3 `make e2e` exits 0 (with the slot); mobile suite all green
+- [x] 16.3 `make e2e` exits 0 (with the slot); mobile suite all green
 
 ## 17. Acceptance (team lead)
 

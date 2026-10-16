@@ -1,7 +1,7 @@
 # mobile-P4-L2 - mobile-serviceability-catalog: pincode, store notices, Home, Categories, Category, Product, Search, change store (team lead)
-Status: started (proposal done; workers not launched)
+Status: done (tasks 1-16 done; 17 acceptance with the team lead)
 ## Doing
-Proposal committed; waiting for the manager to launch group A (tasks 1 to 7).
+Task 16 done: make e2e exit 0 from the worktree root; R1 fixes landed; see mobile-P4-L2-T16.md.
 ## Found
 - Change `openspec/changes/mobile-serviceability-catalog/`: proposal; `specs/mobile-app/spec.md` (2 MODIFIED: Mobile bottom tabs, Mobile end-to-end suite with axe; 20 ADDED); design.md (13 decisions, web-app mirror table, contract audit, scenario-to-test map); tasks.md (15 worker tasks + acceptance, parallel groups A to D). `docs/design/mobile-P4-L2.md` carries the artboard data and interfaces.
 - `openspec validate --all --strict`: 20 passed. INFO: archive needs `openspec/specs/mobile-app` (on main since #255); rebase before archive.
