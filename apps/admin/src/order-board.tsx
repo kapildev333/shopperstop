@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
 import { useSince } from '@shopperstop/ui/app'
-import { OrderSheet } from './order-sheet'
+import { OrderSheet, PaymentBadge } from './order-sheet'
 import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, type Order } from './orders'
 
 
@@ -26,7 +26,10 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
       {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
-      <Price cents={order.totalCents} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Price cents={order.totalCents} />
+        <PaymentBadge order={order} />
+      </div>
       {isActive(order.status) && (
         // Named by its own text and the order's number: "Accept SS-…".
         <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} onClick={onNext}>

@@ -4,8 +4,8 @@ Each task applies its two patches from `patches/` in order with `git apply` (tes
 
 Scope: `apps/admin/src/orders.ts`, `order-board.tsx`, `order-sheet.tsx`, `orders-board.test.tsx`, `order-sheet.test.tsx`. Scenarios: "Orders payment badge" > "Payment on the cards"; "Order sheet payment" > "Order paid online", "Order refunded".
 
-- [ ] 1.1 `test:` apply `patches/1.1-payment-badge-tests.diff`: `orders-board.test.tsx` "each card carries its payment as a badge: cash on delivery, awaiting payment, paid"; `order-sheet.test.tsx` "the sheet of an order paid online shows its payment, its reference, an online total and the payment event by its note" and "the sheet of a refunded order shows Refunded, the refund reference and the refund event after the cancel"; see 3 fail (330 total)
-- [ ] 1.2 `feat:` apply `patches/1.2-payment-badge.diff`: `Payment`, `payment`, `paymentBadge` in `orders.ts`; `PaymentBadge`, reference line, total label and payment-event rendering in `order-sheet.tsx`; the badge beside the card's price in `order-board.tsx`; 330 pass
+- [x] 1.1 `test:` apply `patches/1.1-payment-badge-tests.diff`: `orders-board.test.tsx` "each card carries its payment as a badge: cash on delivery, awaiting payment, paid"; `order-sheet.test.tsx` "the sheet of an order paid online shows its payment, its reference, an online total and the payment event by its note" and "the sheet of a refunded order shows Refunded, the refund reference and the refund event after the cancel"; see 3 fail (330 total)
+- [x] 1.2 `feat:` apply `patches/1.2-payment-badge.diff`: `Payment`, `payment`, `paymentBadge` in `orders.ts`; `PaymentBadge`, reference line, total label and payment-event rendering in `order-sheet.tsx`; the badge beside the card's price in `order-board.tsx`; 330 pass
 
 ## 2. Accept waits for the payment (admin-P5-L1-T2)
 

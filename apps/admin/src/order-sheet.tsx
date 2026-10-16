@@ -2,21 +2,33 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Badge, Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Price, Sheet, StatusMessage } from '@shopperstop/ui'
 import { when } from '@shopperstop/ui/app'
-import { orderQuery, statusBadge, statusLabel, useSetStatus, type Order } from './orders'
+import { orderQuery, payment, paymentBadge, statusBadge, statusLabel, useSetStatus, type Order } from './orders'
 
 // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
 const maxReason = 500
 const actor = { customer: 'the customer', staff: 'staff', system: 'the system', rider: 'the rider' }
+
+// The order's payment in words, on its card, its sheet and its History row.
+export function PaymentBadge({ order }: { order: Order }) {
+  const { variant, label } = paymentBadge[payment(order)]
+  return <Badge variant={variant}>{label}</Badge>
+}
 
 function Details({ order }: { order: Order }) {
   return (
     <div className="flex flex-col gap-4 text-body text-ink">
       <p className="flex flex-wrap items-center gap-2">
         <Badge variant={statusBadge(order.status)}>{statusLabel[order.status]}</Badge>
+        <PaymentBadge order={order} />
         Placed {when(order.placedAt)}
       </p>
       {order.cancelReason && <p>Reason for cancelling: {order.cancelReason}</p>}
       {order.riderName && <p>Rider: {order.riderName}</p>}
+      {order.paymentReference && (
+        <p>
+          Payment reference: <span className="tabular-nums">{order.paymentReference}</span>
+        </p>
+      )}
       <section aria-labelledby="order-items" className="flex flex-col gap-2">
         <h3 id="order-items" className="text-h3">Items</h3>
         <ul className="flex flex-col gap-1">
@@ -34,7 +46,7 @@ function Details({ order }: { order: Order }) {
           <dd className="text-right"><Price cents={order.subtotalCents} /></dd>
           <dt>Delivery fee</dt>
           <dd className="text-right"><Price cents={order.deliveryFeeCents} /></dd>
-          <dt className="font-semibold">Total, cash on delivery</dt>
+          <dt className="font-semibold">Total, {order.paymentMethod === 'online' ? 'online payment' : 'cash on delivery'}</dt>
           <dd className="text-right"><Price cents={order.totalCents} /></dd>
         </dl>
       </section>
@@ -59,8 +71,15 @@ function Details({ order }: { order: Order }) {
         <ol className="flex flex-col gap-1">
           {order.events.map((event, i) => (
             <li key={i}>
-              {statusLabel[event.toStatus]} by {event.actorName ?? actor[event.actorType]}, {when(event.createdAt)}
-              {event.note && `: ${event.note}`}
+              {/* A payment event leaves the status where it was: its note says what happened. */}
+              {event.fromStatus === event.toStatus ? (
+                `${event.note}, by ${event.actorName ?? actor[event.actorType]}, ${when(event.createdAt)}`
+              ) : (
+                <>
+                  {statusLabel[event.toStatus]} by {event.actorName ?? actor[event.actorType]}, {when(event.createdAt)}
+                  {event.note && `: ${event.note}`}
+                </>
+              )}
             </li>
           ))}
         </ol>

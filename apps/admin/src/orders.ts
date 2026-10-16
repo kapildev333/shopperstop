@@ -1,4 +1,5 @@
 import { keepPreviousData, queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { BadgeVariant } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
 
@@ -76,6 +77,17 @@ export const orderQuery = (id: string) =>
 // D28, as on the customer site: an order under way is `accent`, delivered `success`, cancelled `neutral`; the badge
 // always carries the status as text, and a status is never `danger` or `warning`.
 export const statusBadge = (status: OrderStatus) => (status === 'delivered' ? 'success' : status === 'cancelled' ? 'neutral' : 'accent')
+
+// D53: how an order is paid. Core sets `paymentStatus` on online orders only, so its absence is cash. The badge always
+// carries the words; a pending payment is the one `warning`.
+export type Payment = NonNullable<Order['paymentStatus']> | 'cod'
+export const payment = (order: Order): Payment => order.paymentStatus ?? 'cod'
+export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: string }> = {
+  cod: { variant: 'neutral', label: 'Cash on delivery' },
+  pending: { variant: 'warning', label: 'Awaiting payment' },
+  paid: { variant: 'success', label: 'Paid' },
+  refunded: { variant: 'neutral', label: 'Refunded' },
+}
 
 // A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
 // customer cancelled): the order is then read again, so the page can show where it stands and say so.
