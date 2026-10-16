@@ -17,7 +17,7 @@ Status: blocked
 If a diff does not apply or the red/green counts differ, stop and write it under Blockers; do not improvise. Never edit `packages/ui/`, `router.ts`, other apps or the lane log `rider-P4-L3.md`.
 
 ## Red run
-Status: red confirmed (9 failed, manager decision: 9 is correct; the brief said 8 by typo)
+Status: done
 
 Applied "Task 1: tests" with `git apply` (clean). `npm run build --workspace packages/ui` exit 0. `npm run test --workspace apps/rider -- --run` run twice, both exit 1:
  Test Files  4 failed | 6 passed (10)
@@ -36,8 +36,13 @@ FAIL  src/sign-in.test.tsx > wrong credentials or inactive rider
 
 Brief text said "8 failed / 52 passed" and "8 red in all"; the brief also names nine tests, and design.md lists nine. Manager decision: 9 is correct, the "8" was a typo. Passing count 52, total 61.
 ## Green run
-(pending)
+ Test Files  10 passed (10)
+      Tests  61 passed (61)
 ## Gates
+- `npm run test --workspace apps/rider -- --run` exit 0: 10 files, 61 passed.
+- `npm run lint --workspace apps/rider` exit 0.
+- `npm run typecheck --workspace apps/rider` exit 0.
+- `npm run build --workspace apps/rider` exit 0 (built in 256 ms).
 ## Found
 ## Blockers
 Red count is 9 (brief typo said 8; manager confirmed 9). Resolved, proceeding.
