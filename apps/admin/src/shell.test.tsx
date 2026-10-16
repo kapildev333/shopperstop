@@ -112,7 +112,7 @@ test('expired session on load returns to sign-in', async () => {
 
   await waitFor(() => expect(router.state.location.pathname).toBe('/sign-in'))
   expect(router.state.location.search).toEqual({ redirect: '/orders' })
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:staff-token')).toBeNull()
 })
 
@@ -144,7 +144,7 @@ test('sign out ends the session', async () => {
   const signOut = calls.find((call) => call.url.endsWith('/admin/auth/sign-out'))
   expect(signOut?.method).toBe('POST')
   expect(signOut?.headers.get('Authorization')).toBe('Bearer tok')
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:staff-token')).toBeNull()
   expect(screen.queryByRole('navigation', { name: 'Admin' })).not.toBeInTheDocument()
   expect(router.options.context.queryClient.getQueryCache().getAll()).toEqual([])

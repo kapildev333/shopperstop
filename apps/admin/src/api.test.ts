@@ -27,7 +27,7 @@ test('401 with a session clears it and reports the loss', async () => {
 
   await api.GET('/admin/me')
 
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:staff-token')).toBeNull()
   expect(lost).toHaveBeenCalledOnce()
 })
@@ -72,6 +72,7 @@ test.each([
   ['an empty body with its length', () => new Response(null, { status: 502, headers: { 'Content-Length': '0' } })],
   ['a plain-text body', () => new Response('Bad Gateway', { status: 502, headers: { 'Content-Type': 'text/plain' } })],
   ['JSON that is not core\'s error', () => Response.json({ message: 'upstream down' }, { status: 502 })],
+  ['an error code without a message', () => Response.json({ error: { code: 'bad_gateway' } }, { status: 502 })],
 ])('a failure answer with %s reaches the caller as an internal error with its status', async (_, answer) => {
   setToken('tok')
   fakeCore({ 'GET /admin/me': answer })
@@ -112,7 +113,7 @@ test('a 401 without core\'s error body still ends the session and is an error to
 
   const { error, response } = await api.GET('/admin/me')
 
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(lost).toHaveBeenCalledOnce()
   expect(error).toEqual({ error: { code: 'internal', message: 'The server did not answer as expected.' } })
   expect(response.status).toBe(401)

@@ -57,7 +57,7 @@ test.each([
 
   const alert = await screen.findByRole('alert')
   expect(alert).toHaveTextContent(message)
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(localStorage.getItem('shopperstop:staff-token')).toBeNull()
 })
 
@@ -72,7 +72,7 @@ test('validation error is shown on its field', async () => {
   expect(await screen.findByText('must be a valid email address')).toBeInTheDocument()
   expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('must be a valid email address')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
 })
 
 test('submit is disabled while signing in', async () => {

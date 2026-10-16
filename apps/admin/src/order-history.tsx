@@ -2,7 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Button, Card, Chip, EmptyState, ErrorBanner, Price, Skeleton, Table, cn, type Column } from '@shopperstop/ui'
 import { OrderSheet } from './order-sheet'
-import { historyQuery, itemCount, orderQuery, pageSize, statusLabel, when, type Finished, type Order, type OrdersSearch } from './orders'
+import { when } from '@shopperstop/ui/app'
+import { historyQuery, itemCount, orderQuery, pageSize, statusLabel, type Finished, type Order, type OrdersSearch } from './orders'
 
 // One store's finished orders. The route gives it `key={storeId}`, so nothing kept here outlives a change of store.
 // `go` changes the URL; the status filter starts again at page 1.
