@@ -19,9 +19,12 @@ test('sheet closed', async () => {
       <Text>Name field</Text>
     </Sheet>,
   )
-  fireEvent.press(screen.getByRole('button', { name: 'Close' }))
-  fireEvent.press(screen.getByRole('button', { name: 'Close sheet' }))
-  fireEvent(screen.getByText('Edit profile'), 'requestClose')
+  await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Close sheet' }))
+  // The platform asks the modal to close (Android back, Escape on the web export): call the Modal's own handler.
+  let modal = screen.getByText('Edit profile')
+  while (!('onRequestClose' in modal.props) && modal.parent) modal = modal.parent
+  modal.props.onRequestClose()
   expect(onClose).toHaveBeenCalledTimes(3)
 })
 
