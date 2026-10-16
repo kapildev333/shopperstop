@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { Link } from 'expo-router'
 import { ShoppingBag } from 'lucide-react-native'
 import { useAddresses } from './addresses'
 import { clearCart, getCartSummary } from './cart'
@@ -35,7 +35,6 @@ export function PincodeSheet() {
 
 // Mounted only while open, so each open starts from the stored pincode.
 function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void }) {
-  const router = useRouter()
   const token = useToken()
   const addresses = useAddresses()
   const [value, setValue] = useState(getPincode() ?? '')
@@ -91,18 +90,13 @@ function PincodeForm({ onOtherStore }: { onOtherStore: (change: Change) => void 
         Continue
       </Button>
       {token ? null : (
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => {
-            closePincodeSheet()
-            router.push('/sign-in?returnTo=%2F')
-          }}
-          style={styles.link}
-        >
-          <Text tone="accent" style={styles.linkLabel}>
-            Have an account? Sign in to use a saved address
-          </Text>
-        </Pressable>
+        <Link href={{ pathname: '/sign-in', params: { returnTo: '/' } }} asChild>
+          <Pressable accessibilityRole="link" onPress={closePincodeSheet} style={styles.link}>
+            <Text tone="accent" style={styles.linkLabel}>
+              Have an account? Sign in to use a saved address
+            </Text>
+          </Pressable>
+        </Link>
       )}
     </View>
   )
