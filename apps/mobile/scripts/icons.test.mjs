@@ -100,6 +100,9 @@ test('splash uses the brand surface and the mark', () => {
   assert.equal(options.imageWidth, 200)
   assert.equal(options.resizeMode, 'contain')
   assert.ok(existsSync(join(appDir, 'assets', 'splash-icon.png')), 'splash-icon.png exists')
+  const splash = decodePng(readFileSync(join(appDir, 'assets', 'splash-icon.png')))
+  const [, onBrand] = [hexBytes(colors.brand), hexBytes(colors.onBrand)]
+  assert.deepEqual(pixelAt(splash, 512, 512), [...onBrand, 255], 'splash centre is opaque on-brand')
   assert.ok(
     IMAGES.some((e) => e.file === 'splash-icon.png' && e.opaque === false && e.scale === 1),
     'IMAGES holds splash-icon.png (transparent, scale 1)',
