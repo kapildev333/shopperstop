@@ -80,6 +80,8 @@ export function ordersCore(storeId: string, orders: Order[]) {
       const refused = await pass('status')
       if (refused) return refused
       const current = held()
+      // services/core/internal/order: staff accept an online order only once it is paid.
+      if (current.status === 'placed' && body.status === 'accepted' && current.paymentStatus === 'pending') return apiError(409, 'payment_pending', 'the order is awaiting payment')
       if (!moves[current.status]?.includes(body.status)) return apiError(409, 'conflict', `cannot move an order from ${current.status} to ${body.status}`)
       const now = new Date().toISOString()
       const moved: Order = {

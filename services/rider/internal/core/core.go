@@ -64,7 +64,8 @@ type Order struct {
 	CustomerPhone string       `json:"customerPhone,omitempty"`
 	Address       OrderAddress `json:"address"`
 	TotalCents    int64        `json:"totalCents"`
-	PaymentMethod string       `json:"paymentMethod"`
+	PaymentMethod string       `json:"paymentMethod"`           // cod | online
+	PaymentStatus string       `json:"paymentStatus,omitempty"` // online only: pending | paid | refunded
 	PlacedAt      time.Time    `json:"placedAt"`
 	Items         []OrderItem  `json:"items"`
 }

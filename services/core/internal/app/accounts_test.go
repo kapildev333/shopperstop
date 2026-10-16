@@ -34,10 +34,11 @@ func uniqueEmail(t *testing.T) string {
 type sessionBody struct {
 	Token    string `json:"token"`
 	Customer struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-		Name  string `json:"name"`
-		Phone string `json:"phone"`
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		Name          string `json:"name"`
+		Phone         string `json:"phone"`
+		EmailVerified bool   `json:"emailVerified"`
 	} `json:"customer"`
 }
 

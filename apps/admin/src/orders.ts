@@ -1,4 +1,5 @@
 import { keepPreviousData, queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { BadgeVariant } from '@shopperstop/ui'
 import type { components } from '@shopperstop/ui/api'
 import { api } from './api'
 
@@ -77,19 +78,37 @@ export const orderQuery = (id: string) =>
 // always carries the status as text, and a status is never `danger` or `warning`.
 export const statusBadge = (status: OrderStatus) => (status === 'delivered' ? 'success' : status === 'cancelled' ? 'neutral' : 'accent')
 
+// D53: how an order is paid. Core sets `paymentStatus` on online orders only, so its absence is cash. The badge always
+// carries the words; a pending payment is the one `warning`, and a cancelled order whose payment never came (core's
+// payment timeout) is `unpaid`: nothing is awaited any more.
+export type Payment = NonNullable<Order['paymentStatus']> | 'cod' | 'unpaid'
+export const payment = (order: Order): Payment =>
+  order.status === 'cancelled' && order.paymentStatus === 'pending' ? 'unpaid' : (order.paymentStatus ?? 'cod')
+// Core refuses to accept an online order until it is paid (409 payment_pending).
+export const awaitsPayment = (order: Order) => order.status === 'placed' && order.paymentStatus === 'pending'
+export const paymentBadge: Record<Payment, { variant: BadgeVariant; label: string }> = {
+  cod: { variant: 'neutral', label: 'Cash on delivery' },
+  pending: { variant: 'warning', label: 'Awaiting payment' },
+  paid: { variant: 'success', label: 'Paid' },
+  refunded: { variant: 'neutral', label: 'Refunded' },
+  unpaid: { variant: 'neutral', label: 'Not paid' },
+}
+
 // A status change. Core answers 409 when the order is no longer where this page showed it (someone else moved it, or the
-// customer cancelled): the order is then read again, so the page can show where it stands and say so.
+// customer cancelled), or 409 payment_pending when its payment is still pending: the order is then read again, so the
+// page can show where it stands and say so.
 export function useSetStatus(storeId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (sent: { order: Order; status: OrderStatus; note?: string }) => {
       const params = { path: { id: sent.order.id } }
       const { data, error } = await api.POST('/admin/orders/{id}/status', { params, body: { status: sent.status, note: sent.note } })
-      if (!error) return { order: data, changedElsewhere: false }
-      if (error.error.code !== 'conflict') throw error.error
+      if (!error) return { order: data, changedElsewhere: false, awaitingPayment: false }
+      const code = error.error.code
+      if (code !== 'conflict' && code !== 'payment_pending') throw error.error
       const read = await api.GET('/admin/orders/{id}', { params })
       if (read.error) throw read.error.error
-      return { order: read.data, changedElsewhere: true }
+      return { order: read.data, changedElsewhere: code === 'conflict', awaitingPayment: code === 'payment_pending' }
     },
     onSuccess: async ({ order }) => {
       const board = boardQuery(storeId).queryKey

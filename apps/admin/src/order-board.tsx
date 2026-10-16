@@ -2,8 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
 import { useSince } from '@shopperstop/ui/app'
-import { OrderSheet } from './order-sheet'
-import { activeStatuses, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, type Order } from './orders'
+import { OrderSheet, PaymentBadge } from './order-sheet'
+import { activeStatuses, awaitsPayment, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, type Order } from './orders'
 
 
 // Its own component, so a minute passing renders this text and nothing else on the board.
@@ -16,6 +16,8 @@ function Since({ at }: { at: string }) {
 }
 
 function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy: boolean; saving: boolean; onNext: () => void; onOpen: () => void }) {
+  // Accept waits for an online payment: the button stays, `aria-disabled`, described by the badge that says why.
+  const waiting = awaitsPayment(order)
   return (
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -26,10 +28,19 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
       {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
-      <Price cents={order.totalCents} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Price cents={order.totalCents} />
+        <PaymentBadge order={order} id={`payment-${order.id}`} />
+      </div>
       {isActive(order.status) && (
         // Named by its own text and the order's number: "Accept SS-…".
-        <Button id={`next-${order.id}`} aria-labelledby={`next-${order.id} number-${order.id}`} aria-disabled={busy} onClick={onNext}>
+        <Button
+          id={`next-${order.id}`}
+          aria-labelledby={`next-${order.id} number-${order.id}`}
+          aria-describedby={waiting ? `payment-${order.id}` : undefined}
+          aria-disabled={busy || waiting}
+          onClick={onNext}
+        >
           {saving ? 'Saving…' : nextLabel[order.status]}
         </Button>
       )}
@@ -74,7 +85,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   }
 
   function advance(order: Order) {
-    if (move.isPending || !isActive(order.status)) return
+    if (move.isPending || !isActive(order.status) || awaitsPayment(order)) return
     // Delivered ends the order and cannot be taken back: ask first.
     if (order.status === 'out_for_delivery') return setConfirm(order)
     move.mutate({ order, status: nextStatus[order.status] })
@@ -93,7 +104,9 @@ export function OrderBoard({ storeId }: { storeId: string }) {
       <div ref={result} role="group" aria-label="Status change" tabIndex={-1}>
         {move.isError && <ErrorBanner message={`Could not change the status of ${move.variables.order.number}. Try again.`} />}
         {move.data &&
-          (move.data.changedElsewhere ? (
+          (move.data.awaitingPayment ? (
+            <StatusMessage tone="warning">{move.data.order.number} is awaiting payment: accept it once it is paid.</StatusMessage>
+          ) : move.data.changedElsewhere ? (
             <StatusMessage tone="warning">
               {move.data.order.number} was changed by someone else first: it is now {statusLabel[move.data.order.status]}.
             </StatusMessage>

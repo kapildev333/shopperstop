@@ -12,9 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
@@ -35,9 +38,19 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -48,6 +61,11 @@ const SearchRoute = SearchRouteImport.update({
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CSlugRoute = CSlugRouteImport.update({
@@ -75,9 +93,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/checkout': typeof CheckoutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -87,9 +108,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/checkout': typeof CheckoutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -100,9 +124,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/checkout': typeof CheckoutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -114,9 +141,12 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/checkout'
+    | '/forgot-password'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -126,9 +156,12 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/checkout'
+    | '/forgot-password'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -138,9 +171,12 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/checkout'
+    | '/forgot-password'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -151,9 +187,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   CheckoutRoute: typeof CheckoutRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SignInRoute: typeof SignInRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   CSlugRoute: typeof CSlugRoute
   OrdersIdRoute: typeof OrdersIdRoute
   PSlugRoute: typeof PSlugRoute
@@ -183,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -202,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$slug': {
@@ -239,9 +299,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   CheckoutRoute: CheckoutRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SignInRoute: SignInRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   CSlugRoute: CSlugRoute,
   OrdersIdRoute: OrdersIdRoute,
   PSlugRoute: PSlugRoute,

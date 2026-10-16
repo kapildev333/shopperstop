@@ -104,8 +104,10 @@ test('search and load more against core', async ({ page }) => {
   await search.press('Enter')
   await expect(page).toHaveURL(/\/search\?q=banana$/)
   await expect(page.getByRole('link', { name: /Banana Robusta/ })).toBeVisible()
+  await expect(search).toHaveValue('banana')
 
   await search.fill('a')
+  await expect(search).toHaveValue('a')
   await search.press('Enter')
   await expect(page).toHaveURL(/\/search\?q=a$/)
   const cards = page.locator('a[href^="/p/"]')

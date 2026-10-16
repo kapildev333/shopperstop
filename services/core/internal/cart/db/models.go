@@ -58,6 +58,49 @@ func (ns NullOrderStatus) Value() (driver.Value, error) {
 	return string(ns.OrderStatus), nil
 }
 
+type PaymentStatus string
+
+const (
+	PaymentStatusPending  PaymentStatus = "pending"
+	PaymentStatusPaid     PaymentStatus = "paid"
+	PaymentStatusRefunded PaymentStatus = "refunded"
+)
+
+func (e *PaymentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentStatus(s)
+	case string:
+		*e = PaymentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentStatus struct {
+	PaymentStatus PaymentStatus
+	Valid         bool // Valid is true if PaymentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentStatus), nil
+}
+
 type StaffRole string
 
 const (
@@ -141,13 +184,24 @@ type Category struct {
 }
 
 type Customer struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	Name         string
-	Phone        string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID            string
+	Email         string
+	PasswordHash  string
+	Name          string
+	Phone         string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	EmailVerified bool
+}
+
+type CustomerToken struct {
+	ID         string
+	TokenHash  []byte
+	CustomerID string
+	Purpose    string
+	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
 }
 
 type Order struct {
@@ -175,6 +229,8 @@ type Order struct {
 	RiderName        *string
 	StoreName        string
 	PromisedMinutes  int32
+	PaymentStatus    *PaymentStatus
+	PaymentReference string
 }
 
 type OrderEvent struct {
@@ -188,6 +244,7 @@ type OrderEvent struct {
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
 	ActorName  *string
+	Seq        int64
 }
 
 type OrderItem struct {

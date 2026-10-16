@@ -1,0 +1,18 @@
+# core-P5-L1-t1 - payment method on placement and reads (task 1 of core-payments)
+Status: done (test 899694d, feat committed on lane branch; not pushed); review: approve (core-P5-L1-review-t1.md)
+## Brief
+- LANE-ID: core-P5-L1 (task 1 of 4). Area: core. Role: worker.
+- Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L1. Branch: lane/core-P5-L1-payments. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
+- OpenSpec change: `openspec/changes/core-payments/`, task 1 in `tasks.md`. Every code block is verbatim in `design.md` under "Task 1": save the block to a scratchpad file and split it with `git apply --include='*_test.go'` (test commit) then `git apply --exclude='*_test.go'` (feat commit). A choice neither file settles: stop and report.
+- Scope paths: `services/core/migrations/0011_payments.sql` (new), `services/core/queries/order.sql`, sqlc output (every `services/core/internal/*/db/models.go`, `services/core/internal/order/db/order.sql.go`; regenerated only), `services/core/internal/order/order.go`, `place.go`, `handlers.go`, `schema_test.go`, `services/core/internal/app/orders_test.go`, `orders_payment_test.go` (new), `services/core/openapi.json` (Task 1 script only), generated `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json`, `tasks.md` ticks 1.1 and 1.2, this file.
+- Scenarios: orders "Customers pay cash or online" (all three); "Paying online needs a verified email"; platform "Error envelope" / The contract lists every code (`email_unverified`).
+- Failing tests to start from: `internal/app/orders_payment_test.go` `TestPlaceOnline` (red: paymentMethod cod), `TestPlaceOnlineUnverified` (red: 201), `TestPlacePaymentMethodInvalid` (red: 201), `TestPlaceCash` (green before and after: pins the cash answer); `internal/order/schema_test.go` `TestPaymentStatusMatchesMethod` (red: column `payment_status` does not exist). Run `go test -race -count=1 -run 'TestPlace|TestPaymentStatusMatchesMethod' ./internal/app ./internal/order`.
+- Commits, in order: `test: cash or online placement and the verified-email rule` (test files only, after you saw them fail), then `feat: payment method and status on orders (migration 0011)` (code, `make gen` output, the Task 1 script result, regenerated `core.d.ts` and Postman, ticks 1.1 and 1.2).
+- Gates (all pass before the feat commit): from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`: `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`. From the worktree root with `PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (`node_modules` installed; `npm ci` if missing): `make gen postman`, then `git status --short` clean after the commit; `make test-web`; `openspec validate --all --strict`.
+- Rules: tests only against the per-run schemas of `shopperstop_core_test`; no `docker`, no `make db`/`dev`/`seed`/`e2e`, no `core-admin migrate` or `seed-demo` against any database, and never run the archived Phase 3 `check-wiring.sh` (it starts a real rider on :8081 against the dev database). Run `openapi.json` scripts from a scratchpad file not named after a stdlib module; never commit them. Write your progress in this file only (not in `core-P5-L1.md`).
+## Doing
+- 1.1 done: test commit 899694d; four expected reds (TestPlaceOnline, TestPlaceOnlineUnverified, TestPlacePaymentMethodInvalid, TestPaymentStatusMatchesMethod 42703); TestPlaceCash green.
+- 1.2 done: code applied, make gen, openapi script (scratchpad t1_openapi_edit.py, not committed), make gen postman (22/22), gates green.
+## Found
+## Requests
+## Blockers

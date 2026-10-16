@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button, ErrorBanner, FormField, Input } from '@shopperstop/ui'
 import { splitError, type ApiError } from './api'
 
@@ -12,8 +12,10 @@ function text(form: FormData, name: string) {
 
 export function SignInForm({
   submit,
+  forgotPassword,
 }: {
   submit: (values: { email: string; password: string }) => Promise<ApiError | undefined>
+  forgotPassword?: ReactNode
 }) {
   const [errors, setErrors] = useState<Errors>(none)
   const [pending, setPending] = useState(false)
@@ -40,6 +42,7 @@ export function SignInForm({
       <FormField label="Password" error={errors.fields.password}>
         <Input name="password" type="password" autoComplete="current-password" />
       </FormField>
+      {forgotPassword}
       {errors.banner && <ErrorBanner message={errors.banner} />}
       <Button type="submit" size="lg" loading={pending} className="w-full">
         Sign in

@@ -29,7 +29,8 @@ test('Profile shown', async () => {
   await renderAccount()
 
   expect(await screen.findByRole('heading', { name: 'My account' })).toBeTruthy()
-  expect(screen.getByText('Asha Rao')).toBeTruthy()
+  // The heading renders before /me answers; the card shows a skeleton until then.
+  expect(await screen.findByText('Asha Rao')).toBeTruthy()
   expect(screen.getByText('asha@example.com')).toBeTruthy()
   expect(screen.getByText('9876543210')).toBeTruthy()
 })

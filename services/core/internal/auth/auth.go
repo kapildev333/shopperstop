@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,14 @@ import (
 
 // Auth holds what the handlers and middleware need.
 type Auth struct {
+	// Mailer sends the verification and password reset mail. New sets
+	// LogMailer; tests replace it before serving.
+	Mailer Mailer
+	// ResetLimit counts password reset requests on their own budget, so a
+	// reset never uses up the customer's sign-in attempts. Nil admits every
+	// request; New leaves it nil and main sets it.
+	ResetLimit *Limiter
+
 	pool     *pgxpool.Pool
 	q        *db.Queries
 	pepper   []byte
@@ -38,7 +47,7 @@ type service struct {
 // New returns the auth service over pool. pepper is mixed into every token hash.
 // services maps a service name to its token (config.ServiceTokens); nil admits none.
 func New(pool *pgxpool.Pool, pepper string, limit *Limiter, services map[string]string) *Auth {
-	a := &Auth{pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit}
+	a := &Auth{Mailer: LogMailer{}, pool: pool, q: db.New(pool), pepper: []byte(pepper), limit: limit}
 	for name, token := range services {
 		a.services = append(a.services, service{name: name, hash: sha256.Sum256([]byte(token))})
 	}
@@ -77,6 +86,7 @@ var (
 	errUnauthorized = &httpx.Error{Status: http.StatusUnauthorized, Code: "unauthorized", Message: "sign in required"}
 	errAdminsOnly   = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "admins only"}
 	errStaffOnly    = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "staff only"}
+	errServiceOnly  = &httpx.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "services only"}
 )
 
 // CustomerID returns the signed-in customer's id, or "" outside RequireCustomer.
@@ -97,14 +107,15 @@ func Service(ctx context.Context) string {
 	return name
 }
 
-// OrService admits a service token as a service subject and hands every other
-// request to staff (RequireStaff or RequireAdmin), which then decides.
-func (a *Auth) OrService(staff func(http.Handler) http.Handler) func(http.Handler) http.Handler {
+// OrService admits the token of one of the named services as a service subject
+// and hands every other request to staff (RequireStaff or RequireAdmin), which
+// then decides: another service's token is 403 there.
+func (a *Auth) OrService(staff func(http.Handler) http.Handler, names ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		guarded := staff(next)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			name := a.serviceName(bearer(r))
-			if name == "" {
+			if name == "" || !slices.Contains(names, name) {
 				guarded.ServeHTTP(w, r)
 				return
 			}
@@ -113,6 +124,16 @@ func (a *Auth) OrService(staff func(http.Handler) http.Handler) func(http.Handle
 			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, serviceKey{}, name)))
 		})
 	}
+}
+
+// RequireService admits only the token of one of the named services: a staff
+// session or another service's token is 403 forbidden, anything else 401,
+// exactly as RequireStaff answers it.
+func (a *Auth) RequireService(names ...string) func(http.Handler) http.Handler {
+	refuse := a.RequireStaff(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		httpx.WriteError(w, r, errServiceOnly)
+	}))
+	return a.OrService(func(http.Handler) http.Handler { return refuse }, names...)
 }
 
 // newToken returns 32 random bytes as unpadded base64url (43 characters).
@@ -196,7 +217,7 @@ func (a *Auth) RequireCustomer(next http.Handler) http.Handler {
 
 // RequireStaff admits a session of an active staff user. Staff sessions are
 // fixed: use never moves their expiry, and deactivation ends them at once.
-// A service token is 403: services reach only the routes wrapped in OrService.
+// A service token is 403: services reach only the routes OrService names them on.
 func (a *Auth) RequireStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

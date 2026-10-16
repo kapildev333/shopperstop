@@ -62,8 +62,10 @@ export function DeliveryPage({ deliveryId }: { deliveryId: string }) {
         actions={<Badge variant={assigned ? 'accent' : 'success'}>{assigned ? 'On the way' : 'Delivered'}</Badge>}
       />
       {assigned && delivery.paymentMethod === 'cod' && (
-        <StatusMessage>{`Collect ${formatInr(delivery.totalCents)} cash`}</StatusMessage>
+        <StatusMessage>{`Collect ${formatInr(delivery.totalCents)} in cash`}</StatusMessage>
       )}
+      {assigned && delivery.paymentStatus === 'paid' && <StatusMessage>Paid online</StatusMessage>}
+      {assigned && delivery.paymentStatus === 'pending' && <StatusMessage tone="warning">Awaiting payment</StatusMessage>}
       {mark.isSuccess && <StatusMessage tone="success">{`${delivery.orderNumber} delivered.`}</StatusMessage>}
       {report && <StatusMessage tone="warning">{report}</StatusMessage>}
       <Card className="flex flex-col gap-2 p-4">

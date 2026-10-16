@@ -86,6 +86,8 @@ type orderView struct {
 	DeliveryFeeCents int64            `json:"deliveryFeeCents"`
 	TotalCents       int64            `json:"totalCents"`
 	PaymentMethod    string           `json:"paymentMethod"`
+	PaymentStatus    string           `json:"paymentStatus"`
+	PaymentReference string           `json:"paymentReference"`
 	PlacedAt         time.Time        `json:"placedAt"`
 	DeliveredAt      *time.Time       `json:"deliveredAt"`
 	CancelledAt      *time.Time       `json:"cancelledAt"`

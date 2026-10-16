@@ -221,3 +221,52 @@ test('an order that leaves the board takes its count with it: no note of orders 
   expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
   expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
 })
+
+test('Accept waits for the payment: aria-disabled and described by "Awaiting payment", a press sends nothing; once paid it accepts', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  setToken('tok')
+  const orders = [order(1, 'placed', { paymentMethod: 'online', paymentStatus: 'pending' }), order(2, 'placed')]
+  const core = ordersCore(indiranagar.id, orders)
+  fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  const accept = button('Accept SS-TEST0001')
+  expect(accept).toHaveAttribute('aria-disabled', 'true')
+  expect(accept).toBeEnabled()
+  expect(accept).toHaveAccessibleDescription('Awaiting payment')
+  expect(button('Accept SS-TEST0002')).not.toHaveAttribute('aria-disabled', 'true')
+  await userEvent.click(accept)
+  expect(core.posts).toEqual([])
+
+  // The payment service marks it paid; the next poll brings it.
+  orders[0] = { ...orders[0], paymentStatus: 'paid', paymentReference: 'pay_123' }
+  await act(() => vi.advanceTimersByTimeAsync(10_000))
+  await waitFor(() => expect(button('Accept SS-TEST0001')).not.toHaveAttribute('aria-disabled', 'true'))
+  expect(button('Accept SS-TEST0001')).not.toHaveAccessibleDescription()
+  await userEvent.click(button('Accept SS-TEST0001'))
+  expect(await screen.findByText('SS-TEST0001 is now Accepted.')).toBeInTheDocument()
+  expect(core.posts).toEqual([{ id: orders[0].id, body: { status: 'accepted' } }])
+})
+
+test('a 409 payment_pending reads the order again, keeps it in Placed awaiting payment and says so, with no alert', async () => {
+  setToken('tok')
+  const orders = [order(1, 'placed', { paymentMethod: 'online', paymentStatus: 'paid', paymentReference: 'pay_123' })]
+  const core = ordersCore(indiranagar.id, orders)
+  const calls = fakeCore({ ...asAdmin, ...core.routes })
+
+  renderApp('/orders')
+  await screen.findByText('SS-TEST0001')
+  // Core holds the payment as pending, whatever this board was told before (a race the page cannot see).
+  orders[0] = { ...orders[0], paymentStatus: 'pending', paymentReference: undefined }
+  await userEvent.click(button('Accept SS-TEST0001'))
+
+  expect(await screen.findByText('SS-TEST0001 is awaiting payment: accept it once it is paid.')).toHaveAttribute('role', 'status')
+  expect(within(column('Placed')).getByText('Awaiting payment')).toBeInTheDocument()
+  expect(button('Accept SS-TEST0001')).toHaveAttribute('aria-disabled', 'true')
+  expect(button('Accept SS-TEST0001')).toHaveFocus()
+  expect(core.posts).toHaveLength(1)
+  expect(calls.filter((call) => call.method === 'GET' && call.url.endsWith(`/admin/orders/${orders[0].id}`))).toHaveLength(1)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.queryByText(/changed by someone else/)).not.toBeInTheDocument()
+})

@@ -11,6 +11,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +27,9 @@ const testPepper = "test-pepper-test-pepper-test-pepper-00"
 // testServiceToken is the rider service's token on the shared test server.
 const testServiceToken = "test-rider-service-token-test-rider-00"
 
+// testPaymentToken is the payment service's token on the shared test server.
+const testPaymentToken = "test-payment-service-token-test-pay-00"
+
 // srv is the shared test server every route test in this package uses. Its
 // limiter is too large to trip, so only the rate-limit test sees a 429.
 var (
@@ -33,6 +37,8 @@ var (
 	testPool *pgxpool.Pool
 	// filesDir is the files directory every test server stores uploads in.
 	filesDir string
+	// mails captures the mail the shared server sends.
+	mails = &outbox{}
 )
 
 func TestMain(m *testing.M) {
@@ -48,7 +54,8 @@ func TestMain(m *testing.M) {
 		testStoreID); err != nil {
 		panic(err)
 	}
-	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken})
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), map[string]string{"rider": testServiceToken, "payment": testPaymentToken})
+	a.Mailer = mails
 	srv = httptest.NewServer(New(testPool, []string{"http://localhost:5173"}, a, blob.Disk{Dir: filesDir}))
 	code := m.Run()
 	srv.Close()
@@ -202,13 +209,11 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
 	}
 }
 
-// TestWrongMethod: a served path asked with a method it does not serve answers
-// 405 method_not_allowed with Allow naming the path's methods, and the code is
-// one the contract's Error schema lists.
-func TestWrongMethod(t *testing.T) {
+// errorCodes answers the code enum of openapi.json's Error schema, read once.
+var errorCodes = sync.OnceValues(func() ([]string, error) {
 	doc, err := os.ReadFile("../../openapi.json")
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	var spec struct {
 		Components struct {
@@ -228,9 +233,19 @@ func TestWrongMethod(t *testing.T) {
 		} `json:"components"`
 	}
 	if err := json.Unmarshal(doc, &spec); err != nil {
+		return nil, err
+	}
+	return spec.Components.Schemas.Error.Properties.Error.Properties.Code.Enum, nil
+})
+
+// TestWrongMethod: a served path asked with a method it does not serve answers
+// 405 method_not_allowed with Allow naming the path's methods, and the code is
+// one the contract's Error schema lists.
+func TestWrongMethod(t *testing.T) {
+	codes, err := errorCodes()
+	if err != nil {
 		t.Fatal(err)
 	}
-	codes := spec.Components.Schemas.Error.Properties.Error.Properties.Code.Enum
 
 	for _, row := range []struct{ method, path, allow string }{
 		{http.MethodDelete, "/api/core/v1/healthz", "GET"},

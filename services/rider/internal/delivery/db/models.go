@@ -73,6 +73,7 @@ type Delivery struct {
 	DeliveredAt    pgtype.Timestamptz
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
+	PaymentStatus  string
 }
 
 type Rider struct {

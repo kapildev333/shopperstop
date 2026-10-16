@@ -1112,3 +1112,351 @@ When a `PUT /me/cart/items` answer says `replaced: true`, from a Stepper or the 
 #### Scenario: Replaced notice against core
 - **WHEN** a signed-in customer whose cart holds a product at Koramangala opens Home with `560038` chosen and chooses "Add" on a card
 - **THEN** the sheet opens with "Your cart from Koramangala was replaced. A cart holds products from one store.", after closing it the bar reads "1 item" with the same status, and axe reports no violations with the sheet open and closed
+
+### Requirement: Mobile checkout requires sign-in
+With no token held, `/checkout` SHALL replace itself with `/sign-in?returnTo=%2Fcheckout`, on first render and when the token is dropped while it shows, so the customer comes back to checkout after signing in.
+
+#### Scenario: Signed-out checkout redirect
+- **WHEN** the app opens `/checkout` with no token
+- **THEN** the "Sign in" screen is shown, the path is `/sign-in` and `returnTo` is `/checkout`
+
+### Requirement: Mobile checkout screen
+`/checkout` SHALL show a header with a "Back to cart" button and the level-1 heading "Checkout", set the document title "Checkout · ShopperStop", and for the server cart a lines card headed "Delivery in <N> minutes" with "From <store>", both from `GET /stores/{id}` for the cart's `storeId` (never the pincode's store), and per line its image, name, "<quantity> × <unit>" and line total. "Back to cart" SHALL go back and open the cart sheet.
+
+#### Scenario: Checkout summary from the cart
+- **WHEN** a token is held, the default address is "Home", the cart at Koramangala (10 minutes) holds 2 of "Amul Taaza" (`500 ml`, 2700) and 1 of "Amul Butter" (`100 g`, 5600) with fee 2500, and `/checkout` is shown
+- **THEN** the level-1 heading is "Checkout", "Delivery in 10 minutes" and "From Koramangala" are shown, "Amul Taaza" with "2 × 500 ml" and ₹54, and "Amul Butter" with "1 × 100 g" and ₹56
+
+#### Scenario: Summary names the cart's store
+- **WHEN** `560038` is stored and resolves to Indiranagar, the cart is at Koramangala whose `promisedMinutes` is 10, and `/checkout` is shown
+- **THEN** "From Koramangala" and "Delivery in 10 minutes" are shown and "Indiranagar" is not
+
+#### Scenario: Back to cart opens the cart sheet
+- **WHEN** the checkout screen is shown with a cart and the customer chooses "Back to cart"
+- **THEN** the checkout screen is gone and the sheet "My cart" is open
+
+### Requirement: Mobile checkout payment and bill
+The checkout screen SHALL show a "Payment" card with the one method "Cash on delivery", "Pay the rider in cash" and the note "UPI and cards come with the payment service.", and a bill with "Items total" (the subtotal), "Delivery fee" ("FREE" at 0) and "To pay" (the total), every amount in tabular numerals.
+
+#### Scenario: Cash on delivery and bill
+- **WHEN** the checkout screen shows the cart of "Checkout summary from the cart"
+- **THEN** "Payment", "Cash on delivery", "Pay the rider in cash" and "UPI and cards come with the payment service." are shown, and "Items total" ₹110, "Delivery fee" ₹25 and "To pay" ₹135
+
+#### Scenario: Free delivery at checkout
+- **WHEN** the cart's `deliveryFeeCents` is 0
+- **THEN** "Delivery fee" reads "FREE"
+
+### Requirement: Mobile checkout states
+In place of its cards the checkout screen SHALL show: for an empty cart, the empty state "Your cart is empty" with a "Start shopping" button to Home and a "Your orders" button to `/orders`, and no "Place order"; while the cart loads, a skeleton named "Loading"; when the cart fails to load and none is held, the error state with "Try again", which reads the cart again.
+
+#### Scenario: Empty checkout
+- **WHEN** a token is held, `GET /me/cart` answers the empty cart, and `/checkout` is shown
+- **THEN** "Your cart is empty", a "Start shopping" button and a "Your orders" button are shown, and no "Place order" button
+
+#### Scenario: Loading and failed checkout
+- **WHEN** `/checkout` is shown before `GET /me/cart` answers; and separately while core cannot be reached, after which core answers a cart and "Try again" is chosen
+- **THEN** an element named "Loading" is shown; then the alert "You're offline" with "Try again", and after the choice the cart's lines
+
+### Requirement: Mobile checkout address card
+The address card SHALL show the chosen address, which is the one chosen on this screen, else the default, else the first of `GET /me/addresses`: "Delivering to <label>" over `line1`, `line2` when present and `pincode` joined by ", ", and a "Change" button named "Change address". With no address it SHALL show "No addresses yet" and an "Add address" button.
+
+#### Scenario: Default address shown
+- **WHEN** the customer's addresses are "Work" (`1 Park St`, `560038`) and "Home" (`12 80 Feet Rd`, `Koramangala`, `560034`), "Home" the default
+- **THEN** the card shows "Delivering to Home" and "12 80 Feet Rd, Koramangala, 560034"
+
+#### Scenario: No address yet
+- **WHEN** `GET /me/addresses` answers no address
+- **THEN** the card shows "No addresses yet" and an "Add address" button
+
+### Requirement: Mobile checkout address choice
+"Change address" SHALL open a sheet titled "Choose address" listing every address with its label, lines and a "Default" badge on the default, each a radio "Deliver to <label>" in one group "Deliver to", checked on the chosen address, and an "Add address" button. Choosing a radio SHALL make that address the chosen one and close the sheet.
+
+#### Scenario: Choice sheet lists the addresses
+- **WHEN** the card shows "Home" of "Default address shown" and "Change address" is chosen
+- **THEN** the sheet "Choose address" holds the group "Deliver to" with the radios "Deliver to Work", not checked, and "Deliver to Home", checked
+
+#### Scenario: Another address chosen
+- **WHEN** "Deliver to Work" is chosen in that sheet
+- **THEN** the sheet is closed and the card shows "Delivering to Work"
+
+### Requirement: Mobile checkout address added
+"Add address", on the card or in the "Choose address" sheet, SHALL open L1's address sheet "Add address" (closing the "Choose address" sheet first, so one sheet shows at a time); an address saved there SHALL become the chosen address.
+
+#### Scenario: Address added at checkout
+- **WHEN** a customer with only "Home" chooses "Change address", then "Add address",, and saves "Work" with `1 Park St` and `560038`, and core answers 201 and then lists "Home" and "Work"
+- **THEN** the address sheet is closed and the card shows "Delivering to Work"
+
+### Requirement: Mobile checkout place order bar
+Below its scrolling content the checkout screen SHALL show a "Place order" button with the amount to pay or, in its place, a block naming why the order cannot be placed: "Remove the marked products to continue." while a line is marked, else "Minimum order is ₹<min>. Add ₹<missing> more to place the order." while the server cart's subtotal is below its `minOrderCents`, else "Add an address to place the order." while there is no address.
+
+#### Scenario: Checkout below the minimum
+- **WHEN** the cart's subtotal is 5400, `minOrderCents` 9900, and the customer has a default address
+- **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
+
+#### Scenario: Minimum from the cart when the pincode is not served
+- **WHEN** the stored pincode resolves to no store, and the server cart at Koramangala has subtotal 5400 with `minOrderCents` 9900
+- **THEN** "Minimum order is ₹99. Add ₹45 more to place the order." is shown and no "Place order" button
+
+#### Scenario: No address blocks placing
+- **WHEN** the cart is above the minimum and `GET /me/addresses` answers no address
+- **THEN** "Add an address to place the order." is shown and no "Place order" button
+
+#### Scenario: Place order shows the amount
+- **WHEN** the cart of "Checkout summary from the cart" is shown with "Home" chosen
+- **THEN** the "Place order" button shows ₹135
+
+### Requirement: Mobile places an order
+"Place order" SHALL send `POST /orders` with the chosen address's id after any cart change still being written, show busy meanwhile, and send nothing on a second press while busy. A 409 `conflict` SHALL be sent once more before it counts as a failure. On 201 the app SHALL hold the answered order, hold the cart as empty and replace the screen with `/orders/<id>`. A 400 `validation` without a field SHALL hold the cart as empty and replace the screen with `/orders`.
+
+#### Scenario: Order placed
+- **WHEN** a customer with "Home" chosen chooses "Place order" and core answers 201 with order `SS-ABCDEFGH`
+- **THEN** one `POST /orders` carried Home's id, the path is `/orders/<that order's id>`, the heading "Order SS-ABCDEFGH" is shown, and the cart counts nothing
+
+#### Scenario: Order placed after a pending cart change
+- **WHEN** a cart write's answer is held back and placing is asked for
+- **THEN** no `POST /orders` is sent until the write has answered, and then one is
+
+#### Scenario: Order number collision retried once
+- **WHEN** the first answer is 409 `conflict` and the second 201; and separately both answers are 409 `conflict`
+- **THEN** each time exactly two `POST /orders` are sent; the first time placing ends with the order, the second with the `conflict` error
+
+#### Scenario: Place order sent once
+- **WHEN** "Place order" is pressed twice before core answers
+- **THEN** one `POST /orders` was sent and the button is busy
+
+#### Scenario: Cart already empty goes to orders
+- **WHEN** placing is answered 400 `validation` "cart is empty" with no field
+- **THEN** the path is `/orders` and the cart counts nothing
+
+### Requirement: Mobile checkout out of stock
+On 409 `out_of_stock` the screen SHALL stay, read the cart again and show an alert "Some products are not available in the quantity you chose." with "Remove them to place your order.". Each line named in `productIds` SHALL show, until its quantity changes, "Out of stock" (not in stock), "Only N left" (stock below its quantity) or "Not enough stock" in place of its unit, and a "Remove <name>" button in place of its price that sets the line to 0 through the cart.
+
+#### Scenario: Out-of-stock lines marked
+- **WHEN** the cart holds 3 of "Amul Taaza" whose product shows `quantity` 2, 1 of "Amul Butter" not in stock and 1 of "Amul Curd", and placing answers 409 `out_of_stock` naming Amul Taaza and Amul Butter
+- **THEN** the alert is shown, Amul Taaza shows "Only 2 left" and "Remove Amul Taaza", Amul Butter "Out of stock" and "Remove Amul Butter", Amul Curd neither, "Remove the marked products to continue." is shown, and the screen is still Checkout
+
+#### Scenario: Marked line removed
+- **WHEN** only Amul Butter is marked, "Remove Amul Butter" is chosen, and core answers the cart without it
+- **THEN** `PUT /me/cart/items` carried quantity 0 for Amul Butter, its line is gone, and the "Place order" button is shown
+
+#### Scenario: Failed removal at checkout
+- **WHEN** Amul Butter is marked, core cannot be reached, and "Remove Amul Butter" is chosen
+- **THEN** the line shows an alert "Could not reach ShopperStop. Try again." and still shows "Out of stock" and "Remove Amul Butter"
+
+### Requirement: Mobile checkout refusals
+A refusal other than `out_of_stock` and `internal` SHALL keep the screen and the cart, end the busy state and show an alert: 409 `not_serviceable` with field `addressId`, "<store> does not deliver to this address. Choose another address or add one." and a `warning` badge "Not delivered here" on that address; without a field, "<store> is closed right now."; 400 with field `subtotal`, "Your cart is below the store's minimum order."; else "Could not place your order. Try again.".
+
+#### Scenario: Address not served
+- **WHEN** the cart is at Koramangala, "Work" is chosen, and placing answers 409 `not_serviceable` with field `addressId`
+- **THEN** an alert reads "Koramangala does not deliver to this address. Choose another address or add one.", the card shows "Not delivered here", and the cart's lines are still shown
+
+#### Scenario: Store closed at placement
+- **WHEN** placing answers 409 `not_serviceable` without a field
+- **THEN** an alert reads "Koramangala is closed right now." and no "Not delivered here" is shown
+
+#### Scenario: Placement fails
+- **WHEN** placing answers 400 `validation` with field `subtotal`; separately 400 `validation` with field `addressId`; separately 409 `conflict` twice
+- **THEN** the alert reads "Your cart is below the store's minimum order." the first time and "Could not place your order. Try again." the other two, and each time "Place order" is not busy
+
+### Requirement: Mobile checkout refusal cleared
+Choosing another address after an address was refused SHALL remove that alert; the "Not delivered here" badge SHALL stay on the refused address until "Place order" is next pressed or the addresses are read again.
+
+#### Scenario: Choosing another address clears the alert
+- **WHEN** placing with "Work" chosen answered 409 `not_serviceable` with field `addressId`, and "Deliver to Home" is then chosen in "Choose address"
+- **THEN** no alert is shown, the card shows "Delivering to Home" without "Not delivered here", and reopening "Choose address" shows "Not delivered here" on "Work" only
+
+### Requirement: Mobile checkout unconfirmed placement
+When placing answers `internal` (core not reached, a 5xx or a failure without the envelope, or a 2xx without an order), the screen SHALL keep the cart, end the busy state and show an alert "We could not confirm your order. It may have been placed, so check Your orders before you place it again." with a "Your orders" button to `/orders`. When the cart read again after that answer is empty, the app SHALL replace the screen with `/orders`.
+
+#### Scenario: Core cannot be reached at placement
+- **WHEN** a customer with Amul Taaza in the cart chooses "Place order" and core cannot be reached
+- **THEN** the alert reads "We could not confirm your order. It may have been placed, so check Your orders before you place it again.", a "Your orders" button is shown, the Amul Taaza line is still shown, and "Place order" is not busy
+
+#### Scenario: Unconfirmed placement that emptied the cart
+- **WHEN** placing answers 502 with no body and core then answers `GET /me/cart` with the empty cart
+- **THEN** the path is `/orders`
+
+### Requirement: Mobile checkout end-to-end suite
+`e2e/checkout.spec.ts` SHALL run checkout against core on the web export at 390×844, each test with a customer registered for the run and its own in-stock product, reaching `/checkout` in-app through the cart sheet's "Proceed to checkout", and SHALL run axe on every screen, sheet and alert state it visits, with no violation allowed.
+
+#### Scenario: Address added at checkout against core
+- **WHEN** a customer with no address and a cart above the minimum opens checkout from the cart sheet, sees "No addresses yet", chooses "Add address" and saves "Home" with pincode `560034`
+- **THEN** the card shows "Delivering to Home", the "Place order" button is shown, and axe reports no violations with the address sheet open and closed
+
+#### Scenario: Order placed against core
+- **WHEN** a guest with `560034` chosen adds a product above the store's minimum, chooses "Proceed to checkout" in the cart sheet, signs in as a customer with one address, and chooses "Place order"
+- **THEN** the tracking screen's level-1 heading is "Order SS-" and eight more characters, the status reads "Order placed. Waiting for the store to accept it.", the product is listed, `GET /me/cart` answers the empty cart, and axe reports no violations on checkout and tracking
+
+#### Scenario: Out of stock at checkout against core
+- **WHEN** a customer's cart holds a product above the minimum, the store's stock of it is set to 0, and the customer chooses "Place order" and then "Remove <name>"
+- **THEN** after placing the alert and "Out of stock" on that line are shown and `GET /orders` lists no order; after the removal "Your cart is empty" is shown; axe reports no violations with the alert showing
+
+#### Scenario: Address not served against core
+- **WHEN** a customer whose only address has pincode `560038` and whose cart is at Koramangala above the minimum chooses "Place order"
+- **THEN** the alert names Koramangala, the card shows "Not delivered here", `GET /me/cart` still answers the line, and axe reports no violations
+
+### Requirement: Mobile customer flow end-to-end
+The mobile Playwright suite SHALL hold the Spec 2 §13 customer flow as one test in `e2e/flow.spec.ts` on the web export at 390×844 against core with the demo seed: a customer registered in the app goes from the pincode to a placed order by taps alone, the seeded Koramangala store staff move the order to `delivered` through core's HTTP API, and axe runs on every screen and open sheet with no violation allowed.
+
+#### Scenario: Customer order to delivered against core
+- **WHEN** a new customer registers in the app, chooses `560034` in the pincode sheet, opens "Dairy, Bread & Eggs" from Home, goes back, adds a first product from search, raises its quantity in the "My cart" sheet, and signs out on "My account"
+- **AND** as a guest adds a second product from search, signs in through Home's "Account" button, returns to Home, opens the cart sheet and chooses "Proceed to checkout"
+- **AND** at checkout sees "No addresses yet", adds the address "Home" with pincode `560034`, and chooses "Place order"
+- **AND** the Koramangala store staff move the order through core's API to `accepted`, `packing`, `ready`, `out_for_delivery` and `delivered`
+- **THEN** after sign-in the cart bar counts both products, and the sheet and checkout list the first product with the raised quantity and the second with 1
+- **AND** the tracking screen's level-1 heading is "Order SS-" and eight more characters with "Order placed. Waiting for the store to accept it.", and, left open and not reloaded, it reads "Your order was delivered." within 15 seconds of the last move
+- **AND** axe reports no violations on every screen and open sheet visited
+
+### Requirement: Mobile email verification card
+"My account" (first in its content) and checkout (under its header, in every state of the screen) SHALL show a card holding a `warning` status "Verify your email to pay online" and a "Send verification email" button while `GET /me` answers `emailVerified` false, and nothing in its place while no token is held or `/me` loads, has failed, or answers `emailVerified` true.
+
+#### Scenario: Unverified customer sees the card
+- **WHEN** a token is held, `GET /me` answers `emailVerified` false, and the app renders "My account", and separately checkout with a cart core cannot read
+- **THEN** each screen shows a status "Verify your email to pay online" and a "Send verification email" button
+
+#### Scenario: Verified customer sees no card
+- **WHEN** a token is held, `GET /me` answers `emailVerified` true, and the app renders "My account"
+- **THEN** no "Verify your email to pay online" text and no "Send verification email" button are shown
+
+### Requirement: Mobile sends a verification email
+"Send verification email" SHALL send `POST /me/email-verification` and be busy meanwhile. On 202 the card SHALL show a `success` status "Verification email sent" and an "Enter the code" button to `/verify-email`, with no "Send verification email" button; on 409 `conflict` the app SHALL read `GET /me` again, so the card goes once it answers `emailVerified` true; on any other failure an alert SHALL show the error's message and the button SHALL stay.
+
+#### Scenario: Verification email sent
+- **WHEN** an unverified customer on "My account" chooses "Send verification email" and core answers 202
+- **THEN** exactly one `POST /api/core/v1/me/email-verification` was sent, a status reads "Verification email sent", an "Enter the code" button is shown, and no "Send verification email" button is shown
+
+#### Scenario: Enter the code opens the verify screen
+- **WHEN** the card reads "Verification email sent" and the customer chooses "Enter the code"
+- **THEN** the app is on `/verify-email` and the "Code from the email" input is shown
+
+#### Scenario: Already verified when sending
+- **WHEN** the answer is 409 `conflict` and `GET /me` then answers `emailVerified` true
+- **THEN** `GET /me` was sent again and the card is gone
+
+#### Scenario: Sending fails
+- **WHEN** core cannot be reached when the customer chooses "Send verification email"
+- **THEN** an alert reads "Could not reach ShopperStop. Try again." and the "Send verification email" button is shown and enabled
+
+### Requirement: Mobile verify-email screen
+`/verify-email` SHALL need no session and show a "Back" button and the level-1 heading "Verify email". With a `token` in the URL (`shopperstop://verify-email?token=<code>` on a device, `/verify-email?token=<code>` on the web export) it SHALL send `POST /auth/verify-email` `{token}` once when it opens; without one it SHALL show a "Code from the email" input and a "Verify email" button that sends the trimmed code, or shows "Enter the code from the email" and sends nothing when it is empty.
+
+#### Scenario: Empty code checked
+- **WHEN** the app renders `/verify-email` and the customer chooses "Verify email" with the code empty
+- **THEN** "Enter the code from the email" is shown and no request is sent
+
+### Requirement: Mobile verify-email outcome
+While the code is being sent the verify screen SHALL show a status "Verifying your email". On 204 it SHALL show a `success` status "Your email is verified" and a "Continue" button to `/account`, and the app SHALL read `GET /me` again.
+
+#### Scenario: Email verified from the link
+- **WHEN** the app renders `/verify-email?token=c-1` and core answers 204
+- **THEN** exactly one `POST /api/core/v1/auth/verify-email` was sent with body `{"token":"c-1"}`, a status reads "Your email is verified", and a "Continue" button is shown
+
+#### Scenario: Email verified with a typed code
+- **WHEN** the app renders `/verify-email`, the customer enters ` c-2 ` in "Code from the email" and chooses "Verify email", and core answers 204
+- **THEN** exactly one request was sent with body `{"token":"c-2"}` and a status reads "Your email is verified"
+
+#### Scenario: Continue opens the account
+- **WHEN** a signed-in customer's email was verified on `/verify-email` and they choose "Continue"
+- **THEN** the "My account" screen is shown
+
+### Requirement: Mobile verify-email failures
+A 400 answer with field `token` SHALL show an alert "This code is invalid or has expired.", the "Code from the email" input and "Verify email" again, and, while a token is held, the email verification card; with no token held, a "Sign in to get a new code" link to `/sign-in?returnTo=%2Faccount`. Any other failure SHALL show an alert with the error's message and a "Try again" button that sends the code again.
+
+#### Scenario: Expired code while signed in
+- **WHEN** a token is held, `GET /me` answers `emailVerified` false, and `/verify-email?token=old` is answered 400 `validation` with field `token`
+- **THEN** an alert reads "This code is invalid or has expired.", the "Code from the email" input is shown, and the "Send verification email" button is shown
+
+#### Scenario: Expired code while signed out
+- **WHEN** no token is held and `/verify-email?token=old` is answered 400 `validation` with field `token`
+- **THEN** the alert reads "This code is invalid or has expired." and a "Sign in to get a new code" link is shown
+
+#### Scenario: Verification unreachable then retried
+- **WHEN** the first `POST /auth/verify-email` for `/verify-email?token=c-1` cannot reach core and the customer chooses "Try again", which core answers 204
+- **THEN** an alert first reads "Could not reach ShopperStop. Try again.", and after the retry a status reads "Your email is verified"
+
+### Requirement: Mobile forgot-password link
+The sign-in screen SHALL show a "Forgot password?" link to `/forgot-password` directly under the Password field, at least 44 points tall.
+
+#### Scenario: Forgot-password link on sign-in
+- **WHEN** the app renders `/sign-in` and the customer chooses "Forgot password?"
+- **THEN** the app is on `/forgot-password` and the heading "Forgot password" is shown
+
+### Requirement: Mobile forgot-password screen
+`/forgot-password` SHALL need no session and show the `brand` header with a "Back" button and the level-1 heading "Forgot password", an "Email" input, a "Send reset code" button and a "Back to sign in" link to `/sign-in`. An empty email SHALL show "Enter your email" under the input and send nothing; otherwise the button SHALL send `POST /auth/password-reset` with the trimmed email and be busy meanwhile.
+
+#### Scenario: Empty email checked
+- **WHEN** the forgot-password form is submitted empty
+- **THEN** "Enter your email" shows under Email and no request is sent
+
+### Requirement: Mobile forgot-password outcome
+On 202 the screen SHALL show, in place of the form, a `success` status "If that email has an account, a reset code is on its way" and an "Enter the code" button to `/reset-password`; a 400 with field `email` SHALL show its message under Email; any other failure, 429 `rate_limited` included, SHALL show an alert with the error's message and keep the form.
+
+#### Scenario: Reset code requested
+- **WHEN** the form is submitted with ` asha@example.com ` and core answers 202
+- **THEN** one request was sent with body `{"email":"asha@example.com"}`, a status reads "If that email has an account, a reset code is on its way", an "Enter the code" button is shown, and no "Send reset code" button is shown
+
+#### Scenario: Enter the code opens the reset screen
+- **WHEN** the reset code was requested and the customer chooses "Enter the code"
+- **THEN** the app is on `/reset-password` and the heading "Reset password" is shown
+
+#### Scenario: Malformed email from core
+- **WHEN** core answers 400 `validation` with field `email` and message "must be a valid email address"
+- **THEN** "must be a valid email address" shows under Email and no alert is shown
+
+#### Scenario: Too many reset requests
+- **WHEN** core answers 429 `rate_limited` with message "too many attempts, try again later"
+- **THEN** an alert reads "too many attempts, try again later" and the "Send reset code" button is still shown
+
+### Requirement: Mobile reset-password screen
+`/reset-password` SHALL need no session and show the `brand` header with a "Back" button and the level-1 heading "Reset password", a "Code from the email" input holding the URL's `token` when there is one, "New password" (hint "8 to 72 characters") and "Confirm password" inputs and a "Set password" button.
+
+#### Scenario: Code from the link
+- **WHEN** the app renders `/reset-password?token=r-1`
+- **THEN** the "Code from the email" input holds `r-1`
+
+### Requirement: Mobile reset-password checks
+Before calling core the reset screen SHALL flag an empty code ("Enter the code from the email"), an empty new password ("Enter a new password"), one outside 8 to 72 bytes ("Use 8 to 72 characters") and a confirmation that differs ("Passwords do not match"), each under its input, and send nothing; else "Set password" SHALL send `POST /auth/password-reset/confirm` `{token, password}` with the trimmed code and be busy meanwhile.
+
+#### Scenario: Reset form checks fields
+- **WHEN** the reset form is submitted empty; then with code `r-1` and `short1` in both password inputs; then with `newpass123` and `newpass124`
+- **THEN** "Enter the code from the email" and "Enter a new password" show, then "Use 8 to 72 characters" under "New password", then "Passwords do not match" under "Confirm password", and no request is sent
+
+### Requirement: Mobile reset-password outcome
+On 204 the app SHALL drop any held token and cached data and show, in place of the form, a `success` status "Your password is changed. Sign in with your new password." and a "Sign in" button to `/sign-in`.
+
+#### Scenario: Password reset
+- **WHEN** a token is held, the app renders `/reset-password?token=r-1`, the form is submitted with `newpass123` twice, and core answers 204
+- **THEN** one request was sent with body `{"token":"r-1","password":"newpass123"}`, the store holds no token, a status reads "Your password is changed. Sign in with your new password.", and a "Sign in" button is shown
+
+#### Scenario: Sign in after the reset
+- **WHEN** the password was reset and the customer chooses "Sign in"
+- **THEN** the app is on `/sign-in` and the heading "Sign in" is shown
+
+### Requirement: Mobile reset-password refusals
+A 400 with field `token` SHALL show "This code is invalid or has expired." under the code input and a "Request a new code" link to `/forgot-password`; a 400 with field `password` SHALL show its message under "New password"; any other failure SHALL show an alert with the error's message. The form SHALL stay after any failure.
+
+#### Scenario: Password refused by core
+- **WHEN** the confirm is answered 400 `validation` with field `password` and message "must be 8 to 72 bytes"
+- **THEN** "must be 8 to 72 bytes" shows under "New password" and the "Set password" button is still shown
+
+#### Scenario: Expired reset code
+- **WHEN** the confirm is answered 400 `validation` with field `token`
+- **THEN** "This code is invalid or has expired." shows under "Code from the email", a "Request a new code" link is shown, and the "Set password" button is still shown
+
+### Requirement: Mobile account security end-to-end
+`npm run e2e` in `apps/mobile` SHALL write core's standard output to `apps/mobile/e2e/.tmp/core.log`, emptied at each start, and SHALL read a mailed code as the last word of the `body` of the newest log line with message `mail`, the given `to` and the given `subject`, waiting up to 10 seconds for it.
+
+#### Scenario: Email verified against core
+- **WHEN** a newly registered customer opens "My account" on the web export, chooses "Send verification email", and the browser loads `/verify-email?token=<the mailed code>` directly
+- **THEN** "Verification email sent" and then "Your email is verified" are shown, "Continue" shows "My account" with no "Verify your email to pay online" text, and axe reports no violations on "My account" with the card and on the verify screen
+
+#### Scenario: Password reset against core
+- **WHEN** a registered customer chooses "Forgot password?" on sign-in, submits their email, chooses "Enter the code", types the mailed code and `newpass123` twice, chooses "Set password", then "Sign in", and signs in with `newpass123`
+- **THEN** each screen shows the outcome above, the browser lands on `/` with a stored token, signing in with the old password through core answers 401, and axe reports no violations on the forgot-password and reset-password screens
+
+### Requirement: Mobile end-to-end picks read once
+The mobile e2e suite's global setup SHALL, after the reseed, read once the store and product lists the specs pick from and hand them to every spec, so `orderPick(n)` and `homePicks(minimum, storeId)` answer from that read without a request, and an order one spec places cannot shift another spec's pick.
+
+#### Scenario: Picks answer from the setup read
+- **WHEN** `npm run e2e` runs the mobile suite
+- **THEN** every spec takes its products from `e2e/support.ts`'s `orderPick` and `homePicks`, which read only what global setup handed over, and every mobile spec passes

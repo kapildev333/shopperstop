@@ -104,6 +104,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a customer's email
+         * @description Spends the code from the verification mail (POST /me/email-verification) and marks its customer's email verified. Public: the code is the proof, so it works from any device. A code works once, for 24 hours, and only the newest one a customer was sent.
+         */
+        post: operations["postAuthVerifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a password reset
+         * @description When the email belongs to a customer, mails them a code for POST /auth/password-reset/confirm, valid for 24 hours; a new code replaces any earlier one. Answers 202 whether or not the email is registered, so the answer never tells. Reset requests have their own budget, the same numbers as sign-in and registration but not shared with them: the eleventh for one email within an hour, or the hundred and first from one IP, answers 429, and a reset never uses up sign-in attempts. A failure to mail the code still answers 202. In development the mail is written to core's log, not sent.
+         */
+        post: operations["postAuthPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password
+         * @description Spends the code from the reset mail, sets the new password (8 to 72 bytes, bcrypt cost 12), marks the email verified and signs the customer out everywhere: every session of the customer ends. Sign in again with the new password. A code works once, for 24 hours, and only the newest one a customer was sent. A bad password is refused before the code is spent.
+         */
+        post: operations["postAuthPasswordResetConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -126,6 +186,26 @@ export interface paths {
          * @description Changes only the fields present. An empty phone clears it, and a cleared phone is omitted from responses. A null value is refused with 400 naming the field; an empty object changes nothing.
          */
         patch: operations["patchMe"];
+        trace?: never;
+    };
+    "/me/email-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a verification code
+         * @description Mails the signed-in customer a code for POST /auth/verify-email, valid for 24 hours; a new code replaces any earlier one. No body. In development the mail is written to core's log, not sent.
+         */
+        post: operations["postMeEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/me/addresses": {
@@ -235,7 +315,7 @@ export interface paths {
         put?: never;
         /**
          * Place an order from the cart
-         * @description Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 conflict when the order number collides, which is rare, and the client may retry.
+         * @description Turns the signed-in customer's whole cart into one order at the cart's store, in one transaction, and empties the cart. The address must be one of the customer's own, its pincode must be served by the cart's store, the store must be open, and the subtotal must reach the store's minimum order. Every cart line must be in stock: placement takes the stock, and a line whose product is inactive or short of stock refuses the whole order and names every such product. The subtotal is each line's current price times its quantity; the delivery fee is the store's, or 0 at or above its free-delivery amount. The order keeps snapshots of the address, the customer's name and phone, and each item's name, unit label, image, price and MRP. paymentMethod is cod (the default) or online; an online order is placed the same way, with paymentStatus pending, and needs a verified email. Answers 201 with the order, status placed. A refused placement changes nothing: the cart and the stock stay as they were. Errors: 400 validation with no field when the cart is empty; 400 naming addressId when it is missing (required), not a uuid (must be a uuid) or not the customer's (unknown address); 400 naming subtotal when it is below the store's minimum order; 400 naming paymentMethod when it is neither cod nor online; 401 with no token, an unknown token or a staff token; 409 not_serviceable naming addressId when the store does not deliver to the address, and 409 not_serviceable with no field when the store is closed; 409 out_of_stock with productIds; 409 email_unverified when paymentMethod is online and the customer's email is not verified, checked first; 409 conflict when the order number collides, which is rare, and the client may retry.
          */
         post: operations["placeOrder"];
         delete?: never;
@@ -293,7 +373,7 @@ export interface paths {
         };
         /**
          * Read one order of a store
-         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
+         * @description Admins for any order; store staff only for orders of their own store. The order with this id as the customer sees it: its items, its status history oldest first, the customer's name and phone and the delivery address. Store staff of another store, an unknown id and an id that is not a uuid answer 404 not_found, the same answer. 401 with no token, an unknown token or a customer token. The rider and payment services' tokens (SHOPPERSTOP_CORE_SERVICE_TOKENS) are admitted as unscoped readers, like an admin; another service's token answers 403.
          */
         get: operations["getAdminOrder"];
         put?: never;
@@ -315,9 +395,49 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted and must name the rider in actor; it may move an order only to out_for_delivery or delivered, and anything else answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.
+         * @description Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict, and accepting an order whose paymentStatus is pending answers 409 payment_pending. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted by the service actor table: the rider service names the rider in actor and may move an order only to out_for_delivery or delivered; the payment service names the system ({type: system, name}, no id) and may only cancel, which returns the stock like any cancel; another target answers 403 before the actor or the order is read, and another service's token answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.
          */
         post: operations["setOrderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orders/{id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an order's payment paid or refunded
+         * @description The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): marks an online order's payment paid, only while it is pending, or refunded, only while it is paid, in one transaction. The order's status does not change; one event by the system is appended (fromStatus and toStatus both the order's status, actorName payment, note "Payment <status>, reference <reference>") and the reference becomes paymentReference. Staff can accept the order once it is paid. The body is checked before the order is read: a status other than paid or refunded is 400 field status, a reference that is empty after trimming or longer than 100 characters 400 field reference. A cash order, or a payment not in the status the change comes from (paying twice, refunding a pending payment), answers 409 conflict and changes nothing: a caller retrying after a lost answer reads the order to see whether its change landed. An unknown order is 404. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.
+         */
+        post: operations["postAdminOrderPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/order-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tail order events
+         * @description The payment service only (its token in SHOPPERSTOP_CORE_SERVICE_TOKENS): every order event with seq above after, ascending by seq, at most limit of them, each with its order's id, number, store, customer and current payment state. Services learn about orders by polling this feed with the last seq they handled (D51); core never calls out. seq follows commit order, so a caller that moves its cursor to the last seq it read never skips an event. A cursor list, not a page: the answer is {items} with no page, pageSize or total. after (default 0) must be a whole number at least 0 and limit (default 100) a whole number from 1 to 500, else 400 naming the parameter. 401 with no token, an unknown token or a customer token; 403 for a staff session or another service's token.
+         */
+        get: operations["getAdminOrderEvents"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -457,7 +577,7 @@ export interface paths {
         };
         /**
          * List stores
-         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
+         * @description Admins only. Answers one page of stores, admin view (with addressLine and pincode), ordered by name then id. page and pageSize are optional; a value out of range or not a whole number is 400 naming the parameter. total counts every store, not just this page. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.
          */
         get: operations["listStores"];
         put?: never;
@@ -481,7 +601,7 @@ export interface paths {
         };
         /**
          * Get a store, admin view
-         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
+         * @description Admins only. The store with the path id with its address and pincode. An id that is not a store, or not a uuid, answers 404 not_found. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.
          */
         get: operations["getAdminStore"];
         put?: never;
@@ -557,7 +677,7 @@ export interface paths {
         };
         /**
          * List a store's orders
-         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. A service token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin.
+         * @description Admins for any store; store staff only for their own store. The store's orders, newest first, one page at a time, each with its items, its status history and the customer's name, phone and delivery address. status keeps one status (placed, accepted, packing, ready, out_for_delivery, delivered or cancelled); empty or absent keeps every status, and any other value answers 400 naming status. active=true keeps every order that is neither delivered nor cancelled, in one list with its total; any other active value, or active=true with a status, answers 400 naming active. Another store's staff and an unknown store answer 404 not_found; a missing token or a customer token answers 401. The rider service's token (SHOPPERSTOP_CORE_SERVICE_TOKENS) is admitted as an unscoped reader, like an admin; another service's token answers 403.
          */
         get: operations["listStoreOrders"];
         put?: never;
@@ -844,6 +964,8 @@ export interface components {
             name: string;
             /** @description Omitted when the customer has no phone. */
             phone?: string;
+            /** @description Whether the customer has proved they read this email: false on registration, true after POST /auth/verify-email or a password reset. */
+            emailVerified: boolean;
         };
         CustomerSession: {
             /** @description Bearer token for the customer routes. Shown once; the server keeps only a hash. */
@@ -875,7 +997,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "method_not_allowed" | "internal";
+                code: "validation" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "out_of_stock" | "not_serviceable" | "rate_limited" | "method_not_allowed" | "email_unverified" | "payment_pending" | "internal";
                 message: string;
                 field?: string;
                 /** @description Only with out_of_stock: every product that is inactive, has no stock row at the store or has less stock than the line asks for. */
@@ -1377,7 +1499,7 @@ export interface components {
             mrpCents: number;
             quantity: number;
         };
-        /** @description One entry of an order's status history, oldest first. The placement event has no fromStatus. */
+        /** @description One entry of an order's history, oldest first. The placement event has no fromStatus. A payment change (POST /admin/orders/{id}/payment) is an event by the system whose fromStatus equals its toStatus (the order's status, unchanged) and whose note names the payment status and reference. */
         OrderEvent: {
             /** @enum {string} */
             fromStatus?: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
@@ -1385,7 +1507,7 @@ export interface components {
             toStatus: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             /** @enum {string} */
             actorType: "customer" | "staff" | "system" | "rider";
-            /** @description The rider's name on an event a rider made. Omitted otherwise. */
+            /** @description The rider's name on an event a rider made; the actor's name on an event the system made ("payment timeout" on a timeout cancel, the service's name, "payment", on a payment change). Omitted otherwise. */
             actorName?: string;
             /** @description Omitted when empty. */
             note?: string;
@@ -1414,8 +1536,18 @@ export interface components {
             deliveryFeeCents: number;
             /** @description subtotalCents plus deliveryFeeCents. */
             totalCents: number;
-            /** @enum {string} */
-            paymentMethod: "cod";
+            /**
+             * @description cod: cash on delivery. online: paid through the payment service; the order carries paymentStatus.
+             * @enum {string}
+             */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, omitted for cash: pending until the payment service marks it paid, refunded after a paid order is refunded. Staff cannot accept an order whose payment is pending.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @description The payment service's reference for the last payment change. Omitted until there is one. */
+            paymentReference?: string;
             /** Format: date-time */
             placedAt: string;
             /**
@@ -1442,13 +1574,18 @@ export interface components {
              * @description One of the customer's own addresses.
              */
             addressId: string;
+            /**
+             * @description How the customer pays. Optional, cod when absent. online needs a verified email (409 email_unverified) and places the order with paymentStatus pending.
+             * @enum {string}
+             */
+            paymentMethod?: "cod" | "online";
         };
         /** @description The customer's optional reason for cancelling. */
         OrderCancel: {
             /** @description Why the order is cancelled. Optional; at most 500 characters. */
             reason?: string;
         };
-        /** @description A status change by staff or by a service. note is kept on the event; on a cancel it is the order's cancelReason. A service names the rider in actor; staff name no actor. */
+        /** @description A status change by staff or by a service. note is kept on the event; on a cancel it is the order's cancelReason. A service names its actor (the rider service a rider, the payment service the system); staff name no actor. */
         OrderStatusChange: {
             /**
              * @description The status to move the order to.
@@ -1457,12 +1594,15 @@ export interface components {
             status: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             /** @description Why the status changes. Optional; at most 500 characters. */
             note?: string;
-            /** @description Required from a service, refused from staff (400 field actor). The rider making the move. */
+            /** @description Required from a service, refused from staff (400 field actor). The rider service names the rider making the move (type rider, id, name); the payment service names the system (type system, name, no id). */
             actor?: {
                 /** @enum {string} */
-                type: "rider";
-                /** Format: uuid */
-                id: string;
+                type: "rider" | "system";
+                /**
+                 * Format: uuid
+                 * @description The rider's id: required for a rider, refused for the system.
+                 */
+                id?: string;
                 name: string;
             };
         };
@@ -1500,6 +1640,64 @@ export interface components {
         };
         Dashboard: {
             items: components["schemas"]["DashboardStore"][];
+        };
+        TokenRequest: {
+            /** @description The code from the mail, exactly as sent. */
+            token: string;
+        };
+        PasswordResetRequest: {
+            /**
+             * Format: email
+             * @description The email the customer registered with, in any case.
+             */
+            email: string;
+        };
+        PasswordResetConfirm: {
+            /** @description The code from the reset mail, exactly as sent. */
+            token: string;
+            /** @description The new password: 8 to 72 bytes, not trimmed, as on registration. */
+            password: string;
+        };
+        /** @description The payment service marks an online order's payment paid (from pending) or refunded (from paid). */
+        OrderPaymentChange: {
+            /** @enum {string} */
+            status: "paid" | "refunded";
+            /** @description The payment service's reference for this change, trimmed; kept as the order's paymentReference and in the event's note. */
+            reference: string;
+        };
+        /** @description A cursor list, not a page: no page, pageSize or total. Ask again with after set to the last seq handled; an empty items means the caller is up to date. */
+        OrderEventFeed: {
+            items: components["schemas"]["OrderFeedEvent"][];
+        };
+        /** @description One order event as services tail it. seq increases in commit order: an event with a higher seq never commits before one with a lower seq. A payment change is an event whose fromStatus equals its toStatus. */
+        OrderFeedEvent: {
+            /** Format: int64 */
+            seq: number;
+            /** Format: uuid */
+            orderId: string;
+            orderNumber: string;
+            /** Format: uuid */
+            storeId: string;
+            /** Format: uuid */
+            customerId: string;
+            /**
+             * @description Omitted on the placement event.
+             * @enum {string}
+             */
+            fromStatus?: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+            /** @enum {string} */
+            toStatus: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
+            /** @enum {string} */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description The order's payment status when the feed is read, not when the event was written. Online orders only.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @enum {string} */
+            actorType: "customer" | "staff" | "system" | "rider";
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;
@@ -1609,7 +1807,8 @@ export interface operations {
                      *       "customer": {
                      *         "id": "6f1c2a7e-3b9d-4e58-a2c1-9d7e4b8f0a13",
                      *         "email": "new@example.com",
-                     *         "name": "Asha"
+                     *         "name": "Asha",
+                     *         "emailVerified": false
                      *       }
                      *     }
                      */
@@ -1703,7 +1902,8 @@ export interface operations {
                      *         "id": "00000000-0000-4000-8000-000000000201",
                      *         "email": "demo@shopperstop.local",
                      *         "name": "Demo Customer",
-                     *         "phone": "+919800000000"
+                     *         "phone": "+919800000000",
+                     *         "emailVerified": true
                      *       }
                      *     }
                      */
@@ -1799,6 +1999,159 @@ export interface operations {
             };
         };
     };
+    postAuthVerifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k"
+                 *     }
+                 */
+                "application/json": components["schemas"]["TokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The email is verified. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is empty, unknown, already used, expired (24 hours) or for another purpose; field token. Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "invalid or expired token",
+                     *         "field": "token"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "demo@shopperstop.local"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted, registered or not. No body. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The email is missing or not one valid address; field email. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a valid email address",
+                     *         "field": "email"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts for this email or from this IP within the hour. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "too many attempts, try again later"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAuthPasswordResetConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "pQ7xN2mK9vR4tL8wZ3cF6hJ1sD5gB0yA2eU4iO6nM8k",
+                 *       "password": "newpass123"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PasswordResetConfirm"];
+            };
+        };
+        responses: {
+            /** @description The password is set and every session ended. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The password is not 8 to 72 bytes (field password; the code stays usable), or the token is empty, unknown, already used, expired or for another purpose (field token). Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "invalid or expired token",
+                     *         "field": "token"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -1819,7 +2172,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000201",
                      *       "email": "demo@shopperstop.local",
                      *       "name": "Demo Customer",
-                     *       "phone": "+919800000000"
+                     *       "phone": "+919800000000",
+                     *       "emailVerified": true
                      *     }
                      */
                     "application/json": components["schemas"]["Customer"];
@@ -1874,7 +2228,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000201",
                      *       "email": "demo@shopperstop.local",
                      *       "name": "Asha R",
-                     *       "phone": "+919800000001"
+                     *       "phone": "+919800000001",
+                     *       "emailVerified": true
                      *     }
                      */
                     "application/json": components["schemas"]["Customer"];
@@ -1909,6 +2264,58 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postMeEmailVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail is on its way. No body. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token is missing, unknown, expired or a staff token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The customer's email is already verified. No mail is sent. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "email already verified"
                      *       }
                      *     }
                      */
@@ -2560,11 +2967,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "addressId": "00000000-0000-4000-8000-000000000301"
-                 *     }
-                 */
                 "application/json": components["schemas"]["OrderCreate"];
             };
         };
@@ -2593,7 +2995,8 @@ export interface operations {
                      *       "subtotalCents": 103000,
                      *       "deliveryFeeCents": 0,
                      *       "totalCents": 103000,
-                     *       "paymentMethod": "cod",
+                     *       "paymentMethod": "online",
+                     *       "paymentStatus": "pending",
                      *       "placedAt": "2026-10-13T09:20:00Z",
                      *       "items": [
                      *         {
@@ -2627,7 +3030,7 @@ export interface operations {
                     "application/json": components["schemas"]["Order"];
                 };
             };
-            /** @description The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal). Nothing changes. */
+            /** @description The cart is empty (no field), or addressId is missing (required), not a uuid (must be a uuid) or not one of the customer's addresses (unknown address), or the subtotal is below the store's minimum order (field subtotal), or paymentMethod is neither cod nor online (field paymentMethod). Nothing changes. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2662,7 +3065,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry). Nothing changes. */
+            /** @description The store does not deliver to the address (not_serviceable, field addressId), the store is closed (not_serviceable, no field), some cart products are inactive or short of stock (out_of_stock, with productIds listing each one, ascending), or the order number collided (conflict; retry), or paymentMethod is online and the customer's email is not verified (email_unverified). Nothing changes. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3116,7 +3519,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description A service moving the order to any status but out_for_delivery or delivered. Nothing changes. */
+            /** @description A service moving the order to a status its row of the service actor table does not allow (the rider service: anything but out_for_delivery or delivered; the payment service: anything but cancelled), or another service's token. Nothing changes. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3126,7 +3529,7 @@ export interface operations {
                      * @example {
                      *       "error": {
                      *         "code": "forbidden",
-                     *         "message": "a service may only move an order to out_for_delivery or delivered"
+                     *         "message": "this service may not move an order to cancelled"
                      *       }
                      *     }
                      */
@@ -3150,7 +3553,174 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled. Nothing changes. */
+            /** @description The table does not allow the move, for example placed to packing, or the order is already delivered or cancelled (conflict); or staff accept an online order whose payment is still pending (payment_pending); the payment service's system cancel of an order not awaiting payment (paid or cash) is conflict too. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postAdminOrderPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderPaymentChange"];
+            };
+        };
+        responses: {
+            /** @description The order with its new payment status, reference and event. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000703",
+                     *       "number": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
+                     *       "status": "placed",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "label": "Home",
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "subtotalCents": 103000,
+                     *       "deliveryFeeCents": 0,
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "online",
+                     *       "paymentStatus": "paid",
+                     *       "paymentReference": "plink_Demo0001",
+                     *       "placedAt": "2026-10-13T09:20:00Z",
+                     *       "items": [
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000601",
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 7000,
+                     *           "mrpCents": 7000,
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "productId": "00000000-0000-4000-8000-000000000604",
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "imageUrl": "/api/core/v1/files/products/seed-fruits-vegetables.png",
+                     *           "priceCents": 32000,
+                     *           "mrpCents": 32000,
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "events": [
+                     *         {
+                     *           "toStatus": "placed",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         },
+                     *         {
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "placed",
+                     *           "actorType": "system",
+                     *           "actorName": "payment",
+                     *           "note": "Payment paid, reference plink_Demo0001",
+                     *           "createdAt": "2026-10-13T09:21:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description status is neither paid nor refunded (field status), the reference is empty or longer than 100 characters (field reference), or the body is not JSON. Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be paid or refunded",
+                     *         "field": "status"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No token, an unknown token or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A staff session or a service other than payment. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "services only"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No order has this id, or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The order is paid in cash, or its payment is not pending (for paid) or not paid (for refunded). Nothing changes. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3160,7 +3730,133 @@ export interface operations {
                      * @example {
                      *       "error": {
                      *         "code": "conflict",
-                     *         "message": "cannot move an order from placed to packing"
+                     *         "message": "the payment is not pending"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminOrderEvents: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Answer only events with a higher seq. Default 0, from the first event.
+                 * @example 40
+                 */
+                after?: number;
+                /**
+                 * @description At most this many events. Default 100.
+                 * @example 100
+                 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The next events, ascending by seq; empty when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "seq": 41,
+                     *           "orderId": "00000000-0000-4000-8000-000000000704",
+                     *           "orderNumber": "SS-DEMOAAAE",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "toStatus": "placed",
+                     *           "paymentMethod": "online",
+                     *           "paymentStatus": "paid",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:20:00Z"
+                     *         },
+                     *         {
+                     *           "seq": 42,
+                     *           "orderId": "00000000-0000-4000-8000-000000000704",
+                     *           "orderNumber": "SS-DEMOAAAE",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "placed",
+                     *           "paymentMethod": "online",
+                     *           "paymentStatus": "paid",
+                     *           "actorType": "system",
+                     *           "createdAt": "2026-10-13T09:21:00Z"
+                     *         },
+                     *         {
+                     *           "seq": 43,
+                     *           "orderId": "00000000-0000-4000-8000-000000000703",
+                     *           "orderNumber": "SS-DEMOAAAD",
+                     *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "customerId": "00000000-0000-4000-8000-000000000201",
+                     *           "fromStatus": "placed",
+                     *           "toStatus": "cancelled",
+                     *           "paymentMethod": "cod",
+                     *           "actorType": "customer",
+                     *           "createdAt": "2026-10-13T09:25:00Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["OrderEventFeed"];
+                };
+            };
+            /** @description after or limit is not a whole number in its range (field after or limit). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "must be a whole number from 1 to 500",
+                     *         "field": "limit"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No token, an unknown token or a customer token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A staff session or a service other than payment. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "services only"
                      *       }
                      *     }
                      */

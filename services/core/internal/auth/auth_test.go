@@ -107,8 +107,8 @@ func probeRouter(a *Auth) http.Handler {
 	serviceOrStaff := func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, Service(r.Context())+"|"+CurrentStaff(r.Context()).ID)
 	}
-	r.With(a.OrService(a.RequireStaff)).Get("/probe/service", serviceOrStaff)
-	r.With(a.OrService(a.RequireAdmin)).Get("/probe/service-admin", serviceOrStaff)
+	r.With(a.OrService(a.RequireStaff, "rider")).Get("/probe/service", serviceOrStaff)
+	r.With(a.OrService(a.RequireAdmin, "rider")).Get("/probe/service-admin", serviceOrStaff)
 	return r
 }
 
