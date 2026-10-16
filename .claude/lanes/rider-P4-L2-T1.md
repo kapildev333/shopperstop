@@ -1,5 +1,5 @@
 # rider-P4-L2-T1 - Sign-in sweeps expired sessions (task 1 of rider-hygiene-carryover)
-Status: brief (not started)
+Status: in progress (red committed; green next)
 
 ## Brief
 - LANE-ID: rider-P4-L2 (task T1). Area: `rider`.
@@ -18,6 +18,13 @@ Stop and report here (under Blockers) on anything design.md does not settle; do 
 
 ## Doing
 ## Red run
+```
+--- FAIL: TestStartSessionSweepsExpired (4.01s)
+    auth_test.go:248: expired session still stored (1 rows), want swept
+FAIL
+FAIL	github.com/kapildev333/shopperstop/services/rider/internal/auth	4.495s
+```
+Commit `test: rider sign-in sweeps expired sessions` (auth_test.go, this file).
 ## Green run
 ## Gates
 ## Found
