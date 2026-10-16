@@ -1,11 +1,11 @@
 # rider-P3-L3-T4 - delivery page, delivered and location (worker)
-Status: red committed (task 4.1); green next (4.2, 4.3)
+Status: done (tasks 4.1 to 4.3): red committed, then green with the feat commit; gates run
 ## Doing
-Red tests for the delivery page, mark delivered and location are committed; the page and the hook come next.
+Task 4 done: red committed, then the page, the hook and the route file in the feat commit; targeted tests, lint and typecheck green.
 ## Found
 - `apps/rider` has no lucide-react dependency (only `packages/ui` and `apps/web` declare it). The design's `Phone` icon on the "Call" link is left out rather than adding a dependency to `apps/rider/package.json` (out of this task's scope); copy and link are unchanged.
 - `unknown delivery` and `no cash line for a payment made online` pass on the red run: the task 1 stub already answers the not-found page, and a stub without a cash line shows none. They stay as guards.
-- `Mark delivered refused` (409): the spec and design say "close the dialog and read the delivery again" with no message; the brief's "409 as StatusMessage" is not in either, so the page shows no message on 409 (escalated to the manager in the report).
+- Mark delivered refused (409): the spec and design say "close the dialog and read the delivery again" with no message; the brief's "409 as StatusMessage" is not in either, so the page shows no message on 409 (escalated to the manager in the report).
 ## Requests
 ## Blockers
 None.
@@ -34,4 +34,6 @@ None.
 Each failure is an assertion on the stub page (the heading only: no customer, items, badge, dialog or location), not an import error.
 
 ## Gates
-Red only; green and gates after the feat commit.
+- `npm run test --workspace apps/rider -- --run src/delivery.test.tsx src/location.test.tsx`: 2 files, 16 tests passed (green).
+- `npm run lint --workspace apps/rider` and `npm run typecheck --workspace apps/rider`: exit 0.
+- Green deviation from the red run: the cleanup in `location.ts` keeps the `geolocation` object it watched with (a test removes the fake before React unmounts); two locators in the tests were fixed (the stacked table text, and "Call" links, since the nav has links too).

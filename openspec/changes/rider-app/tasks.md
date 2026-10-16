@@ -43,9 +43,9 @@ Scenarios: "Delivery page" (both), "Cash to collect" (both), "Mark delivered wit
 Starts from: `apps/rider/src/delivery.test.tsx` `assigned delivery shown`, `unknown delivery`, `cash on delivery`, `delivered shows no collection`, `delivered`, `core fails`; `apps/rider/src/location.test.tsx` `first fix sent, then every 15 seconds`, `stops after delivered`, `permission denied` (plus `no geolocation api` for the missing-API branch of the same requirement).
 Commits: `test: delivery page, delivered and location`, then `feat: delivery page, delivered and location`.
 
-- [ ] 4.1 `fake-geolocation.ts` (Decision 16) and the tests; red run pasted into the log; commit `test: ...`
-- [ ] 4.2 `location.ts` (Decision 12), `delivery.tsx` (`DeliveryPage`, Decisions 6, 11, 15) and the route file rendering it
-- [ ] 4.3 Gates green; commit `feat: ...`
+- [x] 4.1 `fake-geolocation.ts` (Decision 16) and the tests; red run pasted into the log; commit `test: ...`
+- [x] 4.2 `location.ts` (Decision 12), `delivery.tsx` (`DeliveryPage`, Decisions 6, 11, 15) and the route file rendering it
+- [x] 4.3 Gates green; commit `feat: ...`
 
 ## 5. History (worker, after 1; parallel with 2, 3, 4)
 
