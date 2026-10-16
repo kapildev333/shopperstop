@@ -58,9 +58,9 @@ Scenarios: "Operators create riders from the command line" (both), "Rider demo s
 Starts from: `services/rider/internal/seed/seed_test.go` `TestResetTwiceLeavesDemoRiders`, `TestLoadTwiceFails`, `TestSummaryMatchesSeed` (signs each printed rider in through `app.New` with a `core.New("http://127.0.0.1:1", "unused", time.Now)` client, checks every printed id, and the Postman `riderId`); `services/rider/cmd/rider-admin/main_test.go` `TestCreateRider`, `TestCreateRiderUnknownStore`, `TestCreateRiderRefusesEmptyPassword`, `TestRunRefusesBadArguments` (now with `create-rider a@b.c`, `create-rider a@b.c --shop x`).
 Commits: `test: rider demo seed and create-rider`, then `feat: rider-admin seed-demo and create-rider`.
 
-- [ ] 5.1 Write the tests; red run pasted; commit `test: ...`
-- [ ] 5.2 `internal/seed` per design.md (Reset, Load, Summary, names, phones, stores); `cmd/rider-admin` `seed-demo [--reset]` (prints `seed.Summary`) and `create-rider <email> --store <id>` per design.md Interfaces, full usage line
-- [ ] 5.3 Gates green; commit `feat: ...`
+- [x] 5.1 Write the tests; red run pasted; commit `test: ...`
+- [x] 5.2 `internal/seed` per design.md (Reset, Load, Summary, names, phones, stores); `cmd/rider-admin` `seed-demo [--reset]` (prints `seed.Summary`) and `create-rider <email> --store <id>` per design.md Interfaces, full usage line
+- [x] 5.3 Gates green; commit `feat: ...`
 
 ## 6. Manager verification (area manager, not a worker)
 
