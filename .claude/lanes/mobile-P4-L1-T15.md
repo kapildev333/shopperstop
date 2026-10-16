@@ -1,5 +1,5 @@
 # mobile-P4-L1-T15 - End-to-end suite (mobile-foundation-accounts, task 15)
-Status: blocked (15.2 and 15.3 not done; app fixes needed in `src/app`, outside this brief)
+Status: blocked on 15.2 (mobile 3 of 4: the addresses scenario fails axe on react-native-web markup and Escape does not close the sheet; see the second pass below). 15.3 ticked.
 ## Doing
 15.1 ticked. `make e2e` run from the worktree root: exit 2. The other workspaces' suites passed in the same run (two suites, 7 and 45 tests); mobile 0 of 4. Stopped per the brief: both causes are app code. Nothing else changed, nothing pushed, no dev servers left running (ports 18080, 18081, 15173-15176 free).
 ## Found
@@ -25,3 +25,59 @@ Status: blocked (15.2 and 15.3 not done; app fixes needed in `src/app`, outside 
 - to mobile-P4-L1 (team lead): decide whether the title and sign-out fixes land in a T15 fix task with a brief that names `src/app/_layout.tsx` and `src/app/account.tsx`, then rerun `make e2e`.
 ## Blockers
 - Document title missing from the web export (axe `document-title`) and the sign-out redirect race in `src/app/account.tsx`; both in app code, not this lane's scope.
+
+## Second pass (fixes A to F, Escape check)
+Branch `lane/mobile-P4-L1-foundation-accounts`, worktree `.worktrees/mobile-P4-L1`. Each fix committed after its failing test (red recorded in the commit's test run).
+Commits, oldest first:
+- `cf6c87e` test: every screen has a document title (e2e `toHaveTitle('Sign in · ShopperStop')`; red: title `""`)
+- `a154f19` fix: every screen names itself in the document title (`expo-router/head` per screen: Sign in, Create account, My account, Home, Categories, Your orders, Page not found, each `· ShopperStop`)
+- `c9e692f` fix: sign out lands on Home, not sign-in (e2e red recorded before the fix: URL `/sign-in?returnTo=%2Faccount`; Jest had passed, so the e2e scenario is the red)
+- `fbb7a74`, `e44b789`, `c015b53` sheet: test, test corrected to look for the rendered scroll view (red pre-fix), fix (`ScrollView keyboardShouldPersistTaps="handled"`, `maxHeight` 80% of the window)
+- `879abfd`, `5e82c2b` address row buttons (Edit, Set as default, Delete) disabled while a row action is pending; red: two requests sent
+- `03e8f2b` test: enter in the password field submits sign in and register (`src/auth-forms-enter.test.tsx`, red: no message, no request)
+- `03e8f2b` fix: enter in the password field submits sign in and register (`returnKeyType="go"` and `onSubmitEditing={submit}` on Password, sign in and register)
+- `b0eda6a` refactor: move useBack and splitError (and the `Errors` type) to `src/screen-support.ts`
+- `74ca870` test: Escape closes the address sheet on the web export (e2e step at the end of the addresses scenario, after the axe check on the open sheet). Red, see below.
+- `72beaf8` test: exported pages carry the app title in the static shell (`src/html-shell.test.tsx`; red: module absent)
+- `a1cdcc0` fix: exported pages carry a static title in the html shell (`src/app/+html.tsx`, `useServerDocumentContext` for head and body nodes, `<title>ShopperStop</title>`)
+
+Found on the way, fixed in `a1cdcc0` (amended before push): the first `+html.tsx` rendered its own head and no bundle scripts, so the export did not hydrate (every e2e failed on `/account`). The supported route is `useServerDocumentContext()`; `headNodes` and `bodyNodes` are rendered. Verified: every `dist/*.html` has `<title>ShopperStop</title>`, and scripts are present.
+Why the per-screen titles were not in the static HTML: the root layout returns `null` until the fonts load, so the static renderer never reaches the screens' `Head`. The client sets them after hydration, which the e2e title check sees.
+
+### make e2e (final, from the worktree root, after `a1cdcc0`)
+Exit 2. Workspace summaries from the run:
+- admin: 15 passed
+- mobile: 3 passed, 1 failed (`addresses against core`, line 70)
+- rider: 7 passed
+- web: 45 passed
+Ports 18080, 18081, 15173-15176 are free afterwards. The e2e slot was held for this run.
+
+### Stopped on: axe on react-native-web markup (the rule the brief says to stop on)
+`addresses against core` fails the axe check with the Add address sheet open. Nothing is disabled. Violations (all in RN web markup the app does not control):
+- `aria-allowed-attr` (critical): `<div aria-modal="true" class="css-g5y9jx r-1p0dtai ...">`, the root of RN web's `Modal`.
+- `aria-required-attr` (critical): `<div role="switch" tabindex="0" class="css-g5y9jx r-1loqt21 r-lrvibr" style="height: 20px; width: 40px;">`, RN web's `Switch` (the "Make this my default address" row in `address-sheet.tsx`). No `aria-checked`.
+- `nested-interactive` (serious): the same switch div contains `<input aria-label="Make this my default address" role="switch" type="checkbox">`.
+- `region` (moderate): the sheet's `<h2>Add address</h2>`, the "Save as" label and the sheet's containers sit in the Modal portal, outside any landmark.
+The `Switch` and `Modal` are the app's own choice of RN components, so the owner decides whether to replace the Switch (for example a `Pressable` with `accessibilityRole="switch"` and `accessibilityState`) or accept the RN web markup and scope the rule. Not decided here.
+
+### Escape does not close the sheet (R1 finding 6 was wrong)
+Probe (temporary spec, removed, not committed): Escape on the open address sheet leaves the heading in place (count 1). RN web's `Modal` does not handle Escape on the web export; `onRequestClose` is not called. The e2e step `74ca870` is the red. Fix options for the team lead: a `keydown` Escape listener in `ui/sheet.tsx` on web (needs a Jest test with `Platform.OS` set to web and a document fake), or accept the gap. Not changed here, outside the A to F brief.
+
+### Other choices (for the team lead)
+- Titles: `· ShopperStop` suffix, mirroring the brief's example. The web app's own `index.html` title is only `ShopperStop`; I did not change it.
+- `src/screen-support.ts` is the shared file name for the F refactor.
+- Sheet cap: 80% of the window, not 90%, so the header and keyboard fit on a small phone. Change it if the design wants 90%.
+- Row buttons disabled: all three (Edit, Set as default, Delete) while any row action is pending.
+- 15.2 is not ticked: `make e2e` is not exit 0. 15.3 is ticked (gates below).
+
+### Gates (apps/mobile and root, after `a1cdcc0`)
+- `npm run lint --workspace apps/mobile`: clean (`eslint .`, no output)
+- `npm run typecheck --workspace apps/mobile`: clean (`tsc -p tsconfig.json`, no output)
+- `npm run test --workspace apps/mobile -- --run`: Test Suites 24 passed, Tests 88 passed
+- `npm run build --workspace apps/mobile`: `Exported: dist`; `dist/*.html` each carry `<title>ShopperStop</title>`
+- `openspec validate --all --strict`: Totals 19 passed, 0 failed
+
+## Requests
+- to mobile-P4-L1 (team lead): decide (1) the Switch and Modal axe findings (replace the Switch, or scope the rule with a recorded reason; never disable silently), (2) the Escape close on the web export (fix in `ui/sheet.tsx` or defer). Then rerun `make e2e`; 15.2 follows.
+## Blockers
+- 15.2: addresses scenario (axe on RN web markup in the address sheet) and the Escape step. Stopped per the brief.

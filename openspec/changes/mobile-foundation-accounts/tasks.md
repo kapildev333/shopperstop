@@ -162,7 +162,7 @@ Starts from: `e2e/accounts.spec.ts` with the four scenario names, written before
 
 - [x] 15.1 Red recorded; then the `e2e` script (Decision 4) and `playwright.config.ts` (Decision 13)
 - [ ] 15.2 With the e2e slot announced by the manager: `make e2e` exits 0, the mobile suite 4 of 4; an axe violation on markup the app does not control stops the task (report, no rule switched off)
-- [ ] 15.3 Gates green
+- [x] 15.3 Gates green
 
 ## 16. Acceptance
 
