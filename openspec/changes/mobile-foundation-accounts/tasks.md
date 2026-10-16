@@ -90,9 +90,9 @@ Starts from: `src/ui/sheet.test.tsx`: `sheet shows its title and content` (title
 Scope: `apps/mobile/src/ui/{badge.tsx,chip.tsx,card.tsx,marks.test.tsx}`.
 Starts from: `src/ui/marks.test.tsx`: `badge shows its text` (variant `accent` background `colors.accentSoft`), `chip selected state` (`accessibilityState.selected` true, border `colors.accent`; unselected border `colors.lineStrong`; `onPress` once), `chip tap target` (min height 44). `Card` has no test (Decision 6).
 
-- [ ] 8.1 Red
-- [ ] 8.2 The three components (Badge variants neutral, success, warning, danger, accent, as web)
-- [ ] 8.3 Gates green
+- [x] 8.1 Red
+- [x] 8.2 The three components (Badge variants neutral, success, warning, danger, accent, as web)
+- [x] 8.3 Gates green
 
 ## 9. EmptyState, ErrorBanner, Skeleton
 
