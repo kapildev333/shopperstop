@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native'
 import { renderRouter } from 'expo-router/testing-library'
+import { QueryClientProvider } from '@tanstack/react-query'
 import Category from './app/category/[slug]'
+import { queryClient } from './api'
 import { fakeCore, json } from './fake-core'
 import { setPincode } from './pincode'
 
@@ -9,6 +11,15 @@ jest.mock('@expo-google-fonts/inter', () => ({
   ...jest.requireActual('@expo-google-fonts/inter'),
   useFonts: () => [true, null],
 }))
+
+// The root layout provides the query client; a map-based render has no layout, so the test provides it.
+function CategoryScreen() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Category />
+    </QueryClientProvider>
+  )
+}
 
 const storeId = '00000000-0000-4000-8000-000000000401'
 const store = {
@@ -33,10 +44,10 @@ test('category tabs', async () => {
     [`GET /stores/${storeId}/products`]: () => json(200, { items: [], page: 1, pageSize: 24, total: 0 }),
   })
 
-  const router = await renderRouter({ 'category/[slug]': Category }, { initialUrl: '/category/dairy-bread-eggs' })
+  const router = await renderRouter({ 'category/[slug]': CategoryScreen }, { initialUrl: '/category/dairy-bread-eggs' })
 
   expect(await screen.findByRole('heading', { name: 'Dairy, Bread & Eggs' })).toHaveProp('aria-level', 1)
-  expect(screen.getByRole('tablist', { name: 'Subcategories' })).toBeTruthy()
+  expect(screen.getByLabelText('Subcategories')).toBeTruthy()
   expect(screen.getByRole('tab', { name: 'All', selected: true })).toBeTruthy()
 
   fireEvent.press(screen.getByRole('tab', { name: 'Milk' }))
