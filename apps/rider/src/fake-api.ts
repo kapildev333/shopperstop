@@ -34,6 +34,7 @@ export function readyOrder(n: number, over: Partial<ReadyOrder> = {}): ReadyOrde
     placedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
     itemCount: 3,
     totalCents: 33900,
+    paymentMethod: 'cod',
     pincode: '560034',
     customerName: 'Ravi Kumar',
     ...over,

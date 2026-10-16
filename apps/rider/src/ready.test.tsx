@@ -30,6 +30,18 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+test('cash orders marked', async () => {
+  setToken('tok')
+  const online = readyOrder(2, { paymentMethod: 'online', paymentStatus: 'paid' })
+  fakeApi(routes({ [READY]: () => json(200, { items: [readyOrder(1), online] }) }))
+
+  renderApp('/')
+
+  const cards = within(await screen.findByRole('list', { name: 'Ready orders' })).getAllByRole('listitem')
+  expect(within(cards[0]).getByText('Cash')).toBeInTheDocument()
+  expect(within(cards[1]).queryByText('Cash')).not.toBeInTheDocument()
+})
+
 test('ready orders listed', async () => {
   setToken('tok')
   fakeApi(routes({ [READY]: () => json(200, { items: [readyOrder(1), readyOrder(2)] }) }))

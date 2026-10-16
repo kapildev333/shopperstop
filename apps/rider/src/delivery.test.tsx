@@ -9,7 +9,7 @@ import { renderApp } from './render-app'
 const id = delivery().id
 const deliveryPath = `/api/rider/v1/me/deliveries/${id}`
 const markPath = `${deliveryPath}/delivered`
-const cash = 'Collect ₹339 cash'
+const cash = 'Collect ₹339 in cash'
 
 let geo: ReturnType<typeof fakeGeolocation>
 
@@ -68,18 +68,28 @@ test('cash on delivery', async () => {
   expect(await screen.findByText(cash)).toBeInTheDocument()
 })
 
-test('no cash line for a payment made online', async () => {
-  openDelivery(delivery({ paymentMethod: 'online' }))
+test('paid online', async () => {
+  openDelivery(delivery({ paymentMethod: 'online', paymentStatus: 'paid' }))
 
-  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-AAAA0001' })).toBeInTheDocument()
+  expect(await screen.findByText('Paid online')).toBeInTheDocument()
   expect(screen.queryByText(/Collect/)).not.toBeInTheDocument()
 })
 
-test('delivered shows no collection', async () => {
-  openDelivery(delivery({ status: 'delivered', deliveredAt: new Date().toISOString() }))
+test('awaiting payment', async () => {
+  openDelivery(delivery({ paymentMethod: 'online', paymentStatus: 'pending' }))
+
+  expect(await screen.findByText('Awaiting payment')).toBeInTheDocument()
+  expect(screen.queryByText(/Collect|Paid online/)).not.toBeInTheDocument()
+})
+
+test.each([
+  ['cod', delivery({ status: 'delivered', deliveredAt: new Date().toISOString() })],
+  ['online', delivery({ status: 'delivered', deliveredAt: new Date().toISOString(), paymentMethod: 'online', paymentStatus: 'paid' })],
+])('delivered %s shows no payment line', async (_, shown) => {
+  openDelivery(shown)
 
   expect(await screen.findByText('Delivered')).toBeInTheDocument()
-  expect(screen.queryByText(/Collect/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Collect|Paid online/)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Mark delivered' })).not.toBeInTheDocument()
 })
 
