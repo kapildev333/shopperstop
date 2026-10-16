@@ -598,6 +598,10 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	assertSQL(t, "orders to the demo Home address", "select count(*) from orders o join addresses a on a.id = '00000000-0000-4000-8000-000000000301' where o.address_label = 'Home' and o.address_label = a.label and o.address_line1 = a.line1 and o.address_pincode = a.pincode", 3)
 	assertSQL(t, "orders with the Koramangala snapshot", "select count(*) from orders where store_name = 'Koramangala' and promised_minutes = 10", 3)
 	assertSQL(t, "cancelled orders with a reason and a time", "select count(*) from orders where status = 'cancelled' and cancelled_at is not null and cancel_reason = 'Ordered by mistake'", 1)
+	assertSQL(t, "orders with a rider", "select count(*) from orders where rider_name is not null", 1)
+	assertSQL(t, "SS-DEMOAAAB delivered by Arjun Rao", "select count(*) from orders where id = '00000000-0000-4000-8000-000000000701' and rider_name = 'Arjun Rao'", 1)
+	assertSQL(t, "rider events", "select count(*) from order_events where actor_type = 'rider'", 2)
+	assertSQL(t, "SS-DEMOAAAB rider events by rider ...0801", "select count(*) from order_events where order_id = '00000000-0000-4000-8000-000000000701' and to_status in ('out_for_delivery', 'delivered') and actor_type = 'rider' and actor_id = '00000000-0000-4000-8000-000000000801' and actor_name = 'Arjun Rao'", 2)
 }
 
 // TestDemoOrdersThroughTheRouter: the demo customer lists the three demo
