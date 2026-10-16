@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ShopperStop: a quick-commerce product in the shape of Blinkit. A customer orders groceries from the nearest dark store; the store packs and delivers in minutes. Portfolio product built to the UniCourse standard (`../UniCourse`): real flows, tests, documented design, multi-agent orchestration. Microservices in one repository: `services/core` first, then rider, payment and receipt services, each its own Go module and Postgres database, talking over HTTP.
 
-Phase 1 (foundation) is on `main` except the two apps, `apps/web` and `apps/admin`. The two founding briefs are `docs/specs/2026-10-12-foundation-and-design-system.md` (Spec 1) and `docs/specs/2026-10-12-core-service-and-apps.md` (Spec 2); they are frozen. Phase 1 seeded `openspec/specs/platform` and `design-system` from them; later capabilities are seeded by their Phase 2 changes (D4). `PLAN.md` tracks state.
+Phases 1 and 2 are on `main` (`v0.1.0`, `v0.2.0`); Phase 3 adds the rider service and app (D29). The two founding briefs are `docs/specs/2026-10-12-foundation-and-design-system.md` (Spec 1) and `docs/specs/2026-10-12-core-service-and-apps.md` (Spec 2); they are frozen. Phase 1 seeded `openspec/specs/platform` and `design-system` from them; later capabilities are seeded by their Phase 2 changes (D4). `PLAN.md` tracks state.
 
 ## Commands
 
@@ -15,20 +15,23 @@ Prerequisites: Docker Desktop running (`make db` uses it), Go 1.27, Node >= 22.1
 | Target | What it does |
 |---|---|
 | `make db` | starts the local Postgres 16 container (`shopperstop-postgres-1`) and waits until it is healthy |
-| `make dev` | `db`, then `seed` (migrate and `seed-demo --reset`), then core, web and admin together; Ctrl-C stops them |
-| `make test` | `test-core`, then `test-web` |
+| `make dev` | `db`, then `seed` (migrate and `seed-demo --reset`), then core, rider, web, admin and the rider app together; Ctrl-C stops them |
+| `make test` | `test-core`, `test-rider`, then `test-web` |
 | `make test-core` | gofmt, `go vet`, `go test -race` on `shopperstop_core_test` |
+| `make test-rider` | gofmt, `go vet`, `go test -race` on `shopperstop_rider_test` |
 | `make test-web` | builds `packages/ui`, then lint, typecheck, test and build for every workspace |
-| `make e2e` | Playwright on `shopperstop_core_e2e`: core :18080, web and admin previews 15173 and 15174 (admin under /admin/), fixed env |
-| `make gen` | sqlc generate (only while `sqlc.yaml` exists), then `openapi-typescript` into `packages/ui/src/api/core.d.ts` |
-| `make postman` | regenerates `docs/postman/` from `openapi.json`, then runs `node --test scripts/postman.test.mjs` |
+| `make rider` | the rider service alone, on :8081 |
+| `make rider-app` | the rider app's dev server alone, on :5175 under /rider/ |
+| `make e2e` | Playwright on `shopperstop_core_e2e` and `shopperstop_rider_e2e`: core :18080, rider :18081, web and admin previews 15173 and 15174 (admin under /admin/), rider preview 15175 (under /rider/), fixed env |
+| `make gen` | sqlc generate per service (only while its `sqlc.yaml` exists), then `openapi-typescript` into `packages/ui/src/api/core.d.ts` and `packages/ui/src/api/rider.d.ts` |
+| `make postman` | regenerates one collection per service under `docs/postman/` (`shopperstop-core.postman_collection.json`, `shopperstop-rider.postman_collection.json` once `services/rider/openapi.json` exists), then runs `node --test scripts/postman.test.mjs` |
 | `make prod-local` | builds the apps and serves them through Caddy on http://localhost, starting containers |
 
-Every target prints one skip line (`<target>: <path> absent, skipping`) while its part is absent. `seed`, `core`, `ui`, `web` and `admin` are the pieces `dev` composes.
+Every target prints one skip line (`<target>: <path> absent, skipping`) while its part is absent. `seed`, `core`, `rider`, `ui`, `web`, `admin` and `rider-app` are the pieces `dev` composes.
 
-Single tests: `cd services/core && SHOPPERSTOP_CORE_TEST_DATABASE_URL=... go test -race -run TestName ./internal/<pkg>` (URL from the Makefile) and `npm run test --workspace packages/ui -- <file>`.
+Single tests: `cd services/core && SHOPPERSTOP_CORE_TEST_DATABASE_URL=... go test -race -run TestName ./internal/<pkg>` (URL from the Makefile), `cd services/rider && SHOPPERSTOP_RIDER_TEST_DATABASE_URL=... go test -race -run TestName ./internal/<pkg>` for the rider, and `npm run test --workspace packages/ui -- <file>`.
 
-Agents: `make db`, `make dev` and `make prod-local` start containers and belong to the owner or the orchestrator. Lanes run `make test-core`, `make test-web`, `make e2e` (one at a time), `make gen`, `make postman`, and `make -n` on anything. Ad-hoc database checks use a Go pgx client.
+Agents: `make db`, `make dev` and `make prod-local` start containers and belong to the owner or the orchestrator. Lanes run `make test-core`, `make test-rider`, `make test-web`, `make e2e` (one at a time), `make gen`, `make postman`, and `make -n` on anything. Ad-hoc database checks use a Go pgx client.
 
 ## Layout and naming
 
@@ -45,7 +48,7 @@ docs/specs/         frozen: the two 2026-10-12 briefs that seed openspec/specs/;
 docs/plans/         frozen: the Phase 1 plan; later work is planned as OpenSpec changes, not here
 docs/design/        team-lead design documents, <LANE-ID>.md
 docs/figma.md       link to the Figma file and its page map
-docs/postman/       Postman collection and environment generated from openapi.json
+docs/postman/       Postman collections (one per service) and the shared environment
 openspec/           OpenSpec root: specs/ (living spec per capability), changes/ (one per feature), changes/archive/
 .claude/            agents (team-lead, worker, reviewer), commands (orchestrate, manage), areas/, lanes/
 Makefile            developer targets (see Commands)
@@ -105,13 +108,13 @@ Red, green, refactor per task: the failing test from the spec scenario is commit
 - Commit identity `kapildev333 <47056817+kapildev333@users.noreply.github.com>` (repo git config). No AI attribution or co-author lines in commits or PRs. No personal email, name, address or payment detail anywhere in the repository, seed data included.
 - One branch per lane, `lane/<LANE-ID>-<slug>`, in its own worktree under `.worktrees/<LANE-ID>` (gitignored). Non-lane changes use `chore/<slug>`.
 - Lanes commit on their branch and never push. The area manager pushes, opens the PR from `.github/pull_request_template.md` (lane, spec section, OpenSpec change, gates pasted, reviewer verdict, deferred), waits for `ci`, squash-merges with branch deletion, removes the worktree, records the PR URL in the area plan.
-- `ci.yml` jobs: `core` (gofmt, `go vet`, `go test -race` against a Postgres service from `deploy/initdb.sql`, then `make gen postman` must leave `git status` clean, D14; sqlc is installed only while `services/core/sqlc.yaml` exists), `web` (`npm ci`, `make test-web`), `e2e` (`make e2e`: Playwright, Chromium only, `shopperstop_core_e2e`, core :18080, web and admin previews 15173 and 15174 (admin under /admin/), D15), `spec` (`openspec validate --all --strict`); Node 22 in CI. Each job no-ops with a message while its directory does not exist. Branch protection waits until the repo is public; the PR-only rule is process-enforced until then.
+- `ci.yml` jobs: `core` (gofmt, `go vet`, `go test -race` against a Postgres service from `deploy/initdb.sql`, then `make gen postman` must leave `git status` clean, D14; sqlc is installed only while `services/core/sqlc.yaml` exists), `rider` (`make test-rider` against `shopperstop_rider_test` on a Postgres service from `deploy/initdb.sql`; skipped while `services/rider` is absent), `web` (`npm ci`, `make test-web`), `e2e` (`make e2e`: Playwright, Chromium only, `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core :18080, rider :18081, web and admin previews 15173 and 15174 (admin under /admin/), rider preview 15175 (under /rider/), D15), `spec` (`openspec validate --all --strict`); Node 22 in CI. Each job no-ops with a message while its directory does not exist. Branch protection waits until the repo is public; the PR-only rule is process-enforced until then.
 - Releases: one tag per completed phase, `v0.<phase>.<patch>`, by the program orchestrator at phase close; chore PRs carry the `chore` label.
 - Not used: GitHub Projects, Issues, Wiki, Discussions. `PLAN.md` is the single plan.
 
 ## API documentation (Spec 1 §11)
 
-Every service's `openapi.json` is the contract and the documentation: `summary`, `description`, capability tag, typed schemas, every error code, at least one example per route. A test fails when a served route is missing from the file or the file names an unserved route. `make postman` regenerates `docs/postman/shopperstop-core.postman_collection.json` and CI fails on a diff; `docs/postman/local.postman_environment.json` holds `baseUrl` and the token and id variables. `healthz` and `readyz` are listed in `openapi.json` like every served route (D16); `make gen` turns the file into `packages/ui/src/api/core.d.ts`.
+Every service's `openapi.json` is the contract and the documentation: `summary`, `description`, capability tag, typed schemas, every error code, at least one example per route. A test fails when a served route is missing from the file or the file names an unserved route. `make postman` regenerates `docs/postman/shopperstop-core.postman_collection.json` (and `shopperstop-rider.postman_collection.json` once `services/rider/openapi.json` exists) and CI fails on a diff; `docs/postman/local.postman_environment.json` holds `baseUrl`, `riderBaseUrl` and the token and id variables. `healthz` and `readyz` are listed in `openapi.json` like every served route (D16); `make gen` turns each file into `packages/ui/src/api/<service>.d.ts`.
 
 ## UI conventions (Spec 1 §8 and §10, binding for every web change)
 

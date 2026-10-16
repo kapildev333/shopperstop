@@ -34,10 +34,10 @@ Scenarios: "CI runs a rider job" (Workflow shape with the rider job; Rider tests
 Starts from: `sh openspec/changes/platform-rider-wiring/check-wiring.sh ci docs`, failing on the tree after task 1.
 Commit: `feat: rider ci job and docs`.
 
-- [ ] 3.1 Red: run `sh openspec/changes/platform-rider-wiring/check-wiring.sh ci docs`; paste the last line and the FAIL lines into the log
-- [ ] 3.2 Insert the `rider` job from design.md between `core` and `web` in `ci.yml` (no other job changes); edit `README.md` and `CLAUDE.md` as design.md "README.md and CLAUDE.md" says, in the files' existing voice, no new sections beyond the "Cloned before Phase 3?" paragraph, no link to a path that does not exist
-- [ ] 3.3 Green: `sh openspec/changes/platform-rider-wiring/check-wiring.sh` (every section) prints `wiring check: ok`; `sh openspec/changes/archive/2026-10-12-platform-readme-claude/check-docs.sh` prints `docs check: ok`; `openspec validate --all --strict` passes. Paste the outputs
-- [ ] 3.4 `git status --short` before the commit shows only the three files, this file and the log
+- [x] 3.1 Red: run `sh openspec/changes/platform-rider-wiring/check-wiring.sh ci docs`; paste the last line and the FAIL lines into the log
+- [x] 3.2 Insert the `rider` job from design.md between `core` and `web` in `ci.yml` (no other job changes); edit `README.md` and `CLAUDE.md` as design.md "README.md and CLAUDE.md" says, in the files' existing voice, no new sections beyond the "Cloned before Phase 3?" paragraph, no link to a path that does not exist
+- [x] 3.3 Green: `sh openspec/changes/platform-rider-wiring/check-wiring.sh` (every section) prints `wiring check: ok`; `sh openspec/changes/archive/2026-10-12-platform-readme-claude/check-docs.sh` prints `docs check: ok`; `openspec validate --all --strict` passes. Paste the outputs
+- [x] 3.4 `git status --short` before the commit shows only the three files, this file and the log
 
 ## 4. Manager verification and runtime evidence (area manager, not a worker)
 
