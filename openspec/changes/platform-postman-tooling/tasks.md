@@ -12,8 +12,8 @@ Scope: `scripts/postman.mjs`, `scripts/postman.test.mjs`, `docs/postman/`. Scena
 
 Scope: `Makefile`, `README.md`. Scenarios: "Rider sqlc between core sqlc and the API types", "make gen leaves the tree clean", "Troubleshooting names the crash and the workaround", "README names the tokens step and the service token". Failing test: `sh openspec/changes/platform-postman-tooling/check-tooling.sh` (committed with the proposal; no `test:` commit of its own).
 
-- [ ] 2.1 Red: run the check on the branch head, record its FAIL lines in the lane log
-- [ ] 2.2 `feat:` the `make gen` line (design.md 5) and the three README edits (design.md 6), text as written there
+- [x] 2.1 Red: run the check on the branch head, record its FAIL lines in the lane log
+- [x] 2.2 `feat:` the `make gen` line (design.md 5) and the three README edits (design.md 6), text as written there
 - [ ] 2.3 Gates: the check prints `tooling check: ok`; `sh openspec/changes/archive/2026-10-12-platform-readme-claude/check-docs.sh` and `sh openspec/changes/archive/2026-10-16-platform-mobile-readme-spec/check-readme-mobile.sh` still pass (the archived `check-mobile-wiring.sh` already fails on `main`, superseded by that change); `make -n gen`; `openspec validate --all --strict`
 
 ## 3. Acceptance

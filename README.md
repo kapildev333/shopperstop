@@ -101,15 +101,19 @@ cd apps/mobile && npx expo start --port 5176
 | `make rider-app` | The rider app's dev server alone, on :5175 under /rider/. |
 | `make test-web` | Builds `packages/ui`, then lint, typecheck, test and build for every workspace. |
 | `make e2e` | Playwright against built apps, on `shopperstop_core_e2e` and `shopperstop_rider_e2e`, core on :18080, rider on :18081, web and admin previews on :15173 and :15174 (admin under /admin/), rider preview on :15175 (under /rider/), mobile web export preview on :15176. |
-| `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists), `packages/ui/src/api/core.d.ts` from `openapi.json`, and the rider sqlc code and `packages/ui/src/api/rider.d.ts` once the rider contract exists. |
+| `make gen` | Generates the sqlc code (once `services/core/sqlc.yaml` exists), `packages/ui/src/api/core.d.ts` from `openapi.json`, and the rider sqlc code and `packages/ui/src/api/rider.d.ts` once the rider contract exists, then `packages/ui/src/tokens.ts` from `tokens.css`. |
 | `make postman` | Regenerates one Postman collection per service and the shared environment under `docs/postman/`. |
 | `make prod-local` | Builds the apps and serves them through Caddy on <http://localhost>. |
 
 Each target prints `<target>: <path> absent, skipping` while its part of the tree is not there yet.
 
+## Troubleshooting
+
+**`npm install` crashes with `Cannot read properties of null (reading 'edgesOut')`.** npm 10.9.9 hits this on an `npm install` that adds a new workspace: the fresh resolution of `vitest` 5.0.4 in the new workspace trips over its optional peer `@vitest/browser-playwright`. `npm install --legacy-peer-deps` and npm 11 get past it but rewrite other workspaces' lock entries. The rider app (Phase 3) was added this way instead: its entries in `package-lock.json` were seeded from `apps/admin`, which has the same dependencies (each `apps/admin/node_modules/*` entry copied as `apps/rider/node_modules/*`, the `apps/admin` entry copied as `apps/rider`, and the `node_modules/@shopperstop/rider` link added), then npm 10's `npm install --package-lock-only` validated the lock and `npm ci --dry-run` accepted it. `npm ci` from the committed lock, as in the Quick start and in CI, does not hit the crash.
+
 ## API
 
-The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The rider contract, [services/rider/openapi.json](services/rider/openapi.json), follows the same rules. The Postman collections generated from the contracts live under `docs/postman/`, one per service (the rider's from Phase 3 on), with the shared environment (`riderBaseUrl`, `riderToken`, `riderId` and `deliveryId` included); `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`.
+The contract and the documentation are [services/core/openapi.json](services/core/openapi.json): every served route, with its summary, schemas, error codes and examples. The rider contract, [services/rider/openapi.json](services/rider/openapi.json), follows the same rules. The Postman collections generated from the contracts live under `docs/postman/`, one per service (the rider's from Phase 3 on), with the shared environment (`riderBaseUrl`, `riderToken`, `riderId` and `deliveryId` included); `make postman` regenerates them and also runs the generator tests in `scripts/postman.test.mjs`. The environment's `serviceToken` holds the Makefile's dev service token; the requests for the routes `openapi.json` marks `x-service-token` (the ones the rider service calls) read it instead of `staffToken`.
 
 ## Design
 
