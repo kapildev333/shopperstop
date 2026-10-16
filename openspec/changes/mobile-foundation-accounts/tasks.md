@@ -150,9 +150,9 @@ Scope: `apps/mobile/src/app/account.tsx`, `apps/mobile/src/addresses.ts` (add `s
 Scenarios: Profile shown, Profile saved (card half), Sign out, Addresses and default, Address deleted, No addresses, Signed-out account redirect, Sign in returns to the account, Account button opens the account, Loading account, Core unreachable with nothing held, Core failure with nothing held, Failed refetch keeps the account.
 Starts from: `src/account.test.tsx`, the scenario names; `renderRouter` with the real `(tabs)/index`, `sign-in` and `account` screens; refetch recipe from Decision 12.
 
-- [ ] 14.1 Red
-- [ ] 14.2 `account.tsx` per section 11 and the pattern of Decision 10; no token renders `<Redirect href="/sign-in?returnTo=%2Faccount" />`; "Sign out" does `router.replace('/')` and then `signOut()`
-- [ ] 14.3 Gates green; `make test-web` exits 0
+- [x] 14.1 Red
+- [x] 14.2 `account.tsx` per section 11 and the pattern of Decision 10; no token renders `<Redirect href="/sign-in?returnTo=%2Faccount" />`; "Sign out" does `router.replace('/')` and then `signOut()`
+- [x] 14.3 Gates green; `make test-web` exits 0
 
 ## 15. End-to-end suite
 

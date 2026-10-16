@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import Account from './app/account'
 import { queryClient } from './api'
@@ -8,6 +9,15 @@ const customer = { id: '6f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f70', email: 'asha@exam
 const home = { id: '3f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f71', label: 'Home', line1: '5 Lake Rd', pincode: '560001', isDefault: true }
 const work = { id: '3f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f72', label: 'Work', line1: '1 Park St', line2: 'Floor 2', pincode: '560038', isDefault: false }
 
+// The root layout provides the query client in the app; the screen needs it here too.
+function renderAccount() {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Account />
+    </QueryClientProvider>,
+  )
+}
+
 // Non-navigating tests: the screen renders under no router, so each test owns one render.
 
 test('Profile shown', async () => {
@@ -16,7 +26,7 @@ test('Profile shown', async () => {
     'GET /me': () => json(200, customer),
     'GET /me/addresses': () => json(200, { items: [] }),
   })
-  await render(<Account />)
+  await renderAccount()
 
   expect(await screen.findByRole('heading', { name: 'My account' })).toBeTruthy()
   expect(screen.getByText('Asha Rao')).toBeTruthy()
@@ -31,7 +41,7 @@ test('Profile saved (card half)', async () => {
     'GET /me/addresses': () => json(200, { items: [] }),
     'PATCH /me': () => json(200, customer),
   })
-  await render(<Account />)
+  await renderAccount()
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Edit profile' }))
   await fireEvent.changeText(screen.getByLabelText('Phone'), '9876543210')
@@ -54,7 +64,7 @@ test('Addresses and default', async () => {
       return json(200, { ...work, isDefault: true })
     },
   })
-  await render(<Account />)
+  await renderAccount()
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Set Work as default' }))
 
@@ -76,7 +86,7 @@ test('Address deleted', async () => {
       return json(204)
     },
   })
-  await render(<Account />)
+  await renderAccount()
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Delete Work' }))
 
@@ -91,7 +101,7 @@ test('No addresses', async () => {
     'GET /me': () => json(200, customer),
     'GET /me/addresses': () => json(200, { items: [] }),
   })
-  await render(<Account />)
+  await renderAccount()
 
   expect(await screen.findByText('No saved addresses. Add one to check out faster.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Add address' })).toBeTruthy()
@@ -103,7 +113,7 @@ test('Loading account', async () => {
     'GET /me': () => new Promise<Response>(() => undefined),
     'GET /me/addresses': () => new Promise<Response>(() => undefined),
   })
-  await render(<Account />)
+  await renderAccount()
 
   expect(screen.getAllByLabelText('Loading').length).toBeGreaterThan(0)
   expect(screen.queryByText('Asha Rao')).toBeNull()
@@ -119,7 +129,7 @@ test('Core unreachable with nothing held', async () => {
     },
     'GET /me/addresses': () => json(200, { items: [] }),
   })
-  await render(<Account />)
+  await renderAccount()
 
   expect(await screen.findByText("You're offline")).toBeTruthy()
   expect(screen.getByText('Check your connection and try again.')).toBeTruthy()
@@ -135,7 +145,7 @@ test('Core failure with nothing held', async () => {
     'GET /me': () => json(200, customer),
     'GET /me/addresses': () => apiError(500, 'internal', 'Database is down'),
   })
-  await render(<Account />)
+  await renderAccount()
 
   expect(await screen.findByText('Something went wrong on our side')).toBeTruthy()
   expect(screen.getByText('Please try again in a moment.')).toBeTruthy()
@@ -148,7 +158,7 @@ test('Failed refetch keeps the account', async () => {
   const stale = Date.now() - 61_000
   queryClient.setQueryData(['me', 't-acct'], customer, { updatedAt: stale })
   queryClient.setQueryData(['addresses', 't-acct'], [home, work], { updatedAt: stale })
-  await render(<Account />)
+  await renderAccount()
 
   await waitFor(() => expect(queryClient.getQueryState(['me', 't-acct'])?.status).toBe('error'))
   await waitFor(() => expect(queryClient.getQueryState(['addresses', 't-acct'])?.status).toBe('error'))

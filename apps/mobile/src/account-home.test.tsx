@@ -1,9 +1,16 @@
 import { fireEvent, screen } from '@testing-library/react-native'
 import { renderRouter } from 'expo-router/testing-library'
-import Account from './app/account'
-import Home from './app/(tabs)/index'
 import { fakeCore, json } from './fake-core'
 import { setToken } from './session'
+
+// The font loader is native: under Jest it never reports loaded, so the root layout would never render.
+jest.mock('@expo-google-fonts/inter', () => ({
+  ...jest.requireActual('@expo-google-fonts/inter'),
+  useFonts: () => [true, null],
+}))
+
+// The real route files under src/app: the root layout provides the query client, as in the app.
+const appDir = `${__dirname}/app`
 
 const customer = { id: '6f1c2a9e-0d7b-4c1e-9a55-2b3c4d5e6f70', email: 'asha@example.com', name: 'Asha Rao' }
 
@@ -14,7 +21,7 @@ test('Account button opens the account', async () => {
     'GET /me': () => json(200, customer),
     'GET /me/addresses': () => json(200, { items: [] }),
   })
-  const router = await renderRouter({ index: Home, account: Account }, { initialUrl: '/' })
+  const router = await renderRouter(appDir, { initialUrl: '/' })
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Account' }))
 

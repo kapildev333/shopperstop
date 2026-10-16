@@ -26,7 +26,7 @@ function Back({ label, onBack }: { label: string; onBack: () => void }) {
 }
 
 // Back goes to the previous screen when there is one, else Home (the deep-link case).
-function useBack() {
+export function useBack() {
   const router = useRouter()
   return () => (router.canGoBack() ? router.back() : router.replace('/'))
 }

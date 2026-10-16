@@ -22,13 +22,26 @@ export function useAddresses() {
   })
 }
 
+// Runs one address write; on success the address lists are read again.
+async function changeAddresses(request: () => Promise<{ error?: { error: ApiError } }>): Promise<ApiError | undefined> {
+  const error = await call(request)
+  if (!error) await queryClient.invalidateQueries({ queryKey: ['addresses'] })
+  return error
+}
+
 // Adds when `id` is absent, edits when present. An empty line2 is omitted on POST and sent as '' on PATCH, which clears it.
-export async function saveAddress(id: string | undefined, values: AddressValues): Promise<ApiError | undefined> {
-  const error = await call(() =>
+export function saveAddress(id: string | undefined, values: AddressValues): Promise<ApiError | undefined> {
+  return changeAddresses(() =>
     id === undefined
       ? api.POST('/me/addresses', { body: { ...values, line2: values.line2 || undefined } })
       : api.PATCH('/me/addresses/{id}', { params: { path: { id } }, body: values }),
   )
-  if (!error) await queryClient.invalidateQueries({ queryKey: ['addresses'] })
-  return error
+}
+
+export function setDefaultAddress(id: string): Promise<ApiError | undefined> {
+  return changeAddresses(() => api.PATCH('/me/addresses/{id}', { params: { path: { id } }, body: { isDefault: true } }))
+}
+
+export function deleteAddress(id: string): Promise<ApiError | undefined> {
+  return changeAddresses(() => api.DELETE('/me/addresses/{id}', { params: { path: { id } } }))
 }
