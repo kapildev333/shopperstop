@@ -44,12 +44,13 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   // Only an answer core gave since this board was opened counts: orders kept from an earlier visit (the cache shows them
   // at once) are not a baseline, or what was placed while the board was away would be read out on opening it.
   const [heard, setHeard] = useState<{ from: Order[]; news: string }>()
-  if (board.data && board.isFetchedAfterMount && !board.isError && heard?.from !== board.data) {
+  const answer = board.data?.items
+  if (answer && board.isFetchedAfterMount && !board.isError && heard?.from !== answer) {
     const known = new Set(heard?.from.map((order) => order.id))
     // The first answer is what the store already had: nothing in it is new.
-    const fresh = heard ? board.data.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
+    const fresh = heard ? answer.filter((order) => order.status === 'placed' && !known.has(order.id)) : []
     const numbers = fresh.map((order) => order.number).join(', ')
-    setHeard({ from: board.data, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
+    setHeard({ from: answer, news: fresh.length === 0 ? '' : fresh.length === 1 ? `New order ${numbers}` : `${fresh.length} new orders: ${numbers}` })
   }
 
   // One status change at a time on a board: while one runs, every card's button waits.
@@ -83,7 +84,8 @@ export function OrderBoard({ storeId }: { storeId: string }) {
   if (board.data === undefined) {
     return board.isError ? <ErrorBanner message="Could not load the orders." onRetry={() => void board.refetch()} /> : <Skeleton variant="list" count={5} />
   }
-  const orders = board.data
+  const orders = board.data.items
+  const total = board.data.total
   return (
     <>
       <VisuallyHidden live role="status" aria-label="New orders">{heard?.news}</VisuallyHidden>
@@ -100,6 +102,7 @@ export function OrderBoard({ storeId }: { storeId: string }) {
             </StatusMessage>
           ))}
       </div>
+      {total > orders.length && <StatusMessage>Showing the newest {orders.length} of {total} active orders.</StatusMessage>}
       {orders.length === 0 ? (
         <Card className="p-6">
           <EmptyState title="No active orders" description="New orders show here within 10 seconds." />

@@ -36,19 +36,19 @@ export const nextLabel: Record<keyof typeof nextStatus, string> = {
 }
 export const isActive = (status: OrderStatus): status is keyof typeof nextStatus => status in nextStatus
 
-async function listOrders(storeId: string, query: { status: OrderStatus; page?: number; pageSize: number }) {
+async function listOrders(storeId: string, query: { status?: OrderStatus; active?: 'true'; page?: number; pageSize: number }) {
   const { data, error } = await api.GET('/admin/stores/{id}/orders', { params: { path: { id: storeId }, query } })
   if (error) throw error.error
   return data
 }
 
 // Keys: everything listed for a store is under ['admin', 'orders', storeId]; the board is ['admin', 'orders', storeId, 'board'].
-// Core lists one status per request, so the board is five requests, answered together or not at all.
-// ponytail: a column holds the newest 100 orders of its status (core's largest page); ask core for an "active" filter with a total if a store ever has more waiting.
+// The board is one request for every active order, with core's total.
+// ponytail: the newest 100 active orders (core's largest page), and the board says so when core holds more; page further if a store ever has that many waiting.
 export const boardQuery = (storeId: string) =>
   queryOptions({
     queryKey: ['admin', 'orders', storeId, 'board'],
-    queryFn: async () => (await Promise.all(activeStatuses.map((status) => listOrders(storeId, { status, pageSize: 100 })))).flatMap((list) => list.items),
+    queryFn: () => listOrders(storeId, { active: 'true', pageSize: 100 }),
     refetchInterval: pollMs,
   })
 
@@ -96,7 +96,7 @@ export function useSetStatus(storeId: string) {
       const board = boardQuery(storeId).queryKey
       // A poll still in the air was read before this answer: drop it, or it would put the card back where it was.
       await queryClient.cancelQueries({ queryKey: board })
-      queryClient.setQueryData(board, (orders) => orders && [...orders.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])])
+      queryClient.setQueryData(board, (list) => list && { ...list, items: [...list.items.filter((other) => other.id !== order.id), ...(isActive(order.status) ? [order] : [])] })
       const detail = orderQuery(order.id).queryKey
       await queryClient.cancelQueries({ queryKey: detail })
       queryClient.setQueryData(detail, order)
