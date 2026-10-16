@@ -55,10 +55,12 @@ export const when: (at: string) => string
 export function useSince(at: string): string
 
 // src/app/index.ts
-export * from './session'
-export * from './client'
-export * from './time'
+export * from './session.js'
+export * from './client.js'
+export * from './time.js'
 ```
+
+The specifiers carry `.js`: `tsc` keeps them as written, and plain Node (ESM, no bundler) cannot resolve an extensionless `./session` in `dist/app/`. Vite, Metro and Vitest resolve `.js` to the `.ts` source, so the apps are unaffected. `index.test.ts` › `entry specifiers carry .js so plain Node resolves them` guards it (added in task 3, after the plain-Node check in 3.3 failed).
 
 `undefined` means "no token" (web and mobile already use it; admin and rider's `null` maps to it at their swap, `clearToken()` becomes `set(undefined)`). `session` takes any `{ get, set }` so mobile's secure store can pass its own functions without using `createTokenStore`.
 
@@ -81,7 +83,7 @@ client.use({ onRequest, onResponse })
 Copied from `apps/rider/src/format.ts` byte for byte in behaviour (`since`, `everyFewSeconds` at 5 000 ms, `useSince`, the module-level `Intl.DateTimeFormat` for `when`). `itemCount` stays in the apps (different signatures).
 
 ### 6. `openapi-fetch` as a peer dependency
-`"peerDependencies": { "openapi-fetch": "0.17.0", ... }` and `"devDependencies": { "openapi-fetch": "0.17.0", ... }` (alphabetical in each block). Peer, not dependency: the apps already pin 0.17.0 and npm keeps one hoisted copy, so `Client` types and middleware run against the app's copy. Installed with `npm install --workspace packages/ui --save-dev --save-exact openapi-fetch@0.17.0`, the peer line added by hand, then `npm install` at the root to settle `package-lock.json`; the lock diff touches only the `packages/ui` entry. This is a runtime import of `packages/ui`, so it needs the orchestrator's record (D10 covers dev tooling only).
+`"peerDependencies": { "openapi-fetch": "0.17.0", ... }` and `"devDependencies": { "openapi-fetch": "0.17.0", ... }` (alphabetical in each block). Peer, not dependency: the apps already pin 0.17.0 and npm keeps one hoisted copy, so `Client` types and middleware run against the app's copy. Installed with `npm install --workspace packages/ui --save-dev --save-exact openapi-fetch@0.17.0`, the peer line added by hand, then `npm install` at the root to settle `package-lock.json`; the lock diff touches only the `packages/ui` entry. This is a runtime import of `packages/ui` (D10 covers dev tooling only); the orchestrator recorded it as D47 (openapi-fetch 0.17.0 as a peer and dev dependency of `packages/ui`).
 
 ### 7. Router: out of scope
 `createAppRouter` in admin and rider is fifteen lines bound to each app's `routeTree.gen`, `RouteError`, basepath, query defaults and the `Register` module augmentation, which must name the app's own router type. Sharing it would make `@tanstack/react-router` and `@tanstack/react-query` runtime dependencies of `packages/ui` to save the three shared lines (`queryClient.clear(); void router.invalidate()` in `onUnauthorized`). Each app passes those three lines as `onUnauthorized`.
@@ -97,7 +99,7 @@ Copied from `apps/rider/src/format.ts` byte for byte in behaviour (`since`, `eve
 |---|---|
 | 1 | `packages/ui/package.json`, `package-lock.json` (mechanical), `packages/ui/src/app/index.ts` (only `export * from './session'`), `packages/ui/src/app/session.ts`, `packages/ui/src/app/session.test.ts`, `packages/ui/src/app/package.test.ts` |
 | 2 | `packages/ui/src/app/time.ts`, `packages/ui/src/app/time.test.tsx` |
-| 3 | `packages/ui/src/app/client.ts`, `packages/ui/src/app/client.test.ts`, `packages/ui/src/app/index.ts` (adds the `client` and `time` lines), `packages/ui/src/app/index.test.ts` |
+| 3 | `packages/ui/src/app/client.ts`, `packages/ui/src/app/client.test.ts`, `packages/ui/src/app/index.ts` (adds the `client` and `time` lines; all three specifiers end in `.js`), `packages/ui/src/app/index.test.ts` |
 
 ## Test strategy
 Vitest in jsdom (the package default). `globalThis.fetch` is replaced with `vi.stubGlobal('fetch', vi.fn(async (request: Request) => ...))` after the client is created (proves the per-call lookup); this is the process boundary the apps' `fake-core.ts` also fakes. Blocked storage is `vi.spyOn(Storage.prototype, 'getItem' | 'setItem' | 'removeItem')` throwing. `useSince` uses `vi.useFakeTimers()` + `vi.setSystemTime`, `render` from Testing Library and `act(() => vi.advanceTimersByTime(60_000))`. `afterEach`: `localStorage.clear()`, `vi.restoreAllMocks()`, `vi.unstubAllGlobals()`, `vi.useRealTimers()`. The client tests type their client with `import type { paths } from '../api/core'` and use `GET /admin/me`. Test names are the scenario names in lower case (`client attaches the bearer token`).
