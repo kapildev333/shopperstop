@@ -108,3 +108,50 @@ test('an admin sees the dashboard cards and opens a store\'s orders from one', a
   await expect(sheet).toContainText('Delivered by Arjun Rao')
   await expectNoAxeViolations(page)
 })
+
+// SS-DEMOAAAE (...0704) is seeded placed at Koramangala and paid online. The test places one more Koramangala order
+// online through core as the demo customer (verified email in the seed); no payment service marks it, so it waits.
+const core = 'http://localhost:18080/api/core/v1/'
+const pomegranate = '00000000-0000-4000-8000-000000000604'
+
+test('the board shows each order\'s payment: the seeded order paid, an online order awaiting payment with Accept held', async ({ page, request }) => {
+  const session = await request.post(`${core}auth/sign-in`, { data: { email: 'demo@shopperstop.local', password: 'demo12345' } })
+  expect(session.status()).toBe(200)
+  const headers = { Authorization: `Bearer ${(await session.json()).token}` }
+  const addresses = await (await request.get(`${core}me/addresses`, { headers })).json()
+  const home = addresses.items.find((address: { label: string }) => address.label === 'Home')
+  expect((await request.delete(`${core}me/cart`, { headers })).ok()).toBe(true)
+  expect((await request.put(`${core}me/cart/items`, { headers, data: { storeId: koramangala, productId: pomegranate, quantity: 1 } })).ok()).toBe(true)
+  const placed = await request.post(`${core}orders`, { headers, data: { addressId: home.id, paymentMethod: 'online' } })
+  expect(placed.status()).toBe(201)
+  const { number } = await placed.json()
+
+  // Store staff, not the admin: the admin's sign-ins are the ones near core's limit of 10 an hour per email.
+  await signIn(page, 'koramangala@shopperstop.local', 'staff12345')
+  await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Orders' }).click()
+  const column = page.getByRole('region', { name: /^Placed/ })
+  const paid = column.getByRole('listitem').filter({ hasText: 'SS-DEMOAAAE' })
+  await expect(paid).toContainText('Paid')
+  await expect(page.getByRole('button', { name: 'Accept SS-DEMOAAAE' })).not.toHaveAttribute('aria-disabled', 'true')
+  const waiting = column.getByRole('listitem').filter({ hasText: number })
+  await expect(waiting).toContainText('Awaiting payment')
+  const accept = page.getByRole('button', { name: `Accept ${number}` })
+  await expect(accept).toHaveAttribute('aria-disabled', 'true')
+  await expect(accept).toHaveAccessibleDescription('Awaiting payment')
+  await expectNoAxeViolations(page)
+
+  // The seeded order's sheet: the payment, its reference and the payment event by its note.
+  await paid.getByRole('button', { name: 'SS-DEMOAAAE', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Order SS-DEMOAAAE' })
+  await expect(sheet).toContainText('Payment reference: fake_demo_0a01')
+  await expect(sheet).toContainText('Payment paid, reference fake_demo_0a01, by payment')
+  await expectNoAxeViolations(page)
+  await sheet.getByRole('button', { name: 'Close' }).click()
+
+  // History carries the payment filter.
+  await page.getByRole('navigation', { name: 'Orders' }).getByRole('link', { name: 'History' }).click()
+  await expect(page.getByRole('table', { name: 'Order history' })).toBeVisible()
+  await page.getByLabel('Payment').selectOption({ label: 'Cash on delivery' })
+  await expect(page.getByRole('table', { name: 'Order history' }).getByRole('button', { name: 'SS-DEMOAAAB' })).toBeVisible()
+  await expectNoAxeViolations(page)
+})

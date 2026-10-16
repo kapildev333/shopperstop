@@ -489,3 +489,23 @@ test('a store with more active orders than one page says how many the board show
   expect(await screen.findByText('Showing the newest 1 of 130 active orders.')).toHaveAttribute('role', 'status')
   expect(screen.getByText('SS-TEST0001')).toBeInTheDocument()
 })
+
+test('each card carries its payment as a badge: cash on delivery, awaiting payment, paid', async () => {
+  setToken('tok')
+  fakeCore({
+    ...asAdmin,
+    ...ordersCore(indiranagar.id, [
+      order(1, 'placed'),
+      order(2, 'placed', { paymentMethod: 'online', paymentStatus: 'pending' }),
+      order(3, 'accepted', { paymentMethod: 'online', paymentStatus: 'paid', paymentReference: 'pay_123' }),
+    ]).routes,
+  })
+
+  renderApp('/orders')
+
+  const placed = within(await screen.findByRole('region', { name: /^Placed/ })).getAllByRole('listitem')
+  // D53: cash is neutral, a pending payment the one warning, a paid one success; the badge always says it in words.
+  expect(within(placed[0]).getByText('Awaiting payment')).toHaveClass('bg-warning-soft')
+  expect(within(placed[1]).getByText('Cash on delivery')).toHaveClass('bg-canvas')
+  expect(within(column('Accepted')).getByText('Paid')).toHaveClass('bg-success-soft')
+})

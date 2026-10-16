@@ -28,15 +28,16 @@ test('the History tab lists delivered orders, newest first, with number, placed,
   renderApp('/orders?tab=history')
 
   const table = await screen.findByRole('table', { name: 'Order history' })
-  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Order', 'Placed', 'Customer', 'Items', 'Total', 'Delivered'])
+  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Order', 'Placed', 'Customer', 'Items', 'Total', 'Payment', 'Delivered'])
   const rows = within(table).getAllByRole('row').slice(1)
   expect(numbers()).toEqual(['SS-TEST0002', 'SS-TEST0001'])
-  expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent?.replace(/^(Order|Placed|Customer|Items|Total|Delivered)/, ''))).toEqual([
+  expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent?.replace(/^(Order|Placed|Customer|Items|Total|Payment|Delivered)/, ''))).toEqual([
     'SS-TEST0001',
     '13 Oct 2026, 2:31 pm',
     'Demo Customer',
     '4 items',
     '₹1,030',
+    'Cash on delivery',
     '13 Oct 2026, 3:31 pm',
   ])
   expect(screen.getByText('Page 1 of 1, 2 orders')).toBeInTheDocument()
@@ -303,4 +304,33 @@ test('a page past the end shows a skeleton, never the empty state, until the las
   core.release('lists')
   await screen.findByText('Page 2 of 2, 30 orders')
   expect(router.state.location.search).toEqual({ tab: 'history', page: 2 })
+})
+
+test('the Payment filter keeps the loaded page\'s orders of one payment, asks core nothing, and says when none on the page match', async () => {
+  setToken('tok')
+  const online = { paymentMethod: 'online' as const, paymentReference: 'pay_123' }
+  const calls = fakeCore({
+    ...asAdmin,
+    ...ordersCore(indiranagar.id, [delivered(1), { ...delivered(2), ...online, paymentStatus: 'paid' }, { ...delivered(3), ...online, paymentStatus: 'paid' }]).routes,
+  })
+
+  renderApp('/orders?tab=history')
+  await screen.findByRole('table', { name: 'Order history' })
+  const filter = screen.getByLabelText('Payment')
+  expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual(['Any', 'Cash on delivery', 'Awaiting payment', 'Paid', 'Refunded', 'Not paid'])
+  expect(filter).toHaveValue('')
+
+  await userEvent.selectOptions(filter, 'Paid')
+  expect(numbers()).toEqual(['SS-TEST0003', 'SS-TEST0002'])
+  await userEvent.selectOptions(filter, 'Cash on delivery')
+  expect(numbers()).toEqual(['SS-TEST0001'])
+  // The filter looks at this page only: the pager still counts every order of the list.
+  await userEvent.selectOptions(filter, 'Refunded')
+  expect(screen.queryByRole('table', { name: 'Order history' })).not.toBeInTheDocument()
+  expect(screen.getByText('No orders on this page match')).toBeInTheDocument()
+  expect(screen.getByText('Page 1 of 1, 3 orders')).toBeInTheDocument()
+  await userEvent.selectOptions(filter, 'Any')
+  expect(numbers()).toEqual(['SS-TEST0003', 'SS-TEST0002', 'SS-TEST0001'])
+  expect(filter).toHaveFocus()
+  expect(listRequests(calls)).toHaveLength(1)
 })
