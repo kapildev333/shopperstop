@@ -71,12 +71,12 @@ test('addresses against core', async ({ page }) => {
 
   for (const label of ['Home', 'Work']) {
     await page.getByRole('button', { name: 'Add address', exact: true }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Add address' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toBeVisible()
     if (label !== 'Home') await page.getByRole('button', { name: label, exact: true }).click()
     await page.getByLabel('House, flat, floor', { exact: true }).fill(`${label} flat 12`)
     await page.getByLabel('Pincode', { exact: true }).fill(label === 'Home' ? '560001' : '560002')
     await page.getByRole('button', { name: 'Save address', exact: true }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Add address' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toHaveCount(0)
   }
 
   await page.getByRole('button', { name: 'Set Work as default', exact: true }).click()
@@ -90,7 +90,7 @@ test('addresses against core', async ({ page }) => {
   await expectNoViolations(page)
 
   await page.getByRole('button', { name: 'Add address', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Add address' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Add address', exact: true })).toBeVisible()
   await expectNoViolations(page)
 })
 
