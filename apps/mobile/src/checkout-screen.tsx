@@ -174,7 +174,7 @@ function Checkout() {
             </View>
           </View>
         </ScrollView>
-        <Bar total={view.totalCents} reason={reason} busy={busy} onPlace={() => void place()} />
+        <Bar total={view.totalCents} reason={reason} busy={busy} waiting={addresses.data === undefined} onPlace={() => void place()} />
       </>
     )
   }
@@ -268,7 +268,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 // The one bar: the amount to pay, or the block that says why the order cannot be placed.
-function Bar({ total, reason, busy, onPlace }: { total: number; reason?: string; busy: boolean; onPlace: () => void }) {
+function Bar({ total, reason, busy, waiting, onPlace }: { total: number; reason?: string; busy: boolean; waiting: boolean; onPlace: () => void }) {
   return (
     <SafeAreaView edges={['bottom']} style={styles.bar}>
       {reason ? (
@@ -276,7 +276,15 @@ function Bar({ total, reason, busy, onPlace }: { total: number; reason?: string;
           <Text style={[styles.blockText, { fontFamily: fontFamily(600) }]}>{reason}</Text>
         </View>
       ) : (
-        <Pressable accessibilityRole="button" accessibilityLabel="Place order" accessibilityState={{ busy }} onPress={onPlace} style={styles.place}>
+        // Waiting for the address list: the button is busy and disabled, so a press cannot even start.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Place order"
+          accessibilityState={{ busy: busy || waiting, disabled: waiting }}
+          disabled={waiting}
+          onPress={onPlace}
+          style={styles.place}
+        >
           <Text variant="button" tone="onAccent" tabular style={{ fontFamily: fontFamily(700) }}>
             {formatInr(total)}
           </Text>
