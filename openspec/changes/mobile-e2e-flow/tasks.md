@@ -36,4 +36,4 @@ Gates, in order (paste the last lines into your log):
 
 ## 2. Acceptance (team lead)
 
-- [ ] 2.1 `/opsx:verify mobile-e2e-flow`: the scenario maps to the passing test, task 1 ticked, nothing outside `e2e/flow.spec.ts` changed; `openspec validate --all --strict` green
+- [x] 2.1 `/opsx:verify mobile-e2e-flow`: the scenario maps to the passing test, task 1 ticked, nothing outside `e2e/flow.spec.ts` changed; `openspec validate --all --strict` green
