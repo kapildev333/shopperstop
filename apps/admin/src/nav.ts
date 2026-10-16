@@ -4,6 +4,7 @@ const links = [
   { to: '/', label: 'Dashboard', adminOnly: false },
   { to: '/orders', label: 'Orders', adminOnly: false },
   { to: '/stock', label: 'Stock', adminOnly: false },
+  { to: '/riders', label: 'Riders', adminOnly: false },
   { to: '/stores', label: 'Stores', adminOnly: true },
   { to: '/categories', label: 'Categories', adminOnly: true },
   { to: '/products', label: 'Products', adminOnly: true },

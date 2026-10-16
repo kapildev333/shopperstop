@@ -32,3 +32,9 @@ All of `src/riders.test.tsx` (7 tests, 8 runs) and `src/rider-dialog.test.tsx` (
 - Keep your log in this file below `# Worker log` (format in `.claude/lanes/README.md`). Report the commit hashes, every Vitest summary, the `make test-web` exit code and `git status --short`.
 
 # Worker log
+
+- 2026-10-15 base `Tests 299 passed (299)` (ui build run once first; step 0 checks held: `./api/rider` export, `paths` with `/admin/riders` and `/admin/riders/{id}`, `components.schemas.Rider`).
+- Commit `269ec2e test: riders page, rider dialog, Riders in the nav`. Patch 4.1 applied cleanly; `Tests 25 failed | 297 passed (322)` (3 files failed); lint exit 0; typecheck fails by design. Ticked 4.1.
+- Patches 4.2 and 4.3 applied cleanly. `npm run build --workspace apps/admin` exit 0; `routeTree.gen.ts` diff (21 insertions, `/riders` lines only) matches the patch's hunk exactly.
+- `Tests 322 passed (322)` (27 files). Gates: `make test-web` exit 0 (packages/ui 83, admin 322, web 153 tests passed); `openspec validate admin-riders --strict` valid. Ticked 4.2.
+- Not run, by rule: `make e2e`, Playwright, docker, `make db`, `make dev`.

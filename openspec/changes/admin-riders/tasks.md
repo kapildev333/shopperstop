@@ -38,7 +38,7 @@ Scope: `apps/admin/src/riders-fake.ts`, `apps/admin/src/riders.test.tsx`, `apps/
 Scenarios: every `admin-riders` scenario except "Riders against the rider service"; Role-based navigation › both; Core reached through a same-origin proxy › Rider client calls the page's origin.
 Failing tests: all of `src/riders.test.tsx` (7 tests, 8 runs) and `src/rider-dialog.test.tsx` (10 tests, 15 runs) as named in design.md "Tests"; `src/shell.test.tsx` › "admin sees every section", "store staff see dashboard, orders and stock".
 - [x] 4.1 `patches/4.1-riders-tests.diff` (`test: riders page, rider dialog, Riders in the nav`); `25 failed | 297 passed (322)`; typecheck fails here by design (`Rider` comes with 4.3)
-- [ ] 4.2 `patches/4.2-rider-service-config.diff` and `patches/4.3-riders-code.diff`, then `npm run build --workspace apps/admin` leaves `routeTree.gen.ts` as the patch wrote it (`feat: riders page against the rider service`); `322 passed (322)`; every gate green
+- [x] 4.2 `patches/4.2-rider-service-config.diff` and `patches/4.3-riders-code.diff`, then `npm run build --workspace apps/admin` leaves `routeTree.gen.ts` as the patch wrote it (`feat: riders page against the rider service`); `322 passed (322)`; every gate green
 
 ## 5. Against core and the rider service (the manager's e2e slot)
 Waits on: tasks 1 to 4 landed and reviewed, the e2e slot (D35), and core's seed giving SS-DEMOAAAB the rider "Arjun Rao" (design.md "Requests").
