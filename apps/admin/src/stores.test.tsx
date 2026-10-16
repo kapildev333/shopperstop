@@ -12,14 +12,20 @@ afterEach(() => {
 
 test('stores table lists every store', async () => {
   setToken('tok')
-  const calls = fakeCore({ 'GET /admin/me': () => json(200, admin), 'GET /admin/stores': () => storeList([indiranagar, koramangala]) })
+  const calls = fakeCore({
+    'GET /admin/me': () => json(200, admin),
+    'GET /admin/stores': () => storeList([indiranagar, { ...koramangala, city: 'Bengaluru' }]),
+  })
 
   renderApp('/stores')
 
   const table = await screen.findByRole('table', { name: 'Stores' })
   const rows = within(table).getAllByRole('row').slice(1)
   expect(within(table).getAllByRole('link').map((link) => link.textContent)).toEqual(['Indiranagar', 'Koramangala'])
+  expect(within(table).getByRole('columnheader', { name: 'City' })).toBeInTheDocument()
   expect(within(rows[1]).getByRole('link', { name: 'Koramangala' })).toHaveAttribute('href', `/stores/${koramangala.id}`)
+  expect(rows[1]).toHaveTextContent('Bengaluru')
+  expect(rows[0]).not.toHaveTextContent('Bengaluru')
   expect(rows[1]).toHaveTextContent('560034')
   expect(within(rows[1]).getByText('Open')).toBeInTheDocument()
   expect(within(rows[0]).getByText('Closed')).toBeInTheDocument()

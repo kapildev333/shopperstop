@@ -13,6 +13,7 @@ const columns: Column<AdminStore>[] = [
       </Link>
     ),
   },
+  { key: 'city', header: 'City', cell: (store) => store.city },
   { key: 'pincode', header: 'Pincode', cell: (store) => <span className="tabular-nums">{store.pincode}</span> },
   {
     key: 'status',
