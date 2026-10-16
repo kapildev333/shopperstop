@@ -21,10 +21,8 @@ describe('ImageTile', () => {
   })
 
   it('decorative tile', () => {
-    const { container } = render(<ImageTile src="/img/milk.png" alt="" />)
-    const image = container.querySelector('img')!
-    expect(image).toHaveAttribute('alt', '')
-    expect(image).toHaveAttribute('role', 'presentation')
+    render(<ImageTile src="/img/milk.png" alt="" />)
+    expect(screen.getByRole('presentation')).toHaveAttribute('alt', '')
   })
 
   it('missing alt does not compile', () => {
