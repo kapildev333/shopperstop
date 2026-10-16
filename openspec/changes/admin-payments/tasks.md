@@ -18,8 +18,8 @@ Scope: `apps/admin/src/orders.ts`, `order-board.tsx`, `order-sheet.tsx`, `orders
 
 Scope: `apps/admin/src/order-history.tsx`, `orders-history.test.tsx`, `apps/admin/e2e/orders.spec.ts`. Scenarios: "Orders history payment" > "Payment column", "Filter the page by payment"; "Payments against core" > "Paid and awaiting payment on the board" (written here, run in task 4).
 
-- [ ] 3.1 `test:` apply `patches/3.1-history-filter-and-e2e-tests.diff`: the first History test expects the "Payment" column; "the Payment filter keeps the loaded page's orders of one payment, asks core nothing, and says when none on the page match"; the third `e2e/orders.spec.ts` test; see 2 fail (333 total)
-- [ ] 3.2 `feat:` apply `patches/3.2-history-filter.diff`: the "Payment" column, the "Payment" `Select` and the no-match state in `order-history.tsx`; 333 pass
+- [x] 3.1 `test:` apply `patches/3.1-history-filter-and-e2e-tests.diff`: the first History test expects the "Payment" column; "the Payment filter keeps the loaded page's orders of one payment, asks core nothing, and says when none on the page match"; the third `e2e/orders.spec.ts` test; see 2 fail (333 total)
+- [x] 3.2 `feat:` apply `patches/3.2-history-filter.diff`: the "Payment" column, the "Payment" `Select` and the no-match state in `order-history.tsx`; 333 pass
 
 ## 4. e2e against core (area manager)
 
