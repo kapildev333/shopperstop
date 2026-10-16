@@ -33,7 +33,8 @@ type Item struct {
 type Event struct {
 	FromStatus string    `json:"fromStatus,omitempty"` // absent on the placement event
 	ToStatus   string    `json:"toStatus"`
-	ActorType  string    `json:"actorType"` // customer | staff | system
+	ActorType  string    `json:"actorType"` // customer | staff | system | rider
+	ActorName  string    `json:"actorName,omitempty"`
 	Note       string    `json:"note,omitempty"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
@@ -55,12 +56,14 @@ type Order struct {
 	DeliveredAt      *time.Time `json:"deliveredAt,omitempty"` // UTC when set
 	CancelledAt      *time.Time `json:"cancelledAt,omitempty"` // UTC when set
 	CancelReason     string     `json:"cancelReason,omitempty"`
+	RiderName        string     `json:"riderName,omitempty"`
 	Items            []Item     `json:"items"`  // never nil
 	Events           []Event    `json:"events"` // never nil, oldest first
 }
 
-// Actor is who made a change: Type is "customer" or "staff".
-type Actor struct{ Type, ID string }
+// Actor is who made a change: Type is "customer", "staff" or "rider"; Name is set
+// for a rider only.
+type Actor struct{ Type, ID, Name string }
 
 // scope limits a read to one customer or one store; nil means no filter.
 type scope struct{ customerID, storeID *string }
@@ -97,6 +100,9 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 		if e.FromStatus != nil {
 			ev.FromStatus = string(*e.FromStatus)
 		}
+		if e.ActorName != nil {
+			ev.ActorName = *e.ActorName
+		}
 		events[e.OrderID] = append(events[e.OrderID], ev)
 	}
 	for _, r := range rows {
@@ -113,6 +119,9 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 		}
 		if o.Events == nil {
 			o.Events = []Event{}
+		}
+		if r.RiderName != nil {
+			o.RiderName = *r.RiderName
 		}
 		if r.DeliveredAt != nil {
 			t := r.DeliveredAt.UTC()

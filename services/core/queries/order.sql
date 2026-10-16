@@ -14,8 +14,8 @@ select @order_id::uuid, unnest(@product_ids::uuid[]), unnest(@names::text[]), un
        unnest(@image_urls::text[]), unnest(@price_cents::bigint[]), unnest(@mrp_cents::bigint[]), unnest(@quantities::integer[]);
 
 -- name: AddEvent :exec
-insert into order_events (order_id, from_status, to_status, actor_type, actor_id, note)
-values (@order_id, sqlc.narg(from_status), @to_status, @actor_type, sqlc.narg(actor_id), @note);
+insert into order_events (order_id, from_status, to_status, actor_type, actor_id, actor_name, note)
+values (@order_id, sqlc.narg(from_status), @to_status, @actor_type, sqlc.narg(actor_id), sqlc.narg(actor_name), @note);
 
 -- name: GetOrder :one
 -- A null customer_id or store_id does not filter: the caller's scope.
@@ -36,7 +36,8 @@ update orders
 set status        = @status,
     delivered_at  = case when @status = 'delivered'::order_status then now() else delivered_at end,
     cancelled_at  = case when @status = 'cancelled'::order_status then now() else cancelled_at end,
-    cancel_reason = case when @status = 'cancelled'::order_status then @cancel_reason else cancel_reason end
+    cancel_reason = case when @status = 'cancelled'::order_status then @cancel_reason else cancel_reason end,
+    rider_name    = coalesce(sqlc.narg(rider_name), rider_name)
 where id = @id;
 
 -- name: CustomerOrders :many
@@ -63,7 +64,7 @@ from order_items where order_id = any(@order_ids::uuid[])
 order by order_id, name, product_id;
 
 -- name: OrderEvents :many
-select order_id, from_status, to_status, actor_type, note, created_at
+select order_id, from_status, to_status, actor_type, actor_name, note, created_at
 from order_events where order_id = any(@order_ids::uuid[])
 order by order_id, created_at, id;
 

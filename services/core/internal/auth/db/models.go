@@ -172,6 +172,7 @@ type Order struct {
 	CancelReason     string
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
+	RiderName        *string
 }
 
 type OrderEvent struct {
@@ -184,6 +185,7 @@ type OrderEvent struct {
 	Note       string
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
+	ActorName  *string
 }
 
 type OrderItem struct {

@@ -14422,7 +14422,7 @@
           "request": {
             "name": "Move an order to another status",
             "description": {
-              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted; see the actor member.",
+              "content": "Admins for any order; store staff only for orders of their own store. Moves the order along the table: placed to accepted or cancelled; accepted to packing or cancelled; packing to ready; ready to out_for_delivery; out_for_delivery to delivered. Every move appends one event with its note. A cancel also returns each line's quantity to the store's stock, and its note becomes the order's cancelReason. A status outside the seven, a body that is not JSON, or a note longer than 500 characters, or an actor the rules refuse, answers 400; a move the table does not allow answers 409 conflict. Both change nothing. Store staff of another store, an unknown order and an id that is not a uuid answer 404 not_found, and nothing changes. 401 with no token, an unknown token or a customer token. A service token is admitted and must name the rider in actor; it may move an order only to out_for_delivery or delivered, and anything else answers 403. Staff name no actor. The rider's name is kept on the order as riderName (set by the move to out_for_delivery) and on the event as actorName.",
               "type": "text/plain"
             },
             "url": {
@@ -14552,7 +14552,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "The status is not one of the seven (field status), the note is longer than 500 characters (field note), or the body is not JSON (no field). Nothing changes.",
+              "name": "The status is not one of the seven (field status), the note is longer than 500 characters (field note), an actor is missing from a service, refused from staff, or not a rider, a uuid or a name of 1 to 80 characters (field actor), or the body is not JSON (no field). Nothing changes.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -14686,6 +14686,75 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "A service moving the order to any status but out_for_delivery or delivered. Nothing changes.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "status"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "00000000-0000-4000-8000-000000000703",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"accepted\",\n  \"note\": \"Packing now\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"forbidden\",\n    \"message\": \"a service may only move an order to out_for_delivery or delivered\"\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },

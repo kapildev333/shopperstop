@@ -11,8 +11,8 @@ import (
 )
 
 const addEvent = `-- name: AddEvent :exec
-insert into order_events (order_id, from_status, to_status, actor_type, actor_id, note)
-values ($1, $2, $3, $4, $5, $6)
+insert into order_events (order_id, from_status, to_status, actor_type, actor_id, actor_name, note)
+values ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type AddEventParams struct {
@@ -21,6 +21,7 @@ type AddEventParams struct {
 	ToStatus   OrderStatus
 	ActorType  string
 	ActorID    *string
+	ActorName  *string
 	Note       string
 }
 
@@ -31,6 +32,7 @@ func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) error {
 		arg.ToStatus,
 		arg.ActorType,
 		arg.ActorID,
+		arg.ActorName,
 		arg.Note,
 	)
 	return err
@@ -174,7 +176,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (strin
 }
 
 const customerOrders = `-- name: CustomerOrders :many
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at from orders where customer_id = $1
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name from orders where customer_id = $1
 order by placed_at desc, id desc
 limit $3 offset $2
 `
@@ -216,6 +218,7 @@ func (q *Queries) CustomerOrders(ctx context.Context, arg CustomerOrdersParams) 
 			&i.CancelReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RiderName,
 		); err != nil {
 			return nil, err
 		}
@@ -228,7 +231,7 @@ func (q *Queries) CustomerOrders(ctx context.Context, arg CustomerOrdersParams) 
 }
 
 const getOrder = `-- name: GetOrder :one
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at from orders
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name from orders
 where id = $1
   and ($2::uuid is null or customer_id = $2)
   and ($3::uuid is null or store_id = $3)
@@ -266,6 +269,7 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 		&i.CancelReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RiderName,
 	)
 	return i, err
 }
@@ -304,7 +308,7 @@ func (q *Queries) LockOrder(ctx context.Context, arg LockOrderParams) (LockOrder
 }
 
 const orderEvents = `-- name: OrderEvents :many
-select order_id, from_status, to_status, actor_type, note, created_at
+select order_id, from_status, to_status, actor_type, actor_name, note, created_at
 from order_events where order_id = any($1::uuid[])
 order by order_id, created_at, id
 `
@@ -314,6 +318,7 @@ type OrderEventsRow struct {
 	FromStatus *OrderStatus
 	ToStatus   OrderStatus
 	ActorType  string
+	ActorName  *string
 	Note       string
 	CreatedAt  time.Time
 }
@@ -332,6 +337,7 @@ func (q *Queries) OrderEvents(ctx context.Context, orderIds []string) ([]OrderEv
 			&i.FromStatus,
 			&i.ToStatus,
 			&i.ActorType,
+			&i.ActorName,
 			&i.Note,
 			&i.CreatedAt,
 		); err != nil {
@@ -408,23 +414,30 @@ update orders
 set status        = $1,
     delivered_at  = case when $1 = 'delivered'::order_status then now() else delivered_at end,
     cancelled_at  = case when $1 = 'cancelled'::order_status then now() else cancelled_at end,
-    cancel_reason = case when $1 = 'cancelled'::order_status then $2 else cancel_reason end
-where id = $3
+    cancel_reason = case when $1 = 'cancelled'::order_status then $2 else cancel_reason end,
+    rider_name    = coalesce($3, rider_name)
+where id = $4
 `
 
 type SetStatusParams struct {
 	Status       OrderStatus
 	CancelReason string
+	RiderName    *string
 	ID           string
 }
 
 func (q *Queries) SetStatus(ctx context.Context, arg SetStatusParams) error {
-	_, err := q.db.Exec(ctx, setStatus, arg.Status, arg.CancelReason, arg.ID)
+	_, err := q.db.Exec(ctx, setStatus,
+		arg.Status,
+		arg.CancelReason,
+		arg.RiderName,
+		arg.ID,
+	)
 	return err
 }
 
 const storeOrders = `-- name: StoreOrders :many
-select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at from orders
+select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name from orders
 where store_id = $1 and ($2::order_status is null or status = $2)
 order by placed_at desc, id desc
 limit $4 offset $3
@@ -473,6 +486,7 @@ func (q *Queries) StoreOrders(ctx context.Context, arg StoreOrdersParams) ([]Ord
 			&i.CancelReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RiderName,
 		); err != nil {
 			return nil, err
 		}
