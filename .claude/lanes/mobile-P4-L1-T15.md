@@ -123,6 +123,18 @@ Ports 18080, 18081, 15173-15176 free afterwards.
 - `npm run build --workspace apps/mobile`: exit 0, `Exported: dist`
 - `openspec validate --all --strict`: Totals 19 passed, 0 failed
 
+### 15.4 cold Jest cache (red, then fix)
+Red: `cd apps/mobile && npx jest --ci --no-cache` on the branch before the fix:
+```
+FAIL src/account-sign-in.test.tsx (31.29 s)
+    thrown: "Exceeded timeout of 5000 ms for a test.
+        thrown: "Exceeded timeout of 5000 ms for a test.
+FAIL src/account-sign-out.test.tsx (30.61 s)
+Test Suites: 2 failed, 23 passed, 25 total
+Tests:       2 failed, 92 passed, 94 total
+```
+Fix: `testTimeout: 60_000` in `apps/mobile/jest.config.js` with a one-line reason. After the fix, `npx jest --ci --no-cache` twice: both Test Suites 25 passed, Tests 94 passed.
+
 ## Requests
 - to mobile-P4-L1 (team lead): 15.2 is ticked; ready for 16.1 (`/opsx:verify`) and 16.2 (manager walk).
 ## Blockers

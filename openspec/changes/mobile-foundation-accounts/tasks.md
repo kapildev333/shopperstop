@@ -163,7 +163,7 @@ Starts from: `e2e/accounts.spec.ts` with the four scenario names, written before
 - [x] 15.1 Red recorded; then the `e2e` script (Decision 4) and `playwright.config.ts` (Decision 13)
 - [x] 15.2 With the e2e slot announced by the manager: `make e2e` exits 0, the mobile suite 4 of 4; an axe violation on markup the app does not control stops the task (report, no rule switched off)
 - [x] 15.3 Gates green
-- [ ] 15.4 Router tests pass on a cold Jest cache (found at 16.1). Scope: `apps/mobile/jest.config.js` only. Red: `cd apps/mobile && npx jest --ci --no-cache` fails with `Exceeded timeout of 5000 ms` in the router suites (`account-sign-in`, `account-sign-out`, and on a loaded machine also `shell`, `shell-tabs`, `account-home`, `account-redirect`); paste it into the log. Fix: `testTimeout: 60_000` in `jest.config.js` with a one-line comment (expo-router is transformed inside the first test of each file; a cold CI runner has no cache). One commit `fix: router tests pass on a cold jest cache`. Gates, plus `npx jest --ci --no-cache` twice in a row, both 91 of 91
+- [x] 15.4 Router tests pass on a cold Jest cache (found at 16.1). Scope: `apps/mobile/jest.config.js` only. Red: `cd apps/mobile && npx jest --ci --no-cache` fails with `Exceeded timeout of 5000 ms` in the router suites (`account-sign-in`, `account-sign-out`, and on a loaded machine also `shell`, `shell-tabs`, `account-home`, `account-redirect`); paste it into the log. Fix: `testTimeout: 60_000` in `jest.config.js` with a one-line comment (expo-router is transformed inside the first test of each file; a cold CI runner has no cache). One commit `fix: router tests pass on a cold jest cache`. Gates, plus `npx jest --ci --no-cache` twice in a row, both 91 of 91
 
 ## 16. Acceptance
 
