@@ -1,10 +1,14 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,6 +134,7 @@ func TestPasswordResetTokenExpires(t *testing.T) {
 func TestPasswordResetRateLimited(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
 	a.Mailer = &outbox{}
+	a.ResetLimit = auth.NewLimiter(10, 100, time.Hour, time.Now)
 	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
 	defer limited.Close()
 	email := uniqueEmail(t)
@@ -142,5 +147,89 @@ func TestPasswordResetRateLimited(t *testing.T) {
 		if status != want {
 			t.Fatalf("attempt %d: got %d %s, want %d", i, status, body, want)
 		}
+	}
+}
+
+func TestPasswordResetLeavesSignInOpen(t *testing.T) {
+	c := seedCustomer(t)
+	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
+	a.Mailer = &outbox{}
+	a.ResetLimit = auth.NewLimiter(10, 100, time.Hour, time.Now)
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
+	defer limited.Close()
+	for i := 1; i <= 11; i++ {
+		status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/password-reset", "", map[string]string{"email": c.Customer.Email})
+		want := http.StatusAccepted
+		if i == 11 {
+			want = http.StatusTooManyRequests
+		}
+		if status != want {
+			t.Fatalf("reset attempt %d: got %d %s, want %d", i, status, body, want)
+		}
+	}
+	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/sign-in", "",
+		map[string]string{"email": c.Customer.Email, "password": testPassword})
+	if status != http.StatusOK {
+		t.Fatalf("sign-in after 11 reset requests: got %d %s, want 200", status, body)
+	}
+}
+
+// failingMail is a mailer whose transport is down. It keeps the body it was given.
+type failingMail struct{ body string }
+
+func (f *failingMail) Send(_ context.Context, m auth.Mail) error {
+	f.body = m.Body
+	return errors.New("mail transport down")
+}
+
+func TestPasswordResetMailFailureAnswers202(t *testing.T) {
+	c := seedCustomer(t)
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	box := &failingMail{}
+	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), nil)
+	a.Mailer = box
+	limited := httptest.NewServer(New(testPool, nil, a, blob.Disk{Dir: filesDir}))
+	status, body := callAt(t, limited.URL, http.MethodPost, "/api/core/v1/auth/password-reset", "", map[string]string{"email": c.Customer.Email})
+	limited.Close()
+	if status != http.StatusAccepted || len(body) != 0 {
+		t.Fatalf("known email, mail down: got %d %q, want 202 and no body", status, body)
+	}
+	if box.body == "" {
+		t.Fatal("mailer was not asked to send the reset mail")
+	}
+	token := box.body[strings.LastIndex(box.body, " ")+1:]
+	if !strings.Contains(logs.String(), "password reset") {
+		t.Fatalf("log after a failed mail: %q, want a line about the password reset", logs.String())
+	}
+	if strings.Contains(logs.String(), token) {
+		t.Fatalf("log holds the reset token: %q", logs.String())
+	}
+}
+
+func TestResetCodeDoesNotVerifyEmail(t *testing.T) {
+	c := seedCustomer(t)
+	requestReset(t, c.Customer.Email)
+	reset := mailedToken(t, mails, c.Customer.Email)
+	status, body := verifyEmail(t, reset)
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Field != "token" {
+		t.Fatalf("reset code on verify-email: got %d %s, want 400 field token", status, body)
+	}
+	if status, body := confirmReset(t, reset, newPassword); status != http.StatusNoContent {
+		t.Fatalf("reset code after verify-email: got %d %s, want 204", status, body)
+	}
+}
+
+func TestPasswordResetLeavesOtherCustomersSessions(t *testing.T) {
+	a := seedCustomer(t)
+	b := seedCustomer(t)
+	requestReset(t, a.Customer.Email)
+	if status, body := confirmReset(t, mailedToken(t, mails, a.Customer.Email), newPassword); status != http.StatusNoContent {
+		t.Fatalf("confirm: got %d %s, want 204", status, body)
+	}
+	if status, body := call(t, http.MethodGet, "/api/core/v1/me", b.Token, nil); status != http.StatusOK {
+		t.Fatalf("GET /me with another customer's session after a reset: got %d %s, want 200", status, body)
 	}
 }
