@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ScrollView, View } from 'react-native'
 import { Redirect, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Check, ChevronLeft } from 'lucide-react-native'
 import { formatInr } from '@shopperstop/ui/format'
-import { headline, productCountLabel, statusMessage, timeline, underWay, useNow, useOrder, type Order, type Step } from './orders'
+import { canCancel, headline, productCountLabel, statusMessage, timeline, underWay, useNow, useOrder, type Order, type Step } from './orders'
+import { CancelOrderDialog } from './orders-cancel'
 import { useBack } from './screen-support'
+import { RiderCard } from './rider-card'
 import { useToken } from './session'
 import { Button, IconButton } from './ui/button'
 import { Card } from './ui/card'
@@ -88,6 +90,7 @@ function Frame({ title, back, children }: { title: string; back: () => void; chi
 }
 
 function Content({ order, back, onHelp }: { order: Order; back: () => void; onHelp: () => void }) {
+  const [cancelling, setCancelling] = useState(false)
   return (
     <View role="main" style={{ flex: 1, backgroundColor: colors.canvas }}>
       <Head>
@@ -115,6 +118,9 @@ function Content({ order, back, onHelp }: { order: Order; back: () => void; onHe
           <Card>
             <Timeline order={order} />
           </Card>
+        </View>
+        <View style={{ marginTop: 12, marginHorizontal: 12 }}>
+          <RiderCard order={order} />
         </View>
         <View style={{ marginTop: 12, marginHorizontal: 12 }}>
           <Card>
@@ -145,12 +151,20 @@ function Content({ order, back, onHelp }: { order: Order; back: () => void; onHe
             </View>
           </Card>
         </View>
+        {canCancel(order.status) ? (
+          <View style={{ marginTop: 16, marginHorizontal: 12 }}>
+            <Button variant="danger" size="lg" onPress={() => setCancelling(true)}>
+              Cancel order
+            </Button>
+          </View>
+        ) : null}
         <View style={{ marginTop: 12, marginHorizontal: 12 }}>
           <Button variant="ghost" onPress={onHelp}>
             Need help?
           </Button>
         </View>
       </ScrollView>
+      <CancelOrderDialog order={order} open={cancelling} onClose={() => setCancelling(false)} />
     </View>
   )
 }

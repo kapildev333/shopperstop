@@ -56,8 +56,8 @@ LANE-ID `mobile-P4-L4a-T6`. Scope: `src/orders-cancel.tsx`, `src/orders-cancel.t
 
 LANE-ID `mobile-P4-L4a-T7`. Scope: `src/orders-tracking.tsx`, `src/orders-tracking-cancel.test.tsx`. Scenarios: Cancel offered while placed or accepted; Order cancelled with a reason. Start from `src/orders-tracking-cancel.test.tsx` test `Cancel offered while placed or accepted` (red). Mount `<RiderCard order={order} />` after the timeline card and, when `canCancel(order.status)`, the "Cancel order" button that opens `CancelOrderDialog` (§2). Check "Order cancelled with a reason" end to end on the screen: the body `{"reason":"Ordered by mistake"}`, the dialog closed, the status text, no "Cancel order".
 
-- [ ] 7.1 `test:` the two scenarios, red
-- [ ] 7.2 `feat:` mount the rider card and cancel; gates green
+- [x] 7.1 `test:` the two scenarios, red
+- [x] 7.2 `feat:` mount the rider card and cancel; gates green
 
 ## 8. Orders e2e (`e2e/orders.spec.ts`) — group D, after 7
 
