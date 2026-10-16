@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
   },
 })
