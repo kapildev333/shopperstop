@@ -151,26 +151,13 @@ test('Empty checkout', async () => {
 
 test('Loading and failed checkout', async () => {
   setToken('t-1')
-  let answer: (response: Response) => void = () => {}
+  let release: (failure: TypeError) => void = () => {}
+  let reads = 0
   fakeCore({
-    'GET /me/cart': () => new Promise<Response>((resolve) => (answer = resolve)),
-    'GET /me/addresses': () => addresses([home]),
-    [`GET /stores/${storeId}`]: () => json(200, store),
-  })
-  const loading = await renderScreen()
-
-  // The read is held: the skeleton shows until core answers.
-  expect(await screen.findByLabelText('Loading')).toBeTruthy()
-  answer(json(200, cart([{ product: taaza, quantity: 2 }])))
-  expect(await screen.findByText('Amul Taaza')).toBeTruthy()
-  loading.unmount()
-
-  // Core cannot be reached: the alert, then "Try again" reads the cart again and the lines show.
-  queryClient.clear()
-  let reachable = false
-  fakeCore({
+    // The first read is held, then core cannot be reached; the next read answers.
     'GET /me/cart': () => {
-      if (!reachable) throw new TypeError('Network request failed')
+      reads += 1
+      if (reads === 1) return new Promise<Response>((_, reject) => (release = reject))
       return json(200, cart([{ product: taaza, quantity: 2 }]))
     },
     'GET /me/addresses': () => addresses([home]),
@@ -178,8 +165,10 @@ test('Loading and failed checkout', async () => {
   })
   await renderScreen()
 
+  expect(await screen.findByLabelText('Loading')).toBeTruthy()
+  release(new TypeError('Network request failed'))
   expect(await screen.findByText("You're offline")).toBeTruthy()
-  reachable = true
+
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }))
   expect(await screen.findByText('Amul Taaza')).toBeTruthy()
 })
