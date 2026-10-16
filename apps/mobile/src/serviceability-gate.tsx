@@ -97,8 +97,10 @@ function Notice({ icon: Icon, title, body, action, orders = false }: NoticeProps
 
 const styles = StyleSheet.create({
   loading: { backgroundColor: colors.surface, padding: spacing.gutter },
+  // Surface, not the canvas behind it: the muted body text needs 4.5:1 (axe color-contrast on the canvas's #f5f6f8).
   notice: {
     flex: 1,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.unit * 4,
