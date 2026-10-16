@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Link, Redirect, useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { ChevronLeft, ChevronRight, Plus, ReceiptText } from 'lucide-react-native'
 import { deleteAddress, setDefaultAddress, useAddresses, type Address } from '../addresses'
 import { useBack } from '../screen-support'
-import { useMe, type ApiError } from '../api'
+import { unreachable, useMe, type ApiError } from '../api'
 import { signOut } from '../auth'
 import { AddressSheet } from '../address-sheet'
 import { ProfileSheet } from '../profile-sheet'
@@ -107,15 +107,23 @@ function AddressesCard() {
   // null = sheet closed; {} = adding; { address } = editing that address.
   const [sheet, setSheet] = useState<{ address?: Address } | null>(null)
   const [actionError, setActionError] = useState<string>()
-  // A row action is in flight: its buttons are disabled so a second press sends nothing.
+  // A row action is in flight: its buttons are disabled. The state only draws that; the ref stops a second press in the same tick, before React renders.
   const [busy, setBusy] = useState(false)
+  const inFlight = useRef(false)
 
-  // Row actions report their failure in one line at the top of the card.
+  // Row actions report their failure in one line at the top of the card; a request that throws is reported as unreachable.
   async function rowAction(request: () => Promise<ApiError | undefined>) {
+    if (inFlight.current) return
+    inFlight.current = true
     setBusy(true)
-    const error = await request()
-    setBusy(false)
-    setActionError(error?.message)
+    try {
+      setActionError((await request())?.message)
+    } catch {
+      setActionError(unreachable.message)
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
   }
 
   return (
