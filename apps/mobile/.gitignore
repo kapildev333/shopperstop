@@ -1,0 +1,6 @@
+.expo/
+dist/
+dist-e2e/
+test-results/
+playwright-report/
+expo-env.d.ts

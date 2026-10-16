@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "ShopperStop",
+    "slug": "shopperstop",
+    "scheme": "shopperstop",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "web": {
+      "output": "static"
+    },
+    "plugins": ["expo-router"]
+  }
+}
