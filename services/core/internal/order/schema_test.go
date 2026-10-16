@@ -6,14 +6,18 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"sync/atomic"
 	"testing"
+	"testing/fstest"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kapildev333/shopperstop/services/core/internal/migrate"
 	"github.com/kapildev333/shopperstop/services/core/internal/testdb"
+	"github.com/kapildev333/shopperstop/services/core/migrations"
 )
 
 var (
@@ -169,5 +173,68 @@ func TestStoreWithOrderCannotBeDeleted(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("store rows %d after refused delete, want 1", n)
+	}
+}
+
+// TestBackfillStoreSnapshot: migration 0008 fills an existing order's store_name
+// and promised_minutes from its store, and both columns are NOT NULL after it.
+func TestBackfillStoreSnapshot(t *testing.T) {
+	ctx := context.Background()
+	pool, cleanup := testdb.Open("order_backfill")
+	defer cleanup()
+
+	before := fstest.MapFS{}
+	entries, err := fs.ReadDir(migrations.FS, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() >= "0008" {
+			continue
+		}
+		b, err := fs.ReadFile(migrations.FS, e.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[e.Name()] = &fstest.MapFile{Data: b}
+	}
+	if _, err := migrate.Apply(ctx, pool, before); err != nil {
+		t.Fatalf("migrate to 0007: %v", err)
+	}
+
+	var customerID, storeID, orderID string
+	if err := pool.QueryRow(ctx, `insert into customers (email, password_hash, name) values ('backfill@test.local', 'x', 'Asha') returning id`).Scan(&customerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `insert into stores (name, address_line, pincode, promised_minutes) values ('Backfill store', '1 Test Rd', '570000', 17) returning id`).Scan(&storeID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx,
+		`insert into orders (number, customer_id, store_id, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
+		 values ('SS-BACKFILL', $1, $2, 'Asha', 'Home', '1 Test Rd', '570000', 1000, 0, 1000) returning id`,
+		customerID, storeID).Scan(&orderID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := migrate.Apply(ctx, pool, migrations.FS); err != nil {
+		t.Fatalf("migrate to the latest: %v", err)
+	}
+	var name string
+	var minutes int32
+	if err := pool.QueryRow(ctx, "select store_name, promised_minutes from orders where id = $1", orderID).Scan(&name, &minutes); err != nil {
+		t.Fatal(err)
+	}
+	if name != "Backfill store" || minutes != 17 {
+		t.Fatalf("backfilled %q, %d; want Backfill store, 17", name, minutes)
+	}
+	var nullable int
+	if err := pool.QueryRow(ctx,
+		`select count(*) from information_schema.columns
+		 where table_schema = current_schema() and table_name = 'orders'
+		   and column_name in ('store_name', 'promised_minutes') and is_nullable = 'YES'`).Scan(&nullable); err != nil {
+		t.Fatal(err)
+	}
+	if nullable != 0 {
+		t.Fatalf("%d of store_name and promised_minutes are nullable, want none", nullable)
 	}
 }
