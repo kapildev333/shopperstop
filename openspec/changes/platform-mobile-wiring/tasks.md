@@ -9,10 +9,10 @@ Scenarios: "make dev runs the rider service and app" (Core accepts the mobile we
 Starts from: `sh openspec/changes/platform-mobile-wiring/check-mobile-wiring.sh`, failing on the unchanged tree.
 Commit: `feat: core and rider origins for the mobile web export and mobile docs`.
 
-- [ ] 1.1 Red: run `sh openspec/changes/platform-mobile-wiring/check-mobile-wiring.sh` on the unchanged tree; paste the last line (`mobile wiring check: 24 failures`) and the first five FAIL lines into the log
-- [ ] 1.2 Make the edits in design.md "The edits", each old text replaced by its new text exactly (Makefile: four values on three lines; README: five places; CLAUDE.md: seven places; docs/figma.md: one line). `git diff -- Makefile` shows exactly three changed lines (the two `?=` defaults and the one `E2E_ENV` line)
-- [ ] 1.3 Green: `sh openspec/changes/platform-mobile-wiring/check-mobile-wiring.sh` prints `mobile wiring check: ok`; `sh openspec/changes/archive/2026-10-12-platform-readme-claude/check-docs.sh` prints `docs check: ok`; `sh openspec/changes/archive/2026-10-15-platform-rider-wiring/check-wiring.sh deploy ci docs` prints `wiring check: ok`; `openspec validate --all --strict` passes. Paste the four last lines
-- [ ] 1.4 `git status --short` before the commit shows only the four files, this file and the log
+- [x] 1.1 Red: run `sh openspec/changes/platform-mobile-wiring/check-mobile-wiring.sh` on the unchanged tree; paste the last line (`mobile wiring check: 24 failures`) and the first five FAIL lines into the log
+- [x] 1.2 Make the edits in design.md "The edits", each old text replaced by its new text exactly (Makefile: four values on three lines; README: five places; CLAUDE.md: seven places; docs/figma.md: one line). `git diff -- Makefile` shows exactly three changed lines (the two `?=` defaults and the one `E2E_ENV` line)
+- [x] 1.3 Green: `sh openspec/changes/platform-mobile-wiring/check-mobile-wiring.sh` prints `mobile wiring check: ok`; `sh openspec/changes/archive/2026-10-12-platform-readme-claude/check-docs.sh` prints `docs check: ok`; `sh openspec/changes/archive/2026-10-15-platform-rider-wiring/check-wiring.sh deploy ci docs` prints `wiring check: ok`; `openspec validate --all --strict` passes. Paste the four last lines
+- [x] 1.4 `git status --short` before the commit shows only the four files, this file and the log
 
 ## 2. Acceptance (team lead, then manager)
 

@@ -10,7 +10,7 @@ The owner's Figma plan is Starter, which allows three pages per file and a daily
 | Customer web | `Phone 390`, `Desktop 1280` | One frame per Spec 2 §7 page: Home (with pincode sheet, not-serviceable, loading, error), Category, Product, Search (with empty), Cart drawer (bottom sheet on phone, side drawer on desktop; with empty, loading, error), Checkout (with out-of-stock line), Order tracking (with loading, error), Orders, Account, Sign in, Register. |
 | Admin web | `Admin 1280` | One frame per Spec 2 §8 page: Sign in, Dashboard, Orders board (plus empty, History tab, detail sheet, cancel dialog, store-staff nav), Stock (inline edit, empty), Stores and Store form (pincode editor), Categories tree, Products and Product form (image upload), Staff with invite dialog. |
 
-Mobile: no reserved page (page limit); add it when the mobile app spec lands.
+Mobile: the customer mobile app's screens (Phase 4, D36) live in the design canvas **ShopperStop App Design**, https://claude.ai/artifact/75BFgGxUe3viRFjgvn8Ywy: 19 artboards at 390×844, with the same token names and values as `packages/ui/src/tokens.css`. The canvas is the mobile design source; the Figma file has no `Mobile` page (Starter page limit, D17) and gets none in Phase 4.
 
 ## Keeping it in sync
 
