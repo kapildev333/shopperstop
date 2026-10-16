@@ -76,8 +76,8 @@ Red: commit the two route files as `export default function ForgotPassword() { r
 
 Commits: `test: forgot and reset password screens`, `feat: forgot and reset password screens`.
 
-- [ ] 3.1 Write the twelve tests (with the empty route stubs); run the four files; see them fail on their assertions; commit.
-- [ ] 3.2 Build Decision 4 (route files re-export `ForgotPasswordScreen` and `ResetPasswordScreen` as `sign-in.tsx` does); `src/auth-forms*.test.tsx` pass unchanged; run the gates (`npm run build --workspace apps/mobile` lists `/forgot-password` and `/reset-password`); tick 3.1 and 3.2; commit.
+- [x] 3.1 Write the twelve tests (with the empty route stubs); run the four files; see them fail on their assertions; commit.
+- [x] 3.2 Build Decision 4 (route files re-export `ForgotPasswordScreen` and `ResetPasswordScreen` as `sign-in.tsx` does); `src/auth-forms*.test.tsx` pass unchanged; run the gates (`npm run build --workspace apps/mobile` lists `/forgot-password` and `/reset-password`); tick 3.1 and 3.2; commit.
 
 ## 4. End to end against core (`mobile-P5-L1-T4`)
 

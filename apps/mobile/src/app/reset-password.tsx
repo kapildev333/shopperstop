@@ -1,3 +1,3 @@
-export default function ResetPassword() {
-  return null
-}
+import { ResetPasswordScreen } from '../auth-forms'
+
+export default ResetPasswordScreen

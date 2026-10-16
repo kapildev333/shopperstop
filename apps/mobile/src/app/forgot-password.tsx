@@ -1,3 +1,3 @@
-export default function ForgotPassword() {
-  return null
-}
+import { ForgotPasswordScreen } from '../auth-forms'
+
+export default ForgotPasswordScreen
