@@ -13,7 +13,7 @@ test('register lands on Home', async () => {
   fakeCore({
     'POST /auth/register': () => json(201, { token: 't-reg', customer }),
   })
-  await renderRouter({ index: () => <Text>Home</Text>, 'sign-in': SignIn, register: Register }, { initialUrl: '/register' })
+  const router = await renderRouter({ index: () => <Text>Home</Text>, 'sign-in': SignIn, register: Register }, { initialUrl: '/register' })
   await screen.findByRole('heading', { name: 'Create account' })
 
   await fireEvent.changeText(screen.getByLabelText('Name'), customer.name)
@@ -21,6 +21,6 @@ test('register lands on Home', async () => {
   await fireEvent.changeText(screen.getByLabelText('Password'), 'secret-pass')
   await fireEvent.press(screen.getByRole('button', { name: 'Create account' }))
 
-  await waitFor(() => expect(screen).toHavePathname('/'))
+  await waitFor(() => expect(router.getPathname()).toBe('/'))
   expect(getToken()).toBe('t-reg')
 })
