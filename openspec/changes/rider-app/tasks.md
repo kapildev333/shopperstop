@@ -21,9 +21,9 @@ Scenarios: "Served under /rider/", "Rider and core reached through same-origin p
 Starts from: `apps/rider/e2e/smoke.spec.ts` `built app opens under the prefix`, `preview proxies both services`, `smoke pages pass axe`, `suite seeds its own data`; `apps/rider/e2e/deliveries.spec.ts` `ready order to delivered`; `apps/rider/e2e/flow.spec.ts` `customer to rider to delivered`; `apps/rider/e2e/phone-layout.spec.ts` `pages fit a phone`. Workers cannot run `make e2e`: the red run is the manager's (task 6.1), which must fail on missing page content, not on config or setup.
 Commits: `test: rider e2e suite with the cross-app flow` (all of it; this task has no `feat:` because the pages it covers are tasks 3 to 5).
 
-- [ ] 2.1 `playwright.config.ts` (Decisions 17, 18; `testDir: 'e2e'`, `globalSetup`, `forbidOnly: !!process.env.CI`), `e2e/global-setup.ts` (both services, Decision 18), `e2e/helpers.ts` (Decision 19)
-- [ ] 2.2 The four spec files, axe after every navigation and every dialog opened; cards and rows found by order number; location asserted with `expect.poll` (20 s) on `GET /api/rider/v1/orders/{orderId}/delivery` with the shopper's core token: `status` `assigned`, `location.lat` 12.9352 and `location.lng` 77.6245; the cross-app flow per Decision 10 (contexts for web at `http://localhost:15173/`, admin at `http://localhost:15174/admin/`, rider at `http://localhost:15175/rider/` with the geolocation options)
-- [ ] 2.3 `npm run lint --workspace apps/rider` and `npm run typecheck --workspace apps/rider` clean; gates green; commit `test: ...`
+- [x] 2.1 `playwright.config.ts` (Decisions 17, 18; `testDir: 'e2e'`, `globalSetup`, `forbidOnly: !!process.env.CI`), `e2e/global-setup.ts` (both services, Decision 18), `e2e/helpers.ts` (Decision 19)
+- [x] 2.2 The four spec files, axe after every navigation and every dialog opened; cards and rows found by order number; location asserted with `expect.poll` (20 s) on `GET /api/rider/v1/orders/{orderId}/delivery` with the shopper's core token: `status` `assigned`, `location.lat` 12.9352 and `location.lng` 77.6245; the cross-app flow per Decision 10 (contexts for web at `http://localhost:15173/`, admin at `http://localhost:15174/admin/`, rider at `http://localhost:15175/rider/` with the geolocation options)
+- [x] 2.3 `npm run lint --workspace apps/rider` and `npm run typecheck --workspace apps/rider` clean; gates green; commit `test: ...`
 
 ## 3. Ready to pick up (worker, after 1; parallel with 2, 4, 5)
 
