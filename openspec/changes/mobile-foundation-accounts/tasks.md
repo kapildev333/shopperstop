@@ -81,9 +81,9 @@ Scope: `apps/mobile/src/ui/{sheet.tsx,sheet.test.tsx}`.
 Scenario: Sheet closed.
 Starts from: `src/ui/sheet.test.tsx`: `sheet shows its title and content` (title as header, children rendered), `sheet closed` (choosing "Close", choosing the backdrop "Close sheet", and the `Modal`'s `onRequestClose` each call `onClose`; with `open` false the title is not shown).
 
-- [ ] 7.1 Red
-- [ ] 7.2 `Sheet({ open, title, onClose, children })` per Decision 8 and the Sheet section of `docs/design/mobile-P4-L1.md`
-- [ ] 7.3 Gates green
+- [x] 7.1 Red
+- [x] 7.2 `Sheet({ open, title, onClose, children })` per Decision 8 and the Sheet section of `docs/design/mobile-P4-L1.md`
+- [x] 7.3 Gates green
 
 ## 8. Badge, Chip, Card
 
