@@ -5,12 +5,13 @@ schema: spec-driven
 context: |
   ShopperStop: quick-commerce (Blinkit-like), microservices in one repo. Areas with disjoint scopes:
   platform (root, deploy/, .github/, openspec/, docs/), core (services/core/), ui (packages/ui/),
-  web (apps/web/), admin (apps/admin/), rider (services/rider/ and apps/rider/), mobile (apps/mobile/).
+  web (apps/web/), admin (apps/admin/), rider (services/rider/ and apps/rider/), mobile (apps/mobile/), payment (services/payment/).
   A change belongs to exactly one area and is named <area>-<slug>.
   Stack and naming rules are in CLAUDE.md; a change never introduces a dependency outside CLAUDE.md's list.
   Capabilities in openspec/specs/: platform, design-system, serviceability, catalog, stock, accounts,
   cart, orders, admin-stores, admin-catalog, admin-staff, admin-riders, web-app, admin-app,
-  rider-service, deliveries, rider-app, and mobile-app from Phase 4.
+  rider-service, deliveries, rider-app, mobile-app from Phase 4, and payment-service and
+  payment-gateway-razorpay from Phase 5.
   JSON is camelCase and never null; money is integer cents; routes are /api/<service>/v1/<plural-noun>.
 
 rules:

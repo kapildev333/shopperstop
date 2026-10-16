@@ -77,6 +77,34 @@ jobs:
       - if: hashFiles('services/rider/go.mod') != ''
         run: make test-rider
 
+  payment:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      SHOPPERSTOP_PAYMENT_TEST_DATABASE_URL: postgres://shopperstop_payment:shopperstop_payment@localhost:5432/shopperstop_payment_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - if: hashFiles('services/payment/go.mod') == ''
+        run: 'echo "payment: services/payment absent, skipping"'
+      - if: hashFiles('services/payment/go.mod') != ''
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/payment/go.mod
+          cache-dependency-path: services/payment/go.sum
+      - if: hashFiles('services/payment/go.mod') != ''
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -f deploy/initdb.sql
+        env:
+          PGPASSWORD: postgres
+      - if: hashFiles('services/payment/go.mod') != ''
+        run: make test-payment
+
   web:
     runs-on: ubuntu-latest
     steps:

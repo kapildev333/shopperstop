@@ -1,5 +1,6 @@
 // Scenarios from openspec/changes/platform-postman/specs/platform/spec.md and
-// openspec/changes/platform-rider-wiring/specs/platform/spec.md.
+// openspec/changes/platform-rider-wiring/specs/platform/spec.md and
+// openspec/changes/platform-payment-wiring/specs/platform/spec.md.
 // Run by hand: node --test scripts/postman.test.mjs (not wired into make test or CI).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -163,6 +164,55 @@ const riderFixture = {
         security: [{ bearer: [] }],
         parameters: [{ name: 'orderId', in: 'path', required: true, schema: { type: 'string' }, example: 'o1' }],
         responses: { 200: { description: 'The delivery.', content: { 'application/json': { schema: { type: 'object' }, example: { id: 'd1' } } } } },
+      },
+    },
+  },
+};
+
+// Payment contract shaped like services/payment/openapi.json (platform-payment-wiring design.md, test fixture).
+const ok = (example) => ({ 200: { description: 'OK.', content: { 'application/json': { schema: { type: 'object' }, example } } } });
+const paymentFixture = {
+  openapi: '3.1.0',
+  info: { title: 'payment fixture', version: '0.0.0' },
+  servers: [{ url: '/api/payment/v1' }],
+  tags: [{ name: 'platform' }, { name: 'payment-service' }],
+  components: { securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } } },
+  paths: {
+    '/healthz': { get: { summary: 'Payment liveness', tags: ['platform'], responses: ok({ status: 'ok' }) } },
+    '/me/payments': {
+      post: {
+        summary: 'Create payment',
+        tags: ['payment-service'],
+        security: [{ bearer: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' }, example: { orderId: 'o1', returnUrl: 'http://localhost:5173/orders/o1' } } } },
+        responses: ok({ id: 'p1' }),
+      },
+    },
+    '/me/payments/{id}': {
+      get: {
+        summary: 'Payment',
+        tags: ['payment-service'],
+        security: [{ bearer: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: 'p1' }],
+        responses: ok({ id: 'p1' }),
+      },
+    },
+    '/orders/{orderId}/payment': {
+      get: {
+        summary: 'Order payment',
+        tags: ['payment-service'],
+        security: [{ bearer: [] }],
+        parameters: [{ name: 'orderId', in: 'path', required: true, schema: { type: 'string' }, example: 'o1' }],
+        responses: ok({ id: 'p1' }),
+      },
+    },
+    '/webhooks/razorpay': { post: { summary: 'Razorpay webhook', tags: ['payment-service'], responses: ok({ status: 'ok' }) } },
+    '/fake/{id}': {
+      get: {
+        summary: 'Fake pay page',
+        tags: ['payment-service'],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: 'p1' }],
+        responses: { 200: { description: 'The page.', content: { 'text/html': { schema: { type: 'string' }, example: '<form></form>' } } } },
       },
     },
   },
@@ -353,8 +403,55 @@ test('postman CLI skips an absent rider contract', () => {
   assert.equal(read('../docs/postman/shopperstop-core.postman_collection.json'), committed);
 });
 
+test('payment URLs read the payment base URL', async () => {
+  const text = await generate(paymentFixture, 'payment');
+  assert.ok(!text.includes('{{baseUrl}}'), 'payment collection must not mention {{baseUrl}}');
+  const c = JSON.parse(text);
+  for (const r of requests(c.item)) assert.deepEqual(r.request.url.host, ['{{paymentBaseUrl}}'], r.name);
+});
+
+test('payment routes read the customer token', async () => {
+  const c = JSON.parse(await generate(paymentFixture, 'payment'));
+  for (const name of ['Create payment', 'Payment', 'Order payment']) {
+    assert.equal(requestNamed(c, name).request.auth?.bearer[0].value, '{{customerToken}}', name);
+  }
+  for (const name of ['Payment liveness', 'Razorpay webhook', 'Fake pay page']) {
+    assert.ok(!requestNamed(c, name).request.auth, `${name} must carry no auth`);
+    assert.deepEqual(testScript(requestNamed(c, name)), [], `${name} must carry no script`);
+  }
+});
+
+test('payment ids read environment variables', async () => {
+  const c = JSON.parse(await generate(paymentFixture, 'payment'));
+  const vars = (name) => requestNamed(c, name).request.url.variable.map((v) => [v.key, v.value]);
+  assert.deepEqual(vars('Payment'), [['id', '{{paymentId}}']]);
+  assert.deepEqual(vars('Order payment'), [['orderId', '{{orderId}}']]);
+  assert.deepEqual(vars('Fake pay page'), [['id', 'p1']]);
+});
+
+test('payment collection follows the payment contract', async () => {
+  const contract = new URL('../services/payment/openapi.json', import.meta.url);
+  const collection = '../docs/postman/shopperstop-payment.postman_collection.json';
+  if (existsSync(contract)) {
+    assert.equal(read(collection), await generate(JSON.parse(read('../services/payment/openapi.json')), 'payment'));
+  } else {
+    assert.equal(existsSync(new URL(collection, import.meta.url)), false, 'no payment collection without a payment contract');
+  }
+});
+
+test('postman CLI skips an absent payment contract', () => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const stdout = execFileSync(process.execPath, ['scripts/postman.mjs'], { cwd: root, encoding: 'utf8' });
+  if (existsSync(new URL('../services/payment/openapi.json', import.meta.url))) {
+    assert.ok(!stdout.includes('services/payment/openapi.json absent'));
+  } else {
+    assert.ok(stdout.includes('postman: services/payment/openapi.json absent, skipping'), stdout);
+  }
+  assert.equal(read('../docs/postman/shopperstop-core.postman_collection.json'), committed);
+});
+
 test('two runs give identical bytes with no generated ids', async () => {
-  for (const [spec, service] of [[realSpec, 'core'], [fixture, 'core'], [riderFixture, 'rider']]) {
+  for (const [spec, service] of [[realSpec, 'core'], [fixture, 'core'], [riderFixture, 'rider'], [paymentFixture, 'payment']]) {
     const first = await generate(spec, service);
     const second = await generate(spec, service);
     assert.equal(first, second);
@@ -376,16 +473,17 @@ test('committed collection matches the contract', async () => {
   assert.equal(committed, await generate(realSpec));
 });
 
-test('environment holds the twelve variables', () => {
+test('environment holds the fourteen variables', () => {
   const env = JSON.parse(read('../docs/postman/local.postman_environment.json'));
   assert.deepEqual(env.values.map((v) => v.key), [
     'baseUrl', 'customerToken', 'staffToken', 'storeId', 'productId', 'addressId', 'orderId',
-    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId', 'serviceToken',
+    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId', 'paymentBaseUrl', 'paymentId', 'serviceToken',
   ]);
   const byKey = Object.fromEntries(env.values.map((v) => [v.key, v.value]));
   const byType = Object.fromEntries(env.values.map((v) => [v.key, v.type]));
   assert.equal(byKey.baseUrl, 'http://localhost:8080/api/core/v1');
   assert.equal(byKey.riderBaseUrl, 'http://localhost:8081/api/rider/v1');
+  assert.equal(byKey.paymentBaseUrl, 'http://localhost:8082/api/payment/v1');
   for (const key of ['customerToken', 'staffToken', 'riderToken']) {
     assert.equal(byKey[key], '', `${key} must be empty`);
     assert.equal(byType[key], 'secret', `${key} must be secret`);
@@ -396,6 +494,8 @@ test('environment holds the twelve variables', () => {
   // The rider seed's first Koramangala rider and the demo delivery (.claude/areas/rider.md).
   assert.equal(byKey.riderId, '00000000-0000-4000-8000-000000000801');
   assert.equal(byKey.deliveryId, '00000000-0000-4000-8000-000000000901');
+  // The payment seed's paid payment of core's demo online order (.claude/areas/payment.md).
+  assert.equal(byKey.paymentId, '00000000-0000-4000-8000-000000000a01');
 });
 
 test('serviceToken is the Makefile dev service token', () => {

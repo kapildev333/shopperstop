@@ -5,6 +5,9 @@
 	handle /api/rider/* {
 		reverse_proxy host.docker.internal:8081
 	}
+	handle /api/payment/* {
+		reverse_proxy host.docker.internal:8082
+	}
 	handle /admin/* {
 		uri strip_prefix /admin
 		root * /srv/apps/admin/dist
