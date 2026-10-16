@@ -114,6 +114,11 @@ export function useQuantity(productId: string): number {
   return pending ?? cached
 }
 
+// The count a sheet line shows: its own cart line, or the last ask while its write is pending. Unlike useQuantity, it reads the line's store, not the resolved one.
+export function useLineQuantity(storeId: string | undefined, productId: string, fallback: number): number {
+  return useAsked(storeId, productId) ?? fallback
+}
+
 // The last failed write made from this control; it goes when the control is used again or unmounts.
 export function useLineWrite(storeId: string | undefined, product: CartProduct) {
   const [failure, setFailure] = useState<string>()

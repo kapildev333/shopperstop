@@ -5,7 +5,7 @@ import { formatInr } from '@shopperstop/ui/format'
 import { ChevronRight, ShoppingBag, Timer } from 'lucide-react-native'
 import { imageUri } from './catalog'
 import { CartWriteAlert } from './cart-alert'
-import { useCart, useLineWrite, useQuantity, useStoreName, openCartSheet, closeCartSheet, useCartSheetOpen } from './cart'
+import { useCart, useLineQuantity, useLineWrite, useStoreName, openCartSheet, closeCartSheet, useCartSheetOpen } from './cart'
 import { itemCount, maxQuantity, mrpTotalCents, type CartLine, type CartView } from './cart-guest'
 import { useStore, type Store } from './serviceability'
 import { useToken } from './session'
@@ -161,7 +161,7 @@ function Lines({ view, store }: { view: CartView; store?: Store }) {
 // One line: the image, name, unit and price, its Stepper, and under it the failed write (or the Remove of an out-of-stock line).
 function CartLineRow({ storeId, line }: { storeId?: string; line: CartLine }) {
   const { product } = line
-  const quantity = useQuantity(product.id)
+  const quantity = useLineQuantity(storeId, product.id, line.quantity)
   const [failure, write] = useLineWrite(storeId, product)
   const max = maxQuantity(product)
   return (
