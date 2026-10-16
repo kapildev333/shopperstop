@@ -1,7 +1,7 @@
 # mobile-P4-L4a-T8 - mobile-orders task 8: e2e (apps/mobile/e2e/orders.spec.ts)
-Status: blocked
+Status: done
 ## Doing
-Stopped at 8.2 on two stop conditions from the brief. Not ticked. Waiting for the manager's decision on both.
+Done. 8.0 (landmark), 8.1 (red), 8.2 (green) ticked. Manager decisions applied: landmark commits `bb1fef9`, label-query test, `32e1626` feat; reload dropped in `3d2f210`. `make e2e` from the worktree root exit 0: admin 15 passed, mobile 7 passed, rider 7 passed, web 45 passed.
 ## Found
 - Commits on lane/mobile-P4-L4a-orders: `d4a613f` chore (e2e script gets `EXPO_PUBLIC_RIDER_URL=http://localhost:18081`, same text as L2's request), `6eb9b89` test (rider card carries its own margin; no-rider renders nothing), `97e1ca2` fix (margin moved into `src/rider-card.tsx`, wrapper dropped from `src/orders-tracking.tsx`; closes the T7 gap), `55dbf1a` test (the three e2e scenarios).
 - Tracking and Cancel scenarios pass against core on the web export at 390x844 (2 of 3 passed on the last run). Both reach their order from the Orders tab, not by a direct load, because of blocker 1.
@@ -16,3 +16,7 @@ Stopped at 8.2 on two stop conditions from the brief. Not ticked. Waiting for th
 ## Blockers
 1. Reload of `/orders/<id>` on the static export returns 404 (stop condition in the brief).
 2. axe `region` on the tab bar on the Orders tab (stop condition: react-native-web/react-navigation markup, no rule switched off).
+## Resolution (2026-10-16, manager decisions)
+- Tab bar: `src/tabs-landmark.test.tsx` (`tab bar in a navigation landmark`) queries by label because RNTL skips the non-accessible wrapper; `(tabs)/_layout.tsx` passes `tabBar` wrapping `BottomTabBar` from `expo-router/js-tabs` in `<View role="navigation" accessibilityLabel="Main">`.
+- History: reload step removed (`3d2f210`); every scenario reaches its order from the Orders tab.
+- Gates: mobile lint, typecheck, build exit 0; `npm run test --workspace apps/mobile -- --run` 41 suites, 154 tests; `openspec validate --all --strict` 20 passed.
