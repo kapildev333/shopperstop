@@ -344,3 +344,61 @@ test('a cancel that takes the order off the board takes its count with it: no no
   expect(screen.getByText('SS-TEST0002')).toBeInTheDocument()
   expect(screen.queryByText(/^Showing the newest/)).not.toBeInTheDocument()
 })
+
+test('the sheet of an order paid online shows its payment, its reference, an online total and the payment event by its note', async () => {
+  setToken('tok')
+  const paid = order(1, 'placed', {
+    placedAt,
+    paymentMethod: 'online',
+    paymentStatus: 'paid',
+    paymentReference: 'pay_123',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: placedAt },
+      { fromStatus: 'placed', toStatus: 'placed', actorType: 'system', actorName: 'payment', note: 'Payment paid, reference pay_123', createdAt: '2026-10-13T09:20:30Z' },
+    ],
+  })
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [paid]).routes })
+
+  renderApp('/orders')
+  const sheet = await openSheet()
+
+  expect(within(sheet).getByText('Paid', { exact: true })).toHaveClass('bg-success-soft')
+  expect(sheet).toHaveTextContent('Payment reference: pay_123')
+  expect(sheet).toHaveTextContent('Total, online payment₹1,030')
+  // A payment event leaves the status as it was: it is read by its note, never as "Placed by payment".
+  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
+    'Placed by the customer, 13 Oct 2026, 2:50 pm',
+    'Payment paid, reference pay_123, by payment, 13 Oct 2026, 2:50 pm',
+  ])
+})
+
+test('the sheet of a refunded order shows Refunded, the refund reference and the refund event after the cancel', async () => {
+  setToken('tok')
+  const refunded = order(1, 'cancelled', {
+    paymentMethod: 'online',
+    paymentStatus: 'refunded',
+    paymentReference: 'rfnd_9',
+    cancelReason: 'Out of stock',
+    cancelledAt: '2026-10-13T09:22:00Z',
+    events: [
+      { toStatus: 'placed', actorType: 'customer', createdAt: '2026-10-13T09:20:00Z' },
+      { fromStatus: 'placed', toStatus: 'placed', actorType: 'system', actorName: 'payment', note: 'Payment paid, reference pay_123', createdAt: '2026-10-13T09:20:30Z' },
+      { fromStatus: 'placed', toStatus: 'cancelled', actorType: 'staff', note: 'Out of stock', createdAt: '2026-10-13T09:22:00Z' },
+      { fromStatus: 'cancelled', toStatus: 'cancelled', actorType: 'system', actorName: 'payment', note: 'Payment refunded, reference rfnd_9', createdAt: '2026-10-13T09:23:00Z' },
+    ],
+  })
+  fakeCore({ ...asAdmin, ...ordersCore(indiranagar.id, [refunded]).routes })
+
+  renderApp('/orders?tab=history&status=cancelled')
+  await userEvent.click(await screen.findByRole('button', { name: 'SS-TEST0001' }))
+  const sheet = screen.getByRole('dialog', { name: 'Order SS-TEST0001' })
+
+  expect(within(sheet).getByText('Refunded')).toHaveClass('bg-canvas')
+  expect(sheet).toHaveTextContent('Payment reference: rfnd_9')
+  expect(within(sheet).getAllByRole('listitem').slice(2).map((item) => item.textContent)).toEqual([
+    'Placed by the customer, 13 Oct 2026, 2:50 pm',
+    'Payment paid, reference pay_123, by payment, 13 Oct 2026, 2:50 pm',
+    'Cancelled by staff, 13 Oct 2026, 2:52 pm: Out of stock',
+    'Payment refunded, reference rfnd_9, by payment, 13 Oct 2026, 2:53 pm',
+  ])
+})
