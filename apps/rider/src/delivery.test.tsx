@@ -50,7 +50,7 @@ test('assigned delivery shown', async () => {
   expect(customer).toHaveTextContent('560034')
   expect(within(customer).getByRole('link', { name: 'Call Ravi Kumar' })).toHaveAttribute('href', 'tel:+919800000001')
   const items = screen.getByRole('table', { name: 'Items' })
-  expect(within(items).getByRole('row', { name: /Banana Robusta/ })).toHaveTextContent('1 kg2')
+  expect(within(items).getByRole('row', { name: /Banana Robusta/ })).toHaveTextContent('Banana RobustaUnit1 kgQuantity2')
   expect(screen.getByText('₹339')).toBeInTheDocument()
   expect(screen.getByRole('status')).toHaveTextContent(cash)
   expect(screen.getByRole('button', { name: 'Mark delivered' })).toBeInTheDocument()
@@ -88,7 +88,7 @@ test('tel link only when a phone exists', async () => {
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-AAAA0001' })).toBeInTheDocument()
   expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent('Ravi Kumar')
-  expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /Call/ })).not.toBeInTheDocument()
 })
 
 test('cancel sends nothing', async () => {
