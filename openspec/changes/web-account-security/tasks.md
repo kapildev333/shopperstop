@@ -8,8 +8,8 @@ Gates, from the worktree root with `export PATH="$HOME/.local/node-v22.23.3/bin:
 
 Scope: `apps/web/src/verify-email-banner.tsx` (new), `apps/web/src/verify-email-banner.test.tsx` (new), `apps/web/src/routes/account.tsx`, `apps/web/src/checkout.tsx` (the `Frame` only), `apps/web/src/routes/verify-email.tsx` (new), `apps/web/src/verify-email.test.tsx` (new), `apps/web/src/routeTree.gen.ts` (regenerated), this file (ticks). Scenarios: "Customer email verification banner" (both), "Customer sends a verification email" (all three), "Customer verify-email page" / Email verified with the code, "Customer verify-email failures" (all three). Starts from `src/verify-email-banner.test.tsx` `unverified customer sees the banner`, `verified customer sees no banner`, `verification email sent`, `already verified when sending`, `sending fails` and `src/verify-email.test.tsx` `email verified with the code`, `expired code while signed in`, `missing code while signed out`, `verification unreachable then retried` (red: no banner text on `/account` and `/checkout`; `/verify-email` renders "Page not found"). Commits: `test: verification banner and verify-email page`, `feat: verification banner and verify-email page`.
 
-- [ ] 1.1 Write the nine tests (design.md "Test strategy"), run `npm run test --workspace apps/web -- --run src/verify-email-banner.test.tsx src/verify-email.test.tsx`, see them fail for the reasons above; commit.
-- [ ] 1.2 Build design.md decisions 1 and 2; run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 Write the nine tests (design.md "Test strategy"), run `npm run test --workspace apps/web -- --run src/verify-email-banner.test.tsx src/verify-email.test.tsx`, see them fail for the reasons above; commit.
+- [x] 1.2 Build design.md decisions 1 and 2; run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. Forgot and reset password, sign-in link
 

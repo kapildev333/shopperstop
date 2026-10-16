@@ -15,6 +15,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
@@ -50,6 +51,11 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CSlugRoute = CSlugRouteImport.update({
   id: '/c/$slug',
   path: '/c/$slug',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/c/$slug': typeof CSlugRoute
   '/orders/$id': typeof OrdersIdRoute
   '/p/$slug': typeof PSlugRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/sign-in'
+    | '/verify-email'
     | '/c/$slug'
     | '/orders/$id'
     | '/p/$slug'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
   SignInRoute: typeof SignInRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   CSlugRoute: typeof CSlugRoute
   OrdersIdRoute: typeof OrdersIdRoute
   PSlugRoute: typeof PSlugRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/c/$slug': {
       id: '/c/$slug'
       path: '/c/$slug'
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
   SignInRoute: SignInRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   CSlugRoute: CSlugRoute,
   OrdersIdRoute: OrdersIdRoute,
   PSlugRoute: PSlugRoute,

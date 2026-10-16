@@ -7,6 +7,7 @@ import { addAddress, useAddresses } from '../addresses'
 import { api, call, queryClient, splitError, useMe, type ApiError } from '../api'
 import { signOutAndGoHome } from '../auth'
 import { useToken } from '../session'
+import { VerifyEmailBanner } from '../verify-email-banner'
 
 type Address = components['schemas']['Address']
 type Errors = { fields: Record<string, string>; banner?: string }
@@ -40,6 +41,7 @@ function AccountPage() {
           </>
         }
       />
+      <VerifyEmailBanner />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileCard />
         <AddressesCard />
