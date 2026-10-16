@@ -98,7 +98,7 @@ const listeners = new Set<() => void>()
 let cart: GuestCart = emptyCart
 // A change made before the one read settles wins over it; the read's result is then dropped.
 let loaded = false
-let loading: Promise<GuestCart> | undefined
+let loading: Promise<void> | undefined
 
 function emit() {
   listeners.forEach((listener) => listener())
