@@ -1,0 +1,35 @@
+# receipt - the receipt and notification service
+Scope: `services/receipt/` (D54: one service, no app; the receipt entries, the notification log and the push registration are web, mobile and admin lanes)
+Depends on: platform (receipt databases, Makefile targets and e2e env, Caddy, CI, Postman: platform-P6-L1), core (`GET /admin/order-events` from core-P5-L1 and `customerEmail` for services from core-P6-L1), ui (`packages/ui/src/api/receipt.d.ts` from ui-P6-L1 for the apps)
+Spec: PLAN.md Phase 6 and D54; Spec 1 §4, §5, §11; Spec 2 §5 (service tokens per D30), §6 (envelope, lists, errors), §9, §10, §12, §13, §14 ("receipts, email and SMS notifications: receipt service spec"). The work package below is the brainstorm input; the team leads turn it into OpenSpec changes that seed the capabilities `receipt-service` and `notifications` (D4).
+## Doing
+Planned 2026-10-16 (PLAN.md Phase 6). Nothing running. Starts after Phase 5 closes and platform-P6-L1 is on main. Start the manager with `claude --model claude-fable-5-1` at the repo root, then `/loop 5min /manage receipt`; read `## Requests` first.
+
+## Lanes
+| Lane | Task | Scope | Status |
+|------|------|-------|--------|
+| receipt-P6-L1 | `receipt-service-foundation`: module, config, copies (D52), migrations (`receipts`, `receipt_items`, `notifications`, `devices`, `cursors`), `receipt-admin migrate` and `seed-demo --reset`, `openapi.json` with the contract test, `healthz` and `readyz`, `internal/core` client, the events tail loop, the transport boundaries with their `log` implementations | `services/receipt/`, `openspec/changes/receipt-service-foundation/` | waits on platform-P6-L1 |
+| receipt-P6-L2 | `receipt-documents`: a receipt per delivered order, `GET /me/receipts`, `GET /orders/{orderId}/receipt` with `htmlUrl`, the signed print-ready HTML page | `services/receipt/`, `openspec/changes/receipt-documents/` | waits on receipt-P6-L1 and core-P6-L1 |
+| receipt-P6-L3 | `receipt-notifications`: email on four events, `smtp` transport, SMS `log`, the `notifications` log and its staff read | `services/receipt/`, `openspec/changes/receipt-notifications/` | waits on receipt-P6-L2 |
+| receipt-P6-L4 | `receipt-push`: devices, Expo push over HTTP, push on the four events | `services/receipt/`, `openspec/changes/receipt-push/` | waits on receipt-P6-L2 (parallel with L3) |
+
+## Requests
+- to core (standing, D51 and D54): the receipt service calls core with its service token on `GET /admin/order-events?after=&limit=` and `GET /admin/orders/{id}` (with `customerEmail`); it forwards the customer token to `GET /me` and `GET /orders/{id}`, and the staff token to `GET /admin/me` and `GET /admin/orders/{id}` (store isolation for the notification log).
+- to platform (standing): `SHOPPERSTOP_RECEIPT_DATABASE_URL`, `_ADDR` (:8083, e2e :18083), `_SESSION_PEPPER` (signs `htmlUrl`), `_WEB_ORIGINS`, `_CORE_URL`, `_CORE_SERVICE_TOKEN`, `_PUBLIC_URL` (base of `htmlUrl`), `_MAIL=log` (dev and e2e), `_PUSH=log`; core's `SHOPPERSTOP_CORE_SERVICE_TOKENS` carries `receipt:<token>`. Demo id: `receiptId` `00000000-0000-4000-8000-000000000b01` for the receipt of core's demo delivered order SS-DEMOAAAB.
+- to ui (standing, D19 extended): a receipt lane that changes `services/receipt/openapi.json` runs `make gen` and commits `packages/ui/src/api/receipt.d.ts` in the same PR (ui-P6-L1 creates the file and the stale test first).
+- to web, mobile and admin (contract, from L2 to L4 when cut): `Receipt` `{id, number, orderId, orderNumber, items[{name, unitLabel, quantity, priceCents, mrpCents}], subtotalCents, deliveryFeeCents, totalCents, paymentMethod, paymentStatus?, deliveredAt, htmlUrl, createdAt}`; `Notification` `{id, orderId, channel: email|sms|push, event, status: sent|failed, detail?, createdAt}`; `PUT /me/devices {expoPushToken, platform: ios|android}`.
+
+## Found
+
+## Backlog
+- Ceilings named in D54: no PDF, no GST breakdown beyond "taxes included" on the page, no SMS provider, no email templates beyond plain text with the order lines, a single `smtp` transport, no digest or retry queue beyond one retry, push receipts polled once.
+
+## Phase 6 work package (orchestrator, 2026-10-16)
+One service, the same shape as payment and rider. Conventions are CLAUDE.md's: `/api/receipt/v1/<plural-kebab-noun>` (`/me/receipts`, `/orders/{orderId}/receipt`, `/receipts/{id}/html`, `/me/devices`, `/admin/orders/{id}/notifications`), one error envelope with core's codes, camelCase JSON with no `null`, `SHOPPERSTOP_RECEIPT_` env, snake_case tables, money in cents. Domain words: receipt (the record of a delivered order), notification (one message on one channel for one event), device (a phone registered for push), channel (email, sms, push). Never "invoice", "bill" (the cart's bill is a different thing), "alert", "push token" for device.
+
+- Layout: `cmd/receipt`, `cmd/receipt-admin`, `internal/config`, `internal/httpx`, `internal/pg`, `internal/core`, `internal/tail` (copy of payment's), `internal/receipt` (rows, number generation `RC-` plus 8 upper base32 as core's order numbers, the HTML template with `html/template`, the signed link), `internal/notify` (the three boundaries `Mailer`, `SMS`, `Push`; `log`, `smtp`, `expo` implementations; the event-to-message table), `internal/app`, `internal/seed`, `internal/testdb`, `openapi.json`.
+- Tables: `receipts` (`order_id unique`, `number unique`, `customer_id`, `order_number`, `subtotal_cents`, `delivery_fee_cents`, `total_cents`, `payment_method`, `payment_status null`, `delivered_at`), `receipt_items` (snapshots copied from core's order read), `notifications` (`order_id`, `customer_id`, `channel`, `event`, `status`, `detail`), `devices` (`customer_id`, `expo_push_token unique`, `platform`), `cursors`.
+- The tail: one loop from the `events` cursor, every 3 s, batches of up to 500; each event is handled in one transaction with the cursor advance, so a crash replays at most one batch and every handler is idempotent (a receipt exists, a notification for `(order, channel, event)` exists). `delivered` creates the receipt before its notification so the email carries `htmlUrl`.
+- The signed link: `htmlUrl` = `<PUBLIC_URL>/api/receipt/v1/receipts/{id}/html?exp=<unix>&sig=<hex HMAC-SHA256(id|exp, pepper)>`, one hour; the page is server-rendered HTML with inline CSS using the token values (no script, prints on one page, 4.5:1 text).
+- Email: `log` writes the whole message to the log (the e2e suites read it); `smtp` uses `net/smtp` with PLAIN auth over STARTTLS where offered. SMS: `log` only; a message per event is still composed and recorded so a provider is one implementation later. Push: `POST https://exp.host/--/api/v2/push/send` with `to`, `title`, `body`, `data: {orderId}`, batches of 100; a `DeviceNotRegistered` receipt deletes the device.
+- Tests: the real `shopperstop_receipt_test` database, a fake core (`internal/coretest`), transports faked in-process, an `httptest` Expo; `make e2e` reads the logged mail through the suites' expectations on the order flow. Contract test, Postman, examples on every route.
