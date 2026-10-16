@@ -14,7 +14,8 @@ import {
   type CategoryNode,
   type StoreProduct,
 } from '../../catalog'
-import { setQuantity, useQuantity } from '../../cart'
+import { useLineWrite, useQuantity } from '../../cart'
+import { CartWriteAlert } from '../../cart-alert'
 import { useBack } from '../../screen-support'
 import { useStore } from '../../serviceability'
 import { StoreGate } from '../../serviceability-gate'
@@ -90,6 +91,7 @@ function ProductBody({
 
 function ProductDetail({ storeId, product, categories }: { storeId: string; product: StoreProduct; categories?: CategoryNode[] }) {
   const count = useQuantity(product.id)
+  const [failure, write] = useLineWrite(storeId, product)
   const found = categories ? findCategoryById(categories, product.categoryId) : undefined
   const stock = product.inStock ? stockLabel(product.quantity) : undefined
   const percent = product.mrpCents > product.priceCents ? Math.floor(((product.mrpCents - product.priceCents) * 100) / product.mrpCents) : 0
@@ -136,13 +138,14 @@ function ProductDetail({ storeId, product, categories }: { storeId: string; prod
           <Text variant="small" tone="inkMuted">
             Inclusive of all taxes
           </Text>
+          <CartWriteAlert message={failure} />
         </View>
         <Stepper
           size="lg"
           label={product.name}
           value={count}
           max={product.inStock ? product.quantity : 0}
-          onChange={(next) => setQuantity(storeId, product, next)}
+          onChange={write}
         />
       </SafeAreaView>
     </View>

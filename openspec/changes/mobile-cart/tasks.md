@@ -58,8 +58,8 @@ Scope: `src/cart-alert.tsx`, `src/cart-write-failure.test.tsx`, `src/catalog-car
 Scenarios: Failed write tells the customer; Core's refusal is shown; Next tap clears the failure; Overtaken change shows no failure.
 Starts from: `src/cart-write-failure.test.tsx` test `failed write tells the customer` (red: no alert). Card scenarios render `ProductCard` as task 3 does with `setToken('t-1')` and `GET /me/cart` holding 1 of the product; "Core's refusal is shown" renders the product screen with `renderRouter({ 'product/[slug]': ProductScreen }, { initialUrl: '/product/amul-taaza' })` (wrapper as in `src/catalog-product-count.test.tsx`, not navigating) and `PUT /me/cart/items` answering `apiError(400, 'validation', 'product not available')`; "Overtaken" holds both writes and lets both fail, then counts `getAllByRole('alert')` (1).
 
-- [ ] 4.1 `test:` the four scenarios, red
-- [ ] 4.2 `feat:` `CartWriteAlert` and the two integrations; gates green
+- [x] 4.1 `test:` the four scenarios, red
+- [x] 4.2 `feat:` `CartWriteAlert` and the two integrations; gates green
 
 ## 5. Cart sheet (`src/cart-sheet.tsx`) — group C, after 2 and 3
 
