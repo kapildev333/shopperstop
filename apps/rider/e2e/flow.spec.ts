@@ -6,19 +6,12 @@ const webOrigin = 'http://localhost:15173/'
 const adminOrigin = 'http://localhost:15174/admin/'
 const riderOrigin = 'http://localhost:15175/rider/'
 
-// design.md Decision 10: web-P3-L1 (the rider card on tracking) is not on main. While false, the two on-page checks are
-// recorded as skipped steps; the API checks below are always hard. The follow-up when web-P3-L1 lands: set this to true.
-const webRiderCard = false // web-P3-L1 not on main: tracking page has no rider card yet
-
 const flowPick = 2
 const riderEmail = 'rider2-koramangala@shopperstop.local'
 const riderPassword = 'rider12345'
 
+// The rider card on the tracking page polls every 10 seconds, so the name may take a poll to appear.
 async function expectRiderCard(page: Page, name: string) {
-  if (!webRiderCard) {
-    test.info().annotations.push({ type: 'skipped-step', description: 'rider card on tracking: web-P3-L1 not on main' })
-    return
-  }
   await expect(page.getByRole('region', { name: 'Rider', exact: true }).getByText(name, { exact: true })).toBeVisible({ timeout: 20_000 })
 }
 
@@ -87,7 +80,10 @@ test('customer to rider to delivered', async ({ request, browser }) => {
     const card = phone.getByRole('list', { name: 'Ready orders', exact: true }).getByRole('listitem').filter({ hasText: number })
     await expect(card).toBeVisible({ timeout: 15_000 })
     await card.getByRole('button', { name: `Pick up ${number}`, exact: true }).click()
-    await phone.getByRole('dialog', { name: `Pick up ${number}?`, exact: true }).getByRole('button', { name: 'Pick up', exact: true }).click()
+    const pickUp = phone.getByRole('dialog', { name: `Pick up ${number}?`, exact: true })
+    await expect(pickUp).toBeVisible()
+    await expectNoViolations(phone)
+    await pickUp.getByRole('button', { name: 'Pick up', exact: true }).click()
     await expect(phone.getByRole('heading', { level: 1, name: `Order ${number}`, exact: true })).toBeVisible()
     await expectNoViolations(phone)
 
@@ -99,7 +95,10 @@ test('customer to rider to delivered', async ({ request, browser }) => {
     expect((await customerDelivery(request, shopper, orderId)).riderName).toBe('Meera Iyer')
 
     await phone.getByRole('button', { name: 'Mark delivered', exact: true }).click()
-    await phone.getByRole('dialog', { name: `Mark ${number} delivered?`, exact: true }).getByRole('button', { name: 'Mark delivered', exact: true }).click()
+    const delivered = phone.getByRole('dialog', { name: `Mark ${number} delivered?`, exact: true })
+    await expect(delivered).toBeVisible()
+    await expectNoViolations(phone)
+    await delivered.getByRole('button', { name: 'Mark delivered', exact: true }).click()
     await expect(phone.getByRole('status').filter({ hasText: `${number} delivered.` })).toBeVisible()
     await expectNoViolations(phone)
 

@@ -18,10 +18,11 @@ async function expectFitsPhone(page: Page) {
         const box = element.getBoundingClientRect()
         return box.width > 0 && box.height > 0
       })
-      .map((element) => ({ text: element.textContent?.trim() ?? '', height: Math.round(element.getBoundingClientRect().height) }))
+      .map((element) => ({ text: element.textContent?.trim() ?? '', height: element.getBoundingClientRect().height }))
       .filter((target) => target.height < 44),
   )
-  expect(small).toEqual([])
+  // Compared unrounded (43.5 px fails); rounded only here, so the failure text reads in whole pixels.
+  expect(small.map((target) => ({ text: target.text, height: Math.round(target.height) }))).toEqual([])
   await expectNoViolations(page)
 }
 

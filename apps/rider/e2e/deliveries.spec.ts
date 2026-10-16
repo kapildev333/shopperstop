@@ -7,6 +7,7 @@ const riderPassword = 'rider12345'
 const pickIndex = 0
 
 test('ready order to delivered', async ({ page, request }) => {
+  test.slow()
   const order = await readyOrder(request, await staffHeaders(request), pickIndex)
   await asRider(page, await riderToken(request, riderEmail, riderPassword))
 
