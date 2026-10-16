@@ -88,19 +88,6 @@ function section(page: Page, heading: string): Locator {
   return page.getByRole('heading', { level: 2, name: heading, exact: true }).locator('xpath=..')
 }
 
-// From Home's search control; the search screen's own box takes over after that.
-async function openSearch(page: Page) {
-  await page.getByRole('button', { name: 'Search products', exact: true }).click()
-  await expect(page).toHaveURL(/\/search$/)
-}
-
-async function searchFor(page: Page, text: string) {
-  const box = page.getByRole('textbox', { name: 'Search products', exact: true })
-  await box.fill(text)
-  await box.press('Enter')
-  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(text)
-}
-
 function quantityOf(page: Page, name: string): Locator {
   return page.getByRole('group', { name: `Quantity of ${name}`, exact: true })
 }
@@ -211,15 +198,10 @@ test('Merge at sign-in against core', async ({ page, request }) => {
 })
 
 test('Clamp against core', async ({ page, request }) => {
-  // The first product of the first 100 at full stock: it is reached by search, so Home's picks are not involved.
-  const listed = await request.get(`${core}/stores/${koramangala}/products?pageSize=100`)
-  expect(listed.status()).toBe(200)
-  const { items } = (await listed.json()) as {
-    items: { id: string; name: string; slug: string; inStock: boolean; quantity: number }[]
-  }
-  const target = items.find((item) => item.inStock && item.quantity === 10)
-  if (!target) throw new Error('the demo store holds no product at full stock on page one')
-  const { name } = target
+  // A Home pick with a stock of at least 2: its product screen is opened from Home, so no search screen (L2's, not axe-clean) is visited.
+  const [name] = await homePicks(request, 2)
+  expect(name).toBeDefined()
+  const target = await listedProduct(request, koramangala, name!)
 
   // The seeded demo admin changes the stock; the real value is read first and restored in finally.
   const staff = await staffHeaders(request)
@@ -244,8 +226,7 @@ test('Clamp against core', async ({ page, request }) => {
 
   try {
     await page.goto('/')
-    await openSearch(page)
-    await searchFor(page, name)
+    await expect(section(page, 'Picked for you').getByRole('button', { name: `Add one ${name}`, exact: true })).toBeVisible()
     await page.locator(`a[href="/product/${target.slug}"]:visible`).click()
     await expect(page).toHaveURL(new RegExp(`/product/${target.slug}$`))
     await expect(quantityOf(page, name)).toContainText('2')
@@ -298,7 +279,7 @@ test('Replaced notice against core', async ({ page, request }) => {
   const shopper = await freshShopper(request, 'E2E Replaced')
   const seeded = await request.put(`${core}/me/cart/items`, {
     headers: shopper.headers,
-    data: { storeId: koramangala, productId: (await productId(request, koramangala, atKoramangala!)), quantity: 1 },
+    data: { storeId: koramangala, productId: (await listedProduct(request, koramangala, atKoramangala!)).id, quantity: 1 },
   })
   expect(seeded.status()).toBe(200)
   await signedIn(page, shopper, '560038')
@@ -315,19 +296,20 @@ test('Replaced notice against core', async ({ page, request }) => {
   await expect(sheet.getByText(notice, { exact: true })).toBeVisible()
   await expectNoViolations(page)
 
-  await sheet.getByRole('button', { name: 'Close sheet', exact: true }).click()
+  // A tap on the scrim above the panel closes it: the panel covers the scrim's centre, where Playwright would click.
+  await sheet.getByRole('button', { name: 'Close sheet', exact: true }).click({ position: { x: 4, y: 4 } })
   await expect(sheet).toBeHidden()
   await expect(cartBar(page, '1')).toBeVisible()
   await expect(page.getByText(notice, { exact: true })).toBeVisible()
   await expectNoViolations(page)
 })
 
-// The product id behind a name at a store: the first page's listing, as Home reads it.
-async function productId(request: APIRequestContext, storeId: string, name: string): Promise<string> {
+// The listed product of a name at a store (page one, as Home reads it): its id and slug.
+async function listedProduct(request: APIRequestContext, storeId: string, name: string): Promise<{ id: string; slug: string }> {
   const listed = await request.get(`${core}/stores/${storeId}/products?pageSize=24`)
   expect(listed.status()).toBe(200)
-  const { items } = (await listed.json()) as { items: { id: string; name: string }[] }
+  const { items } = (await listed.json()) as { items: { id: string; name: string; slug: string }[] }
   const found = items.find((item) => item.name === name)
   if (!found) throw new Error(`no product ${name} at ${storeId}`)
-  return found.id
+  return found
 }
