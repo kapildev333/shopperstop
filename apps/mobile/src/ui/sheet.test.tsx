@@ -50,3 +50,15 @@ test('sheet content scrolls', async () => {
   expect(scroll.type).toBe('RCTScrollView')
   expect(scroll.props.keyboardShouldPersistTaps).toBe('handled')
 })
+
+// The dialog is named by its title: react-native-web gives the Modal's root the dialog role and this label.
+test('sheet dialog is named by its title', async () => {
+  await render(
+    <Sheet open title="Add address" onClose={() => {}}>
+      <Text>Name field</Text>
+    </Sheet>,
+  )
+  let modal = screen.getByText('Add address')
+  while (!('onRequestClose' in modal.props) && modal.parent) modal = modal.parent
+  expect(modal.props.accessibilityLabel).toBe('Add address')
+})
