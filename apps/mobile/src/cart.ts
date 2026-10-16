@@ -10,6 +10,7 @@ import {
   getGuestCart,
   itemCount,
   loadGuestCart,
+  mergeBodies,
   useGuestCart,
   type CartFees,
   type CartProduct,
@@ -181,6 +182,51 @@ export async function clearCart(): Promise<ApiError | undefined> {
       queryClient.setQueryData(cartKey(token), cartView(emptyCart))
     }
     return error
+  })
+}
+
+// Pushes each guest line in guest order, then empties the guest cart even when a push failed. A session change before its turn sends nothing and keeps the guest cart.
+export async function mergeGuestCart(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  // A guest cart still being read is merged too.
+  await loadGuestCart()
+  return queued(async () => {
+    if (getToken() !== token) return
+    const bodies = mergeBodies(getGuestCart())
+    if (bodies.length === 0) return
+    const before = await queryClient.fetchQuery(cartOptions(token)).catch(() => undefined)
+    let failed = false
+    let clamped = false
+    let replaced = false
+    let last: CartUpdate | undefined
+    for (const body of bodies) {
+      const answered: { cart?: CartUpdate } = {}
+      const error = await call(async () => {
+        const result = await api.PUT('/me/cart/items', { body })
+        answered.cart = result.data
+        return result
+      })
+      if (error || !answered.cart) {
+        failed = true
+        continue
+      }
+      last = answered.cart
+      clamped ||= last.clamped
+      replaced ||= last.replaced
+    }
+    clearGuestCart()
+    await queryClient.cancelQueries({ queryKey: cartKey(token) })
+    if (last && !failed) {
+      queryClient.setQueryData(cartKey(token), {
+        ...last,
+        clamped,
+        replaced,
+        ...(replaced ? { replacedStoreId: before?.storeId } : {}),
+      })
+    } else {
+      await queryClient.invalidateQueries({ queryKey: cartKey(token) })
+    }
   })
 }
 

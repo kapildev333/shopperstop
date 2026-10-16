@@ -77,8 +77,8 @@ Scope: `src/cart.ts` (add `mergeGuestCart` only), `src/auth.ts` (one `await merg
 Scenarios: Merge bodies in guest order; Guest cart discarded after merge; Merge dropped when the session changed; Server cart emptied on a store change; Emptying the server cart fails.
 Starts from: `src/cart-merge.test.ts` test `merge bodies in guest order` (red: sign-in sends no `PUT`): guest lines set with `setQuantity` while signed out, then `await signIn({ email, password })` from `src/auth.ts` with fake `POST /auth/sign-in` (a `CustomerSession`), `PUT /me/cart/items` (recording bodies), `GET /me/cart`; the recorded bodies in order, and `getCartSummary()` from core's last answer. "Merge dropped": `setToken('t-1')`, hold a `PUT` from a `setQuantity`, call `mergeGuestCart()`, `setToken('t-2')`, release; no merge `PUT` and the guest cart unchanged (put guest lines in through `dispatchGuest` while signed out first). `src/cart-store-change.test.tsx`: render `PincodeSheet` (as `src/pincode-sheet.test.tsx` does) signed in with a cached cart line at Koramangala, `560038` faked to Indiranagar; "Switch store" sends `DELETE /me/cart` (204) and stores the pincode; with `DELETE` throwing, the alert "Could not empty your cart." and the pincode unchanged. These two need no product change if L2's dialog behaves as designed; if one fails for a reason outside `src/cart.ts`, stop and report.
 
-- [ ] 6.1 `test:` the five scenarios, red (the store-change pair may already pass once task 3 is in: then commit them as `test:` with a note in the log, no `feat:` needed for them)
-- [ ] 6.2 `feat:` `mergeGuestCart` and the `auth.ts` line; gates green
+- [x] 6.1 `test:` the five scenarios, red (the store-change pair may already pass once task 3 is in: then commit them as `test:` with a note in the log, no `feat:` needed for them)
+- [x] 6.2 `feat:` `mergeGuestCart` and the `auth.ts` line; gates green
 
 ## 7. Cart bar (`src/cart-bar.tsx`) — group C, after 3
 
