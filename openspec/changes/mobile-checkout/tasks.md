@@ -82,8 +82,8 @@ Starts from: `e2e/checkout.spec.ts` test `Address added at checkout against core
 Build: copy the helpers from `e2e/orders.spec.ts` and `e2e/cart.spec.ts` (`signedIn`, `guest`, `cartBar`, `cartSheet`, `serverCart`; design.md Decision 11), extending `orderPick` to return the product's `name` and `addAddress` to take a label and pincode; picks 2, 3, 4 and 5 in the scenario order. Copy the stock read, set to 0 and restore-in-`finally` from `apps/web/e2e/checkout.spec.ts`. Signed-in tests preset the token and `shopperstop:pincode` `560034` (`signedIn`); the guest test presets only the pincode. Reach `/checkout` through Home's "View cart" bar and the "My cart" sheet's "Proceed to checkout" link; the guest test finds its product through Home's search field as `e2e/catalog.spec.ts` does. Wait for `getByRole('dialog', { name })` before axe on a sheet. Run axe on every screen, sheet and alert state the scenario names.
 Run (with the manager's e2e slot only; ask in your log): `export PATH="$HOME/.local/node-v22.23.3/bin:$HOME/.local/bin:$PATH" && cd /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/mobile-P4-L4b && make e2e`; paste the mobile summary line.
 
-- [ ] 6.1 `test:` the four scenarios
-- [ ] 6.2 `feat:`/`fix:` until `make e2e` is green; gates green
+- [x] 6.1 `test:` the four scenarios
+- [x] 6.2 `feat:`/`fix:` until `make e2e` is green; gates green
 
 ## 7. Acceptance (team lead)
 
