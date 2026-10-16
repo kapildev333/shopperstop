@@ -154,9 +154,9 @@ Scope: `apps/mobile/src/app/product/[slug].tsx`, `apps/mobile/src/{catalog-produ
 Scenarios: Product with a discount, Plenty in stock, Out of stock product, Unknown product, More in the category, Count follows the product across screens.
 Starts from: `src/catalog-product.test.tsx`: the five scenario names (`renderRouter({ 'product/[slug]': Product }, { initialUrl: '/product/amul-curd' })`, each test its own render; none navigates); `src/catalog-product-count.test.tsx`: `count follows the product across screens` (`setQuantity('s-1', <banana id>, 1)` stands for the Home press, then the product screen shows the group "Quantity of Banana Robusta" with 1).
 
-- [ ] 13.1 Red
-- [ ] 13.2 The screen per the design file "3 · Product"
-- [ ] 13.3 Gates green
+- [x] 13.1 Red
+- [x] 13.2 The screen per the design file "3 · Product"
+- [x] 13.3 Gates green
 
 ## 14. Search screen
 
