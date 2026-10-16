@@ -3,7 +3,7 @@ Scope: `apps/admin/`
 Depends on: ui (`@shopperstop/ui`, landed #20), core (`services/core/openapi.json`, landed #23)
 Spec: Spec 1 §4, §7, §8; Spec 2 §8, §13; plan task 11
 ## Doing
-Admin's Phase 3 work is complete (2026-10-16): admin-P3-L1 `admin-riders` merged (#235) and archived in this PR. No admin worktree, branch or PR is open; no admin `make e2e` running (the slot went to rider, then mobile, by message). Next: nothing until the orchestrator writes a new package here or hands back a gap.
+Paused (2026-10-16). Admin's Phase 3 work is complete: admin-P3-L1 `admin-riders` merged (#235) and archived (#236). Admin has no Phase 4 lane. Next: the Phase 5 (payment) package the orchestrator writes here; Phase 6 (receipt) follows. No admin worktree, branch or PR is open; no admin `make e2e` running. Resume with `/loop 5min /manage admin` and read `## Requests` (label contract with rider) and `## Found` first.
 
 ## Lanes
 | Lane | Task | Scope | Status |
