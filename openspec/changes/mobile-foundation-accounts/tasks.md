@@ -71,9 +71,9 @@ Starts from: `src/ui/button.test.tsx`: `button presses` (role button, label text
 Scope: `apps/mobile/src/ui/{form-field.tsx,form-field.test.tsx}`.
 Starts from: `src/ui/form-field.test.tsx`: `input named by its label` (`getByLabelText('Email')`), `hint shown`, `error replaces the hint` (error text shown, hint gone, input `accessibilityHint` is the error, border `colors.danger`), `optional suffix` ("(optional)" after the label), `trailing slot` (a trailing `IconButton`-like node renders inside the frame), `typing calls onChangeText`.
 
-- [ ] 6.1 Red
-- [ ] 6.2 `FormField` (label, `TextInput` props passed through, `hint`, `error`, `optional`, `trailing`)
-- [ ] 6.3 Gates green
+- [x] 6.1 Red
+- [x] 6.2 `FormField` (label, `TextInput` props passed through, `hint`, `error`, `optional`, `trailing`)
+- [x] 6.3 Gates green
 
 ## 7. Sheet
 
