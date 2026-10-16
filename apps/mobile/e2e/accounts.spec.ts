@@ -38,6 +38,8 @@ async function openAccountSignedIn(page: Page) {
 test('demo customer signs in', async ({ page }) => {
   await page.goto('/account')
   await expect(page).toHaveURL(/\/sign-in\?returnTo=%2Faccount$/)
+  // Every screen names itself in the title (axe document-title); the sign-in screen's is "Sign in · ShopperStop".
+  await expect(page).toHaveTitle('Sign in · ShopperStop')
   await expectNoViolations(page)
 
   await page.getByLabel('Email', { exact: true }).fill(demo.email)
