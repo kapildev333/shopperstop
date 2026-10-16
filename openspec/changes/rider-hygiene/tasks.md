@@ -19,8 +19,8 @@ Scope: `services/rider/internal/httpx/` (`router.go`, `router_test.go`), `servic
 
 `make test-web` (the manager's gate) fails on this task until ui has landed the `api.test.ts` change in design.md "Cross-area" on main and the branch is merged with main. If it fails only with TS2344 in `packages/ui/src/api/api.test.ts`, commit the rider work anyway and write it in the lane log: that file is ui's.
 
-- [ ] 2.1 Apply the "Task 2: 405 method_not_allowed, tests" diff; see both tests fail; commit.
-- [ ] 2.2 Apply the "Task 2: 405 method_not_allowed, code" diff (`router.go`, the one-line `openapi.json` enum); `make gen postman` (only `rider.d.ts` changes, one line); run the gates; tick 2.1 and 2.2; commit with `rider.d.ts`.
+- [x] 2.1 Apply the "Task 2: 405 method_not_allowed, tests" diff; see both tests fail; commit.
+- [x] 2.2 Apply the "Task 2: 405 method_not_allowed, code" diff (`router.go`, the one-line `openapi.json` enum); `make gen postman` (only `rider.d.ts` changes, one line); run the gates; tick 2.1 and 2.2; commit with `rider.d.ts`.
 
 ## 3. Acceptance (team lead) and verification (manager)
 

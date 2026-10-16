@@ -1574,6 +1574,7 @@
                   "not_found",
                   "conflict",
                   "rate_limited",
+                  "method_not_allowed",
                   "internal"
                 ]
               },
