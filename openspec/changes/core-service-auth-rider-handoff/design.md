@@ -28,7 +28,7 @@ Alternative: a separate `RequireService` plus `RequireStaffOrService`/`RequireAd
 
 ### 3. Config: optional, strict when set
 
-`config.Config.ServiceTokens map[string]string` (nil when unset or empty). Entries are split on `,`, trimmed, empty ones dropped, each cut at the first `:`. Refused, with one problem each and never the token in the text: no colon or empty name (`entries must be name:token`), token under 32 bytes, a repeated name, a repeated token (two names on one token would make the subject ambiguous). The name has no charset rule (it only appears in logs).
+`config.Config.ServiceTokens map[string]string` (nil when unset or empty). Entries are split on `,`, trimmed, empty ones dropped, each cut at the first `:`. Refused, with one problem each and never the token in the text: no colon or empty name (`entries must be name:token`), token under 32 bytes, a repeated name, a repeated token (two names on one token would make the subject ambiguous). The name has no charset rule (it only appears in logs). Review fix (5d62990): whitespace anywhere inside a trimmed entry is refused too (`entries must be name:token with no spaces`), since a bearer header never carries it.
 
 ### 4. The request log names the service as `subjectType` `service`, `subjectId` `<name>`
 

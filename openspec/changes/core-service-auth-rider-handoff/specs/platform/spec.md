@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Service tokens are configured
-The core service SHALL read the optional `SHOPPERSTOP_CORE_SERVICE_TOKENS` as comma-separated `name:token` entries. It SHALL refuse to start, naming the variable and never printing a token, when an entry has no colon or an empty name, a token is shorter than 32 bytes, or a name or a token appears twice. Unset or empty, the service starts and admits no service.
+The core service SHALL read the optional `SHOPPERSTOP_CORE_SERVICE_TOKENS` as comma-separated `name:token` entries. It SHALL refuse to start, naming the variable and never printing a token, when an entry has no colon, an empty name or whitespace inside it, a token is shorter than 32 bytes, or a name or a token appears twice. Unset or empty, the service starts and admits no service.
 
 #### Scenario: The Makefile tokens are accepted
 - **WHEN** `SHOPPERSTOP_CORE_SERVICE_TOKENS` is `rider:dev-rider-service-token-dev-rider-00`, and again `rider:e2e-rider-service-token-e2e-rider-00`
@@ -16,7 +16,7 @@ The core service SHALL read the optional `SHOPPERSTOP_CORE_SERVICE_TOKENS` as co
 - **THEN** the service refuses to start with a message that names `SHOPPERSTOP_CORE_SERVICE_TOKENS` and 32 bytes and does not contain `abc123`
 
 #### Scenario: Malformed or repeated entries
-- **WHEN** an entry has no colon, an empty name, or names `rider` a second time
+- **WHEN** an entry has no colon, an empty name, whitespace inside it (`rider: <token>`), or names `rider` a second time
 - **THEN** the service refuses to start with a message that names `SHOPPERSTOP_CORE_SERVICE_TOKENS`
 
 ### Requirement: Services reach the rider's admin routes
