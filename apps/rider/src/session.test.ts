@@ -33,9 +33,9 @@ test('blocked storage keeps the token in memory', async () => {
   vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(blocked)
 
   const { clearToken, getToken, setToken } = await freshSession()
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
   expect(() => setToken('t4')).not.toThrow()
   expect(getToken()).toBe('t4')
   expect(() => clearToken()).not.toThrow()
-  expect(getToken()).toBeNull()
+  expect(getToken()).toBeUndefined()
 })

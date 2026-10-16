@@ -1,5 +1,5 @@
 # rider-P4-L3-T1 - rider on the shared client and token store (task 1 of rider-app-shared-swap)
-Status: not started
+Status: blocked
 
 ## Brief
 - LANE-ID: rider-P4-L3 (task T1). Area: `rider`.
@@ -17,7 +17,27 @@ Status: not started
 If a diff does not apply or the red/green counts differ, stop and write it under Blockers; do not improvise. Never edit `packages/ui/`, `router.ts`, other apps or the lane log `rider-P4-L3.md`.
 
 ## Red run
+Status: red confirmed (9 failed, manager decision: 9 is correct; the brief said 8 by typo)
+
+Applied "Task 1: tests" with `git apply` (clean). `npm run build --workspace packages/ui` exit 0. `npm run test --workspace apps/rider -- --run` run twice, both exit 1:
+ Test Files  4 failed | 6 passed (10)
+      Tests  9 failed | 52 passed (61)
+
+Failing tests (9, the same nine the brief names):
+FAIL  src/api.test.ts > a 401 mid-session returns to sign-in
+FAIL  src/api.test.ts > a failure answer with an error envelope without a message reaches the caller as an internal error with its status
+FAIL  src/api.test.ts > expired session on load returns to sign-in
+FAIL  src/session.test.ts > blocked storage keeps the token in memory
+FAIL  src/shell.test.tsx > sign out ends the session
+FAIL  src/sign-in.test.tsx > field validation from the service
+FAIL  src/sign-in.test.tsx > rate limited
+FAIL  src/sign-in.test.tsx > service unreachable or failing
+FAIL  src/sign-in.test.tsx > wrong credentials or inactive rider
+
+Brief text said "8 failed / 52 passed" and "8 red in all"; the brief also names nine tests, and design.md lists nine. Manager decision: 9 is correct, the "8" was a typo. Passing count 52, total 61.
 ## Green run
+(pending)
 ## Gates
 ## Found
 ## Blockers
+Red count is 9 (brief typo said 8; manager confirmed 9). Resolved, proceeding.
