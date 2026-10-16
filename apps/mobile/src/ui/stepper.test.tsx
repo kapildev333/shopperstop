@@ -13,7 +13,8 @@ test('stepper counts within the maximum', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Add Toned milk' }))
   await fireEvent.press(screen.getByRole('button', { name: 'Add one Toned milk' }))
 
-  const group = screen.getByRole('group', { name: 'Quantity of Toned milk' })
+  // A group View is not an accessibility element for RNTL's role query; its label is what names it.
+  const group = screen.getByLabelText('Quantity of Toned milk')
   expect(within(group).getByText('2')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Add one Toned milk' }).props.accessibilityState).toMatchObject({
     disabled: true,

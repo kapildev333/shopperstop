@@ -41,9 +41,9 @@ Scope: `apps/mobile/src/ui/{stepper.tsx,stepper.test.tsx}`.
 Scenario: Stepper counts within the maximum.
 Starts from: `src/ui/stepper.test.tsx`: `stepper counts within the maximum` (a test harness holding `value` in `useState`), `out of stock is disabled`, `large add reads Add to cart`.
 
-- [ ] 2.1 Red
-- [ ] 2.2 `Stepper` per the design file (`md` and `lg`, `hitSlop` to 44 in `md`)
-- [ ] 2.3 Gates green
+- [x] 2.1 Red
+- [x] 2.2 `Stepper` per the design file (`md` and `lg`, `hitSlop` to 44 in `md`)
+- [x] 2.3 Gates green
 
 ## 3. Dialog
 
