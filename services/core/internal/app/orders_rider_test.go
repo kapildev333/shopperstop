@@ -106,3 +106,10 @@ func TestServiceActorRules(t *testing.T) {
 		t.Fatalf("80-character name: got %d %s, want 200", status, raw)
 	}
 }
+
+// TestServiceForbiddenBeforeLookup: a service cancel is refused as forbidden even
+// for an order that does not exist, so the answer does not reveal which ids exist.
+func TestServiceForbiddenBeforeLookup(t *testing.T) {
+	status, raw := setStatus(t, testServiceToken, missingOrderID, map[string]any{"status": "cancelled", "actor": rider(riderA, "Ravi")})
+	expectError(t, "service cancel on a missing order", status, raw, 403, "forbidden", "", "")
+}
