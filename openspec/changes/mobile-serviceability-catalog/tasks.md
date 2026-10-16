@@ -103,9 +103,9 @@ Scope: `apps/mobile/src/{serviceability.ts,serviceability-gate.tsx,serviceabilit
 Scenarios: Not serviceable notice, Closed store notice, Store lookup fails, No pincode notice (the notice half: "Set your pincode" and "Choose pincode" opens the sheet state).
 Starts from: `src/serviceability-gate.test.tsx`: render `<StoreGate>{(store) => <Text>open {store.name}</Text>}</StoreGate>` inside `QueryClientProvider`: `not serviceable notice` (`setPincode('110001')`, fake 404 `not_serviceable`: level-2 heading "We don't deliver here yet"; pressing "Change pincode" makes `usePincodeSheetOpen()` true), `closed store notice` (heading "Koramangala store is closed", "Change pincode", link "See your orders"), `store lookup fails` (fetch refused: "You're offline"; fake core then "Try again" shows "open Koramangala"), `no pincode notice` ("Set your pincode", "Choose pincode" opens the sheet), `loading while the pincode is unknown` (label "Loading"); `src/serviceability.test.ts`: `resolvePincode caches the answer` (a following `useStore` makes no second request).
 
-- [ ] 8.1 Red
-- [ ] 8.2 `serviceability.ts` and `StoreGate` per design.md Decision 3 and the design file "8 · Not serviceable / closed"
-- [ ] 8.3 Gates green
+- [x] 8.1 Red
+- [x] 8.2 `serviceability.ts` and `StoreGate` per design.md Decision 3 and the design file "8 · Not serviceable / closed"
+- [x] 8.3 Gates green
 
 ## 9. Catalog queries, product card, paged grid
 
