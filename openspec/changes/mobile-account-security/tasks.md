@@ -58,8 +58,8 @@ Red: the map tests fail on the missing module `./app/verify-email` (create it as
 
 Commits: `test: verify-email screen`, `feat: verify-email screen`.
 
-- [ ] 2.1 Write the eight tests (with the empty route stub); run the three files; see them fail on their assertions; commit.
-- [ ] 2.2 Build Decisions 2 and 3; run the gates (`npm run build --workspace apps/mobile` must list `/verify-email`); tick 2.1 and 2.2; commit.
+- [x] 2.1 Write the eight tests (with the empty route stub); run the three files; see them fail on their assertions; commit.
+- [x] 2.2 Build Decisions 2 and 3; run the gates (`npm run build --workspace apps/mobile` must list `/verify-email`); tick 2.1 and 2.2; commit.
 
 ## 3. Forgot and reset password, sign-in link (`mobile-P5-L1-T3`)
 
