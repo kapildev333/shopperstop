@@ -1,15 +1,9 @@
 # mobile-P4-L1-T14 - Account screen (mobile-foundation-accounts, task 14)
-Status: blocked
+Status: done (open item: a jest open handle in `account.test.tsx`, see Found)
 ## Doing
-Red `test:` committed (b52da14, six files, 13 scenarios). Green (`feat:`) stopped on a primitive gap in `ui/button.tsx`, outside this brief's scope; waiting for a decision. Nothing pushed. Boxes 14.1 to 14.3 not ticked.
+Done on `lane/mobile-P4-L1-foundation-accounts`, nothing pushed. Commits, in order: `b52da14` test (account red, 13 scenarios), `54b9110` test (button red), `e883839` feat (Button `accessibilityLabel` and `icon`), `159c4ac` feat (account screen, `setDefaultAddress`, `deleteAddress`, `useBack` exported, boxes 14.1 to 14.3 ticked), `16f211c` refactor (one `splitError`). Team lead's decisions applied: Button approved in this lane, `useBack` exported, Link kept (see Found).
 ## Found
-- Red (14.1), full mobile suite before `app/account.tsx` exists: `Test Suites: 5 failed, 17 passed, 22 total`, `Tests: 67 passed, 67 total`. Each red suite fails at load with:
-  ```
-  FAIL src/account.test.tsx
-    Test suite failed to run
-      Cannot find module './app/account' from 'src/account.test.tsx'
-  ```
-  `npm run typecheck`: `TS2307: Cannot find module './app/account'` in the five account test files only.
+- Red (14.1): full mobile suite before `app/account.tsx` exists: `Test Suites: 5 failed, 17 passed, 22 total`, `Tests: 67 passed, 67 total`; each red suite fails at load with `Cannot find module './app/account' from 'src/account.test.tsx'`. Button red (54b9110): `Received: <View accessibilityRole="button" ...><Text ...>Edit</Text></View>` for `queryByRole('button', { name: 'Edit' })`, which must be null once `accessibilityLabel` names the button.
 - Scenario to file map (test names as tasks.md names them):
   | Scenario | File: test |
   |---|---|
@@ -26,17 +20,20 @@ Red `test:` committed (b52da14, six files, 13 scenarios). Green (`feat:`) stoppe
   | Core unreachable with nothing held | `src/account.test.tsx`: `Core unreachable with nothing held` |
   | Core failure with nothing held | `src/account.test.tsx`: `Core failure with nothing held` |
   | Failed refetch keeps the account | `src/account.test.tsx`: `Failed refetch keeps the account` |
-  Non-navigating scenarios render the screen directly (no router, one render per test); the five navigating ones each sit in their own file (one `renderRouter` per file).
-- Blocker, the gap: the account scenarios name buttons that `Button` (`src/ui/button.tsx`, T5) cannot produce. `Button` takes `children`, `variant`, `size`, `loading`, `disabled`, `onPress` and nothing else: no `accessibilityLabel`, no icon. The spec and design need "Edit profile" (ghost compact, visible "Edit"), "Edit <label>", "Set <label> as default", "Delete <label>" (ghost-danger) and the "Add" button named "Add address" with a `Plus` 16 icon. A wrapping `View` with a label would nest two controls; a local `Pressable` in `account.tsx` would be the one-off recipe CLAUDE.md forbids.
-- Smaller items for the same decision: the profile card's `Edit` and the `Your orders` row use `Link` (expo-router) outside a navigator in the non-navigating tests; not verified yet, it may need the `renderRouter` path for those tests.
-- Held cleanup (`refactor:` one splitError), verified, then reverted because the suite is not green: `address-sheet.tsx` imports `splitError` from `./auth-forms` and calls `splitError(error, fieldNames)`; its local `splitError` and the `ApiError` import go. With it, the 67 non-account tests pass and typecheck is clean outside the account files. Re-apply after the `feat:`.
-- `addresses.ts` `setDefaultAddress` and `deleteAddress` are not written yet: they are only reachable through the screen, so they go in with the `feat:` that makes "Addresses and default" and "Address deleted" pass (no untested code).
-- Back button in the account header: `useBack` in `auth-forms.tsx` is not exported. Planned as three inline lines in `account.tsx`, not a shared helper; say if it should be exported instead (that is T11's file).
+- Non-navigating tests render the screen with `QueryClientProvider` (the root layout supplies it in the app). Navigating tests use the real `src/app` directory with the `shell.test.tsx` font mock, so the root layout provides the query client; one `renderRouter` per file.
+- Choice (team lead's point 3): `Link` kept for "Your orders". It renders outside a navigator (the non-navigating tests pass); no press test of it. `router.push` not needed.
+- `useMe` is not in `api.ts`, though task 3.2 says it stays there, and nothing in `src` defines it. Defined in `account.tsx` (its only reader). Move it to `api.ts` if a second screen needs it; this is a placement question for the team lead.
+- Button additions: `accessibilityLabel` overrides the name from the visible text; `icon` (`ComponentType<{ size?, color? }>`) renders 16 px in the label tone before the text. The icon test uses a probe component, not Lucide, to read the props Button gives it.
+- Back in the account header: `useBack` exported from `auth-forms.tsx` (team lead's point 2), imported in `account.tsx`.
+- Gates on `16f211c` (last lines): `npm run build --workspace packages/ui` exit 0; `npm run lint --workspace apps/mobile` exit 0; `npm run typecheck --workspace apps/mobile` exit 0; `npm run test --workspace apps/mobile -- --run`: `Test Suites: 22 passed, 22 total`, `Tests: 82 passed, 82 total`, exit 0; `npm run build --workspace apps/mobile`: `Exported: dist`, exit 0, `apps/mobile/dist/account.html` present; `openspec validate mobile-foundation-accounts --strict`: `Change 'mobile-foundation-accounts' is valid`; `make test-web`: exit 0 (mobile 82 tests inside; web 295 and 153 in the other workspaces).
+- Open item, not fixed: jest reports an open `Timeout` handle from `account.test.tsx`. Isolated runs: `Loading account` alone has none; `Core unreachable with nothing held` alone passes and then keeps jest from exiting ("did not exit one second after the test run"). Navigating account files show none. The suites still pass and exit 0, and `make test-web` exits 0; the jest worker warning ("failed to exit gracefully") appears in the mobile run. Diagnosis not finished: likely a timer left by the banner's refetch path. Owner: this lane's reviewer or the next task.
 ## Deviations and choices (for the team lead)
-- Red commit lists six files, not one: the brief's `account.test.tsx` plus the five navigating files it allows (`account-*.test.tsx`).
-- Test name `Profile saved (card half)` follows tasks.md; the spec scenario is `Profile saved`.
+- Red commit spans six files: the brief's `account.test.tsx` plus the five navigating files it allows.
+- The `feat:` commit also changed the red test files: the `QueryClientProvider` wrapper for non-navigating renders, and the real `app` directory for navigating renders (both needed to run the screen, see Found). The red run was recorded before those changes.
+- The `button.test.tsx` icon test was rewritten in the `feat:` (its red version queried the icon through `screen.UNSAFE_getAllByType`, which RNTL 14 does not provide), so the red commit's icon test was a test bug, not the feature.
+- Header Back uses `useBack` (exported), so no duplicate. Sign out does `router.replace('/')` then `signOut()`, as the spec says.
+- Address row errors (set default, delete) show one `alert` line at the top of the addresses card, as web does; the spec does not name the copy.
 ## Requests
-- to mobile-P4-L1 (team lead): decide the `Button` gap. Proposed: a `feat:` in this lane on `src/ui/button.tsx` (T5's file, approved by you) adding an optional `accessibilityLabel?: string` passed through to the `Pressable`, and an optional `icon?` (Lucide, 16 px in the compact and md sizes) before the label. Then the account screen composes `Button` as the design says. Alternatives: a `ui` lane task for it, or accept a one-off in `account.tsx` (not recommended). Green is blocked until this is decided.
-- to mobile-P4-L1 (team lead): confirm `useBack` may be duplicated inline in `account.tsx`, or export it from `auth-forms.tsx`.
+- to mobile-P4-L1 (team lead): decide where `useMe` lives (see Found); the open jest handle needs an owner.
 ## Blockers
-- Button primitive gap above (no `accessibilityLabel`, no icon). Blocks 14.2 and 14.3.
+None.
