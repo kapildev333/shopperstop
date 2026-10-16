@@ -1,5 +1,5 @@
 # core-P4-L2-t2 - password reset (task 2 of core-accounts-security)
-Status: ready (after task 1 is committed)
+Status: done (2.1 93ccabe, 2.2 7970452; review approve after fix task 4, accepted 2026-10-16)
 ## Brief
 - LANE-ID: core-P4-L2 (task 2 of 3). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L2. Branch: lane/core-P4-L2-accounts-security. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.

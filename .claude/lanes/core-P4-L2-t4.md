@@ -1,5 +1,5 @@
 # core-P4-L2-t4 - reset limiter and mail failure (fix task 4 from the task 2 review)
-Status: done
+Status: done (4.1 e2083d2, 4.2 4234f53; review approve, accepted 2026-10-16)
 ## Brief
 - LANE-ID: core-P4-L2 (fix task 4). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L2. Branch: lane/core-P4-L2-accounts-security. Commit as kapildev333, no trailers; never push.

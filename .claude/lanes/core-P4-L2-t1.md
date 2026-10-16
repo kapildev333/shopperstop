@@ -1,5 +1,5 @@
 # core-P4-L2-t1 - email verification (task 1 of core-accounts-security)
-Status: done (1.1, 1.2)
+Status: done (1.1 5757b54, 1.2 84bc597; review approve, accepted 2026-10-16)
 ## Brief
 - LANE-ID: core-P4-L2 (task 1 of 3). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P4-L2. Branch: lane/core-P4-L2-accounts-security. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
