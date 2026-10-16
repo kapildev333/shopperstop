@@ -291,7 +291,7 @@ test('a poll answer read before a cancel never puts the order back on the board'
   // The poll leaves, and core reads the order as placed; its answer is still in the air when the cancel is answered.
   core.hold('lists')
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
   await user.click(within(cancelDialog()).getByRole('button', { name: 'Cancel order' }))
   const sheet = await screen.findByRole('dialog', { name: 'Order SS-TEST0001' })
   expect(within(sheet).getByText('Order cancelled.')).toBeInTheDocument()

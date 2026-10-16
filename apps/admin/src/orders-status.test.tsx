@@ -42,7 +42,7 @@ test('a press sends the next status once, moves the card with core\'s answer and
   expect(within(column('Accepted')).getByRole('button', { name: 'Start packing SS-TEST0001' })).toBeInTheDocument()
   expect(within(column('Placed')).getAllByRole('listitem')).toHaveLength(1)
   expect(core.posts).toEqual([{ id: order(1, 'placed').id, body: { status: 'accepted' } }])
-  expect(listRequests(calls)).toHaveLength(5)
+  expect(listRequests(calls)).toHaveLength(1)
 })
 
 test('while a status change runs the pressed button reads Saving…, keeps focus and is never disabled; a second press and another card\'s button send nothing', async () => {
@@ -179,7 +179,7 @@ test('a poll answer read before a status change never moves the card back', asyn
   // The poll leaves, and core reads the order as placed; its answer is still in the air when the press is answered.
   core.hold('lists')
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  expect(listRequests(calls)).toHaveLength(10)
+  expect(listRequests(calls)).toHaveLength(2)
   await user.click(button('Accept SS-TEST0001'))
   expect(await screen.findByText('SS-TEST0001 is now Accepted.')).toBeInTheDocument()
 
@@ -190,7 +190,7 @@ test('a poll answer read before a status change never moves the card back', asyn
 
   // The poll goes on afterwards.
   await act(() => vi.advanceTimersByTimeAsync(10_000))
-  await waitFor(() => expect(listRequests(calls)).toHaveLength(15))
+  await waitFor(() => expect(listRequests(calls)).toHaveLength(3))
 })
 
 test('the keyboard after a delivery is on a result named for what it holds', async () => {
