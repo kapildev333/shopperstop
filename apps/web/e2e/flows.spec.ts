@@ -114,7 +114,7 @@ test('customer order to delivered across both apps', async ({ page, request, bro
   await dialog.getByLabel('Pincode', { exact: true }).fill('560034')
   await dialog.getByRole('button', { name: 'Save address', exact: true }).click()
   await expect(dialog).toBeHidden()
-  await expect(addresses.getByRole('button', { name: 'Deliver to Home', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(addresses.getByRole('radio', { name: 'Deliver to Home', exact: true })).toHaveAttribute('aria-checked', 'true')
   const summary = page.getByRole('region', { name: 'Order summary', exact: true })
   await expect(summary.getByText(a.name, { exact: true })).toBeVisible()
   await expect(summary.getByText(b.name, { exact: true })).toBeVisible()

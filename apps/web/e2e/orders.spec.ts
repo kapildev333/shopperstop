@@ -168,7 +168,7 @@ test.describe('phone', () => {
     const addresses = page.getByRole('region', { name: 'Delivery address', exact: true })
     const summary = page.getByRole('region', { name: 'Order summary', exact: true })
     await expect(summary.getByText(pick.name, { exact: true })).toBeVisible()
-    await expect(addresses.getByRole('button', { name: 'Deliver to Home', exact: true })).toBeVisible()
+    await expect(addresses.getByRole('radio', { name: 'Deliver to Home', exact: true })).toBeVisible()
     await expect(addresses.getByRole('button', { name: 'Add address', exact: true })).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Edit cart', exact: true })).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Place order (COD)', exact: true })).toBeVisible()
