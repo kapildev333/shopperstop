@@ -5,7 +5,7 @@ import { queryClient } from './api'
 import { keys } from './catalog'
 import { Countdown } from './order-parts'
 import { OrderPage } from './order-tracking'
-import { orderKey, type Order, type OrderResult } from './orders'
+import { deliveryKey, orderKey, type Delivery, type Order, type OrderResult } from './orders'
 import { setToken } from './session'
 import { order, refetchFailed, renderAt, renderInRouter, store } from './test-data'
 
@@ -15,9 +15,17 @@ const koramangala = '00000000-0000-4000-8000-000000000401'
 // Only the clock is faked here, and only in the countdown tests (Testing Library's findBy and the router need setTimeout).
 afterEach(() => {
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 const placed = { toStatus: 'placed' as const, actorType: 'customer' as const, createdAt: '2026-10-13T10:00:00.000Z' }
 const accepted = { toStatus: 'accepted' as const, actorType: 'staff' as const, createdAt: '2026-10-13T10:20:00.000Z' }
+
+// The rider read, seeded like the order: the mount read fails under jsdom and the seed stays.
+function seedDelivery(delivery: Delivery | null) {
+  queryClient.setQueryData(deliveryKey('t', id), delivery)
+}
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000 - 5_000).toISOString()
+const position = (recordedAt: string) => ({ lat: 12.9352, lng: 77.6245, recordedAt })
 
 // Signed in, with the order seeded (no HTTP). The order key has no staleTime, so the page's mount read fails under jsdom and the seed stays.
 function seed(overrides: Partial<Order> | null = {}) {
@@ -246,4 +254,91 @@ test('refused cancel reads the order again', async () => {
   expect(within(dialog).getByRole('button', { name: 'Keep order' })).toBeInTheDocument()
   expect(within(dialog).queryByRole('button', { name: 'Cancel order' })).toBeNull()
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Your order is being packed.'))
+})
+
+test('rider on the way with a position', async () => {
+  seed({ status: 'out_for_delivery', riderName: 'Asha' })
+  seedDelivery({ riderName: 'Asha', status: 'assigned', location: position(minutesAgo(3)) })
+  renderAt(`/orders/${id}`)
+  const rider = await screen.findByRole('region', { name: 'Rider' })
+  expect(within(rider).getByText('Asha')).toBeInTheDocument()
+  expect(within(rider).getByText('Out for delivery')).toBeInTheDocument()
+  expect(within(rider).getByText('Last seen 3 minutes ago')).toBeInTheDocument()
+  const maps = within(rider).getByRole('link', { name: 'Open in Maps (opens in a new tab)' })
+  expect(maps).toHaveAttribute('href', 'https://www.google.com/maps?q=12.9352,77.6245')
+  expect(maps).toHaveAttribute('target', '_blank')
+  expect(maps).toHaveAttribute('rel', 'noopener')
+})
+
+test('rider without a position', async () => {
+  seed({ status: 'out_for_delivery', riderName: 'Asha' })
+  seedDelivery({ riderName: 'Asha', status: 'assigned' })
+  renderAt(`/orders/${id}`)
+  const rider = await screen.findByRole('region', { name: 'Rider' })
+  expect(within(rider).getByText('Asha')).toBeInTheDocument()
+  expect(within(rider).queryByText(/Last seen/)).toBeNull()
+  expect(within(rider).queryByRole('link', { name: /Open in Maps/ })).toBeNull()
+})
+
+test('no rider card before a rider', async () => {
+  const asked: string[] = []
+  vi.stubGlobal('fetch', async (request: Request) => {
+    const path = new URL(request.url).pathname
+    asked.push(path)
+    if (path.startsWith('/api/rider/')) {
+      return new Response(JSON.stringify({ error: { code: 'not_found', message: 'not found' } }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw new TypeError('fetch failed')
+  })
+  seed({ status: 'ready' })
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+  await waitFor(() => expect(asked).toContain(`/api/core/v1/orders/${id}`))
+  expect(screen.queryByRole('region', { name: 'Rider' })).toBeNull()
+  expect(asked.filter((path) => path.startsWith('/api/rider/'))).toEqual([])
+
+  cleanup()
+  seed({ status: 'out_for_delivery' })
+  renderAt(`/orders/${id}`)
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-DEMOAAAD' })).toBeInTheDocument()
+  await waitFor(() => expect(queryClient.getQueryState(deliveryKey('t', id))?.status).toBe('success'))
+  expect(queryClient.getQueryData(deliveryKey('t', id))).toBeNull()
+  expect(screen.queryByRole('region', { name: 'Rider' })).toBeNull()
+})
+
+test('delivered order names the rider from the rider read', async () => {
+  seed({ status: 'delivered' })
+  seedDelivery({ riderName: 'Arjun Rao', status: 'delivered' })
+  renderAt(`/orders/${id}`)
+  const rider = await screen.findByRole('region', { name: 'Rider' })
+  expect(within(rider).getByText('Arjun Rao')).toBeInTheDocument()
+  expect(within(rider).getByText('Delivered')).toBeInTheDocument()
+  expect(within(rider).queryByRole('link', { name: /Open in Maps/ })).toBeNull()
+})
+
+test('failed rider read keeps the card', async () => {
+  seed({ status: 'out_for_delivery', riderName: 'Asha' })
+  seedDelivery({ riderName: 'Asha', status: 'assigned', location: position(minutesAgo(3)) })
+  renderAt(`/orders/${id}`)
+  const rider = await screen.findByRole('region', { name: 'Rider' })
+  await refetchFailed(deliveryKey('t', id))
+  expect(within(rider).getByText('Asha')).toBeInTheDocument()
+  expect(within(rider).getByText('Last seen 3 minutes ago')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('last seen kept current', async () => {
+  fakeClock('2026-10-13T10:13:00.000Z')
+  seed({ status: 'out_for_delivery', riderName: 'Asha' })
+  seedDelivery({ riderName: 'Asha', status: 'assigned', location: position('2026-10-13T10:10:00.000Z') })
+  renderAt(`/orders/${id}`)
+  const rider = await screen.findByRole('region', { name: 'Rider' })
+  expect(within(rider).getByText('Last seen 3 minutes ago')).toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(60_000)
+  })
+  expect(within(rider).getByText('Last seen 4 minutes ago')).toBeInTheDocument()
 })
