@@ -125,7 +125,7 @@ Deferred, named:
 - R1 #2 (a guest cart priced without a resolved store has zero fees and minimum, so Proceed can show below the store's minimum): handled in mobile-P4-L4b (checkout re-reads the store and core re-checks at placement).
 - R1 #4: three "overlapping act() calls" console errors in `src/cart-write-failure.test.tsx`; not failing; clean up when that file is next touched.
 - R1 #5: a guest change in the milliseconds before the one storage read settles drops the stored lines (Decision 2's rule); accepted.
-- The Modal close in `src/pincode-store-change-close.test.tsx` is a stand-in (the test calls the dialog's close path directly; RNTL cannot run the native `Modal` fade-out); the e2e store-change scenario covers the real close on the web export.
+- `src/pincode-store-change-close.test.tsx` replaces React Native's `Modal` with a stand-in (`jest.mock('react-native/Libraries/Modal/Modal')`) that keeps its children mounted while closing, as the device does during the fade; Jest's `Modal` unmounts at once. It mocks a platform component, not an app module or the network; the e2e store-change scenarios cover the real close on the web export.
 
 ## Risks / Trade-offs
 
