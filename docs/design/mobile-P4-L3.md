@@ -32,8 +32,8 @@ export function mergeBodies(cart: GuestCart): { storeId: string; productId: stri
 export function getGuestCart(): GuestCart
 export function loadGuestCart(): Promise<GuestCart>                   // starts the one read on the first call, resolves after it settles; later calls return the same promise
 export function useGuestCart(): GuestCart                            // calls loadGuestCart() once from an effect; server snapshot emptyCart
-export function dispatchGuest(action: CartAction): void               // memory now and loaded = true (a late read is dropped); then setItem / removeItem, rejections swallowed
-export function clearGuestCart(): void
+export function dispatchGuest(action: CartAction): void               // only when the action changes the cart: memory now and loaded = true (a late read is dropped); then setItem / removeItem, rejections swallowed. A no-op leaves the read to load
+export function clearGuestCart(): void                                // always: empty cart, loaded = true, emit, removeItem, even when memory is already empty (a late read is dropped)
 
 // src/cart.ts  (task 3; L2's names kept, bodies replaced)
 export type { CartProduct, CartView } from './cart-guest'

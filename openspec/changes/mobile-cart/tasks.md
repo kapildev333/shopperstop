@@ -30,6 +30,7 @@ Starts from: `src/cart-guest.test.ts` test `guest line set and removed` (red: mo
 
 - [x] 1.1 `test:` the scenarios, red
 - [x] 1.2 `feat:` `src/cart-guest.ts`; gates green
+- [ ] 1.3 Follow-up (manager decision on T1's question, design.md Decision 2): `test:` `clear before the read settles wins` in `src/cart-guest.test.ts` (stored cart holds P, read pending, `clearGuestCart()` on the empty in-memory cart, then resolve the read: the cart is empty and async storage has no `shopperstop:cart`), red; then `fix:` `clearGuestCart()` marks loaded, emits and removes the stored value even when the reducer returns the same empty cart; the no-op rule for `set` stays; gates green
 
 ## 2. Sheet footer (`src/ui/sheet.tsx`) — group A
 

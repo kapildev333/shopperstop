@@ -41,7 +41,7 @@ Workers cannot open the canvas: `docs/design/mobile-P4-L3.md` carries the artboa
 
 ### 2. Guest storage read once, asynchronously
 
-As `src/pincode.ts`: module state with `useSyncExternalStore`; the first `useGuestCart()` (from an effect) or `loadGuestCart()` starts the one read; a `dispatchGuest` before it settles marks the cart loaded and the read's result is dropped. Every storage call is in `try`/`catch` or `.catch`. The static render in Node never reads (the read starts from an effect). On the web export async storage is `localStorage` under the same key, which the e2e suite reads.
+As `src/pincode.ts`: module state with `useSyncExternalStore`; the first `useGuestCart()` (from an effect) or `loadGuestCart()` starts the one read; a `set` that changes the cart before the read settles marks it loaded and the read's result is dropped; a `set` that changes nothing (for example 0 for a product not in the cart) leaves the read to load the stored cart; `clearGuestCart()` always wins, even on an empty in-memory cart: it marks the cart loaded, emits and removes the stored value, because a clear is the customer's decision (store change confirmed, merge done) and a late read must not bring the cart back (manager, 2026-10-16, on T1's question). Every storage call is in `try`/`catch` or `.catch`. The static render in Node never reads (the read starts from an effect). On the web export async storage is `localStorage` under the same key, which the e2e suite reads.
 
 ### 3. `setQuantity` takes the product
 
