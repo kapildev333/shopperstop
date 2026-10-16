@@ -119,9 +119,7 @@ function Content({ order, back, onHelp }: { order: Order; back: () => void; onHe
             <Timeline order={order} />
           </Card>
         </View>
-        <View style={{ marginTop: 12, marginHorizontal: 12 }}>
-          <RiderCard order={order} />
-        </View>
+        <RiderCard order={order} />
         <View style={{ marginTop: 12, marginHorizontal: 12 }}>
           <Card>
             <View style={{ gap: 8 }}>
