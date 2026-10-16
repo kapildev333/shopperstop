@@ -36,7 +36,7 @@ export function deliveryOptions(token: string, orderId: string, status: OrderSta
         params: { path: { orderId } },
       })
       if (response.status === 404) return null
-      if (error || !data) throw error ?? new Error('no answer')
+      if (error || !data) throw error?.error ?? new Error('no answer')
       return data
     },
   })
