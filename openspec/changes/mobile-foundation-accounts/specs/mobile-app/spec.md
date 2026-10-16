@@ -202,11 +202,15 @@ The account screen SHALL list `GET /me/addresses` under "Saved addresses", each 
 - **THEN** "No saved addresses. Add one to check out faster." and an "Add address" button are shown
 
 ### Requirement: Mobile address row actions sent once
-While an address row action is waiting for core, the row actions SHALL be disabled, so a second tap sends nothing.
+While an address row action is waiting for core, the row actions SHALL be disabled, so a second tap sends nothing, also when both taps fall in the same tick. A row action that fails, also by throwing, SHALL re-enable the row actions.
 
 #### Scenario: Row action not sent twice
 - **WHEN** the customer chooses "Set as default" or "Delete" on "Work" twice before core answers the first
 - **THEN** one `PATCH` or one `DELETE` was sent
+
+#### Scenario: Failed row action re-enables the rows
+- **WHEN** the customer chooses "Set as default" on "Work" and the network refuses the `PATCH`
+- **THEN** "Could not reach ShopperStop. Try again." is shown and "Set Work as default" and "Delete Work" are enabled again
 
 ### Requirement: Mobile address sheet
 Adding and editing SHALL use one sheet titled "Add address" or "Edit address" with "Save as" chips Home, Work and Other (plus the address's own label when it is none of these), "House, flat, floor", "Street and area" (optional), "Pincode", a "Make this my default address" switch that announces its on or off state, and "Save address", which sends `POST /me/addresses` or `PATCH /me/addresses/{id}` and closes the sheet only on success.
@@ -222,6 +226,10 @@ Adding and editing SHALL use one sheet titled "Add address" or "Edit address" wi
 #### Scenario: Default switch reports its state
 - **WHEN** the "Make this my default address" switch is off and the customer chooses it
 - **THEN** it is found by the role switch and its label, its state is checked false before the press, and the sheet is told it is now on
+
+#### Scenario: Space flips the switch
+- **WHEN** the "Make this my default address" switch is off and has focus on the web export, and the customer presses Space
+- **THEN** the sheet is told it is now on, the page does not scroll, and Enter is left to the switch's own press
 
 ### Requirement: Mobile address sheet checks
 The address sheet SHALL show "Enter house, flat or floor" for an empty first line and "Enter a 6-digit pincode" unless the pincode is six digits, and send nothing then; an envelope error naming `label`, `line1`, `line2` or `pincode` SHALL show under that field and keep the sheet open; any other failure SHALL show in an alert inside the sheet.

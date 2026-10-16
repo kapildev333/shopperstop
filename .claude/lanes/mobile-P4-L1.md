@@ -1,7 +1,7 @@
 # mobile-P4-L1 - mobile-foundation-accounts: Expo workspace, client, session, RN primitives, sign in, register, account, addresses (team lead)
-Status: blocked (16.1 not accepted: one gap, task 15.4)
+Status: done (16.1 accepted)
 ## Doing
-16.1 `/opsx:verify` done: not accepted until 15.4 (cold-cache Jest timeout) lands; then re-verify and tick 16.1.
+16.1 accepted and ticked (second pass, after 15.4 and the R2 fixes). 16.2 is the manager's.
 ## Found
 - Change `openspec/changes/mobile-foundation-accounts/`: proposal; `specs/mobile-app/spec.md` (22 ADDED requirements, 58 scenarios, seeds `mobile-app`); design.md (18 decisions, web-app mirror table, scenario-to-test map, deferred list); tasks.md (15 worker tasks + 15.4 + acceptance). `docs/design/mobile-P4-L1.md` carries the canvas data.
 - 16.1 verify (2026-10-16, head after 2bf3a46):
@@ -13,8 +13,9 @@ Status: blocked (16.1 not accepted: one gap, task 15.4)
 - T15 decisions folded into design.md: Decision 8 (dialog name, dialog role and Escape only after the slide ends, 80% scroll cap), 14 (Toggle replaces RN Switch), 15 (+html.tsx static title, per-screen "<Screen> · ShopperStop"), 16 (Enter submits, row guard, screen-support.ts), 17 (sign-out `leaving` state; the old "replace first" note in Decision 5 was wrong and is replaced), 18 (e2e global-setup reseed, eslint.config.mjs, one navigating router test per file).
 - Worker requests answered: T9 lucide under Jest (moduleNameMapper, in place); T10 split router files (Decision 18); T13 splitError (screen-support.ts) and pincode tabular-nums (deferred to L2); T14 useMe (now in api.ts), open jest handle (not seen at 16.1).
 - Deferred (design.md "Deferred to later lanes"): L2 inline-style cleanup and ErrorBanner reusing Button, pincode tabular-nums; L3 "Your cart stays as it is." copy; jest.config.js hard-coded lucide path (next lane touching it); R1 finding 7 hydration watch.
+- 16.1 second pass (head ee35d1f + this commit): 15.4 (5bb4c35, `testTimeout: 60_000`) and R2 fixes (d498901, df2d7ab, 33e2709, 550fb73, 9819d93) checked. ui build, lint, typecheck exit 0; `npx jest --ci --no-cache` twice: 94 of 94 both; `npm run test --workspace apps/mobile -- --run` 25 suites, 94 tests; build exit 0; `openspec validate --all --strict` 19 passed. Two scenarios added for the R2 behaviour (Space flips the switch; Failed row action re-enables the rows), 60 scenarios across 22 requirements, all mapped in design.md; R2 notes folded into Decisions 14 and 16. Scope: the R2 and 15.4 commits touch only `src/ui/toggle.tsx`, `src/ui/toggle.test.tsx`, `src/app/account.tsx`, `src/account.test.tsx`, `jest.config.js`; nothing outside apps/mobile, this change, docs/design/mobile-P4-L1.md, the lane logs and package-lock.json. Accepted.
 ## Requests
-- to mobile manager: launch task 15.4 (brief in tasks.md and in the team-lead report); then I re-run 16.1. 16.2 (gates, `make e2e`, walk) is yours.
+- to mobile manager: 16.2 (gates, `make e2e`, walk at 390x844) is yours; then archive by PR after merge.
 - to platform (via manager): task 1 rewrote the root `package-lock.json` (mechanical).
 ## Blockers
-- 16.1 waits on 15.4.
+None.

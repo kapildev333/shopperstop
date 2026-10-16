@@ -148,7 +148,7 @@ typescript-eslint recommended plus `react-hooks`, as in `apps/web`, without `jsx
 
 ### 14. Toggle instead of React Native's Switch
 
-`src/ui/toggle.tsx`: a `Pressable` with `accessibilityRole="switch"`, `accessibilityLabel`, `accessibilityState={{ checked }}` and `aria-checked={checked}`, a 44 px row with the label, and a track (`lineStrong` off, `accent` on) and thumb (`surface`) from tokens. React Native's `Switch` on the web export nests an `<input role="switch">` inside a `div role="switch"` with no `aria-checked` (axe `nested-interactive`, `aria-required-attr`), and no axe rule is switched off. `aria-checked` is passed as well as `accessibilityState` because react-native-web 0.21.4 reads only `aria-checked` for a `Pressable`. Jest cannot see the web attribute (the host does not forward it), so the e2e axe run on the open address sheet is its test; `toggle.test.tsx` covers the role, state and flip. Every later on/off control uses `Toggle`.
+`src/ui/toggle.tsx`: a `Pressable` with `accessibilityRole="switch"`, `accessibilityLabel`, `accessibilityState={{ checked }}` and `aria-checked={checked}`, a 44 px row with the label, and a track (`lineStrong` off, `accent` on) and thumb (`surface`) from tokens. React Native's `Switch` on the web export nests an `<input role="switch">` inside a `div role="switch"` with no `aria-checked` (axe `nested-interactive`, `aria-required-attr`), and no axe rule is switched off. `aria-checked` is passed as well as `accessibilityState` because react-native-web 0.21.4 reads only `aria-checked` for a `Pressable`. Jest cannot see the web attribute (the host does not forward it), so the e2e axe run on the open address sheet is its test; `toggle.test.tsx` covers the role, state and flip. On the web export react-native-web presses a switch on Enter but not on Space (it maps Space only for buttons), so `Toggle` handles `keyDown` Space itself, flips and calls `preventDefault` so the page does not scroll (R2). The thumb takes `radius.pill`. Every later on/off control uses `Toggle`.
 
 ### 15. Document titles
 
@@ -157,7 +157,7 @@ typescript-eslint recommended plus `react-hooks`, as in `apps/web`, without `jsx
 
 ### 16. Enter submits; row actions guarded
 
-R1 findings 2 and 3, fixed in T15: Password carries `returnKeyType="go"` and `onSubmitEditing={submit}` on both forms; the account screen disables Edit, Set as default and Delete on every row while one row action is pending (one state for the list, not per row: there is one customer and seldom more than a few addresses). `useBack` and `splitError` moved to `src/screen-support.ts` (R1 finding 4).
+R1 findings 2 and 3, fixed in T15: Password carries `returnKeyType="go"` and `onSubmitEditing={submit}` on both forms; the account screen disables Edit, Set as default and Delete on every row while one row action is pending (one state for the list, not per row: there is one customer and seldom more than a few addresses). The guard is a `useRef` read synchronously, so two presses in one tick send one request, and `try`/`finally` re-enables the rows when the request throws (R2). `useBack` and `splitError` moved to `src/screen-support.ts` (R1 finding 4).
 
 ### 17. Sign-out navigation
 
@@ -171,7 +171,7 @@ R1 findings 2 and 3, fixed in T15: Password carries `returnKeyType="go"` and `on
 
 ## Scenario to test
 
-Acceptance (16.1) map: every test named below passed in `npm run test --workspace apps/mobile -- --run` (25 suites, 91 tests) and in the T15 `make e2e` run (mobile 4 of 4).
+Acceptance (16.1) map: every test named below passed in `npm run test --workspace apps/mobile -- --run` (25 suites, 94 tests, also with `--no-cache`) and in the T15 `make e2e` run (mobile 4 of 4).
 
 | Scenario | Test file: test name | Task |
 |---|---|---|
@@ -191,8 +191,10 @@ Acceptance (16.1) map: every test named below passed in `npm run test --workspac
 | Profile saved (sheet half: body sent, sheet closed, cache updated); Bad phone from the envelope | `src/profile-sheet.test.tsx`: `profile saved`, `bad phone from the envelope` (plus `empty name checked`) | 12 |
 | Address added; Edit sheet prefilled; Address sheet checks fields; Envelope field error in the sheet | `src/address-sheet.test.tsx`: the scenario names | 13 |
 | Default switch reports its state | `src/ui/toggle.test.tsx`: `toggle is a switch with its checked state and reports the flip`, `checked toggle reports off on press`; web `aria-checked` by axe in `e2e/accounts.spec.ts`: `addresses against core` | 15 |
+| Space flips the switch | `src/ui/toggle.test.tsx`: `Space flips the switch and stops the page scrolling; Enter is left to the press` | R2 fix |
 | Profile shown; Profile saved (card half); Addresses and default; Address deleted; No addresses; Loading account; Core unreachable with nothing held; Core failure with nothing held; Failed refetch keeps the account | `src/account.test.tsx`: the scenario names | 14 |
-| Row action not sent twice | `src/account.test.tsx`: `set default is not sent twice while pending`, `delete is not sent twice while pending` | 15 |
+| Row action not sent twice | `src/account.test.tsx`: `set default is not sent twice while pending`, `delete is not sent twice while pending`, `set default is not sent twice when pressed twice in one tick` | 15, R2 fix |
+| Failed row action re-enables the rows | `src/account.test.tsx`: `a row request that rejects leaves the row buttons enabled` | R2 fix |
 | Account button opens the account | `src/account-home.test.tsx`: `Account button opens the account` | 14 |
 | Sign in returns to the account | `src/account-sign-in.test.tsx`: `Sign in returns to the account` | 14 |
 | Sign out | `src/account-sign-out.test.tsx`: `Sign out` | 14 |
@@ -210,7 +212,7 @@ Tasks 4, 5, 6, 8 and 9 test primitives no scenario names directly (their tests a
 - [Jest and the hoisted monorepo] -> `@shopperstop/ui` resolves to `packages/ui` through the workspace link and is transformed by Babel; the `make test-web` order (ui build first) gives `dist/` for `@shopperstop/ui/tokens` and `/testing`; a worker running the mobile gates alone builds `packages/ui` first.
 - [Static rendering runs screen modules in Node] -> no module touches `window`, `localStorage` or the secure store outside `try`/`catch` or effects.
 - [`expo export` in CI time] -> first export is the slowest step of `make test-web`; measured in task 1's log.
-- [Cold Jest cache] -> on a cold transform cache (`jest --no-cache`, as on a fresh CI runner) the router tests transform expo-router inside the test and exceed Jest's 5 s default (16.1 saw 2 to 6 timeouts; warm runs pass 91 of 91). Task 15.4 raises `testTimeout`.
+- [Cold Jest cache] -> on a cold transform cache (`jest --no-cache`, as on a fresh CI runner) the router tests transform expo-router inside the test and exceeded Jest's 5 s default (16.1 saw 2 to 6 timeouts). Task 15.4 set `testTimeout: 60_000` (5bb4c35); a real hang now fails after a minute instead of five seconds.
 
 ## Deferred to later lanes
 
