@@ -350,7 +350,6 @@ func TestChangeStatusConflict(t *testing.T) {
 }
 
 func TestServiceTokenRefusedIs502(t *testing.T) {
-	buf := captureLogs(t)
 	f := coretest.New()
 	t.Cleanup(f.Close)
 	f.AddOrder(order(orderReady, storeA, "ready"), "")
@@ -363,13 +362,13 @@ func TestServiceTokenRefusedIs502(t *testing.T) {
 	}
 	for name, call := range calls {
 		t.Run(name, func(t *testing.T) {
-			before := len(failureLines(t, buf))
+			buf := captureLogs(t)
 			requireHTTPError(t, call(), http.StatusBadGateway, "internal")
 			lines := failureLines(t, buf)
-			if len(lines) != before+1 {
-				t.Fatalf("%d %q log lines after the call, want %d", len(lines), failMessage, before+1)
+			if len(lines) != 1 {
+				t.Fatalf("%d %q log lines, want 1: %s", len(lines), failMessage, buf.String())
 			}
-			if got := lines[len(lines)-1]["status"]; got != float64(http.StatusUnauthorized) {
+			if got := lines[0]["status"]; got != float64(http.StatusUnauthorized) {
 				t.Fatalf("logged status %v, want 401", got)
 			}
 		})

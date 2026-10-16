@@ -9,9 +9,9 @@ Scenarios: "Core refusing the service token is a core failure" (client level); t
 Starts from: `services/rider/internal/core/core_test.go` `TestStoreOrdersReadsReadyWithServiceToken`, `TestOrderReadsWithServiceToken` (and unknown id → `core.ErrNotFound`), `TestChangeStatusSendsActor` (fake's `StatusChanges` holds `{out_for_delivery, {rider, id, name}}`), `TestChangeStatusConflict` (order `packing` → `core.ErrConflict`), `TestServiceTokenRefusedIs502` (client built with `"wrong-token"`: `StoreOrders`, `Order`, `ChangeStatus` each give a 502 `internal` `*httpx.Error`, not 401, with one `core call failed` line carrying status 401), `TestCustomerOrder` (owner 200, other customer's token 404 `ErrNotFound`, unknown token 401 `ErrUnauthorized`).
 Commits: `test: core client order calls and service-token refusal`, then `feat: core client order calls and fake order routes`.
 
-- [ ] 1.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 1.2 `internal/core` per design.md Interfaces and Decision 5 (types, `ErrConflict`, `service`, the four methods, `do`'s 409 case); `internal/coretest` per design.md (`ServiceToken`, `AddOrder`, `SetOrderStatus`, `OrderStatus`, `StatusChanges`, `FailRoute`, the four routes with core's envelopes); stdlib only; L1's tests stay green unchanged
-- [ ] 1.3 Gates green; commit `feat: ...`
+- [x] 1.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 1.2 `internal/core` per design.md Interfaces and Decision 5 (types, `ErrConflict`, `service`, the four methods, `do`'s 409 case); `internal/coretest` per design.md (`ServiceToken`, `AddOrder`, `SetOrderStatus`, `OrderStatus`, `StatusChanges`, `FailRoute`, the four routes with core's envelopes); stdlib only; L1's tests stay green unchanged
+- [x] 1.3 Gates green; commit `feat: ...`
 
 ## 2. Deliveries table, ready orders and claims (worker, after 1)
 
