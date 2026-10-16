@@ -1,5 +1,5 @@
 # rider-P5-L1-T2 - rider app cash badge and amount line (task 2 of rider-collect-cash)
-Status: not started (starts after T1 is committed)
+Status: red committed (test commit); code next
 
 ## Brief
 - LANE-ID: rider-P5-L1 (task T2). Area: `rider`.
@@ -18,6 +18,7 @@ Status: not started (starts after T1 is committed)
 If a diff does not apply, the red/green counts differ or a gate fails, stop and write it under Blockers; do not improvise. Never edit `packages/ui/`, `services/`, other apps or the lane log `rider-P5-L1.md`.
 
 ## Red run
+`npm run test --workspace apps/rider -- --run`: 2 files failed, **5 failed / 59 passed (64)**. Failing: `ready.test.tsx` cash orders marked; `delivery.test.tsx` assigned delivery shown, cash on delivery, paid online, awaiting payment (`Unable to find` the `Collect ₹339 in cash` / `Paid online` / `Awaiting payment` text; the cash badge `getByText('Cash')` misses on the ready card). `delivered cod/online shows no payment line` pass already (no line is the current behaviour).
 ## Green run
 ## Gates
 ## Found
