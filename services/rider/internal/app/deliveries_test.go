@@ -399,3 +399,215 @@ func TestReadyOrdersWrongServiceToken(t *testing.T) {
 		t.Fatalf("ready orders with a wrong service token: got %d %s, want 502 internal", status, body)
 	}
 }
+
+const listPath = "/api/rider/v1/me/deliveries"
+
+func deliveryPath(id string) string { return listPath + "/" + id }
+
+// deliveredPath is the delivered route of one delivery id.
+func deliveredPath(id string) string { return listPath + "/" + id + "/delivered" }
+
+// deliveryListBody is the paged answer of GET /me/deliveries.
+type deliveryListBody struct {
+	Items    []deliveryJSON `json:"items"`
+	Page     int            `json:"page"`
+	PageSize int            `json:"pageSize"`
+	Total    int64          `json:"total"`
+}
+
+// insertDelivery inserts a delivery of riderID at store straight into the table,
+// in status with assignedAt (and deliveredAt when delivered), and returns its id.
+// The list tests need rows of several statuses without going through core.
+func insertDelivery(t *testing.T, riderID, store, status string, assignedAt time.Time, deliveredAt *time.Time) string {
+	t.Helper()
+	var id string
+	err := testPool.QueryRow(context.Background(),
+		`insert into deliveries (order_id, order_number, store_id, rider_id, customer_name, address_line1, address_pincode,
+			total_cents, payment_method, item_count, items, status, assigned_at, delivered_at)
+		 values ($1, 'SS-LIST', $2, $3, 'Demo Customer', '12 80 Feet Rd', '560034', 33900, 'cod', 3, '[]', $4::delivery_status, $5, $6)
+		 returning id`,
+		newID(), store, riderID, status, assignedAt, deliveredAt).Scan(&id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func TestListDefaultsToAssigned(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	t0 := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	assigned := insertDelivery(t, riderID, store, "assigned", t0, nil)
+	done := t0.Add(time.Hour)
+	insertDelivery(t, riderID, store, "delivered", t0.Add(-time.Hour), &done)
+
+	status, body := callAt(t, srv.URL, http.MethodGet, listPath, token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("list: got %d %s, want 200", status, body)
+	}
+	var list deliveryListBody
+	if err := json.Unmarshal(body, &list); err != nil {
+		t.Fatal(err)
+	}
+	if list.Total != 1 || list.Page != 1 || list.PageSize != 24 || len(list.Items) != 1 {
+		t.Fatalf("list %s: want one assigned delivery on page 1 of 24", body)
+	}
+	if got := list.Items[0]; got.ID != assigned || got.Status != "assigned" || got.DeliveredAt != nil {
+		t.Fatalf("list item %+v: want the assigned delivery %s", got, assigned)
+	}
+}
+
+func TestListDelivered(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	t0 := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	older, newer := t0, t0.Add(time.Hour)
+	olderDone, newerDone := older.Add(time.Minute), newer.Add(time.Minute)
+	first := insertDelivery(t, riderID, store, "delivered", older, &olderDone)
+	second := insertDelivery(t, riderID, store, "delivered", newer, &newerDone)
+	insertDelivery(t, riderID, store, "assigned", t0.Add(2*time.Hour), nil)
+
+	status, body := callAt(t, srv.URL, http.MethodGet, listPath+"?status=delivered", token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("list delivered: got %d %s, want 200", status, body)
+	}
+	var list deliveryListBody
+	if err := json.Unmarshal(body, &list); err != nil {
+		t.Fatal(err)
+	}
+	if list.Total != 2 || len(list.Items) != 2 {
+		t.Fatalf("list delivered %s: want the two delivered deliveries", body)
+	}
+	if list.Items[0].ID != second || list.Items[1].ID != first {
+		t.Fatalf("list delivered %s: want newest claim first (%s, %s)", body, second, first)
+	}
+	for _, d := range list.Items {
+		if d.Status != "delivered" || d.DeliveredAt == nil {
+			t.Fatalf("list item %+v: want status delivered with deliveredAt", d)
+		}
+	}
+}
+
+func TestListBadStatus(t *testing.T) {
+	_, token := riderAt(t, newID())
+	status, body := callAt(t, srv.URL, http.MethodGet, listPath+"?status=packing", token, nil)
+	if e := decodeError(t, body); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != "status" {
+		t.Fatalf("list with status=packing: got %d %s, want 400 validation on status", status, body)
+	}
+}
+
+func TestGetOtherRidersDelivery(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	_, otherToken := riderAt(t, store)
+	id := insertDelivery(t, riderID, store, "assigned", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC), nil)
+
+	status, body := callAt(t, srv.URL, http.MethodGet, deliveryPath(id), token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("own delivery: got %d %s, want 200", status, body)
+	}
+	for _, path := range []string{deliveryPath(id), deliveryPath(unknownUUID), deliveryPath("not-a-uuid")} {
+		status, body := callAt(t, srv.URL, http.MethodGet, path, otherToken, nil)
+		if e := decodeError(t, body); status != http.StatusNotFound || e.Error.Code != "not_found" {
+			t.Fatalf("GET %s by another rider: got %d %s, want 404 not_found", path, status, body)
+		}
+	}
+}
+
+func TestDeliveredOnce(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC))
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": o.ID})
+	var claimed deliveryJSON
+	if status != http.StatusCreated || json.Unmarshal(body, &claimed) != nil {
+		t.Fatalf("claim: got %d %s, want 201", status, body)
+	}
+
+	status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil)
+	var done deliveryJSON
+	if status != http.StatusOK || json.Unmarshal(body, &done) != nil {
+		t.Fatalf("delivered: got %d %s, want 200", status, body)
+	}
+	if done.Status != "delivered" || done.DeliveredAt == nil || done.ID != claimed.ID {
+		t.Fatalf("delivered answer %s: want status delivered with deliveredAt", body)
+	}
+	if got := coreFake.OrderStatus(o.ID); got != "delivered" {
+		t.Fatalf("core status %q, want delivered", got)
+	}
+	want := core.Actor{Type: "rider", ID: riderID, Name: "Asha Rao"}
+	changes := coreFake.StatusChanges(o.ID)
+	if len(changes) != 2 || changes[1].Status != "delivered" || changes[1].Actor != want {
+		t.Fatalf("core status changes %+v: want delivered with actor %+v last", changes, want)
+	}
+
+	status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil)
+	if e := decodeError(t, body); status != http.StatusConflict || e.Error.Code != "conflict" || e.Error.Message != "delivery is not assigned" {
+		t.Fatalf("second delivered: got %d %s, want 409 conflict delivery is not assigned", status, body)
+	}
+}
+
+func TestDeliveredStaysAssignedWhenCoreFails(t *testing.T) {
+	store := newID()
+	_, token := riderAt(t, store)
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC))
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": o.ID})
+	var claimed deliveryJSON
+	if status != http.StatusCreated || json.Unmarshal(body, &claimed) != nil {
+		t.Fatalf("claim: got %d %s, want 201", status, body)
+	}
+
+	coreFake.FailRoute(claimRoute, http.StatusInternalServerError)
+	t.Cleanup(func() { coreFake.FailRoute(claimRoute, 0) })
+	status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil)
+	if e := decodeError(t, body); status != http.StatusBadGateway || e.Error.Code != "internal" {
+		t.Fatalf("delivered with core failing: got %d %s, want 502 internal", status, body)
+	}
+	status, body = callAt(t, srv.URL, http.MethodGet, deliveryPath(claimed.ID), token, nil)
+	var kept deliveryJSON
+	if status != http.StatusOK || json.Unmarshal(body, &kept) != nil || kept.Status != "assigned" || kept.DeliveredAt != nil {
+		t.Fatalf("delivery after core failed: got %d %s, want still assigned", status, body)
+	}
+	if got := coreFake.OrderStatus(o.ID); got != "out_for_delivery" {
+		t.Fatalf("core status %q, want out_for_delivery", got)
+	}
+
+	coreFake.FailRoute(claimRoute, 0)
+	status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("retry after core recovers: got %d %s, want 200", status, body)
+	}
+}
+
+func TestClaimAndDeliveredLogged(t *testing.T) {
+	store := newID()
+	riderID, token := riderAt(t, store)
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC))
+	lines := captureLog(t)
+
+	status, body := callAt(t, srv.URL, http.MethodPost, claimPath, token, map[string]string{"orderId": o.ID})
+	var claimed deliveryJSON
+	if status != http.StatusCreated || json.Unmarshal(body, &claimed) != nil {
+		t.Fatalf("claim: got %d %s, want 201", status, body)
+	}
+	if status, body = callAt(t, srv.URL, http.MethodPost, deliveredPath(claimed.ID), token, nil); status != http.StatusOK {
+		t.Fatalf("delivered: got %d %s, want 200", status, body)
+	}
+
+	byMsg := map[string][]map[string]any{}
+	for _, m := range lines() {
+		if msg, ok := m["msg"].(string); ok {
+			byMsg[msg] = append(byMsg[msg], m)
+		}
+	}
+	for _, msg := range []string{"delivery claimed", "delivery delivered"} {
+		if len(byMsg[msg]) != 1 {
+			t.Fatalf("%q lines: %d, want 1", msg, len(byMsg[msg]))
+		}
+		l := byMsg[msg][0]
+		if l["level"] != "INFO" || l["deliveryId"] != claimed.ID || l["orderId"] != o.ID || l["number"] != o.Number ||
+			l["riderId"] != riderID || l["requestId"] == nil || l["requestId"] == "" {
+			t.Fatalf("%q line %v: want info with deliveryId, orderId, number, riderId and requestId", msg, l)
+		}
+	}
+}
