@@ -14,10 +14,11 @@ afterEach(() => {
 
 type DashboardStore = components['schemas']['DashboardStore']
 const quiet = { placed: 0, accepted: 0, packing: 0, ready: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 }
-const atIndiranagar: DashboardStore = { storeId: indiranagar.id, storeName: 'Indiranagar', ordersToday: quiet, lowStockCount: 1, revenueTodayCents: 0 }
+const atIndiranagar: DashboardStore = { storeId: indiranagar.id, storeName: 'Indiranagar', ...{ isOpen: true }, ordersToday: quiet, lowStockCount: 1, revenueTodayCents: 0 }
 const atKoramangala: DashboardStore = {
   storeId: koramangala.id,
   storeName: 'Koramangala',
+  ...{ isOpen: true },
   ordersToday: { placed: 1, accepted: 2, packing: 3, ready: 4, out_for_delivery: 5, delivered: 6, cancelled: 7 },
   lowStockCount: 20,
   revenueTodayCents: 618050,

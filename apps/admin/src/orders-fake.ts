@@ -13,6 +13,7 @@ export function order(n: number, status: OrderStatus, over: Partial<Order> = {})
     id: `00000000-0000-4000-8000-0000000007${String(n).padStart(2, '0')}`,
     number: `SS-TEST${String(n).padStart(4, '0')}`,
     storeId: indiranagar.id,
+    ...{ storeName: 'Indiranagar', promisedMinutes: 12 },
     status,
     customerName: 'Demo Customer',
     customerPhone: '+919800000000',
