@@ -12,6 +12,14 @@
       "types": "./dist/testing/literal-colors.d.ts",
       "default": "./dist/testing/literal-colors.js"
     },
+    "./tokens": {
+      "types": "./dist/tokens.d.ts",
+      "default": "./dist/tokens.js"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "default": "./dist/format.js"
+    },
     "./tokens.css": "./src/tokens.css",
     "./api": {
       "types": "./src/api/core.d.ts"
@@ -22,7 +30,8 @@
     "gen:api": "openapi-typescript ../../services/core/openapi.json -o src/api/core.d.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "gen:tokens": "node scripts/gen-tokens.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",
