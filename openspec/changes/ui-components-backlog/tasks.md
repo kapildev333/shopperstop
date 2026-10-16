@@ -37,4 +37,4 @@ Scope: `packages/ui/src/choice-group.tsx`, `packages/ui/src/choice-group.test.ts
 
 ## 6. Acceptance (team lead) and verification (manager)
 - [x] 6.1 Team lead `/opsx:verify`: every scenario in the delta has a passing same-named test, tasks 1 to 5 ticked, diff only in the files design.md lists
-- [ ] 6.2 Manager: `make test-web` (ui, web, admin green: the apps render `TabNav`, `Dialog`, `Sheet`, `Table`), `openspec validate --all --strict`, and a Chrome check at 390 px and 1280 px of a stacked Table, a compact ghost Button, a ChoiceGroup by keyboard and a Dialog over a Sheet
+- [x] 6.2 Manager: `make test-web` (ui, web, admin green: the apps render `TabNav`, `Dialog`, `Sheet`, `Table`), `openspec validate --all --strict`, and a Chrome check at 390 px and 1280 px of a stacked Table, a compact ghost Button, a ChoiceGroup by keyboard and a Dialog over a Sheet
