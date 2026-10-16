@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   form: { paddingHorizontal: 16, paddingVertical: 24, gap: 16 },
   alert: { backgroundColor: colors.dangerSoft, borderRadius: radius.control, padding: 12 },
   center: { textAlign: 'center' },
-  link: { color: colors.accent, fontFamily: fontFamily(600) },
+  link: { color: colors.accent, fontFamily: fontFamily(600), lineHeight: 20 },
   // 20 pt line plus 12 above and below: a 44 pt tap target.
   linkRow: { alignSelf: 'flex-start', paddingVertical: 12 },
 })

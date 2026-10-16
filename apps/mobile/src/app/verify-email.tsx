@@ -145,6 +145,6 @@ const styles = StyleSheet.create({
   },
   content: { padding: 12, paddingBottom: 32, gap: 12 },
   column: { gap: spacing.unit * 3 },
-  link: { color: colors.accent, fontFamily: fontFamily(600) },
+  link: { color: colors.accent, fontFamily: fontFamily(600), lineHeight: 20 },
   linkRow: { alignSelf: 'flex-start', paddingVertical: 12 },
 })
