@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider, focusManager } from '@tanstack/react-query'
 import { fireEvent, screen } from '@testing-library/react-native'
 import { renderRouter } from 'expo-router/testing-library'
 import { Stack } from 'expo-router'
@@ -91,6 +91,42 @@ test('verification unreachable then retried', async () => {
   expect(screen.getByText('Could not reach ShopperStop. Try again.')).toBeTruthy()
 
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }))
+
+  expect(await screen.findByText('Your email is verified')).toBeTruthy()
+  expect(calls).toHaveLength(2)
+})
+
+test('a refused code is not posted again on remount or focus', async () => {
+  const calls = fakeCore({ 'POST /auth/verify-email': () => apiError(400, 'validation', 'invalid or expired token', 'token') })
+  const first = await renderRouter(routes, { initialUrl: '/verify-email?token=old' })
+  expect(await screen.findByText('This code is invalid or has expired.')).toBeTruthy()
+  await first.unmount()
+
+  await renderRouter(routes, { initialUrl: '/verify-email?token=old' })
+  expect(await screen.findByText('This code is invalid or has expired.')).toBeTruthy()
+  // renderRouter fakes timers: the real ones let a refetch on mount, if any, reach fetch before the check.
+  jest.useRealTimers()
+  focusManager.setFocused(false)
+  focusManager.setFocused(true)
+  await new Promise((done) => setTimeout(done, 10))
+  focusManager.setFocused(undefined)
+
+  expect(calls).toHaveLength(1)
+})
+
+test('the refused code retyped is sent again', async () => {
+  let attempts = 0
+  const calls = fakeCore({
+    'POST /auth/verify-email': () => {
+      attempts += 1
+      return attempts === 1 ? apiError(400, 'validation', 'invalid or expired token', 'token') : json(204)
+    },
+  })
+  await renderRouter(routes, { initialUrl: '/verify-email?token=old' })
+  expect(await screen.findByText('This code is invalid or has expired.')).toBeTruthy()
+
+  await fireEvent.changeText(screen.getByLabelText('Code from the email'), 'old')
+  await fireEvent.press(screen.getByRole('button', { name: 'Verify email' }))
 
   expect(await screen.findByText('Your email is verified')).toBeTruthy()
   expect(calls).toHaveLength(2)
