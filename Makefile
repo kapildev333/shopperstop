@@ -7,13 +7,13 @@ SHOPPERSTOP_CORE_DATABASE_URL ?= postgres://shopperstop_core:shopperstop_core@lo
 SHOPPERSTOP_CORE_ADDR ?= :8080
 SHOPPERSTOP_CORE_SESSION_PEPPER ?= dev-pepper-dev-pepper-dev-pepper-00
 SHOPPERSTOP_CORE_FILES_DIR ?= $(CURDIR)/services/core/data/files
-SHOPPERSTOP_CORE_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175
+SHOPPERSTOP_CORE_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
 SHOPPERSTOP_CORE_TEST_DATABASE_URL ?= postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable
 # Rider service (D29, D30): its own database and port; it calls core with a service token that core accepts.
 SHOPPERSTOP_RIDER_DATABASE_URL ?= postgres://shopperstop_rider:shopperstop_rider@localhost:5432/shopperstop_rider?sslmode=disable
 SHOPPERSTOP_RIDER_ADDR ?= :8081
 SHOPPERSTOP_RIDER_SESSION_PEPPER ?= dev-rider-pepper-dev-rider-pepper-00
-SHOPPERSTOP_RIDER_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175
+SHOPPERSTOP_RIDER_WEB_ORIGINS ?= http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
 SHOPPERSTOP_RIDER_CORE_URL ?= http://localhost:8080
 SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN ?= dev-rider-service-token-dev-rider-00
 SHOPPERSTOP_RIDER_TEST_DATABASE_URL ?= postgres://shopperstop_rider:shopperstop_rider@localhost:5432/shopperstop_rider_test?sslmode=disable
@@ -21,7 +21,7 @@ SHOPPERSTOP_CORE_SERVICE_TOKENS ?= rider:$(SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN)
 CORE_ENV = SHOPPERSTOP_CORE_DATABASE_URL='$(SHOPPERSTOP_CORE_DATABASE_URL)' SHOPPERSTOP_CORE_ADDR='$(SHOPPERSTOP_CORE_ADDR)' SHOPPERSTOP_CORE_SESSION_PEPPER='$(SHOPPERSTOP_CORE_SESSION_PEPPER)' SHOPPERSTOP_CORE_FILES_DIR='$(SHOPPERSTOP_CORE_FILES_DIR)' SHOPPERSTOP_CORE_WEB_ORIGINS='$(SHOPPERSTOP_CORE_WEB_ORIGINS)' SHOPPERSTOP_CORE_SERVICE_TOKENS='$(SHOPPERSTOP_CORE_SERVICE_TOKENS)'
 RIDER_ENV = SHOPPERSTOP_RIDER_DATABASE_URL='$(SHOPPERSTOP_RIDER_DATABASE_URL)' SHOPPERSTOP_RIDER_ADDR='$(SHOPPERSTOP_RIDER_ADDR)' SHOPPERSTOP_RIDER_SESSION_PEPPER='$(SHOPPERSTOP_RIDER_SESSION_PEPPER)' SHOPPERSTOP_RIDER_WEB_ORIGINS='$(SHOPPERSTOP_RIDER_WEB_ORIGINS)' SHOPPERSTOP_RIDER_CORE_URL='$(SHOPPERSTOP_RIDER_CORE_URL)' SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN='$(SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN)'
 # make e2e: fixed values, not overridable, so dev values never leak in. One env for core and rider commands alike.
-E2E_ENV = SHOPPERSTOP_CORE_DATABASE_URL='postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_e2e?sslmode=disable' SHOPPERSTOP_CORE_ADDR=':18080' SHOPPERSTOP_CORE_SESSION_PEPPER='e2e-pepper-e2e-pepper-e2e-pepper-00' SHOPPERSTOP_CORE_FILES_DIR='$(CURDIR)/services/core/data/e2e-files' SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175' SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:e2e-rider-service-token-e2e-rider-00' SHOPPERSTOP_RIDER_DATABASE_URL='postgres://shopperstop_rider:shopperstop_rider@localhost:5432/shopperstop_rider_e2e?sslmode=disable' SHOPPERSTOP_RIDER_ADDR=':18081' SHOPPERSTOP_RIDER_SESSION_PEPPER='e2e-rider-pepper-e2e-rider-pepper-00' SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175' SHOPPERSTOP_RIDER_CORE_URL='http://localhost:18080' SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN='e2e-rider-service-token-e2e-rider-00'
+E2E_ENV = SHOPPERSTOP_CORE_DATABASE_URL='postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_e2e?sslmode=disable' SHOPPERSTOP_CORE_ADDR=':18080' SHOPPERSTOP_CORE_SESSION_PEPPER='e2e-pepper-e2e-pepper-e2e-pepper-00' SHOPPERSTOP_CORE_FILES_DIR='$(CURDIR)/services/core/data/e2e-files' SHOPPERSTOP_CORE_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176' SHOPPERSTOP_CORE_SERVICE_TOKENS='rider:e2e-rider-service-token-e2e-rider-00' SHOPPERSTOP_RIDER_DATABASE_URL='postgres://shopperstop_rider:shopperstop_rider@localhost:5432/shopperstop_rider_e2e?sslmode=disable' SHOPPERSTOP_RIDER_ADDR=':18081' SHOPPERSTOP_RIDER_SESSION_PEPPER='e2e-rider-pepper-e2e-rider-pepper-00' SHOPPERSTOP_RIDER_WEB_ORIGINS='http://localhost:15173,http://localhost:15174,http://localhost:15175,http://localhost:15176' SHOPPERSTOP_RIDER_CORE_URL='http://localhost:18080' SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN='e2e-rider-service-token-e2e-rider-00'
 
 db:
 	docker compose -f $(CURDIR)/deploy/docker-compose.yml up -d --wait postgres
