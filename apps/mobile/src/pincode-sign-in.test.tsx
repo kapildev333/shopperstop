@@ -13,7 +13,7 @@ const appDir = `${__dirname}/app`
 test('sign-in link when signed out', async () => {
   const router = await renderRouter(appDir, { initialUrl: '/' })
   // Home's first state is on screen before the sheet opens, so the Stack has settled before the press.
-  await screen.findByRole('heading', { name: 'Groceries in minutes' })
+  await screen.findByRole('heading', { level: 1, name: /^ShopperStop/ })
   await act(async () => {
     openPincodeSheet()
   })
