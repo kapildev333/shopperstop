@@ -49,7 +49,9 @@ export function useCartSummary(): CartSummary
 export function loadCartSummary(): Promise<CartSummary | undefined>  // after the cart's read settles: token ? fetchQuery(cartOptions(token)) : loadGuestCart(); undefined when the server read failed
 export function clearCart(): Promise<ApiError | undefined>            // web's
 export function mergeGuestCart(): Promise<void>                       // task 6; web's, awaiting loadGuestCart() first
-export function useStoreName(storeId: string | undefined): string | undefined  // GET /stores/{id}, key ['store', id], enabled only with an id
+export function storeOptions(storeId: string)                       // queryOptions: GET /stores/{id}, key ['store', id], the whole Store; throws error.error (mobile-P4-L4b reads promisedMinutes from it)
+export function useStoreName(storeId: string | undefined): string | undefined  // useQuery({ ...storeOptions(id), enabled: !!id, select: (store) => store.name })
+export function queued<T>(work: () => Promise<T>): Promise<T>        // web's write queue, exported as web does (mobile-P4-L4b places the order inside it)
 export function openCartSheet(): void
 export function closeCartSheet(): void
 export function useCartSheetOpen(): boolean
