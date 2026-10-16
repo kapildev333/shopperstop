@@ -78,6 +78,17 @@ const fixture = {
         },
       },
     },
+    '/admin/stores': {
+      get: {
+        summary: 'Stores',
+        tags: ['admin-staff'],
+        security: [{ bearer: [] }],
+        'x-service-token': true,
+        responses: {
+          200: { description: 'The stores.', content: { 'application/json': { schema: { type: 'object' }, example: { items: [], total: 0 } } } },
+        },
+      },
+    },
     '/admin/me': {
       get: {
         summary: 'Me',
@@ -214,6 +225,69 @@ test('sign-in requests store the returned token', async () => {
   assert.deepEqual(testScript(requestNamed(c, 'Sign out')), []);
 });
 
+test('service routes read serviceToken', async () => {
+  const c = JSON.parse(await generate(fixture));
+  assert.equal(requestNamed(c, 'Stores').request.auth.bearer[0].value, '{{serviceToken}}');
+  assert.equal(requestNamed(c, 'Me').request.auth.bearer[0].value, '{{staffToken}}');
+});
+
+test('core service routes follow x-service-token', async () => {
+  const c = JSON.parse(await generate(realSpec));
+  const served = new Set(requests(c.item)
+    .filter((r) => r.request.auth?.bearer[0].value === '{{serviceToken}}')
+    .map((r) => `${r.request.method} /${r.request.url.path.join('/').replace(/:([^/]+)/g, '{$1}')}`));
+  const marked = new Set(Object.entries(realSpec.paths).flatMap(([path, item]) =>
+    Object.entries(item).filter(([, op]) => op['x-service-token'] === true).map(([method]) => `${method.toUpperCase()} ${path}`)));
+  assert.ok(marked.size > 0, 'the core contract marks service routes');
+  assert.deepEqual(served, marked);
+});
+
+test('saved responses read environment ids', async () => {
+  const c = JSON.parse(await generate(fixture));
+  const saved = requestNamed(c, 'Order').response;
+  assert.ok(saved.length > 0, 'the Order example is saved');
+  for (const r of saved) assert.deepEqual(r.originalRequest.url.variable.map((v) => [v.key, v.value]), [['id', '{{orderId}}']]);
+});
+
+const paramFixture = {
+  openapi: '3.1.0',
+  info: { title: 'parameter fixture', version: '0.0.0' },
+  servers: [{ url: '/api/core/v1' }],
+  tags: [{ name: 'things' }],
+  paths: {
+    '/things/{code}': {
+      get: {
+        summary: 'Thing',
+        tags: ['things'],
+        parameters: [
+          { name: 'code', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'since', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 24 } },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['ready', 'delivered'] } },
+        ],
+        responses: {
+          200: { description: 'The thing.', content: { 'application/json': { schema: { type: 'object' }, example: { code: 'x' } } } },
+        },
+      },
+    },
+  },
+};
+
+test('parameters without an example get a fixed value', async () => {
+  const text = await generate(paramFixture);
+  assert.equal(text, await generate(paramFixture));
+  const c = JSON.parse(text);
+  const want = [['code', '<code>'], ['since', '<since>'], ['pageSize', '24'], ['status', 'ready']];
+  const values = (r) => [
+    ...r.url.variable.map((v) => [v.key, v.value]),
+    ...(r.url.query ?? []).map((q) => [q.key, q.value]),
+  ];
+  const r = requestNamed(c, 'Thing').request;
+  assert.deepEqual(values(r).sort(), want.slice().sort());
+  for (const saved of requestNamed(c, 'Thing').response) assert.deepEqual(values(saved.originalRequest).sort(), want.slice().sort());
+  for (const p of paramFixture.paths['/things/{code}'].get.parameters) assert.ok(!('example' in p), `${p.name} must stay without an example`);
+});
+
 test('path ids read environment variables', async () => {
   const c = JSON.parse(await generate(fixture));
   const variables = requestNamed(c, 'Order').request.url.variable;
@@ -302,11 +376,11 @@ test('committed collection matches the contract', async () => {
   assert.equal(committed, await generate(realSpec));
 });
 
-test('environment holds the eleven variables', () => {
+test('environment holds the twelve variables', () => {
   const env = JSON.parse(read('../docs/postman/local.postman_environment.json'));
   assert.deepEqual(env.values.map((v) => v.key), [
     'baseUrl', 'customerToken', 'staffToken', 'storeId', 'productId', 'addressId', 'orderId',
-    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId',
+    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId', 'serviceToken',
   ]);
   const byKey = Object.fromEntries(env.values.map((v) => [v.key, v.value]));
   const byType = Object.fromEntries(env.values.map((v) => [v.key, v.type]));
@@ -316,9 +390,20 @@ test('environment holds the eleven variables', () => {
     assert.equal(byKey[key], '', `${key} must be empty`);
     assert.equal(byType[key], 'secret', `${key} must be secret`);
   }
+  assert.equal(byType.serviceToken, 'secret', 'serviceToken must be secret');
   // D20: the ids are the core seed's fixed uuids so the collection runs top to bottom against make dev.
   for (const key of ['storeId', 'productId', 'addressId', 'orderId']) assert.match(byKey[key], /^00000000-0000-4000-8000-0000000007?0[0-9]{2}$|^00000000-0000-4000-8000-[0-9a-f]{12}$/, `${key} must be a fixed seed uuid`);
   // The rider seed's first Koramangala rider and the demo delivery (.claude/areas/rider.md).
   assert.equal(byKey.riderId, '00000000-0000-4000-8000-000000000801');
   assert.equal(byKey.deliveryId, '00000000-0000-4000-8000-000000000901');
+});
+
+test('serviceToken is the Makefile dev service token', () => {
+  const makefile = read('../Makefile');
+  const match = makefile.match(/^SHOPPERSTOP_RIDER_CORE_SERVICE_TOKEN \?= (\S+)$/m);
+  assert.ok(match, 'the Makefile sets the rider service token');
+  const env = JSON.parse(read('../docs/postman/local.postman_environment.json'));
+  const last = env.values.at(-1);
+  assert.equal(last.key, 'serviceToken');
+  assert.equal(last.value, match[1]);
 });
