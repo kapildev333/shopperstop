@@ -1,7 +1,7 @@
 # rider-P3-L1-T2 - riders, sessions, sign-in, sign-out and me (OpenSpec change rider-service-foundation, tasks 2.1 to 2.5)
-Status: started
+Status: done (awaiting reviewer)
 ## Doing
-Task 2.1 (red) done: tests written for `internal/auth`, `internal/pg`, `internal/app` (riders_test.go, app_test.go wiring) and `internal/migrate` (`TestEmbeddedMigrationsApplyOnce`). Next: commit `test:`, then the feat commit (0002_riders, sqlc, auth, pg, app, cmd/rider, openapi.json, Postman).
+Tasks 2.1 to 2.5 landed: `50be836 test: rider sign-in, sessions, sign-out and me` (red), then the feat commit (0002_riders, sqlc, internal/auth, internal/pg, app routes, cmd/rider, openapi.json, Postman). Gates green. Awaiting reviewer.
 ## Found
 - Copied from core at `5335efc` (design Decision 1): `internal/auth/limit.go`, `password.go` and their tests (`limit_test.go`, `password_test.go`); `internal/pg` (pg.go and pg_test.go, rider tables). `TestStaffRoleMatchesStore` is dropped (no staff tables in rider).
 - `TestEmbeddedMigrationsApplyOnce` did not exist in core or in rider task 1; written new in `internal/migrate/migrate_test.go` against the embedded `migrations.FS`.
@@ -25,6 +25,11 @@ FAIL	.../internal/app [build failed]
     migrate_test.go:218: applied [0001_init], want [0001_init 0002_riders]
 FAIL	.../internal/migrate	0.351s
 ```
+## Gate evidence
+- `make test-rider` (gofmt, vet, `go test -race ./...`): every package `ok` or `no test files`, including T3's `internal/core` (package passing at the time of the run). `internal/app`, `internal/auth`, `internal/pg`, `internal/migrate` also ran with `-count=1 -v` and passed, all named tests among them.
+- `make gen`: sqlc writes `internal/auth/db`; core's `core.d.ts` unchanged. `make postman`: `node --test scripts/postman.test.mjs` 17 pass, 0 fail; `shopperstop-rider.postman_collection.json` +506 lines, core's collection unchanged.
+- `openspec validate --all --strict`: `Totals: 15 passed, 0 failed (15 items)`.
+- `go mod tidy` (offline): `golang.org/x/crypto v0.58.0` moved to the direct requires; nothing else changed.
 ## Requests
 - none
 ## Blockers

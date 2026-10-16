@@ -10,15 +10,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
 )
 
 // New returns the rider router. Routes are registered with their full path
 // so chi.Walk yields the paths openapi.json documents.
-func New(pool *pgxpool.Pool, origins []string) chi.Router {
+func New(pool *pgxpool.Pool, origins []string, a *auth.Auth) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/rider/v1/healthz", healthz)
 	r.Get("/api/rider/v1/readyz", readyz(pool))
+	r.Post("/api/rider/v1/auth/sign-in", a.SignIn)
+	r.With(a.RequireRider).Post("/api/rider/v1/auth/sign-out", a.SignOut)
+	r.With(a.RequireRider).Get("/api/rider/v1/me", a.Me)
 	return r
 }
 

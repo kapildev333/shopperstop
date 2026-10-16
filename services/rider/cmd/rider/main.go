@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/app"
+	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
 	"github.com/kapildev333/shopperstop/services/rider/internal/config"
 )
 
@@ -51,7 +52,8 @@ func run(cfg config.Config) error {
 		return fmt.Errorf("listen on %s: %w", cfg.Addr, err)
 	}
 	slog.Info("rider listening", "addr", ln.Addr().String())
-	srv := newHTTPServer(app.New(pool, cfg.WebOrigins))
+	a := auth.New(pool, cfg.SessionPepper, auth.NewLimiter(10, 100, time.Hour, time.Now))
+	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err
 	}

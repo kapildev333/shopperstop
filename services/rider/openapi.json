@@ -14,6 +14,10 @@
     {
       "name": "platform",
       "description": "Service health: liveness and readiness."
+    },
+    {
+      "name": "rider-service",
+      "description": "Rider sign-in, sessions and the signed-in rider."
     }
   ],
   "paths": {
@@ -82,6 +86,189 @@
           }
         }
       }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "operationId": "postAuthSignIn",
+        "summary": "Sign in as a rider",
+        "description": "Checks the email and password and answers a new session token. The rider's other sessions stay signed in. A wrong password, an unknown email and an inactive rider all answer the same 401. More than 10 attempts for one email, or more than 100 from one client IP, within an hour answer 429.",
+        "tags": [
+          "rider-service"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              },
+              "example": {
+                "email": "rider1-koramangala@shopperstop.local",
+                "password": "rider12345"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new session and the rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiderSession"
+                },
+                "example": {
+                  "token": "k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq",
+                  "rider": {
+                    "id": "00000000-0000-4000-8000-000000000801",
+                    "storeId": "00000000-0000-4000-8000-000000000401",
+                    "email": "rider1-koramangala@shopperstop.local",
+                    "name": "Arjun Rao",
+                    "phone": "+919000000001",
+                    "isActive": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email is not an address, or the password is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be a valid email address",
+                    "field": "email"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong email or password, or the rider is inactive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "wrong email or password"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many sign-in attempts for this email or client IP within an hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many attempts, try again later"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "postAuthSignOut",
+        "summary": "Sign out this session",
+        "description": "Ends the session of the bearer token. The rider's other sessions stay signed in.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The session is ended."
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "The signed-in rider",
+        "description": "Answers the rider the bearer token belongs to.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signed-in rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000801",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "rider1-koramangala@shopperstop.local",
+                  "name": "Arjun Rao",
+                  "phone": "+919000000001",
+                  "isActive": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -141,6 +328,74 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "Rider": {
+        "type": "object",
+        "required": [
+          "id",
+          "storeId",
+          "email",
+          "name",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The store the rider works at (core's store id)."
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Omitted when the rider has no phone."
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RiderSession": {
+        "type": "object",
+        "required": [
+          "token",
+          "rider"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Send as Authorization: Bearer <token>. Shown once."
+          },
+          "rider": {
+            "$ref": "#/components/schemas/Rider"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
           }
         },
         "additionalProperties": false
