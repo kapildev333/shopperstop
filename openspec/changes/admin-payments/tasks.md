@@ -30,4 +30,4 @@ Scope: `apps/admin/src/orders.ts`, `order-sheet.tsx`, `order-sheet.test.tsx`, `o
 
 ## 4. e2e against core (area manager)
 
-- [ ] 4.1 (area manager, open at acceptance 2026-10-16) `make e2e` with the slot: admin `orders.spec.ts` passes, including "the board shows each order's payment: the seeded order paid, an online order awaiting payment with Accept held", and every other suite stays green
+- [x] 4.1 (area manager, open at acceptance 2026-10-16) `make e2e` with the slot: admin `orders.spec.ts` passes, including "the board shows each order's payment: the seeded order paid, an online order awaiting payment with Accept held", and every other suite stays green
