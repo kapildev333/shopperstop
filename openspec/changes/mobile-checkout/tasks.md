@@ -31,8 +31,8 @@ Scenarios: Order placed after a pending cart change; Order number collision retr
 Starts from: `src/checkout.test.ts` test `Order placed after a pending cart change` (red: module missing): `setToken('t-1')`, `fakeCore` with `PUT /me/cart/items` held (a promise the test resolves; answer a `CartUpdate`), `POST /orders` answering 201 with an order, `GET /me/cart`; call `setQuantity(storeId, product, 2)` from `src/cart.ts` without awaiting, then `placeOrder(homeId)`; assert no `POST /orders` among the calls, release the `PUT`, await the placing, assert one `POST /orders` after the `PUT` with body `{"addressId": homeId}`. Then `Order number collision retried once` (two parts as the scenario: count `POST /orders` calls, check `result.order` then `result.error?.code === 'conflict'`). Then unit tests with no scenario: `order held and cart emptied on success` (`queryClient.getQueryData(orderKey('t-1', id))` is the order, `getQueryData(cartKey('t-1'))` has no items), `outcome of each answer` (one `outcomeOf` call per row of the table in the design file), `refusal copy` (`refusalOf` for each row, store name `Koramangala`), `mark text` (`shortText`: not in stock, quantity 2 of 3, quantity 5 of 3), `block precedence` (`blockReason`: marked over minimum over no address; `undefined` when none).
 Build: `src/checkout.ts` per `docs/design/mobile-P4-L4b.md` "The port" and "Module interfaces", design.md Decisions 1, 4 and 5.
 
-- [ ] 1.1 `test:` the two scenarios and the unit tests, red
-- [ ] 1.2 `feat:` `src/checkout.ts`; gates green
+- [x] 1.1 `test:` the two scenarios and the unit tests, red
+- [x] 1.2 `feat:` `src/checkout.ts`; gates green
 
 ## 2. Address card and choice (`src/checkout-address.tsx`) — group A
 
