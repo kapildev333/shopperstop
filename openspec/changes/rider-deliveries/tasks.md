@@ -45,10 +45,10 @@ Scenarios: "Riders report their location" (both), "Customers see their order's d
 Starts from: `services/rider/internal/app/deliveries_test.go` `TestPutLocationReplaces`, `TestPutLocationRefusals` (missing `lat`, `lat` 91, `lng` -181: 400 naming the field, nothing stored), `TestCustomerFollowsRider` (body has no `phone`, `email` or rider id key), `TestCustomerLocationHiddenAfterDelivery`, `TestCustomerLocationBeforeClaimHidden`, `TestCustomerReadRefusals` (another customer's token 404, no delivery 404, no token 401 without a core call, unknown token 401).
 Commits: `test: rider location and customer delivery view`, then `feat: rider location and customer delivery view`.
 
-- [ ] 4.1 Write the tests; red run pasted into the log; commit `test: ...`
-- [ ] 4.2 `auth.Bearer` rename; `PutLocation` (Decision 10), `OrderDelivery` (Decisions 6 and 7); the two routes
-- [ ] 4.3 `openapi.json`: schemas `LocationUpdate`, `Location`, `CustomerDelivery`, the two operations with every code and examples
-- [ ] 4.4 Gates green, `make gen postman` clean; commit `feat: ...`
+- [x] 4.1 Write the tests; red run pasted into the log; commit `test: ...`
+- [x] 4.2 `auth.Bearer` rename; `PutLocation` (Decision 10), `OrderDelivery` (Decisions 6 and 7); the two routes
+- [x] 4.3 `openapi.json`: schemas `LocationUpdate`, `Location`, `CustomerDelivery`, the two operations with every code and examples
+- [x] 4.4 Gates green, `make gen postman` clean; commit `feat: ...`
 
 ## 5. Delivery demo seed (worker, after 3; parallel with 4)
 

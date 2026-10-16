@@ -33,6 +33,8 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
 	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries", d.List)
 	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries/{id}", d.Get)
 	r.With(a.RequireRider).Post("/api/rider/v1/me/deliveries/{id}/delivered", d.Delivered)
+	r.With(a.RequireRider).Put("/api/rider/v1/me/location", d.PutLocation)
+	r.Get("/api/rider/v1/orders/{orderId}/delivery", d.OrderDelivery)
 	return r
 }
 

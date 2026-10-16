@@ -1361,6 +1361,170 @@
           }
         }
       }
+    },
+    "/me/location": {
+      "put": {
+        "operationId": "putLocation",
+        "summary": "Report the rider's location",
+        "description": "Stores the signed-in rider's last position, replacing the previous one, stamped with the server's clock. Accepted whether or not the rider has an assigned delivery. lat is checked before lng; a missing or out-of-range value is 400 naming the field, and nothing is stored.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationUpdate"
+              },
+              "example": {
+                "lat": 12.9716,
+                "lng": 77.5946
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The position was stored. No body."
+          },
+          "400": {
+            "description": "A missing lat or lng, lat outside -90 to 90, or lng outside -180 to 180. Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "must be between -90 and 90",
+                    "field": "lat"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}/delivery": {
+      "get": {
+        "operationId": "getOrderDelivery",
+        "summary": "A customer's view of their order's delivery",
+        "description": "Reads the order from core with the customer's bearer, which proves the order is theirs, then answers the rider's name and the delivery's status. location appears only while the delivery is assigned and the rider reported a position after the claim. The rider's phone, email and id are never shown. Another customer's order and an order without a delivery are 404; a bearer core does not know is 401.",
+        "tags": [
+          "deliveries"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "The order's id (core's order id).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000701"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The delivery as the customer sees it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDelivery"
+                },
+                "example": {
+                  "riderName": "Arjun Rao",
+                  "status": "assigned",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245,
+                    "recordedAt": "2026-10-15T09:20:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a bearer core does not know.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Another customer's order, an order with no delivery, or an id that is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed to answer (a 500, a timeout, no connection, or core refused the service token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1790,6 +1954,74 @@
           "total": {
             "type": "integer",
             "description": "Every delivery of the caller in this status, not just this page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "LocationUpdate": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitude in degrees, -90 to 90."
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitude in degrees, -180 to 180."
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng",
+          "recordedAt"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the server received the position."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerDelivery": {
+        "type": "object",
+        "required": [
+          "riderName",
+          "status"
+        ],
+        "properties": {
+          "riderName": {
+            "type": "string",
+            "description": "The rider's current name."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "assigned",
+              "delivered"
+            ]
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location",
+            "description": "The rider's last position, only while the delivery is assigned and recorded after the claim. Omitted otherwise."
           }
         },
         "additionalProperties": false

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -340,6 +341,94 @@ func (d *Deliveries) Delivered(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+// Location is a rider's last reported position and the server's time for it.
+type Location struct {
+	Lat        float64   `json:"lat"`
+	Lng        float64   `json:"lng"`
+	RecordedAt time.Time `json:"recordedAt"`
+}
+
+// CustomerDelivery is a customer's view of the delivery of their order. The
+// rider's position is shown only while the delivery is assigned.
+type CustomerDelivery struct {
+	RiderName string    `json:"riderName"`
+	Status    string    `json:"status"`
+	Location  *Location `json:"location,omitempty"`
+}
+
+type locationRequest struct {
+	Lat *float64 `json:"lat"`
+	Lng *float64 `json:"lng"`
+}
+
+// coordinate checks one position field: present, and within ±limit.
+func coordinate(field string, v *float64, limit float64) error {
+	if v == nil {
+		return &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Field: field, Message: "is required"}
+	}
+	if *v < -limit || *v > limit {
+		return &httpx.Error{Status: http.StatusBadRequest, Code: "validation", Field: field,
+			Message: fmt.Sprintf("must be between -%v and %v", limit, limit)}
+	}
+	return nil
+}
+
+// PutLocation replaces the signed-in rider's position, stamped with the
+// server's clock, and answers 204. lat is checked before lng.
+func (d *Deliveries) PutLocation(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var in locationRequest
+	if err := httpx.ReadJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if err := coordinate("lat", in.Lat, 90); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if err := coordinate("lng", in.Lng, 180); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	err := d.q.UpsertLocation(ctx, db.UpsertLocationParams{RiderID: auth.CurrentRider(ctx).ID, Lat: *in.Lat, Lng: *in.Lng})
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// OrderDelivery answers the customer's view of the delivery of their order.
+// The customer's bearer is read from core, which proves the order is theirs:
+// core's 401 and 404 pass through. No bearer is 401 with no core call.
+func (d *Deliveries) OrderDelivery(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	token := auth.Bearer(r)
+	if token == "" {
+		httpx.WriteError(w, r, core.ErrUnauthorized)
+		return
+	}
+	id, err := httpx.PathID(r, "orderId")
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if _, err := d.core.CustomerOrder(ctx, token, id); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	row, err := d.q.OrderDelivery(ctx, id)
+	if err != nil {
+		httpx.WriteError(w, r, pg.Map(err))
+		return
+	}
+	out := CustomerDelivery{RiderName: row.RiderName, Status: string(row.Status)}
+	if row.Lat != nil {
+		out.Location = &Location{Lat: *row.Lat, Lng: *row.Lng, RecordedAt: row.RecordedAt.Time}
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
