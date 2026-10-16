@@ -49,7 +49,7 @@ export function Table<T>({
                 className={cn('border-b border-line px-3 py-2', stack && 'max-sm:block')}
               >
                 {stack && (
-                  <span className="text-small font-semibold text-ink-muted sm:hidden">
+                  <span className="block text-small font-semibold text-ink-muted sm:hidden">
                     {col.header}
                   </span>
                 )}

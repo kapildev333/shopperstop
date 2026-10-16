@@ -42,3 +42,10 @@ test('stack labels cells', () => {
   render(<Table columns={columns} rows={rows} rowKey={(r) => r.id} />)
   expect(screen.getAllByRole('cell')[0]).not.toHaveTextContent('Product')
 })
+
+test('stack label sits above the value', () => {
+  render(<Table columns={columns} rows={rows} rowKey={(r) => r.id} stack />)
+  for (const cell of screen.getAllByRole('cell')) {
+    expect(cell.firstElementChild).toHaveClass('block', 'sm:hidden')
+  }
+})

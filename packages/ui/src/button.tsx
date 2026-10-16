@@ -3,10 +3,10 @@ import { Loader2 } from 'lucide-react'
 import { cn } from './cn'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'ghost-danger'
-export type ButtonSize = 'md' | 'lg'
+export type ButtonSize = 'md' | 'lg' | 'compact'
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-control text-button transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex items-center justify-center gap-2 rounded-control text-button transition-colors disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 export const buttonVariantClass: Record<ButtonVariant, string> = {
   primary: 'bg-accent text-on-accent hover:bg-accent-hover',
@@ -18,6 +18,7 @@ export const buttonVariantClass: Record<ButtonVariant, string> = {
 const sizeClass: Record<ButtonSize, string> = {
   md: 'h-11 px-4 sm:h-10',
   lg: 'h-12 px-6',
+  compact: 'h-11 px-2 sm:h-8',
 }
 
 export function buttonClass({ variant = 'primary', size = 'md' }: { variant?: ButtonVariant; size?: ButtonSize }): string {
