@@ -83,8 +83,8 @@ func (a *Auth) startSession(ctx context.Context, riderID string) (string, error)
 	return token, nil
 }
 
-// bearer returns the token of an "Authorization: Bearer <token>" header, or "".
-func bearer(r *http.Request) string {
+// Bearer returns the token of an "Authorization: Bearer <token>" header, or "".
+func Bearer(r *http.Request) string {
 	scheme, token, ok := strings.Cut(r.Header.Get("Authorization"), " ")
 	if !ok || !strings.EqualFold(scheme, "Bearer") {
 		return ""
@@ -97,7 +97,7 @@ func bearer(r *http.Request) string {
 func (a *Auth) RequireRider(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		token := bearer(r)
+		token := Bearer(r)
 		if token == "" {
 			httpx.WriteError(w, r, errUnauthorized)
 			return

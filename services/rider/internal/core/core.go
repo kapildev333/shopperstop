@@ -1,7 +1,9 @@
 // Package core is the rider's client for core's HTTP API: staff introspection
-// for the admin routes and the public store read. Errors are *httpx.Error
-// values the handlers pass through: core's 401 is the caller's 401, a core
-// 404 is ErrNotFound, and any other core failure is logged and becomes a 502.
+// for the admin routes, the public store read, and the order calls the
+// rider makes with its service token or a customer's bearer. Errors are
+// *httpx.Error values the handlers pass through: core's 401 is the caller's
+// 401 (except on service calls, which are a 502), a core 404 is ErrNotFound,
+// a core 409 is ErrConflict, and any other core failure is logged and becomes a 502.
 package core
 
 import (
@@ -38,8 +40,45 @@ type Store struct {
 	IsOpen bool   `json:"isOpen"`
 }
 
+// OrderAddress is the part of core's OrderAddress the rider keeps.
+type OrderAddress struct {
+	Line1   string `json:"line1"`
+	Line2   string `json:"line2,omitempty"`
+	Pincode string `json:"pincode"`
+}
+
+// OrderItem is the part of core's OrderItem the rider keeps.
+type OrderItem struct {
+	Name      string `json:"name"`
+	UnitLabel string `json:"unitLabel"`
+	Quantity  int    `json:"quantity"`
+}
+
+// Order is the part of core's Order the rider reads.
+type Order struct {
+	ID            string       `json:"id"`
+	Number        string       `json:"number"`
+	StoreID       string       `json:"storeId"`
+	Status        string       `json:"status"`
+	CustomerName  string       `json:"customerName"`
+	CustomerPhone string       `json:"customerPhone,omitempty"`
+	Address       OrderAddress `json:"address"`
+	TotalCents    int64        `json:"totalCents"`
+	PaymentMethod string       `json:"paymentMethod"`
+	PlacedAt      time.Time    `json:"placedAt"`
+	Items         []OrderItem  `json:"items"`
+}
+
+// Actor is the rider named as the actor of a status change core records.
+type Actor struct {
+	Type string `json:"type"` // always "rider"
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 var ErrUnauthorized = &httpx.Error{Status: http.StatusUnauthorized, Code: "unauthorized", Message: "sign in required"}
 var ErrNotFound = &httpx.Error{Status: http.StatusNotFound, Code: "not_found", Message: "not found"}
+var ErrConflict = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "core refused the change"}
 
 const staffTTL = 30 * time.Second
 
@@ -100,10 +139,65 @@ func (c *Client) Store(ctx context.Context, id string) (Store, error) {
 	return s, nil
 }
 
+// StoreOrders lists the orders of storeID with status, newest first, with the
+// service token. A core 404 (no such store) is core failing, so it is a 502.
+func (c *Client) StoreOrders(ctx context.Context, storeID, status string) ([]Order, error) {
+	q := url.Values{"status": {status}, "pageSize": {"100"}}
+	path := "/admin/stores/" + url.PathEscape(storeID) + "/orders?" + q.Encode()
+	var page struct {
+		Items []Order `json:"items"`
+	}
+	err := c.service(ctx, http.MethodGet, path, nil, &page)
+	if errors.Is(err, ErrNotFound) {
+		return nil, c.failure(ctx, http.MethodGet, path, http.StatusNotFound, nil)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}
+
+// Order reads one order with the service token. An unknown id is ErrNotFound.
+func (c *Client) Order(ctx context.Context, id string) (Order, error) {
+	var o Order
+	err := c.service(ctx, http.MethodGet, "/admin/orders/"+url.PathEscape(id), nil, &o)
+	return o, err
+}
+
+// ChangeStatus moves order id to status for actor with the service token.
+// core refuses a move the order's status does not allow with ErrConflict.
+func (c *Client) ChangeStatus(ctx context.Context, id, status string, actor Actor) error {
+	body := struct {
+		Status string `json:"status"`
+		Actor  Actor  `json:"actor"`
+	}{status, actor}
+	return c.service(ctx, http.MethodPost, "/admin/orders/"+url.PathEscape(id)+"/status", body, nil)
+}
+
+// CustomerOrder reads order id with the customer's bearer token, which proves
+// the customer owns it: core answers 404 for another customer's order and 401
+// for a token it does not know.
+func (c *Client) CustomerOrder(ctx context.Context, token, id string) (Order, error) {
+	var o Order
+	err := c.do(ctx, http.MethodGet, "/orders/"+url.PathEscape(id), token, nil, &o)
+	return o, err
+}
+
+// service is do with the rider's service token. core refusing that token is a
+// misconfigured rider, not a signed-out rider, so its 401 is logged and
+// becomes a 502; a 403 already falls into do's default.
+func (c *Client) service(ctx context.Context, method, path string, body, out any) error {
+	err := c.do(ctx, method, path, c.serviceToken, body, out)
+	if errors.Is(err, ErrUnauthorized) {
+		return c.failure(ctx, method, path, http.StatusUnauthorized, nil)
+	}
+	return err
+}
+
 // do sends one request to base+"/api/core/v1"+path with bearer (when
 // non-empty) and JSON body (when non-nil), decodes a 2xx into out (when
-// non-nil), returns ErrUnauthorized on 401, ErrNotFound on 404, and the logged
-// 502 error otherwise. Every method, the rider's later calls included, goes through it.
+// non-nil), returns ErrUnauthorized on 401, ErrNotFound on 404, ErrConflict on
+// 409, and the logged 502 error otherwise.
 func (c *Client) do(ctx context.Context, method, path, bearer string, body, out any) error {
 	var reader io.Reader
 	if body != nil {
@@ -133,6 +227,8 @@ func (c *Client) do(ctx context.Context, method, path, bearer string, body, out 
 		return ErrUnauthorized
 	case resp.StatusCode == http.StatusNotFound:
 		return ErrNotFound
+	case resp.StatusCode == http.StatusConflict:
+		return ErrConflict
 	case resp.StatusCode < 200 || resp.StatusCode > 299:
 		return c.failure(ctx, method, path, resp.StatusCode, nil)
 	}

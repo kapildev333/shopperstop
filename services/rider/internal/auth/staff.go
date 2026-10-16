@@ -36,7 +36,7 @@ func CurrentStaff(ctx context.Context) core.Staff {
 func (a *Auth) RequireStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		token := bearer(r)
+		token := Bearer(r)
 		if token == "" {
 			httpx.WriteError(w, r, errUnauthorized)
 			return
