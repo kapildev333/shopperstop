@@ -21,11 +21,11 @@ Scope: `apps/mobile/{package.json,app.json,tsconfig.json,eslint.config.js,jest.c
 Scenarios: Root test arguments ignored, Web export built, No literal colours in the app.
 Starts from: `src/no-literal-colors.test.ts`: `no literal colours in src` (`findLiteralColors` from `@shopperstop/ui/testing` over `src`, expects `[]`) and `scanner finds literal colours` (the local quoted-colour-name regex plus `matchLiteralColors` find `#fff`, `rgba(0,0,0,0.5)` and `'white'` in a sample string); red until the workspace and the regex exist.
 
-- [ ] 1.1 `package.json` (`@shopperstop/mobile`, private, `main: "expo-router/entry"`, no `"type"`), the exact versions of design.md Decision 2 (no async-storage), scripts of Decision 4 without `e2e`; `npm install` from the repository root
-- [ ] 1.2 `app.json` per Decision 3; `tsconfig.json` extends `expo/tsconfig.base`, `strict`, includes `src`, `e2e`, `*.ts`, `types: ["jest", "node"]` as needed; `eslint.config.js` per Decision 11 ignoring `dist`, `dist-e2e`, `.expo`; `.gitignore` `.expo/`, `dist/`, `dist-e2e/`, `test-results/`, `playwright-report/`, `expo-env.d.ts`
-- [ ] 1.3 `jest.config.js` and `jest.setup.ts` per Decision 12 (fetch throws `TypeError('Network request failed')`, in-memory `expo-secure-store` fake with `getItem`, `setItem`, `deleteItemAsync`, cleared after each test)
-- [ ] 1.4 Red, then green: the two tests; `npm run test --workspace apps/mobile -- --run` exits 0 (arguments ignored); `npm run build --workspace apps/mobile` exits 0 and `ls apps/mobile/dist` shows `index.html`; record the build time in the log; if the export cannot resolve a hoisted package, add Expo's monorepo `metro.config.js` and say so
-- [ ] 1.5 `make test-web` exits 0; `git status --short` shows only the scope files
+- [x] 1.1 `package.json` (`@shopperstop/mobile`, private, `main: "expo-router/entry"`, no `"type"`), the exact versions of design.md Decision 2 (no async-storage), scripts of Decision 4 without `e2e`; `npm install` from the repository root
+- [x] 1.2 `app.json` per Decision 3; `tsconfig.json` extends `expo/tsconfig.base`, `strict`, includes `src`, `e2e`, `*.ts`, `types: ["jest", "node"]` as needed; `eslint.config.js` per Decision 11 ignoring `dist`, `dist-e2e`, `.expo`; `.gitignore` `.expo/`, `dist/`, `dist-e2e/`, `test-results/`, `playwright-report/`, `expo-env.d.ts`
+- [x] 1.3 `jest.config.js` and `jest.setup.ts` per Decision 12 (fetch throws `TypeError('Network request failed')`, in-memory `expo-secure-store` fake with `getItem`, `setItem`, `deleteItemAsync`, cleared after each test)
+- [x] 1.4 Red, then green: the two tests; `npm run test --workspace apps/mobile -- --run` exits 0 (arguments ignored); `npm run build --workspace apps/mobile` exits 0 and `ls apps/mobile/dist` shows `index.html`; record the build time in the log; if the export cannot resolve a hoisted package, add Expo's monorepo `metro.config.js` and say so
+- [x] 1.5 `make test-web` exits 0; `git status --short` shows only the scope files
 
 ## 2. Session and core client
 
