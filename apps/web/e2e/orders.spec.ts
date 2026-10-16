@@ -15,6 +15,7 @@ import {
 test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('shopperstop:pincode', '560034')))
 
 // The demo customer's orders are read only here: 701 delivered, 702 cancelled, 703 placed (read by number and position).
+// The rider seed holds its delivery by Arjun Rao (`...0901`), delivered, no position.
 const delivered = '00000000-0000-4000-8000-000000000701'
 const tolerance = 0.5
 
@@ -63,6 +64,56 @@ test('tracking against core', async ({ page, request }) => {
   const history = page.getByRole('region', { name: 'Status history', exact: true })
   await expect(history.getByRole('listitem')).toHaveCount(6)
   await expect(history.getByRole('listitem').last().getByText('Delivered', { exact: true })).toBeVisible()
+  await expectNoViolations(page)
+})
+
+test('seeded delivered order against core and rider', async ({ page, request }) => {
+  const shopper = await demoShopper(request)
+  await signedIn(page, shopper)
+  await page.goto(`/orders/${delivered}`)
+
+  const rider = page.getByRole('region', { name: 'Rider', exact: true })
+  await expect(rider.getByText('Arjun Rao', { exact: true })).toBeVisible()
+  await expect(rider.getByText('Delivered', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Open in Maps/ })).toHaveCount(0)
+  await expectNoViolations(page)
+})
+
+// The live delivery as the rider service makes it: staff move the order to ready, the seeded rider Meera Iyer claims it and puts a position.
+test('rider picked up and located against core and rider', async ({ page, request }) => {
+  const shopper = await freshShopper(request, 'E2E Rider Watch')
+  const pick = await orderPick(request, 9)
+  const addressId = await addAddress(request, shopper)
+  await fillCart(request, shopper, pick)
+  const placed = await placeByApi(request, shopper, addressId)
+
+  const staff = await staffHeaders(request)
+  for (const status of ['accepted', 'packing', 'ready']) {
+    const answer = await request.post(`/api/core/v1/admin/orders/${placed.id}/status`, { headers: staff, data: { status } })
+    expect(answer.status()).toBe(200)
+  }
+  const signIn = await request.post('/api/rider/v1/auth/sign-in', {
+    data: { email: 'rider2-koramangala@shopperstop.local', password: 'rider12345' },
+  })
+  expect(signIn.status()).toBe(200)
+  const riderHeaders = { Authorization: `Bearer ${((await signIn.json()) as { token: string }).token}` }
+  const claimed = await request.post('/api/rider/v1/me/deliveries', { headers: riderHeaders, data: { orderId: placed.id } })
+  expect(claimed.status()).toBe(201)
+  const located = await request.put('/api/rider/v1/me/location', { headers: riderHeaders, data: { lat: 12.9352, lng: 77.6245 } })
+  expect(located.status()).toBe(204)
+
+  await signedIn(page, shopper)
+  await page.goto(`/orders/${placed.id}`)
+  const rider = page.getByRole('region', { name: 'Rider', exact: true })
+  await expect(rider.getByText('Meera Iyer', { exact: true })).toBeVisible()
+  await expect(rider.getByText('Out for delivery', { exact: true })).toBeVisible()
+  await expect(rider.getByText('Last seen just now', { exact: true })).toBeVisible()
+  await expect(rider.getByRole('link', { name: 'Open in Maps (opens in a new tab)', exact: true })).toHaveAttribute(
+    'href',
+    'https://www.google.com/maps?q=12.9352,77.6245',
+  )
+  const history = page.getByRole('region', { name: 'Status history', exact: true })
+  await expect(history.getByRole('listitem').last().getByText('Picked up by Meera Iyer', { exact: true })).toBeVisible()
   await expectNoViolations(page)
 })
 
