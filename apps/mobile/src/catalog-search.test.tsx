@@ -51,7 +51,7 @@ test('no query shows search for products', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Search for products' })).toHaveProp('aria-level', 1)
   expect(screen.getByText('Or browse a category.')).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Fruits & Vegetables' })).toBeTruthy()
+  expect(await screen.findByRole('link', { name: 'Fruits & Vegetables' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Dairy, Bread & Eggs' })).toBeTruthy()
 })
 
@@ -62,8 +62,8 @@ test('no results suggests categories', async () => {
 
   expect(await screen.findByRole('heading', { name: 'No results for “zzz”' })).toHaveProp('aria-level', 1)
   expect(screen.getByText('Check the spelling, or browse a category instead.')).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Fruits & Vegetables' })).toHaveProp('href', '/category/fruits-vegetables')
-  expect(screen.getByRole('link', { name: 'Dairy, Bread & Eggs' })).toHaveProp('href', '/category/dairy-bread-eggs')
+  expect(await screen.findByRole('link', { name: 'Fruits & Vegetables' })).toHaveProp('href', '/category/fruits-vegetables')
+  expect(await screen.findByRole('link', { name: 'Dairy, Bread & Eggs' })).toHaveProp('href', '/category/dairy-bread-eggs')
 })
 
 test('clear search', async () => {

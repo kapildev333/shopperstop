@@ -61,5 +61,5 @@ test('search submits', async () => {
   await fireEvent(screen.getByLabelText('Search products'), 'submitEditing')
 
   expect(await screen.findByRole('heading', { name: '2 products for “milk”' })).toHaveProp('aria-level', 1)
-  expect(router).toHaveSearchParams({ q: 'milk' })
+  expect(router.getSearchParams()).toEqual({ q: 'milk' })
 })
