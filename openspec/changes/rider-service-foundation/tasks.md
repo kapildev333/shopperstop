@@ -58,9 +58,9 @@ Scenarios: "Staff create riders" ("Fields are checked before the store"); design
 Starts from: `services/rider/internal/app/admin_riders_test.go` `TestCreateRiderChecksFieldsBeforeCore`: as the admin, post `{storeId: <a uuid the fake does not know>, email: "not-an-email", name: "R", password: "password123"}`; want 400 `validation` on `email`, and `fake.Calls("GET /api/core/v1/stores/{id}")` unchanged across the request. Fails today (400 on `storeId`).
 Commits: `test: rider creation checks fields before the store`, then `fix: check rider fields before the core store call; request schemas accept unknown members`.
 
-- [ ] 4b.1 Write the test; red run pasted into `.claude/lanes/rider-P3-L1-T4b.md`; commit `test: ...`
-- [ ] 4b.2 In `CreateRider`, move the `c.Store` block after the four field checks (before `HashPassword`); update its doc comment. In `openapi.json`, delete `"additionalProperties": false` from `SignInRequest`, `RiderCreate` and `RiderPatch` only (response schemas keep it)
-- [ ] 4b.3 Gates: `make test-rider`, `make gen` and `make postman` leave the tree clean after the commit, `openspec validate --all --strict`; commit `fix: ...`
+- [x] 4b.1 Write the test; red run pasted into `.claude/lanes/rider-P3-L1-T4b.md`; commit `test: ...`
+- [x] 4b.2 In `CreateRider`, move the `c.Store` block after the four field checks (before `HashPassword`); update its doc comment. In `openapi.json`, delete `"additionalProperties": false` from `SignInRequest`, `RiderCreate` and `RiderPatch` only (response schemas keep it)
+- [x] 4b.3 Gates: `make test-rider`, `make gen` and `make postman` leave the tree clean after the commit, `openspec validate --all --strict`; commit `fix: ...`
 
 ## 5. Operator commands and demo seed (worker, after 4)
 

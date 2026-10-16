@@ -106,17 +106,13 @@ func checkPhone(phone string) error {
 	return nil
 }
 
-// CreateRider checks the store with core, validates the fields as core validates
-// a customer's, hashes the password at cost 12 and inserts an active rider.
+// CreateRider validates the fields as core validates a customer's, checks the
+// store with core, hashes the password at cost 12 and inserts an active rider.
+// The field checks run first, so a bad field never costs a core request.
 // Refusals are *httpx.Error: 400 naming the field (storeId when core does not
 // know the store), 409 conflict on email when it is taken in any case, or the
 // 502 of a core failure. Shared by the admin route and rider-admin create-rider.
 func CreateRider(ctx context.Context, pool *pgxpool.Pool, c *core.Client, in NewRider) (Rider, error) {
-	if _, err := c.Store(ctx, in.StoreID); errors.Is(err, core.ErrNotFound) {
-		return Rider{}, invalid("storeId", "no such store")
-	} else if err != nil {
-		return Rider{}, err
-	}
 	email, err := checkEmail(in.Email)
 	if err != nil {
 		return Rider{}, err
@@ -129,6 +125,11 @@ func CreateRider(ctx context.Context, pool *pgxpool.Pool, c *core.Client, in New
 		return Rider{}, err
 	}
 	if err := checkPasswordLength(in.Password); err != nil {
+		return Rider{}, err
+	}
+	if _, err := c.Store(ctx, in.StoreID); errors.Is(err, core.ErrNotFound) {
+		return Rider{}, invalid("storeId", "no such store")
+	} else if err != nil {
 		return Rider{}, err
 	}
 	hash, err := HashPassword(in.Password)
