@@ -84,15 +84,17 @@ func (q *Queries) CountCustomerOrders(ctx context.Context, customerID string) (i
 const countStoreOrders = `-- name: CountStoreOrders :one
 select count(*) from orders
 where store_id = $1 and ($2::order_status is null or status = $2)
+  and (not $3::boolean or status not in ('delivered', 'cancelled'))
 `
 
 type CountStoreOrdersParams struct {
 	StoreID string
 	Status  *OrderStatus
+	Active  bool
 }
 
 func (q *Queries) CountStoreOrders(ctx context.Context, arg CountStoreOrdersParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStoreOrders, arg.StoreID, arg.Status)
+	row := q.db.QueryRow(ctx, countStoreOrders, arg.StoreID, arg.Status, arg.Active)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -447,21 +449,25 @@ func (q *Queries) SetStatus(ctx context.Context, arg SetStatusParams) error {
 const storeOrders = `-- name: StoreOrders :many
 select id, number, customer_id, store_id, status, customer_name, customer_phone, address_label, address_line1, address_line2, address_pincode, subtotal_cents, delivery_fee_cents, total_cents, payment_method, placed_at, delivered_at, cancelled_at, cancel_reason, created_at, updated_at, rider_name, store_name, promised_minutes from orders
 where store_id = $1 and ($2::order_status is null or status = $2)
+  and (not $3::boolean or status not in ('delivered', 'cancelled'))
 order by placed_at desc, id desc
-limit $4 offset $3
+limit $5 offset $4
 `
 
 type StoreOrdersParams struct {
 	StoreID string
 	Status  *OrderStatus
+	Active  bool
 	Off     int32
 	Lim     int32
 }
 
+// active keeps every order that is neither delivered nor cancelled.
 func (q *Queries) StoreOrders(ctx context.Context, arg StoreOrdersParams) ([]Order, error) {
 	rows, err := q.db.Query(ctx, storeOrders,
 		arg.StoreID,
 		arg.Status,
+		arg.Active,
 		arg.Off,
 		arg.Lim,
 	)

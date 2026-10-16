@@ -49,14 +49,17 @@ limit @lim offset @off;
 select count(*) from orders where customer_id = $1;
 
 -- name: StoreOrders :many
+-- active keeps every order that is neither delivered nor cancelled.
 select * from orders
 where store_id = @store_id and (sqlc.narg(status)::order_status is null or status = sqlc.narg(status))
+  and (not @active::boolean or status not in ('delivered', 'cancelled'))
 order by placed_at desc, id desc
 limit @lim offset @off;
 
 -- name: CountStoreOrders :one
 select count(*) from orders
-where store_id = @store_id and (sqlc.narg(status)::order_status is null or status = sqlc.narg(status));
+where store_id = @store_id and (sqlc.narg(status)::order_status is null or status = sqlc.narg(status))
+  and (not @active::boolean or status not in ('delivered', 'cancelled'));
 
 -- name: OrderItems :many
 select order_id, product_id, name, unit_label, image_url, price_cents, mrp_cents, quantity
