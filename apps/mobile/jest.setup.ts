@@ -1,6 +1,9 @@
 import { queryClient } from './src/api'
 import { setToken } from './src/session'
 
+// Query's gc timers (5 minutes each) would outlive the test and keep Jest from exiting; no test needs cache eviction.
+queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } })
+
 // The device keychain is the process boundary, like the file system: an in-memory store stands in for it.
 const mockSecureStore = new Map<string, string>()
 
