@@ -1,8 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, renderHook, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen } from '@testing-library/react-native'
 import type { StoreProduct } from './catalog'
 import { queryClient } from './api'
 import { cartKey, setQuantity, useCartSheetOpen } from './cart'
+import { Text } from './ui/text'
 import { CartBar } from './cart-bar'
 import { fakeCore, json } from './fake-core'
 import { setPincode } from './pincode'
@@ -53,10 +54,16 @@ async function serve(routes: Parameters<typeof fakeCore>[0] = {}) {
   await resolvePincode('560034')
 }
 
+// The sheet's open state, shown as text in the same tree (a second render would replace what `screen` reads).
+function SheetState() {
+  return <Text>{useCartSheetOpen() ? 'sheet open' : 'sheet closed'}</Text>
+}
+
 function bar() {
   return (
     <QueryClientProvider client={queryClient}>
       <CartBar />
+      <SheetState />
     </QueryClientProvider>
   )
 }
@@ -64,15 +71,15 @@ function bar() {
 test('bar follows the cart', async () => {
   await serve()
   await render(bar())
-  const sheet = await renderHook(() => useCartSheetOpen())
   expect(screen.queryByRole('button', { name: /^View cart/ })).toBeNull()
+  expect(screen.getByText('sheet closed')).toBeTruthy()
 
   await setQuantity(storeId, taaza, 2)
 
   expect(await screen.findByText('2 items')).toBeTruthy()
   expect(screen.getByText('₹79')).toBeTruthy()
   await fireEvent.press(screen.getByRole('button', { name: /^View cart/ }))
-  expect(sheet.result.current).toBe(true)
+  expect(await screen.findByText('sheet open')).toBeTruthy()
 })
 
 test('bar shows the replaced notice', async () => {
