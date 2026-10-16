@@ -18,3 +18,11 @@ Proposal committed (`docs(openspec): propose platform-postman-tooling`); waiting
 - to platform manager: CLAUDE.md's `make gen` row should also name `packages/ui/src/tokens.ts` once this lands (outside this lane's scope).
 ## Blockers
 None.
+
+## T1 review
+Verdict: approve. No findings.
+- Commit order: e41a216 (test only, scripts/postman.test.mjs) before 8dad1ca (feat); red recorded in the T1 log with the six expected names. Scope held (scripts, docs/postman, tasks.md, lane log).
+- Code matches design.md 1 to 4: fillExamples runs on the structuredClone and skips $ref and existing examples; id rewrite covers originalRequest.url; serviceOperations reads x-service-token and matches the converter's `:id` paths (the real-contract test checks both ways).
+- Regenerated docs diff holds only: five core routes staffToken to serviceToken, literal seed ids to {{storeId}}/{{orderId}}/{{productId}}/{{riderId}}/{{deliveryId}}/{{addressId}} in saved-response originalRequest, and the twelfth environment variable (secret, Makefile dev token).
+- Gates I ran: `node --test scripts/postman.test.mjs` 22 pass 0 fail; `make postman` twice, both exit 0, `git status --porcelain` empty; `openspec validate --all --strict` 20 passed 0 failed. test-core/test-rider and e2e not re-run (environment file only gains a key at the end).
+- Nits (no action): none needed.
