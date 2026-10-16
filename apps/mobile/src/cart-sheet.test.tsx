@@ -102,7 +102,8 @@ test('sheet lines and bill', async () => {
   expect(screen.getByText('Delivery fee')).toBeTruthy()
   expect(screen.getByText('₹25')).toBeTruthy()
   expect(screen.getByText('Grand total')).toBeTruthy()
-  expect(screen.getByText('₹135')).toBeTruthy()
+  // The bill's grand total and the footer's TOTAL both read ₹135.
+  expect(screen.getAllByText('₹135')).toHaveLength(2)
 })
 
 test('free delivery', async () => {
