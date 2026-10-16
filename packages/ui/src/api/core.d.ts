@@ -1386,6 +1386,10 @@ export interface components {
             number: string;
             /** Format: uuid */
             storeId: string;
+            /** @description The store's name at placement. */
+            storeName: string;
+            /** @description The store's promised delivery minutes at placement. */
+            promisedMinutes: number;
             /** @enum {string} */
             status: "placed" | "accepted" | "packing" | "ready" | "out_for_delivery" | "delivered" | "cancelled";
             customerName: string;
@@ -2442,6 +2446,8 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000703",
                      *           "number": "SS-DEMOAAAD",
                      *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "storeName": "Koramangala",
+                     *           "promisedMinutes": 10,
                      *           "status": "placed",
                      *           "customerName": "Demo Customer",
                      *           "customerPhone": "+919800000000",
@@ -2558,6 +2564,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2675,6 +2683,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2791,6 +2801,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "cancelled",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -2942,6 +2954,8 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000703",
                      *       "number": "SS-DEMOAAAD",
                      *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "storeName": "Koramangala",
+                     *       "promisedMinutes": 10,
                      *       "status": "placed",
                      *       "customerName": "Demo Customer",
                      *       "customerPhone": "+919800000000",
@@ -4791,6 +4805,8 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000703",
                      *           "number": "SS-DEMOAAAD",
                      *           "storeId": "00000000-0000-4000-8000-000000000401",
+                     *           "storeName": "Koramangala",
+                     *           "promisedMinutes": 10,
                      *           "status": "placed",
                      *           "customerName": "Demo Customer",
                      *           "customerPhone": "+919800000000",

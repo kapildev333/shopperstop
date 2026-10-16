@@ -159,15 +159,15 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 	// customer at Koramangala, their items, totals and events.
 	if _, err := tx.Exec(ctx, `
 -- 1. orders ($1 customer ...0201, $2 store ...0401); totals filled by statement 3
-insert into orders (id, number, customer_id, store_id, status, customer_name, customer_phone,
+insert into orders (id, number, customer_id, store_id, store_name, promised_minutes, status, customer_name, customer_phone,
                     address_label, address_line1, address_pincode,
                     subtotal_cents, delivery_fee_cents, total_cents, placed_at, delivered_at, cancelled_at, cancel_reason)
 values
-  ('00000000-0000-4000-8000-000000000701', 'SS-DEMOAAAB', $1, $2, 'delivered', 'Demo Customer', '+919800000000',
+  ('00000000-0000-4000-8000-000000000701', 'SS-DEMOAAAB', $1, $2, 'Koramangala', 10, 'delivered', 'Demo Customer', '+919800000000',
    'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '2 days', now() - interval '2 days' + interval '11 minutes', null, ''),
-  ('00000000-0000-4000-8000-000000000702', 'SS-DEMOAAAC', $1, $2, 'cancelled', 'Demo Customer', '+919800000000',
+  ('00000000-0000-4000-8000-000000000702', 'SS-DEMOAAAC', $1, $2, 'Koramangala', 10, 'cancelled', 'Demo Customer', '+919800000000',
    'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '1 day', null, now() - interval '1 day' + interval '2 minutes', 'Ordered by mistake'),
-  ('00000000-0000-4000-8000-000000000703', 'SS-DEMOAAAD', $1, $2, 'placed', 'Demo Customer', '+919800000000',
+  ('00000000-0000-4000-8000-000000000703', 'SS-DEMOAAAD', $1, $2, 'Koramangala', 10, 'placed', 'Demo Customer', '+919800000000',
    'Home', '12 80 Feet Rd, Koramangala', '560034', 0, 0, 0, now() - interval '10 minutes', null, null, '');
 `, customerID, storeKoramangala); err != nil {
 		return fmt.Errorf("insert demo orders: %w", err)

@@ -52,9 +52,9 @@ func orderIn(t *testing.T, storeID, customerID, productID, status string) string
 	number := "SS-" + base32.StdEncoding.EncodeToString(n[3:])
 	ctx := context.Background()
 	var id string
-	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, status, customer_name, customer_phone,
+	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, store_name, promised_minutes, status, customer_name, customer_phone,
 		address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
-		values ($1, $2, $3, $4::order_status, 'Asha', '+919800000001', 'Home', '12 Test Rd', '570000', 2000, 0, 2000)
+		values ($1, $2, $3, 'Test store', 10, $4::order_status, 'Asha', '+919800000001', 'Home', '12 Test Rd', '570000', 2000, 0, 2000)
 		returning id`, number, customerID, storeID, status).Scan(&id); err != nil {
 		t.Fatal(err)
 	}

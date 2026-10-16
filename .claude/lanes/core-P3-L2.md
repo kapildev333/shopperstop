@@ -1,7 +1,7 @@
 # core-P3-L2 - core backlog: active orders, store snapshot, dashboard isOpen (OpenSpec change core-orders-backlog)
 Status: started
 ## Doing
-2026-10-15: change proposed and validated (`openspec validate --all --strict` 15 passed); two worker briefs in the report. Waiting for the manager to launch Task 1.
+2026-10-15: Task 1 done (1.1 6650a99 red, 1.2 feat commit): core suite green under -race; openspec 15 passed; `make test-web` stops at typecheck with TS2322 in `apps/admin/src/orders-fake.ts` and `apps/web/src/test-data.ts` only (other areas' fixtures, requested; web/admin tests and builds did not run past it). Task 2 not started.
 ## Found
 - Change `openspec/changes/core-orders-backlog/`: proposal; deltas `orders` (MODIFIED "Orders are snapshots" 452 chars, ADDED "Staff read a store's active orders in one call" 399 chars) and `admin-staff` (MODIFIED "Staff dashboard" 356 chars). design.md carries all code, SQL, tests and two Python scripts for the `openapi.json` edits verbatim; tasks.md two sequential worker tasks. No `docs/design/core-P3-L2.md`: design.md is enough.
 - Spike on 061b010 (tree restored before the commit): builds, `go vet` clean, five new tests pass (`TestBackfillStoreSnapshot`, `TestOrderStoreSnapshot`, the seed snapshot assertion, `TestStoreOrdersActive`, `TestDashboardIsOpen`), every package green under `-race -count=1`; `make gen postman` writes `core.d.ts`, the Postman collection and the eight `models.go`.

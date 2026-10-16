@@ -79,9 +79,9 @@ func fixture(t *testing.T) (customerID, storeID, productID string) {
 func insertOrder(customerID, storeID, number string, subtotal, fee, total int64) (string, error) {
 	var id string
 	err := testPool.QueryRow(context.Background(),
-		`insert into orders (number, customer_id, store_id, customer_name, address_label, address_line1, address_pincode,
+		`insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, address_label, address_line1, address_pincode,
 		                     subtotal_cents, delivery_fee_cents, total_cents)
-		 values ($1, $2, $3, 'Asha', 'Home', '1 Test Rd', '570000', $4, $5, $6) returning id`,
+		 values ($1, $2, $3, 'Test store', 10, 'Asha', 'Home', '1 Test Rd', '570000', $4, $5, $6) returning id`,
 		number, customerID, storeID, subtotal, fee, total).Scan(&id)
 	return id, err
 }

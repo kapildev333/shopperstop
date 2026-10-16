@@ -44,6 +44,8 @@ type Order struct {
 	ID               string     `json:"id"`
 	Number           string     `json:"number"`
 	StoreID          string     `json:"storeId"`
+	StoreName        string     `json:"storeName"`       // the store's name at placement
+	PromisedMinutes  int32      `json:"promisedMinutes"` // the store's promise at placement
 	Status           string     `json:"status"`
 	CustomerName     string     `json:"customerName"`
 	CustomerPhone    string     `json:"customerPhone,omitempty"`
@@ -107,7 +109,8 @@ func views(ctx context.Context, q *db.Queries, rows []db.Order) ([]Order, error)
 	}
 	for _, r := range rows {
 		o := Order{
-			ID: r.ID, Number: r.Number, StoreID: r.StoreID, Status: string(r.Status),
+			ID: r.ID, Number: r.Number, StoreID: r.StoreID, StoreName: r.StoreName,
+			PromisedMinutes: r.PromisedMinutes, Status: string(r.Status),
 			CustomerName: r.CustomerName, CustomerPhone: r.CustomerPhone,
 			Address:       Address{Label: r.AddressLabel, Line1: r.AddressLine1, Line2: r.AddressLine2, Pincode: r.AddressPincode},
 			SubtotalCents: r.SubtotalCents, DeliveryFeeCents: r.DeliveryFeeCents, TotalCents: r.TotalCents,

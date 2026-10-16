@@ -1,8 +1,8 @@
 -- name: CreateOrder :one
-insert into orders (number, customer_id, store_id, customer_name, customer_phone,
+insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, customer_phone,
                     address_label, address_line1, address_line2, address_pincode,
                     subtotal_cents, delivery_fee_cents, total_cents)
-values (@number, @customer_id, @store_id, @customer_name, @customer_phone,
+values (@number, @customer_id, @store_id, @store_name, @promised_minutes, @customer_name, @customer_phone,
         @address_label, @address_line1, @address_line2, @address_pincode,
         @subtotal_cents, @delivery_fee_cents, @total_cents)
 returning id;

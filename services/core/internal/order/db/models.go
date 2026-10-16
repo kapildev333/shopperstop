@@ -214,6 +214,8 @@ type Order struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	RiderName        *string
+	StoreName        string
+	PromisedMinutes  int32
 }
 
 type OrderEvent struct {

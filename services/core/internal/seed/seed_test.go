@@ -543,8 +543,8 @@ func TestResetLoadsDemoOrders(t *testing.T) {
 	}
 	addOtherRows(t)
 	var other string
-	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
-		values ('SS-OTHERAAA', '00000000-0000-4000-8000-000000000999', $1, 'Other', 'Home', 'Elsewhere', '110001', 7000, 0, 7000) returning id::text`, storeKoramangala).Scan(&other); err != nil {
+	if err := testPool.QueryRow(ctx, `insert into orders (number, customer_id, store_id, store_name, promised_minutes, customer_name, address_label, address_line1, address_pincode, subtotal_cents, delivery_fee_cents, total_cents)
+		values ('SS-OTHERAAA', '00000000-0000-4000-8000-000000000999', $1, 'Koramangala', 10, 'Other', 'Home', 'Elsewhere', '110001', 7000, 0, 7000) returning id::text`, storeKoramangala).Scan(&other); err != nil {
 		t.Fatalf("insert other order: %v", err)
 	}
 	if _, err := testPool.Exec(ctx, `insert into order_items (order_id, product_id, name, unit_label, price_cents, mrp_cents, quantity)
