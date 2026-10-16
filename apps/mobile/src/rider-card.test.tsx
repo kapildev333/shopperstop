@@ -55,11 +55,12 @@ test('Rider on the way with a position', async () => {
   expect(await screen.findByRole('heading', { name: 'Your rider' })).toBeTruthy()
   expect(screen.getByText('Asha')).toBeTruthy()
   expect(screen.getByText('Out for delivery')).toBeTruthy()
-  expect(screen.getByText('Last seen 3 minutes ago')).toBeTruthy()
+  // The name comes from the order at once; the position waits for the rider read.
+  expect(await screen.findByText('Last seen 3 minutes ago')).toBeTruthy()
   const read = calls.find((request) => new URL(request.url).pathname === delivery)
   expect(read?.headers.get('Authorization')).toBe('Bearer t-rider')
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Open in Maps' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Open in Maps' }))
 
   expect(open).toHaveBeenCalledWith('https://www.google.com/maps?q=12.9352,77.6245')
   open.mockRestore()
