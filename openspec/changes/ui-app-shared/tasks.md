@@ -23,4 +23,4 @@ Scope: `packages/ui/src/app/client.ts`, `packages/ui/src/app/client.test.ts`, `p
 
 ## 4. Acceptance (team lead) and verification (manager)
 - [x] 4.1 Team lead `/opsx:verify`: every scenario in the delta has a passing same-named test, tasks 1 to 3 ticked, test-first order per task, diff only in the files design.md lists plus this change and the ui-P4-L2 lane logs
-- [ ] 4.2 Manager: `make test-web` green on the lane head (every workspace), `openspec validate --all --strict`; nothing under `apps/` changed
+- [x] 4.2 Manager: `make test-web` green on the lane head (every workspace), `openspec validate --all --strict`; nothing under `apps/` changed
