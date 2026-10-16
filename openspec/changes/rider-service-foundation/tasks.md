@@ -10,10 +10,10 @@ Starts from: `services/rider/internal/config/config_test.go` `TestLoadNamesEvery
 Commits: `test: rider config, health, http plumbing and contract`, then `feat: rider service skeleton with health, migrations and contract`.
 
 - [x] 1.1 Write the tests above (copies per Decision 1; config tests new); `go test ./...` in `services/rider` fails (build failure is the red); paste the first failing lines into the log; commit `test: ...`
-- [ ] 1.2 `go.mod` (module `github.com/kapildev333/shopperstop/services/rider`, `go 1.27`, chi and pgx at core's versions), the copied packages, `internal/config` per design.md Interfaces, `migrations/0001_init.sql` per design.md, `internal/app` with `New(pool, origins)` serving healthz and readyz, `cmd/rider` (no core client or auth yet), `cmd/rider-admin migrate` with the usage `usage: rider-admin migrate`
-- [ ] 1.3 `openapi.json`: `openapi` 3.1.0, `info` (title `ShopperStop rider API`, version `0.3.0`, a description naming the envelope and bearer tokens), `servers` `/api/rider/v1`, tag `platform`, `components.securitySchemes.bearer`, schemas `Status` and `Error`, the two health operations with examples on every response
-- [ ] 1.4 `make postman` writes `docs/postman/shopperstop-rider.postman_collection.json`; `make gen` prints the rider sqlc skip line and leaves the tree clean
-- [ ] 1.5 Gates green; paste `make test-rider` package lines and the validate totals; commit `feat: ...` (including the collection)
+- [x] 1.2 `go.mod` (module `github.com/kapildev333/shopperstop/services/rider`, `go 1.27`, chi and pgx at core's versions), the copied packages, `internal/config` per design.md Interfaces, `migrations/0001_init.sql` per design.md, `internal/app` with `New(pool, origins)` serving healthz and readyz, `cmd/rider` (no core client or auth yet), `cmd/rider-admin migrate` with the usage `usage: rider-admin migrate`
+- [x] 1.3 `openapi.json`: `openapi` 3.1.0, `info` (title `ShopperStop rider API`, version `0.3.0`, a description naming the envelope and bearer tokens), `servers` `/api/rider/v1`, tag `platform`, `components.securitySchemes.bearer`, schemas `Status` and `Error`, the two health operations with examples on every response
+- [x] 1.4 `make postman` writes `docs/postman/shopperstop-rider.postman_collection.json`; `make gen` prints the rider sqlc skip line and leaves the tree clean
+- [x] 1.5 Gates green; paste `make test-rider` package lines and the validate totals; commit `feat: ...` (including the collection)
 
 ## 2. Riders, sessions, sign-in, sign-out and me (worker, after 1)
 

@@ -144,16 +144,16 @@ func TestContract(t *testing.T) {
 }
 
 // toyDoc is one documented operation with summary, description, tag and example.
-const toyDoc = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
+const toyDoc = `{"openapi":"3.1.0","servers":[{"url":"/api/rider/v1"}],"paths":{"/extra":{"get":{
   "summary":"s","description":"d","tags":["platform"],
   "responses":{"200":{"description":"ok","content":{"application/json":{"example":{"ok":true}}}}}}}}}`
 
-const toyDocNoExample = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
+const toyDocNoExample = `{"openapi":"3.1.0","servers":[{"url":"/api/rider/v1"}],"paths":{"/extra":{"get":{
   "summary":"s","description":"d","tags":["platform"],
   "responses":{"200":{"description":"ok"}}}}}}`
 
 // toyDocMissing503Example documents a 200 example but no example on the 503.
-const toyDocMissing503Example = `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{"/extra":{"get":{
+const toyDocMissing503Example = `{"openapi":"3.1.0","servers":[{"url":"/api/rider/v1"}],"paths":{"/extra":{"get":{
   "summary":"s","description":"d","tags":["platform"],
   "responses":{
     "200":{"description":"ok","content":{"application/json":{"example":{"ok":true}}}},
@@ -161,28 +161,28 @@ const toyDocMissing503Example = `{"openapi":"3.1.0","servers":[{"url":"/api/core
 
 func toyRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/api/core/v1/extra", http.NotFound)
+	r.Get("/api/rider/v1/extra", http.NotFound)
 	return r
 }
 
 func TestContractNamesUndocumentedRoute(t *testing.T) {
-	problems := contractProblems(toyRouter(), []byte(`{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],"paths":{}}`))
-	if !containsProblem(problems, "GET /api/core/v1/extra") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
+	problems := contractProblems(toyRouter(), []byte(`{"openapi":"3.1.0","servers":[{"url":"/api/rider/v1"}],"paths":{}}`))
+	if !containsProblem(problems, "GET /api/rider/v1/extra") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra, got %q", problems)
 	}
 }
 
 func TestContractNamesUnservedPath(t *testing.T) {
 	problems := contractProblems(chi.NewRouter(), []byte(toyDoc))
-	if !containsProblem(problems, "GET /api/core/v1/extra") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
+	if !containsProblem(problems, "GET /api/rider/v1/extra") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra, got %q", problems)
 	}
 }
 
 func TestContractNamesMissingExample(t *testing.T) {
 	problems := contractProblems(toyRouter(), []byte(toyDocNoExample))
-	if !containsProblem(problems, "GET /api/core/v1/extra") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
+	if !containsProblem(problems, "GET /api/rider/v1/extra") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra, got %q", problems)
 	}
 }
 
@@ -201,8 +201,8 @@ func TestContractUsesServersURL(t *testing.T) {
 // TestContractNamesMissing503Example: every response that declares content needs an example.
 func TestContractNamesMissing503Example(t *testing.T) {
 	problems := contractProblems(toyRouter(), []byte(toyDocMissing503Example))
-	if !containsProblem(problems, "GET /api/core/v1/extra") || !containsProblem(problems, "503") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra and response 503, got %q", problems)
+	if !containsProblem(problems, "GET /api/rider/v1/extra") || !containsProblem(problems, "503") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra and response 503, got %q", problems)
 	}
 }
 
@@ -307,13 +307,13 @@ func TestContractSecurity(t *testing.T) {
 	}
 }
 
-// toySecurityDoc documents GET /api/core/v1/extra with a 401, with or without security.
+// toySecurityDoc documents GET /api/rider/v1/extra with a 401, with or without security.
 func toySecurityDoc(secured bool) string {
 	security := ""
 	if secured {
 		security = `"security":[{"bearer":[]}],`
 	}
-	return `{"openapi":"3.1.0","servers":[{"url":"/api/core/v1"}],
+	return `{"openapi":"3.1.0","servers":[{"url":"/api/rider/v1"}],
   "components":{"securitySchemes":{"bearer":{"type":"http","scheme":"bearer"}}},
   "paths":{"/extra":{"get":{"summary":"s","description":"d","tags":["accounts"],` + security + `
   "responses":{"200":{"description":"ok"},"401":{"description":"no token"}}}}}}`
@@ -324,7 +324,7 @@ func toySecurityDoc(secured bool) string {
 func toySecurityProblems(t *testing.T, status int, doc string) []string {
 	t.Helper()
 	r := chi.NewRouter()
-	r.Get("/api/core/v1/extra", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })
+	r.Get("/api/rider/v1/extra", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })
 	ts := httptest.NewServer(r)
 	t.Cleanup(ts.Close)
 	return securityProblems(ts.URL, []byte(doc))
@@ -333,16 +333,16 @@ func toySecurityProblems(t *testing.T, status int, doc string) []string {
 // TestContractNamesMissingSecurity: a route that answers 401 must declare security.
 func TestContractNamesMissingSecurity(t *testing.T) {
 	problems := toySecurityProblems(t, http.StatusUnauthorized, toySecurityDoc(false))
-	if !containsProblem(problems, "GET /api/core/v1/extra") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra, got %q", problems)
+	if !containsProblem(problems, "GET /api/rider/v1/extra") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra, got %q", problems)
 	}
 }
 
 // TestContractNamesNeedlessSecurity: an operation that answers without a token must not declare security.
 func TestContractNamesNeedlessSecurity(t *testing.T) {
 	problems := toySecurityProblems(t, http.StatusOK, toySecurityDoc(true))
-	if !containsProblem(problems, "GET /api/core/v1/extra") || !containsProblem(problems, "answers 200") {
-		t.Fatalf("want a problem naming GET /api/core/v1/extra and answers 200, got %q", problems)
+	if !containsProblem(problems, "GET /api/rider/v1/extra") || !containsProblem(problems, "answers 200") {
+		t.Fatalf("want a problem naming GET /api/rider/v1/extra and answers 200, got %q", problems)
 	}
 }
 

@@ -106,4 +106,3 @@ func TestWriteErrorEnvelope(t *testing.T) {
 		}
 	})
 }
-
