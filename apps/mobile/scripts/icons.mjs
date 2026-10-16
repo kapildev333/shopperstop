@@ -24,6 +24,7 @@ const MARK = [
 export const IMAGES = [
   { file: 'icon.png', opaque: true, scale: 1 },
   { file: 'adaptive-icon.png', opaque: false, scale: 0.8 },
+  { file: 'splash-icon.png', opaque: false, scale: 1 },
 ]
 
 function declaration(css, name) {

@@ -45,9 +45,9 @@ Scope: `apps/mobile/scripts/icons.mjs` (`IMAGES` row only), `apps/mobile/scripts
 Scenario: Splash uses the brand surface and the mark.
 Starts from: `apps/mobile/scripts/icons.test.mjs` `splash uses the brand surface and the mark` (the `plugins` entry whose first element is `expo-splash-screen` has `image === './assets/splash-icon.png'`, `backgroundColor === brandColors(tokensCss).brand`, `imageWidth === 200`, `resizeMode === 'contain'`; the file exists; `IMAGES` holds `splash-icon.png` with `opaque: false, scale: 1`, which also brings it under `committed icons match the generator`).
 
-- [ ] 3.1 `test:` the splash test, red
-- [ ] 3.2 `IMAGES` row for `splash-icon.png`, run `node scripts/icons.mjs`, commit the PNG (the two existing PNGs must come out pixel-identical; `git status` shows them unchanged or the test says why)
-- [ ] 3.3 `app.json` plugin entry per design.md Decision 3; `npm run build --workspace apps/mobile` exits 0
+- [x] 3.1 `test:` the splash test, red
+- [x] 3.2 `IMAGES` row for `splash-icon.png`, run `node scripts/icons.mjs`, commit the PNG (the two existing PNGs must come out pixel-identical; `git status` shows them unchanged or the test says why)
+- [x] 3.3 `app.json` plugin entry per design.md Decision 3; `npm run build --workspace apps/mobile` exits 0
 
 ## 4. Acceptance (team lead)
 
