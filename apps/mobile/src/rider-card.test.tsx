@@ -129,3 +129,21 @@ test('Failed rider read keeps the card', async () => {
   expect(screen.getByText('Last seen 3 minutes ago')).toBeTruthy()
   expect(screen.queryByRole('alert')).toBeNull()
 })
+
+test('Rider card carries its own margin', async () => {
+  setToken('t-rider')
+  fakeCore({ [`GET ${delivery}`]: () => apiError(404, 'not_found') })
+
+  const { toJSON } = await renderCard(order({ riderName: 'Asha' }))
+
+  expect(toJSON()).toMatchObject({ props: { style: { marginTop: 12, marginHorizontal: 12 } } })
+})
+
+test('No rider renders nothing, so no spacer is left above the products card', async () => {
+  setToken('t-rider')
+  fakeCore({ [`GET ${delivery}`]: () => apiError(404, 'not_found') })
+
+  const { toJSON } = await renderCard(order({ riderName: undefined, status: 'placed' }))
+
+  expect(toJSON()).toBeNull()
+})
