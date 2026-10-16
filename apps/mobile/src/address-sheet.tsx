@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, Switch, View } from 'react-native'
 import { saveAddress, type Address } from './addresses'
-import type { ApiError } from './api'
+import { splitError } from './auth-forms'
 import { Button } from './ui/button'
 import { Chip } from './ui/chip'
 import { FormField } from './ui/form-field'
@@ -13,12 +13,6 @@ const fieldNames = ['label', 'line1', 'line2', 'pincode'] as const
 type Errors = { fields: Partial<Record<(typeof fieldNames)[number], string>>; banner?: string }
 const none: Errors = { fields: {} }
 const defaultLabels = ['Home', 'Work', 'Other']
-
-// An envelope error naming one of this form's fields shows under it; any other error shows in the alert.
-function splitError(error: ApiError): Errors {
-  const field = fieldNames.find((name) => name === error.field)
-  return field ? { fields: { [field]: error.message } } : { fields: {}, banner: error.message }
-}
 
 // Adds when `address` is absent, edits when present. Closes only on success; the form is mounted only while open, so each open starts fresh.
 export function AddressSheet({ open, address, onClose }: { open: boolean; address?: Address; onClose: () => void }) {
@@ -50,7 +44,7 @@ function AddressForm({ address, onClose }: { address?: Address; onClose: () => v
     setPending(true)
     const error = await saveAddress(address?.id, values)
     setPending(false)
-    if (error) return setErrors(splitError(error))
+    if (error) return setErrors(splitError(error, fieldNames))
     onClose()
   }
 
