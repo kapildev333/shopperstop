@@ -1,5 +1,5 @@
 # core-P5-L1-t1 - payment method on placement and reads (task 1 of core-payments)
-Status: done (test 899694d, feat committed on lane branch; not pushed)
+Status: done (test 899694d, feat committed on lane branch; not pushed); review: approve (core-P5-L1-review-t1.md)
 ## Brief
 - LANE-ID: core-P5-L1 (task 1 of 4). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L1. Branch: lane/core-P5-L1-payments. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.

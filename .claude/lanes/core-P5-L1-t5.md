@@ -1,5 +1,5 @@
 # core-P5-L1-t5 - fix: system cancel only while payment is pending (task 5 of core-payments)
-Status: done
+Status: done; review: approve (core-P5-L1-review-t5.md)
 ## Doing
 Done: test `6facad2`, fix `616f316`. Gates green (see Found). Lane log committed separately.
 ## Found

@@ -1,6 +1,6 @@
 # Tasks
 
-Five worker tasks, in order (task 5 is a fix after the task 2 review, not in `design.md`), on branch `lane/core-P5-L1-payments` in `.worktrees/core-P5-L1`. Every code block is verbatim in `design.md` ("Task 1" to "Task 4"); a choice neither file settles is a stop-and-report.
+Six worker tasks, in order (task 5 is a fix after the task 2 review, task 6 a test gap found at acceptance; neither is in `design.md`), on branch `lane/core-P5-L1-payments` in `.worktrees/core-P5-L1`. Every code block is verbatim in `design.md` ("Task 1" to "Task 4"); a choice neither file settles is a stop-and-report.
 
 Databases (D26): tests only, on the per-run schemas of `shopperstop_core_test`. No `core-admin migrate`, no `seed-demo`, no `make dev`/`make seed`/`make e2e`, no client on `shopperstop_core` or `shopperstop_core_e2e`, no `docker`. Never run the archived Phase 3 `check-wiring.sh` (it starts a real rider on :8081 against the dev database).
 
@@ -40,3 +40,9 @@ Scope: `services/core/internal/order/status.go`, `services/core/internal/app/ord
 
 - [x] 5.1 Add `TestSystemCancelNeedsPendingPayment`: a paid online order and a cash order are refused 409 `conflict` with status, events and stock unchanged; the pending timeout still cancels 200; run it and see it fail; commit.
 - [x] 5.2 In `Transition`, after the table check, refuse a `system` cancel unless the payment is `pending` (409 `conflict`, "only an order awaiting payment can be cancelled by the system"); update the status route's 409 description; `make gen postman`; run the gates; tick 5.1 and 5.2; commit.
+
+## 6. Every answered error code is in the contract
+
+Scope: `services/core/internal/app/{app_test.go,catalog_categories_test.go,orders_payment_test.go}`, this file (ticks). Scenarios: platform "Error envelope" / The contract lists every code (`email_unverified`, `payment_pending`); orders "The payment service cannot cancel a paid order" (events of the cash order). Test-only: the behaviour already holds, so the red is shown by mutation (drop `payment_pending` from the `Error` code enum in `openapi.json`, see `TestAcceptAwaitsPayment` fail, restore). Commit: `test: every error code a test expects is in the contract`.
+
+- [ ] 6.1 Move the `openapi.json` Error enum read out of `TestWrongMethod` into a package-level `errorCodes = sync.OnceValues(...)` in `app_test.go`; `TestWrongMethod` uses it; `expectError` fails when `code` is not in it; in `TestSystemCancelNeedsPendingPayment` assert the cash order still has 1 event after the refused cancel; run the mutation above and see it fail, restore, run the gates; tick 6.1; commit.

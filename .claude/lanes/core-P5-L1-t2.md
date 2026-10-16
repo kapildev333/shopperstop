@@ -1,5 +1,5 @@
 # core-P5-L1-t2 - payment route, accept guard, service actor table, services per route (task 2 of core-payments)
-Status: done (red 49ec29e; feat committed, gates green)
+Status: done (red 49ec29e; feat committed, gates green); review: approve (core-P5-L1-review-t2.md)
 ## Brief
 - LANE-ID: core-P5-L1 (task 2 of 4). Area: core. Role: worker. Starts after task 1 is committed on the branch.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L1. Branch: lane/core-P5-L1-payments. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout.
