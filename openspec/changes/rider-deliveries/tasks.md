@@ -57,9 +57,9 @@ Scenarios: "Delivery demo seed" (both); rider-service's "Seed needs no core" and
 Starts from: `services/rider/internal/seed/seed_test.go` `TestSeededDeliveryInHistory` (sign in as `rider1-koramangala@shopperstop.local`, `GET /me/deliveries?status=delivered` lists `...0901` with `orderNumber` `SS-DEMOAAAB`, `itemCount` 3, `totalCents` 33900), the extended `TestSummaryMatchesSeed` (id regex `0000000008xx|0000000009xx`, each id line's table `riders` or `deliveries` holds that id, the lines marked `(Postman riderId)` and `(Postman deliveryId)` equal the environment's `riderId` and `deliveryId`, 5 ids), `TestResetTwiceLeavesDemoRiders` also asserts one delivery after two resets and none of a delivery or location inserted before them.
 Commits: `test: delivery demo seed`, then `feat: delivery demo seed`.
 
-- [ ] 5.1 Write the tests; `server()` passes `delivery.New(testPool, c)` (c still points at a closed port); red run pasted into the log; commit `test: ...`
-- [ ] 5.2 `truncateTables`, the row and the summary per design.md Decision 13 and Data model
-- [ ] 5.3 Gates green; commit `feat: ...`
+- [x] 5.1 Write the tests; `server()` passes `delivery.New(testPool, c)` (c still points at a closed port); red run pasted into the log; commit `test: ...`
+- [x] 5.2 `truncateTables`, the row and the summary per design.md Decision 13 and Data model
+- [x] 5.3 Gates green; commit `feat: ...`
 
 ## 6. Verification (area manager)
 
