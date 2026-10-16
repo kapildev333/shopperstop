@@ -26,3 +26,11 @@ Verdict: approve (commit f90534f). No findings that need a change.
 - Scope: only the three files, tasks.md 1.x ticks and the T1 log. Commit identity correct, no trailers.
 - Test-first: the check script was committed with the proposal (83fb0a7) and is the test; red (36 failures) is recorded in the T1 log before the feat. Acceptable per the brief.
 - Nit (no action): the "five servers" scenario name is kept by validate rules, now describes six.
+## T2 review
+Verdict: approve (commits 490b4c7 test, 6762af2 feat). No findings.
+- Re-ran: `node --test scripts/postman.test.mjs` 27 pass, 0 fail; `make postman` twice prints `postman: services/payment/openapi.json absent, skipping`, `git status --porcelain` empty; core and rider collections byte-identical to 5eeae78 (only the environment file changed under docs/postman); no payment collection; `openspec validate --all --strict` 20 passed, 0 failed.
+- postman.mjs: two lines (`payments: 'paymentId'`, `payment: { baseUrl: 'paymentBaseUrl', ownToken: 'customerToken' }`), nothing else.
+- Environment: fourteen variables, `paymentBaseUrl` http://localhost:8082/api/payment/v1 and `paymentId` 00000000-0000-4000-8000-000000000a01 (type default) before `serviceToken`.
+- Scenarios: each spec-delta scenario (URLs, skip line, committed-collection guard, routes, ids, environment variables, payment id fixed) has a test; the guard test passes before and after by design.
+- Test-first: 490b4c7 touches only the test file (21 pass / 6 fail per log, names match task 2.1); 6762af2 adds the code, env, tasks 2.1 to 2.3 ticked and the T2 log. Scope clean; no needless complexity.
+- Not re-run: make test-core and make test-rider (worker reports exit 0; the change cannot affect them beyond the environment file).
