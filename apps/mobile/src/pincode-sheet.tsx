@@ -131,6 +131,9 @@ function StoreChangeDialog({ change, onClose }: { change?: Change; onClose: () =
   const [clearing, setClearing] = useState(false)
   const [failed, setFailed] = useState(false)
   const busy = useRef(false)
+  // The words come from the last change: `change` is cleared when the dialog closes, and the closing frame still shows.
+  const [shown, setShown] = useState(change)
+  if (change && change !== shown) setShown(change)
 
   function keep() {
     if (!busy.current) onClose()
@@ -150,14 +153,14 @@ function StoreChangeDialog({ change, onClose }: { change?: Change; onClose: () =
     onClose()
   }
 
-  const items = change?.count === 1 ? '1 item' : `${change?.count} items`
+  const items = shown?.count === 1 ? '1 item' : `${shown?.count} items`
   return (
-    <Dialog open={!!change} title={`Switch to the ${change?.store.name ?? ''} store?`} onClose={keep}>
+    <Dialog open={!!change} title={`Switch to the ${shown?.store.name ?? ''} store?`} onClose={keep}>
       <View style={styles.icon} aria-hidden>
         <ShoppingBag size={24} color={colors.ink} />
       </View>
       <Text tone="inkMuted">
-        {`Pincode ${change?.pincode} is served by a different store. Your cart has ${items} from ${change?.from}; switching will empty it.`}
+        {`Pincode ${shown?.pincode} is served by a different store. Your cart has ${items} from ${shown?.from}; switching will empty it.`}
       </Text>
       {failed ? (
         <View accessibilityRole="alert" style={styles.alert}>
