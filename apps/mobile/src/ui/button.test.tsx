@@ -91,12 +91,18 @@ test('button accessible name overrides the visible text', async () => {
 })
 
 test('button icon is 16 px in the label tone', async () => {
+  // A probe icon records the props Button gives it; no Lucide render needed.
+  const seen: { size?: number; color?: string }[] = []
+  const Probe = (props: { size?: number; color?: string }) => {
+    seen.push(props)
+    return null
+  }
   await render(
     <>
-      <Button icon={X}>Save</Button>
-      <Button variant="ghost" icon={X}>Add</Button>
+      <Button icon={Probe}>Save</Button>
+      <Button variant="ghost" icon={Probe}>Add</Button>
     </>,
   )
-  expect(screen.UNSAFE_getAllByType(X)[0].props).toMatchObject({ size: 16, color: colors.onAccent })
-  expect(screen.UNSAFE_getAllByType(X)[1].props).toMatchObject({ size: 16, color: colors.accent })
+  expect(seen[0]).toEqual({ size: 16, color: colors.onAccent })
+  expect(seen[seen.length - 1]).toEqual({ size: 16, color: colors.accent })
 })

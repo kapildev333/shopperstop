@@ -12,6 +12,10 @@ type ButtonProps = {
   size?: Size
   loading?: boolean
   disabled?: boolean
+  // Overrides the name read from the visible text (the account's "Edit" is "Edit profile").
+  accessibilityLabel?: string
+  // Lucide icon, 16 px, in the label tone, before the text.
+  icon?: ComponentType<{ size?: number; color?: string }>
   onPress?: () => void
 }
 
@@ -38,12 +42,22 @@ const sizes: Record<Size, ViewStyle> = {
   compact: { minHeight: 44, paddingHorizontal: 8 },
 }
 
-export function Button({ children, variant = 'primary', size = 'md', loading = false, disabled = false, onPress }: ButtonProps) {
+export function Button({
+  children,
+  variant = 'primary',
+  size = 'md',
+  loading = false,
+  disabled = false,
+  accessibilityLabel,
+  icon: Icon,
+  onPress,
+}: ButtonProps) {
   const inactive = disabled || loading
   const tone = labelTone[variant]
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
@@ -56,6 +70,7 @@ export function Button({ children, variant = 'primary', size = 'md', loading = f
       ]}
     >
       {loading ? <ActivityIndicator size="small" color={colors[tone]} /> : null}
+      {Icon ? <Icon size={16} color={colors[tone]} /> : null}
       <Text variant="button" tone={tone}>
         {children}
       </Text>
