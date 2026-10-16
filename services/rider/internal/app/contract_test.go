@@ -138,7 +138,7 @@ func TestContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if problems := contractProblems(New(nil, nil, nil), doc); len(problems) > 0 {
+	if problems := contractProblems(New(nil, nil, nil, nil), doc); len(problems) > 0 {
 		t.Fatalf("contract problems:\n%s", strings.Join(problems, "\n"))
 	}
 }
