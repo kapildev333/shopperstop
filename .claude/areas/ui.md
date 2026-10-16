@@ -3,7 +3,7 @@ Scope: `packages/ui/`
 Depends on: platform (root `package.json` workspaces, landed)
 Spec: Spec 1 §8, §10; plan task 9
 ## Doing
-ui-P4-L2 `ui-app-shared` done 2026-10-16 (#296, archived in the next PR). Idle on the loop; new work comes from `## Requests` in the other area plans or from the orchestrator. No `make e2e` here.
+ui-P4-L2 `ui-app-shared` done (#296, archived #298); web (#302) and rider (#304) have swapped to `@shopperstop/ui/app`, admin's swap (admin-P4-L2) is running. Next: ui-P5-L1 `ui-payment-api-types` (PLAN.md Phase 5, D48 to D55) starts when payment-P5-L1 puts `services/payment/openapi.json` on main; then ui-P6-L1 `ui-receipt-api-types` after receipt-P6-L1; ui-P7-L1 `ui-dark-mode` in Phase 7. No `make e2e` here.
 
 ## Lanes
 | Lane | Task | Scope | Status |
