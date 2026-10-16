@@ -55,7 +55,10 @@ func run(cfg config.Config) error {
 	}
 	slog.Info("rider listening", "addr", ln.Addr().String())
 	c := core.New(cfg.CoreURL, cfg.CoreServiceToken, time.Now)
-	a := auth.New(pool, cfg.SessionPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), c)
+	// Sign-in limiter: 10 attempts per email and 100 per IP per hour.
+	limit := auth.NewLimiter(10, 100, time.Hour, time.Now)
+	limit.TrustProxy = cfg.TrustProxy
+	a := auth.New(pool, cfg.SessionPepper, limit, c)
 	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err

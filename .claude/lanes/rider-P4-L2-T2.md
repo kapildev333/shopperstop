@@ -1,5 +1,5 @@
 # rider-P4-L2-T2 - The sign-in limiter trusts a proxy only when told (task 2 of rider-hygiene-carryover)
-Status: in progress (test commit made; code next)
+Status: done (test commit 6d9b81b; feat commit below)
 
 ## Brief
 - LANE-ID: rider-P4-L2 (task T2). Area: `rider`.
@@ -26,6 +26,14 @@ vet: internal/config/config_test.go:110:24: cfg.TrustProxy undefined (type confi
 vet: internal/app/riders_test.go:309:8: limit.TrustProxy undefined (type *auth.Limiter has no field or method TrustProxy)
 ```
 ## Green run
+```
+TestLoadTrustProxy PASS (internal/config)
+TestRiderSignInRateLimited PASS, TestRiderSignInRateLimitedPerIP PASS, TestRiderSignInRateLimitedPerForwardedIP PASS, TestRiderSignInEmptyForwardedForFallsBackToConnection PASS (internal/app), race, real shopperstop_rider_test
+diff services/core/internal/auth/limit.go services/rider/internal/auth/limit.go: empty
+```
 ## Gates
+- `GOFLAGS=-count=1 make test-rider`: exit 0; all rider packages ok (app 39.99s, auth 12.27s, config 2.07s, seed 47.80s).
+- `make gen postman`: exit 0, no generated diff; `git status` shows only the feat files plus untracked `.claude/lanes/rider-P4-L2-R1.md`.
+- `openspec validate --all --strict`: 20 passed, 0 failed, exit 0.
 ## Found
 ## Blockers

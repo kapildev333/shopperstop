@@ -17,8 +17,8 @@ Scope: `services/rider/queries/auth.sql`, `services/rider/internal/auth/db/auth.
 
 Scope: `services/rider/internal/config/config.go`, `config_test.go`, `services/rider/internal/auth/limit.go`, `services/rider/internal/auth/rider.go`, `services/rider/cmd/rider/main.go`, `services/rider/internal/app/riders_test.go`, this file (ticks). Scenarios: rider-service "The rider sign-in limiter trusts a proxy only when told" / Clients behind a trusted proxy (`TestRiderSignInRateLimitedPerForwardedIP`), Empty forwarded address falls back to the connection (`TestRiderSignInEmptyForwardedForFallsBackToConnection`), Proxy not trusted (`TestRiderSignInRateLimitedPerIP`), Unknown value refused (`TestLoadTrustProxy`); "Rider sign-in is rate limited" stays green. Starts from `services/rider/internal/config/config_test.go` `TestLoadTrustProxy` (fails to compile: `cfg.TrustProxy undefined`) and `services/rider/internal/app/riders_test.go` `TestRiderSignInRateLimitedPerForwardedIP` (fails to compile: `limit.TrustProxy undefined`). Commits: `test: rider sign-in limiter trusts a proxy only when told`, `feat: SHOPPERSTOP_RIDER_TRUST_PROXY keys the rider limiter on X-Forwarded-For`.
 
-- [ ] 2.1 Apply the "Task 2: trusted proxy, tests" diff; run `go vet ./internal/config/ ./internal/app/` from `services/rider` and see both undefined-field errors; commit.
-- [ ] 2.2 Apply the "Task 2: trusted proxy, code" diff; run the gates; tick 2.1 and 2.2; commit.
+- [x] 2.1 Apply the "Task 2: trusted proxy, tests" diff; run `go vet ./internal/config/ ./internal/app/` from `services/rider` and see both undefined-field errors; commit.
+- [x] 2.2 Apply the "Task 2: trusted proxy, code" diff; run the gates; tick 2.1 and 2.2; commit.
 
 ## 3. Acceptance (team lead) and verification (manager)
 
