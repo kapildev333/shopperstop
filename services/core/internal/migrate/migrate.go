@@ -12,6 +12,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// lockKey is the session advisory lock every Apply holds on its database.
+const lockKey = 727001
+
 var fileName = regexp.MustCompile(`^(\d{4})_[a-z0-9_]+\.sql$`)
 
 const bookkeeping = `create table if not exists schema_migrations (
@@ -24,9 +27,9 @@ const bookkeeping = `create table if not exists schema_migrations (
 // recorded, in file-name order. Each file runs in its own transaction with
 // its version insert, so a failure leaves no trace of that file and stops the
 // run. Apply returns the versions applied by this call. Two files sharing a
-// number are refused before anything runs. Two runners racing fail on the
-// primary key instead of waiting.
-// ponytail: no advisory lock; add pg_advisory_lock when deploys migrate from more than one process.
+// number are refused before anything runs. The whole run holds a session
+// advisory lock on its own connection, so a second runner on the same
+// database waits for the first and then applies only what is still pending.
 func Apply(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) ([]string, error) {
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
@@ -49,10 +52,22 @@ func Apply(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) ([]string, error
 		files = append(files, e.Name())
 	}
 
-	if _, err := pool.Exec(ctx, bookkeeping); err != nil {
+	// The connection leaves the pool and is closed at the end: closing the
+	// session releases the lock even when ctx is already cancelled.
+	pc, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("migrate: connect: %w", err)
+	}
+	conn := pc.Hijack()
+	defer conn.Close(context.Background())
+	if _, err := conn.Exec(ctx, "select pg_advisory_lock($1)", lockKey); err != nil {
+		return nil, fmt.Errorf("migrate: lock: %w", err)
+	}
+
+	if _, err := conn.Exec(ctx, bookkeeping); err != nil {
 		return nil, fmt.Errorf("migrate: create schema_migrations: %w", err)
 	}
-	rows, err := pool.Query(ctx, "select version from schema_migrations")
+	rows, err := conn.Query(ctx, "select version from schema_migrations")
 	if err != nil {
 		return nil, fmt.Errorf("migrate: read schema_migrations: %w", err)
 	}
@@ -80,7 +95,7 @@ func Apply(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) ([]string, error
 		if err != nil {
 			return applied, fmt.Errorf("migrate %s: read: %w", name, err)
 		}
-		err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		err = pgx.BeginFunc(ctx, conn, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, string(body)); err != nil {
 				return err
 			}

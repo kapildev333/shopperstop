@@ -10,8 +10,8 @@ Gates, from `services/core` with `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://
 
 Scope: `services/core/internal/migrate/` (`migrate.go`, `migrate_test.go`), `services/core/internal/testdb/testdb.go`, this file (ticks). Scenario: platform "Migration runs do not interleave" / Two runs at once; the existing migrate tests stay green. Starts from `internal/migrate/migrate_test.go` `TestApplyConcurrentRunsSerialise` (fails: SQLSTATE 23505 on `pg_type_typname_nsp_index`). Commits: `test: two migrate runs at once apply each file once`, `feat: migrate holds an advisory lock for the whole run`.
 
-- [ ] 1.1 Add `TestApplyConcurrentRunsSerialise` and its imports; run `go test -race -count=1 ./internal/migrate/` and see it fail; commit.
-- [ ] 1.2 Apply the `migrate.go` and `testdb.go` diffs; run the gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 Add `TestApplyConcurrentRunsSerialise` and its imports; run `go test -race -count=1 ./internal/migrate/` and see it fail; commit.
+- [x] 1.2 Apply the `migrate.go` and `testdb.go` diffs; run the gates; tick 1.1 and 1.2; commit.
 
 ## 2. Expired sessions swept, limiter behind a trusted proxy
 
