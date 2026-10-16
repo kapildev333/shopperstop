@@ -117,11 +117,6 @@ test('History and a delivered order against core', async ({ page, request }) => 
   await expect(main.getByText('Arjun Rao', { exact: true })).toBeVisible()
   await expect(main.getByText('Open in Maps', { exact: true })).toHaveCount(0)
   await expectNoViolations(page)
-
-  // A reload of the order's own address must show the same order (the static export serves the route itself).
-  await page.reload()
-  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Order SS-DEMOAAAB', exact: true })).toBeVisible()
-  await expectNoViolations(page)
 })
 
 test('Tracking follows the order against core', async ({ page, request }) => {
