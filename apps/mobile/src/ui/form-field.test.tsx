@@ -62,3 +62,8 @@ test('typing calls onChangeText', async () => {
   fireEvent.changeText(screen.getByLabelText('Email'), 'asha@example.com')
   expect(onChangeText).toHaveBeenCalledWith('asha@example.com')
 })
+
+test('tabular input', async () => {
+  await render(<FormField label="Pincode" tabular value="560034" onChangeText={() => {}} />)
+  expect(screen.getByLabelText('Pincode')).toHaveStyle({ fontVariant: ['tabular-nums'], letterSpacing: 2 })
+})
