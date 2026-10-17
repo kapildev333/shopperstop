@@ -59,7 +59,14 @@ func (d *Dispatcher) AdminOrderDispatch(w http.ResponseWriter, r *http.Request) 
 	}
 	out := OrderDispatch{Online: online, Dispatch: "off", Offers: make([]DispatchOffer, 0, len(rows))}
 	if d.cfg.Enabled {
-		out.Dispatch = "on"
+		loc, err := d.storeLocation(ctx, order.StoreID)
+		if err != nil {
+			httpx.WriteError(w, r, err)
+			return
+		}
+		if loc != nil {
+			out.Dispatch = "on"
+		}
 	}
 	for _, row := range rows {
 		o := DispatchOffer{ID: row.ID, RiderName: row.RiderName, Status: string(row.Status), EtaSeconds: int(row.EtaSeconds), OfferedAt: row.OfferedAt.Time}

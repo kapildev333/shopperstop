@@ -67,8 +67,8 @@ Scenarios: dispatch "Candidates rank by ETA to the store" (all four), "Staff rea
 Starts from: `internal/dispatch/dispatch_test.go` `TestETA`, `TestTickNearerRiderFirst`, `TestTickSameMinuteLongerIdle`, `TestTickIdleCountsFromLastDelivery`, `TestTickWithin100mIsZero`, `TestTickStoreWithoutLocation`, `TestTickNoCandidateNoCoreCall` (R3: candidates before core; alone it fails with "core ready-orders calls for a store with no candidate: 1, want 0"); `internal/app/dispatch_test.go` `TestOrderDispatchOffWithoutLocation` (must land: admin-P5-L2 relies on it), `TestOrderDispatchRefusals` (R4: no token 401, customer token 401, non-uuid 404, core failing 502; pins behaviour that exists since T4, so it passes once the package compiles). Red: `go vet` prints `undefined: core.StoreLocation` in both test files. The feat patch also carries R3's `ponytail:` comments (lock held across core calls, 100-order page) and `Run` passing `time.Now()`.
 Commits: `test: candidates rank by ETA to the store; no location, no dispatch`, then `feat: store location from core and ETA ranking`.
 
-- [ ] 6.1 `git apply .../code/T6-test.diff`; red check; commit.
-- [ ] 6.2 `git apply .../code/T6-feat.diff`; gates (`make gen postman` changes nothing); tick 6.1 and 6.2; commit.
+- [x] 6.1 `git apply .../code/T6-test.diff`; red check; commit.
+- [x] 6.2 `git apply .../code/T6-feat.diff`; gates (`make gen postman` changes nothing); tick 6.1 and 6.2; commit.
 
 ## 7. Verification (manager) and acceptance (team lead)
 

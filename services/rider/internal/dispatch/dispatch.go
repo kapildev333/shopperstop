@@ -58,8 +58,8 @@ func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) {
 		select {
 		case <-ctx.Done():
 			return
-		case now := <-t.C:
-			if err := d.Tick(ctx, now); err != nil && ctx.Err() == nil {
+		case <-t.C:
+			if err := d.Tick(ctx, time.Now()); err != nil && ctx.Err() == nil {
 				slog.ErrorContext(ctx, "dispatch tick failed", "err", err)
 			}
 		}
@@ -69,6 +69,8 @@ func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) {
 // Tick runs one dispatch round at now, in one transaction holding the tick
 // lock; when another transaction holds it, Tick returns nil having done
 // nothing. now is the only clock Tick reads, so tests pass their own.
+// ponytail: the lock is held across core calls (up to two 5 s calls per store
+// with work), so a rider going offline can wait that long; commit per store if it bites.
 func (d *Dispatcher) Tick(ctx context.Context, now time.Time) error {
 	return pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
 		q := d.q.WithTx(tx)
@@ -109,6 +111,12 @@ type candidate struct {
 // A core failure skips the store (the core client logged it); only database
 // errors are returned.
 func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store string, now time.Time) error {
+	// Candidates first: a store whose online riders are all busy, stale or offered costs no core call.
+	rows, err := q.Candidates(ctx, db.CandidatesParams{StoreID: store, LocatedAfter: ts(now.Add(-d.cfg.LocationTTL))})
+	if err != nil || len(rows) == 0 {
+		return err
+	}
+	// ponytail: core's first page of 100 ready orders, newest first; beyond 100 the oldest wait for the hand claim. Page through core then.
 	orders, err := d.core.StoreOrders(ctx, store, "ready")
 	if err != nil || len(orders) == 0 {
 		return nil
@@ -121,13 +129,14 @@ func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store str
 	if err != nil {
 		return err
 	}
-	rows, err := q.Candidates(ctx, db.CandidatesParams{StoreID: store, LocatedAfter: ts(now.Add(-d.cfg.LocationTTL))})
-	if err != nil || len(rows) == 0 {
-		return err
+	loc, err := d.storeLocation(ctx, store)
+	if err != nil || loc == nil {
+		return nil // core failed (logged by the client), or the store has no location: dispatch is off there
 	}
 	cands := make([]candidate, len(rows))
 	for i, r := range rows {
-		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time}
+		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time,
+			etaSeconds: etaSeconds(distance(r.Lat, r.Lng, loc.Lat, loc.Lng), d.cfg.SpeedKMH)}
 	}
 	rank(cands)
 	sort.SliceStable(orders, func(i, j int) bool { return orders[i].PlacedAt.Before(orders[j].PlacedAt) })
@@ -176,6 +185,20 @@ func rank(cs []candidate) {
 		}
 		return a.id < b.id
 	})
+}
+
+// storeLocation reads the store's location from core's public store read; nil
+// when the store has none. ponytail: one core read per store per tick that has
+// an order and a candidate; cache it for 30 s if core feels it.
+func (d *Dispatcher) storeLocation(ctx context.Context, store string) (*core.StoreLocation, error) {
+	s, err := d.core.Store(ctx, store)
+	if err != nil {
+		return nil, err
+	}
+	if s.Location == nil {
+		slog.DebugContext(ctx, "dispatch skips a store without a location", "storeId", store)
+	}
+	return s.Location, nil
 }
 
 func ts(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }

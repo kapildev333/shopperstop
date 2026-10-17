@@ -35,9 +35,16 @@ type Staff struct {
 
 // Store is the part of core's public Store the rider reads.
 type Store struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	IsOpen bool   `json:"isOpen"`
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	IsOpen   bool           `json:"isOpen"`
+	Location *StoreLocation `json:"location,omitempty"` // omitted while the store has none (core-store-location)
+}
+
+// StoreLocation is core's StoreLocation: where the store is.
+type StoreLocation struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 // OrderAddress is the part of core's OrderAddress the rider keeps.
