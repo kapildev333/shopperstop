@@ -19,7 +19,7 @@ Red: all but `offline sends no offer read` fail (that one may pass already; say 
 
 ### Commit 2, `feat: offer sheet with countdown and decline`
 In `src/dispatch.tsx`, `export function OfferSheet()`:
-- `online = useQuery(meQuery).data?.isOnline === true`.
+- `online = useQuery(meQuery).data?.isOnline ?? false`.
 - The offer query (design Decision 5): `queryKey: ['rider', 'offer']`, `enabled: online`, `refetchInterval: 3_000`, `gcTime: 0`, `retry: false`; the function does `const { data, error, response } = await rider.GET('/me/offer')`, throws `error.error` on error, returns `response.status === 204 ? null : (data ?? null)`. A failed read shows nothing. `// ponytail:` polling every 3 s, no push or SSE (D57).
 - State: `answered?: string` (Decision 6) and `status?: string`. `open = online && offer != null && offer.id !== answered`.
 - `decline(o)`: `setAnswered(o.id)`, `setStatus(undefined)`, then `void rider.POST('/me/offers/{id}/decline', { params: { path: { id: o.id } } }).catch(() => undefined)` (fire and forget, Decision 8, with a `// ponytail:` comment: a failed decline lets the offer run out its 30 s).

@@ -16,13 +16,13 @@ Starts from: `e2e/online.spec.ts` `online rider offered a readied order`. It can
 
 ## 2. Availability in the banner
 
-Scope: `apps/rider/src/dispatch.tsx` (new), `apps/rider/src/api.ts`, `apps/rider/src/routes/__root.tsx`, `apps/rider/src/fake-api.ts`, `apps/rider/src/availability.test.tsx` (new); this file.
+Scope: `apps/rider/src/dispatch.tsx` (new), `apps/rider/src/api.ts`, `apps/rider/src/routes/__root.tsx`, `apps/rider/src/fake-api.ts`, `apps/rider/src/availability.test.tsx` (new), `services/rider/openapi.json`; generated `packages/ui/src/api/rider.d.ts`, `docs/postman/shopperstop-rider.postman_collection.json`; this file. Merge `origin/main` first (admin-P5-L2 #374 fixtures). Extra gates: `make gen postman` (committed, then `git status` clean), `make test-rider`, `make test-web`.
 Scenarios: "Availability in the banner" (Offline rider, Go online then offline, Change fails).
 Starts from: `src/availability.test.tsx` `offline rider`, `go online, then offline`, `change fails`.
 Commits: `test: availability in the banner`, then `feat: go online and offline from the banner`.
 
 - [ ] 2.1 `isOnline: false` on the `arjun` fixture, `offer()` fixture and `Offer` type; the three tests; red check; commit.
-- [ ] 2.2 `Availability` in `dispatch.tsx`, rendered by the shell; gates; tick 2.1 and 2.2; commit.
+- [ ] 2.2 `Availability` in `dispatch.tsx`, rendered by the shell; `isOnline` in `Rider.required`, `make gen postman`; gates; tick 2.1 and 2.2; commit.
 
 ## 3. Position while online; location needed to stay online
 

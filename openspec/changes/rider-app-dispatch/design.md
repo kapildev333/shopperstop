@@ -13,6 +13,7 @@ Non-goals: push or SSE, background location, offer sounds, offers while on a del
 - `src/api.ts`: `export type Offer = components['schemas']['Offer']`.
 - `src/routes/__root.tsx`: renders `<Availability />` in the banner row after the rider's name and before "Sign out", and `<OfferSheet />` at the top of `<main>`, both only while `me` is set.
 - `src/fake-api.ts`: `arjun` gains `isOnline: false`; new `offer(over)` fixture.
+- `services/rider/openapi.json`: `isOnline` in `Rider.required`; regenerated `packages/ui/src/api/rider.d.ts` and the rider Postman collection (Decision 13).
 - Tests: `src/availability.test.tsx`, `src/offer.test.tsx` (new). e2e: `e2e/helpers.ts`, `e2e/online.spec.ts` (new).
 
 ### 2. The online state lives in `meQuery`
@@ -51,8 +52,8 @@ The work package asked for a changing label ("Go online" / "Go offline") and `ar
 - admin-P5-L2's "No rider online" assertion is about Koramangala and runs in the admin suite, before the rider suite. Even so, `online.spec.ts` ends offline twice over: the test presses "Go offline" and asserts it, and a `finally` puts `{online: false}` through the API with the rider's token, so a failed run cannot leave the rider online for a later suite.
 - The geolocation is set per test with `context.setGeolocation({ latitude: 12.9719, longitude: 77.6412 })` on top of the config's granted permission (the config's Koramangala position stays for the Phase 3 specs).
 
-### 13. `Rider.isOnline` stays optional in `openapi.json`
-rider-dispatch Decision 10 left it out of `required` so typed fixtures keep compiling. This lane adds it to the rider app's fixture, but `apps/admin/src/riders-fake.ts` on main has no `isOnline` (admin-P5-L2 is still building), so marking it required now would break admin's typecheck. Left for a later rider lane after admin-P5-L2 lands; the app treats a missing `isOnline` as offline (`=== true`).
+### 13. `Rider.isOnline` becomes required
+rider-dispatch Decision 10 left it out of `required` only so typed fixtures kept compiling. admin-P5-L2 (#374) put `isOnline: false` on every rider in `apps/admin/src/riders-fake.ts`, and the only other users of the schema are the rider app's `src/api.ts` and `src/fake-api.ts`, which task 2 updates. So task 2 adds `isOnline` to `Rider.required` (and drops the "not listed in required" sentence from its description), regenerates `rider.d.ts` and Postman (`make gen postman`), and the app reads `isOnline` as the plain boolean it now is. Task 2 merges `origin/main` first so admin's fixtures are on the branch for `make test-web`.
 
 ## Risks / Trade-offs
 - An e2e timing budget: the sheet must open within 10 s of the order reaching ready: one tick (3 s) plus one poll (3 s) plus requests. A slow CI machine near the limit would flake; the timeout is the spec's 10 s and is the first thing to look at.
