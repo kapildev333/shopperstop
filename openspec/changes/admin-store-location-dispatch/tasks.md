@@ -4,8 +4,8 @@ Each task applies its two patches from `patches/` in order with `git apply` (tes
 
 Scope: `apps/admin/src/store-form.tsx`, `store-form.test.tsx`. Scenarios: "Store location fields" > "Create a store with a location", "Location sent only when it moved".
 
-- [ ] 1.1 `test:` apply `patches/1.1-location-fields-tests.diff`: `store-form.test.tsx` "create a store with a location sends both coordinates" and "the change form shows the location and sends it only when a coordinate changed" (`keepsStore` takes a start store); see 2 fail (336 total)
-- [ ] 1.2 `feat:` apply `patches/1.2-location-fields.diff`: `Field` with `lat`/`lng` instead of the `Exclude` stopgap, the two inputs after City, `location` in `parse()`, `changed()` comparing the location by number; 336 pass
+- [x] 1.1 `test:` apply `patches/1.1-location-fields-tests.diff`: `store-form.test.tsx` "create a store with a location sends both coordinates" and "the change form shows the location and sends it only when a coordinate changed" (`keepsStore` takes a start store); see 2 fail (336 total)
+- [x] 1.2 `feat:` apply `patches/1.2-location-fields.diff`: `Field` with `lat`/`lng` instead of the `Exclude` stopgap, the two inputs after City, `location` in `parse()`, `changed()` comparing the location by number; 336 pass
 
 ## 2. Location errors, local and from core; e2e round trip (admin-P5-L2-T2)
 
