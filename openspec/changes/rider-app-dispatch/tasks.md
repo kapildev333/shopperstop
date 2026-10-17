@@ -1,6 +1,6 @@
 # Tasks
 
-Five worker tasks, strictly in order, on branch `lane/rider-P5-L3-app-dispatch` in `.worktrees/rider-P5-L3`; then the manager's e2e and the team lead's acceptance. Each worker's brief is `.claude/lanes/rider-P5-L3-T<n>.md`; the worker writes its log there and ticks this file in its `feat:` commit (task 1 in its only commit).
+Six worker tasks (task 6 from review R4), strictly in order, on branch `lane/rider-P5-L3-app-dispatch` in `.worktrees/rider-P5-L3`; then the manager's e2e and the team lead's acceptance. Each worker's brief is `.claude/lanes/rider-P5-L3-T<n>.md`; the worker writes its log there and ticks this file in its `feat:` commit (task 1 in its only commit).
 
 Setup, from the worktree root: `export PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (the default Node breaks Vitest); `test -d node_modules || npm ci`.
 Gates for every task, from the worktree root: `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run`, `npm run build --workspace apps/rider`, `openspec validate --all --strict`. Task 5 also runs `make test-web`. Nobody but the area manager runs `make e2e`; no worker touches containers.
@@ -56,7 +56,17 @@ Commits: `test: accept an offer`, then `feat: accept an offer and open its deliv
 - [ ] 5.1 The three tests; red check; commit.
 - [ ] 5.2 The accept mutation; gates plus `make test-web`; tick 5.0, 5.1 and 5.2; commit.
 
-## 6. Landing checks (area manager, then team lead)
+## 6. Fix: no stale offer after going online again; status cleared (review R4)
 
-- [ ] 6.1 Area manager: `make e2e` green with the slot taken (rider suite includes `online.spec.ts`; admin, mobile and web suites unchanged); phone walk at 390 px: banner with the toggle, the offer sheet, the status lines; evidence in the lane's status cell.
-- [ ] 6.2 Team lead: `/opsx:verify rider-app-dispatch`: every scenario mapped to a passing test, every task ticked, nothing outside scope.
+Scope: `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`; this file. Runs after task 5's `feat:`.
+Scenarios: "Offers read while online", "Offer sheet", "Decline an offer" (design.md Decisions 5 and 6).
+Starts from: `src/offer.test.tsx` `going online again shows no old offer`, `going offline clears the offer status`, `a new offer clears the old status` (red), and the pins `close icon declines once`, `countdown outside any live region`, `no decline after expiry`.
+Commits: `test: no stale offer after going online again; status cleared offline and on a new offer; close icon, live region, no decline after expiry`, then `fix: drop the offer when going offline; clear the status on a new offer`.
+
+- [ ] 6.1 The six tests; red check (the first three red); commit.
+- [ ] 6.2 `OfferSheet` mounts `OnlineOffer` only while online; a new offer id clears the status; gates plus `make test-web`; tick 6.1 and 6.2; commit.
+
+## 7. Landing checks (area manager, then team lead)
+
+- [ ] 7.1 Area manager: `make e2e` green with the slot taken (rider suite includes `online.spec.ts`; admin, mobile and web suites unchanged); phone walk at 390 px: banner with the toggle, the offer sheet, the status lines; evidence in the lane's status cell.
+- [ ] 7.2 Team lead: `/opsx:verify rider-app-dispatch`: every scenario mapped to a passing test, every task ticked, nothing outside scope.
