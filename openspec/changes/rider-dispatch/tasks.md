@@ -45,8 +45,8 @@ Scenarios: dispatch "Staff read an order's dispatch" (Offers newest first, Store
 Starts from: `internal/app/dispatch_test.go` `TestOrderDispatchOffersNewestFirst`, `TestOrderDispatchLatestTen`, `TestOrderDispatchStoreIsolation`, `TestOrderDispatchOffWhenDispatcherOff`. Red: `go vet` prints `too many arguments in call to New`.
 Commits: `test: staff read an order's dispatch`, then `feat: staff dispatch read for the board`.
 
-- [ ] 4.1 `git apply .../code/T4-test.diff`; red check; commit.
-- [ ] 4.2 `git apply .../code/T4-feat.diff`; `make gen postman`; gates; tick 4.1 and 4.2; commit.
+- [x] 4.1 `git apply .../code/T4-test.diff`; red check; commit.
+- [x] 4.2 `git apply .../code/T4-feat.diff`; `make gen postman`; gates; tick 4.1 and 4.2; commit.
 
 ## 5. The offer seed
 

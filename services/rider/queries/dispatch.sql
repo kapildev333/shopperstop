@@ -44,3 +44,13 @@ insert into offers (order_id, order_number, store_id, rider_id, eta_seconds, ite
 values (@order_id, @order_number, @store_id, @rider_id, @eta_seconds, @item_count, @total_cents,
     @payment_method, @payment_status, @pincode, @placed_at, @offered_at, @expires_at)
 returning id;
+
+-- name: CountOnline :one
+select count(*) from riders where store_id = $1 and is_online;
+
+-- name: OrderOffers :many
+select o.id, r.name as rider_name, o.status, o.eta_seconds, o.offered_at, o.answered_at
+from offers o join riders r on r.id = o.rider_id
+where o.order_id = $1
+order by o.offered_at desc, o.id
+limit 10;

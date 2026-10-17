@@ -356,6 +356,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/orders/{orderId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An order's dispatch
+         * @description For staff (a core staff token): reads the order from core with the rider's service token, then answers the store's online rider count, whether dispatch is on, and the order's latest offers. Store staff read only their own store's orders; another store's order is 404, as an unknown one is.
+         */
+        get: operations["getOrderDispatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -591,6 +611,39 @@ export interface components {
              * @description After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider.
              */
             expiresAt: string;
+        };
+        /** @description One offer of an order, as staff see it. */
+        DispatchOffer: {
+            /** Format: uuid */
+            id: string;
+            /** @description The rider's current name. */
+            riderName: string;
+            /** @enum {string} */
+            status: "offered" | "accepted" | "declined" | "expired";
+            /** @description The rider's straight-line time to the store when the offer was made. */
+            etaSeconds: number;
+            /**
+             * Format: date-time
+             * @description When the dispatcher made the offer.
+             */
+            offeredAt: string;
+            /**
+             * Format: date-time
+             * @description When the offer was accepted, declined or expired; omitted while it is open.
+             */
+            answeredAt?: string;
+        };
+        /** @description An order's dispatch: the store's online riders, whether the dispatcher runs for the store, and the order's latest offers. */
+        OrderDispatch: {
+            /** @description Riders of the order's store who are online now. */
+            online: number;
+            /**
+             * @description off while the dispatcher is turned off (SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0) or the store has no location in core.
+             * @enum {string}
+             */
+            dispatch: "on" | "off";
+            /** @description The order's latest 10 offers, newest first; empty when it has none. */
+            offers: components["schemas"]["DispatchOffer"][];
         };
     };
     responses: never;
@@ -2325,6 +2378,106 @@ export interface operations {
                      *       "error": {
                      *         "code": "conflict",
                      *         "message": "offer is no longer open"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getOrderDispatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Core's order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order's dispatch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "online": 2,
+                     *       "dispatch": "on",
+                     *       "offers": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000903",
+                     *           "riderName": "Meera Iyer",
+                     *           "status": "offered",
+                     *           "etaSeconds": 90,
+                     *           "offeredAt": "2026-10-16T09:12:31Z"
+                     *         },
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000902",
+                     *           "riderName": "Arjun Rao",
+                     *           "status": "expired",
+                     *           "etaSeconds": 30,
+                     *           "offeredAt": "2026-10-16T09:12:00Z",
+                     *           "answeredAt": "2026-10-16T09:12:30Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["OrderDispatch"];
+                };
+            };
+            /** @description No bearer, or a token core does not answer as staff. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core does not know the order, it is another store's order (store staff), or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core failed or could not be reached. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "internal",
+                     *         "message": "core unavailable"
                      *       }
                      *     }
                      */

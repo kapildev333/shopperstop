@@ -73,7 +73,7 @@ func run(cfg config.Config) error {
 		}
 	}()
 	defer func() { stop(); <-ticking }()
-	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
+	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c), dsp))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err
 	}

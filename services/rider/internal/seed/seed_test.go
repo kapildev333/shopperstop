@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 func server(t *testing.T) string {
 	t.Helper()
 	c := core.New("http://127.0.0.1:1", "unused", time.Now)
-	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, c), delivery.New(testPool, c)))
+	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, c), delivery.New(testPool, c), nil))
 	t.Cleanup(srv.Close)
 	return srv.URL
 }

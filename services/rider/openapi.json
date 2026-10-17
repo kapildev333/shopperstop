@@ -1903,6 +1903,115 @@
           }
         }
       }
+    },
+    "/admin/orders/{orderId}/dispatch": {
+      "get": {
+        "operationId": "getOrderDispatch",
+        "summary": "An order's dispatch",
+        "description": "For staff (a core staff token): reads the order from core with the rider's service token, then answers the store's online rider count, whether dispatch is on, and the order's latest offers. Store staff read only their own store's orders; another store's order is 404, as an unknown one is.",
+        "tags": [
+          "dispatch"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "Core's order id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000703"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order's dispatch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDispatch"
+                },
+                "example": {
+                  "online": 2,
+                  "dispatch": "on",
+                  "offers": [
+                    {
+                      "id": "00000000-0000-4000-8000-000000000903",
+                      "riderName": "Meera Iyer",
+                      "status": "offered",
+                      "etaSeconds": 90,
+                      "offeredAt": "2026-10-16T09:12:31Z"
+                    },
+                    {
+                      "id": "00000000-0000-4000-8000-000000000902",
+                      "riderName": "Arjun Rao",
+                      "status": "expired",
+                      "etaSeconds": 30,
+                      "offeredAt": "2026-10-16T09:12:00Z",
+                      "answeredAt": "2026-10-16T09:12:30Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a token core does not answer as staff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Core does not know the order, it is another store's order (store staff), or the id is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed or could not be reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2533,6 +2642,85 @@
             "type": "string",
             "format": "date-time",
             "description": "After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DispatchOffer": {
+        "type": "object",
+        "description": "One offer of an order, as staff see it.",
+        "required": [
+          "id",
+          "riderName",
+          "status",
+          "etaSeconds",
+          "offeredAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "riderName": {
+            "type": "string",
+            "description": "The rider's current name."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "offered",
+              "accepted",
+              "declined",
+              "expired"
+            ]
+          },
+          "etaSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The rider's straight-line time to the store when the offer was made."
+          },
+          "offeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the dispatcher made the offer."
+          },
+          "answeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the offer was accepted, declined or expired; omitted while it is open."
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderDispatch": {
+        "type": "object",
+        "description": "An order's dispatch: the store's online riders, whether the dispatcher runs for the store, and the order's latest offers.",
+        "required": [
+          "online",
+          "dispatch",
+          "offers"
+        ],
+        "properties": {
+          "online": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Riders of the order's store who are online now."
+          },
+          "dispatch": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off"
+            ],
+            "description": "off while the dispatcher is turned off (SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0) or the store has no location in core."
+          },
+          "offers": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/DispatchOffer"
+            },
+            "description": "The order's latest 10 offers, newest first; empty when it has none."
           }
         },
         "additionalProperties": false

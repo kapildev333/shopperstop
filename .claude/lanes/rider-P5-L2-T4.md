@@ -1,5 +1,5 @@
 # rider-P5-L2-T4 - the staff dispatch read (task 4 of rider-dispatch)
-Status: not started
+Status: done (test 8477a5c, feat in the commit titled "feat: staff dispatch read for the board")
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T4). Area: `rider`.
@@ -22,10 +22,25 @@ Red check, from `services/rider`: `go vet ./...` and `SHOPPERSTOP_RIDER_TEST_DAT
 If a patch does not apply, the red differs from the expected red, a generated file outside the scope changes or a gate fails, stop and write it under Blockers; do not improvise. Never edit `apps/`, other services, `packages/ui` by hand, `docs/postman` by hand, or the lane log `rider-P5-L2.md`.
 
 ## Red run
+`git apply T4-test.diff` then `go vet ./...` in services/rider:
+```
+vet: internal/app/dispatch_test.go:124:101: too many arguments in call to New
+	have (*pgxpool.Pool, nil, *auth.Auth, nil, *dispatch.Dispatcher)
+	want (*pgxpool.Pool, []string, *auth.Auth, *delivery.Deliveries)
+```
+The package does not compile, so the grep for `^--- FAIL` printed nothing (the expected red). Build output of `go test ./internal/app/`: `FAIL ... internal/app [build failed]`. The four scenarios were therefore red by compile failure, not by assertion. Commit 8477a5c.
 
 ## Green run
+`git apply T4-feat.diff`; `make gen postman` (sqlc regenerates `internal/dispatch/db/dispatch.sql.go`; openapi.json, rider.d.ts and the Postman collection changed as the patch intends). `go test -v -run TestOrderDispatch ./internal/app/`: all four PASS (OffersNewestFirst, LatestTen, StoreIsolation, OffWhenDispatcherOff).
 
 ## Gates
+- `GOFLAGS=-count=1 make test-rider`: exit 0; every package `ok` (cmd/rider, cmd/rider-admin, internal/app 30.3 s, auth, config, core, dispatch, httpx, migrate, pg, seed); no FAIL.
+- `make gen postman`: postman tests `# pass 27 # fail 0`. Regeneration afterwards changes nothing further; the changed files are all in scope.
+- `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
+- Tasks 4.1 and 4.2 ticked.
+
+## Found
+- Worktree was changed outside this task while I worked: `openspec/changes/rider-dispatch/code/T5-test.diff` shows modified (not mine, not staged), and `.claude/lanes/rider-P5-L2-R3.md` appeared as untracked. Left untouched.
 
 ## Found
 

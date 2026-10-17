@@ -89,6 +89,17 @@ func (q *Queries) Candidates(ctx context.Context, arg CandidatesParams) ([]Candi
 	return items, nil
 }
 
+const countOnline = `-- name: CountOnline :one
+select count(*) from riders where store_id = $1 and is_online
+`
+
+func (q *Queries) CountOnline(ctx context.Context, storeID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countOnline, storeID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOffer = `-- name: CreateOffer :one
 insert into offers (order_id, order_number, store_id, rider_id, eta_seconds, item_count, total_cents,
     payment_method, payment_status, pincode, placed_at, offered_at, expires_at)
@@ -191,6 +202,50 @@ func (q *Queries) OnlineStores(ctx context.Context) ([]string, error) {
 			return nil, err
 		}
 		items = append(items, store_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const orderOffers = `-- name: OrderOffers :many
+select o.id, r.name as rider_name, o.status, o.eta_seconds, o.offered_at, o.answered_at
+from offers o join riders r on r.id = o.rider_id
+where o.order_id = $1
+order by o.offered_at desc, o.id
+limit 10
+`
+
+type OrderOffersRow struct {
+	ID         string
+	RiderName  string
+	Status     OfferStatus
+	EtaSeconds int32
+	OfferedAt  pgtype.Timestamptz
+	AnsweredAt pgtype.Timestamptz
+}
+
+func (q *Queries) OrderOffers(ctx context.Context, orderID string) ([]OrderOffersRow, error) {
+	rows, err := q.db.Query(ctx, orderOffers, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OrderOffersRow
+	for rows.Next() {
+		var i OrderOffersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RiderName,
+			&i.Status,
+			&i.EtaSeconds,
+			&i.OfferedAt,
+			&i.AnsweredAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
