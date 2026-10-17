@@ -21,8 +21,8 @@ Scenarios: "Availability in the banner" (Offline rider, Go online then offline, 
 Starts from: `src/availability.test.tsx` `offline rider`, `go online, then offline`, `change fails`.
 Commits: `test: availability in the banner`, then `feat: go online and offline from the banner`.
 
-- [ ] 2.1 `isOnline: false` on the `arjun` fixture, `offer()` fixture and `Offer` type; the three tests; red check; commit.
-- [ ] 2.2 `Availability` in `dispatch.tsx`, rendered by the shell; `isOnline` in `Rider.required`, `make gen postman`; gates; tick 2.1 and 2.2; commit.
+- [x] 2.1 `isOnline: false` on the `arjun` fixture, `offer()` fixture and `Offer` type; the three tests; red check; commit.
+- [x] 2.2 `Availability` in `dispatch.tsx`, rendered by the shell; `isOnline` in `Rider.required`, `make gen postman`; gates; tick 2.1 and 2.2; commit.
 
 ## 3. Position while online; location needed to stay online
 

@@ -2083,7 +2083,8 @@
           "storeId",
           "email",
           "name",
-          "isActive"
+          "isActive",
+          "isOnline"
         ],
         "properties": {
           "id": {
@@ -2110,7 +2111,7 @@
           },
           "isOnline": {
             "type": "boolean",
-            "description": "true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10)."
+            "description": "true while the rider is online for dispatch offers (PUT /me/availability)."
           }
         },
         "additionalProperties": false
