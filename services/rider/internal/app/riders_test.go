@@ -64,6 +64,7 @@ type riderJSON struct {
 	Name     string `json:"name"`
 	Phone    string `json:"phone"`
 	IsActive bool   `json:"isActive"`
+	IsOnline bool   `json:"isOnline"`
 }
 
 // signInBody is the 200 body of sign-in.
@@ -159,6 +160,9 @@ func TestRiderSignIn(t *testing.T) {
 	}
 	if strings.Contains(string(body), `"phone"`) {
 		t.Fatalf("phone present although empty: %s", body)
+	}
+	if !strings.Contains(string(body), `"isOnline":false`) {
+		t.Fatalf("sign-in rider lacks isOnline false: %s", body)
 	}
 	status, body = callAt(t, srv.URL, http.MethodGet, "/api/rider/v1/me", s.Token, nil)
 	var me riderJSON

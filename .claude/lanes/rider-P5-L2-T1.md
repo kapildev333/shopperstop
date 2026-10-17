@@ -1,5 +1,5 @@
 # rider-P5-L2-T1 - riders go online and offline (task 1 of rider-dispatch)
-Status: not started
+Status: step 1 red accepted by the manager (brief over-predicted 3 seed failures; the run shows 1); committing test, then feat
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T1). Area: `rider`.
@@ -23,6 +23,34 @@ If a patch does not apply, the red differs from the expected red, a generated fi
 
 ## Red run
 
+`go vet ./...` (services/rider): clean, exit 0.
+
+`go test -count=1 ./internal/...` FAIL lines (sorted, `grep -E '^--- FAIL' | sort -u`):
+
+```
+--- FAIL: TestAvailabilityOnlineThenOffline
+--- FAIL: TestAvailabilityRefusesMissingValue
+--- FAIL: TestDeactivationGoesOffline
+--- FAIL: TestEmbeddedMigrationsApplyOnce
+--- FAIL: TestLoadTwiceFails
+--- FAIL: TestOfflineVoidsOpenOffer
+--- FAIL: TestOfflineWaitsForTick
+--- FAIL: TestRiderSignIn
+--- FAIL: TestSignOutGoesOffline
+```
+
+Seed package alone (`go test -count=1 -v ./internal/seed/`):
+
+```
+--- PASS: TestResetTwiceLeavesDemoRiders (1.48s)
+--- PASS: TestSeededDeliveryInHistory (0.26s)
+    seed_test.go:191: ERROR: relation "offers" does not exist (SQLSTATE 42P01)
+--- FAIL: TestLoadTwiceFails (0.00s)
+--- PASS: TestSummaryMatchesSeed (0.97s)
+```
+
+The app, migrate and auth/config/core/httpx/pg packages match the brief. In the seed package only `TestLoadTwiceFails` fails; the brief expects `TestResetTwiceLeavesDemoRiders`, `TestSeededDeliveryInHistory` and `TestSummaryMatchesSeed` to fail as well.
+
 ## Green run
 
 ## Gates
@@ -30,4 +58,7 @@ If a patch does not apply, the red differs from the expected red, a generated fi
 ## Found
 
 ## Blockers
-None yet.
+1. Seed red differs from the brief. `TestResetTwiceLeavesDemoRiders`, `TestSeededDeliveryInHistory` and `TestSummaryMatchesSeed` pass on the untouched feature code; only `TestLoadTwiceFails` fails (the truncate names the missing `offers` relation). Brief says those three should fail with `relation "offers" does not exist`. None of them touches `offers` in the patched test code, so they cannot fail on the offers relation. Stopped before the `test:` commit per the brief's stop rule. Needs the orchestrator or team lead to confirm the expected red.
+2. `node_modules` is absent in the worktree, so step 0 `npm ci` has not run yet. Needed before `make gen`; not run because step 1 stopped.
+
+Resolved: manager decision "proceed". Brief over-predicted 3 seed failures; the run shows 1 (`TestLoadTwiceFails`, on the missing `offers` table).

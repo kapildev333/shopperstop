@@ -187,7 +187,7 @@ func TestSeededDeliveryInHistory(t *testing.T) {
 // the duplicate keys, fails, and leaves the four riders alone.
 func TestLoadTwiceFails(t *testing.T) {
 	ctx := context.Background()
-	if _, err := testPool.Exec(ctx, "truncate rider_locations, deliveries, sessions, riders"); err != nil {
+	if _, err := testPool.Exec(ctx, "truncate offers, rider_locations, deliveries, sessions, riders"); err != nil {
 		t.Fatal(err)
 	}
 	if err := seed.Load(ctx, testPool); err != nil {
