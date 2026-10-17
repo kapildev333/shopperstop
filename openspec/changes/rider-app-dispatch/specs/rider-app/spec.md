@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Availability in the banner
-While a rider is signed in, the banner SHALL show a badge "Online" (success) or "Offline" (neutral) from the rider's `isOnline`, and a button "Go online" or "Go offline" with `aria-pressed` true while online. Pressing it SHALL send `PUT /me/availability {online}` once, disabled while pending, and show the answered rider's state; a failure SHALL keep the shown state and show the status message "Could not change your status. Try again.".
+While a rider is signed in, the banner SHALL show a badge "Online" (success) or "Offline" (neutral) from the rider's `isOnline`, and a button "Go online" while offline or "Go offline" while online, with no pressed state (the label and the badge carry the state). Pressing it SHALL send `PUT /me/availability {online}` once, disabled while pending, and show the answered rider's state; a failure SHALL keep the shown state and show the status message "Could not change your status. Try again.".
 
 #### Scenario: Offline rider
 - **WHEN** a signed-in rider whose `isOnline` is false opens `/`
-- **THEN** the banner shows "Offline" and a "Go online" button with `aria-pressed` false
+- **THEN** the banner shows "Offline" and a "Go online" button with no `aria-pressed` attribute
 
 #### Scenario: Go online, then offline
 - **WHEN** the rider presses "Go online", the service answers the rider online, then the rider presses "Go offline" and the service answers the rider offline
-- **THEN** `PUT /me/availability` was sent with `{"online": true}` then `{"online": false}`, the banner showed "Online" with "Go offline" pressed in between, and shows "Offline" with "Go online" at the end
+- **THEN** `PUT /me/availability` was sent with `{"online": true}` then `{"online": false}`, the banner showed "Online" and "Go offline" in between, and shows "Offline" with "Go online" at the end
 
 #### Scenario: Change fails
 - **WHEN** the rider presses "Go online" and the service answers 502

@@ -42,8 +42,8 @@ Seconds left = `Math.max(0, Math.ceil((Date.parse(expiresAt) - Date.now()) / 100
 ### 10. Copy
 From the work package (PLAN.md D57, area plan): "Online", "Offline", "Go online", "Go offline", "Allow location to go online", "New order <number>", "Accept", "Decline", "Someone else took <number>.", "Offer expired". Added by this design: "Could not change your status. Try again.", "Could not accept the order. Try again.", "<n> s left". The sheet body reuses the ready card's lines: `itemCount()` ("3 items"), "Pincode <pincode>", `Price`, `Badge` "Cash".
 
-### 11. Toggle and `aria-pressed`
-The work package asks for a label that changes ("Go online" / "Go offline") and `aria-pressed`. The ARIA practices prefer a fixed label on a toggle; both together are valid and axe-clean, and the badge carries the state visibly, so this follows the package as written. If the owner prefers the practices, drop `aria-pressed` (one attribute, one test line).
+### 11. A changing label, no `aria-pressed`
+The work package asked for a changing label ("Go online" / "Go offline") and `aria-pressed`. Together they read as "Go offline, pressed", which contradicts itself. Area manager's decision (2026-10-16): keep the changing label, drop `aria-pressed`; the label says what pressing does and the "Online"/"Offline" badge says the state. Tests assert the attribute is absent.
 
 ### 12. e2e isolation
 - `make e2e` runs the workspaces' `e2e` scripts one after another (npm `--workspaces`, alphabetical: admin, mobile, rider, web); inside the rider suite Playwright runs files in parallel workers. The rider suite's global setup resets both databases, so it starts with no ready orders and every rider offline.
