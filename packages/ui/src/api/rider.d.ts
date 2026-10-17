@@ -405,8 +405,8 @@ export interface components {
             /** @description Omitted when the rider has no phone. */
             phone?: string;
             isActive: boolean;
-            /** @description true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10). */
-            isOnline?: boolean;
+            /** @description true while the rider is online for dispatch offers (PUT /me/availability). */
+            isOnline: boolean;
         };
         RiderSession: {
             /** @description Send as Authorization: Bearer <token>. Shown once. */

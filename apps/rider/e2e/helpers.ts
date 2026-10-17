@@ -3,6 +3,7 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 // Helpers for the rider suite. Node side only. Ordering tests use their own pick index (see design Decision 19).
 export const koramangala = '00000000-0000-4000-8000-000000000401'
+export const indiranagar = '00000000-0000-4000-8000-000000000402'
 export const riderTokenKey = 'shopperstop:rider-token'
 export const customerTokenKey = 'shopperstop:customer-token'
 
@@ -44,20 +45,42 @@ export async function orderPick(request: APIRequestContext, n: number): Promise<
   return { id: pick.id, name: pick.name, priceCents: pick.priceCents, units: Math.ceil(minOrderCents / pick.priceCents) }
 }
 
-export async function fillCart(request: APIRequestContext, shopper: Shopper, pick: Pick): Promise<void> {
+// The first in-stock product of the store at or above 20 rupees that covers its minimum order; for specs that make no stock assertion.
+export async function storePick(request: APIRequestContext, storeId: string): Promise<Pick> {
+  const listed = await request.get(`/api/core/v1/stores/${storeId}/products?pageSize=100`)
+  expect(listed.status()).toBe(200)
+  const { items } = (await listed.json()) as {
+    items: { id: string; name: string; priceCents: number; inStock: boolean; quantity: number }[]
+  }
+  const detail = await request.get(`/api/core/v1/stores/${storeId}`)
+  expect(detail.status()).toBe(200)
+  const { minOrderCents } = (await detail.json()) as { minOrderCents: number }
+  const pick = items.find(
+    (item) => item.inStock && item.priceCents >= 2000 && item.quantity >= Math.ceil(minOrderCents / item.priceCents),
+  )
+  if (!pick) throw new Error(`no in-stock pick covers the minimum order at store ${storeId}`)
+  return { id: pick.id, name: pick.name, priceCents: pick.priceCents, units: Math.ceil(minOrderCents / pick.priceCents) }
+}
+
+export async function fillCart(request: APIRequestContext, shopper: Shopper, pick: Pick, storeId = koramangala): Promise<void> {
   const answer = await request.put('/api/core/v1/me/cart/items', {
     headers: shopper.headers,
-    data: { storeId: koramangala, productId: pick.id, quantity: pick.units },
+    data: { storeId, productId: pick.id, quantity: pick.units },
   })
   expect(answer.status()).toBe(200)
   expect(((await answer.json()) as { clamped: boolean }).clamped).toBe(false)
 }
 
-// Adds the shopper's default address in pincode 560034 (Koramangala). Returns its id.
-export async function addAddress(request: APIRequestContext, shopper: Shopper): Promise<string> {
+// Adds the shopper's default address (Koramangala's pincode 560034 unless told otherwise). Returns its id.
+export async function addAddress(
+  request: APIRequestContext,
+  shopper: Shopper,
+  pincode = '560034',
+  line1 = '12 80 Feet Rd, Koramangala',
+): Promise<string> {
   const answer = await request.post('/api/core/v1/me/addresses', {
     headers: shopper.headers,
-    data: { label: 'Home', line1: '12 80 Feet Rd, Koramangala', pincode: '560034', isDefault: true },
+    data: { label: 'Home', line1, pincode, isDefault: true },
   })
   expect(answer.status()).toBe(201)
   return ((await answer.json()) as { id: string }).id
@@ -70,18 +93,20 @@ export async function placeByApi(request: APIRequestContext, shopper: Shopper, a
   return { id, number }
 }
 
-// Store staff (Koramangala), signed in through core's admin route. Memoised per worker: core allows 10 sign-ins per email per hour.
-let staffSignIn: Promise<{ Authorization: string }> | undefined
-export function staffHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
-  staffSignIn ??= (async () => {
-    const answer = await request.post('/api/core/v1/admin/auth/sign-in', {
-      data: { email: 'koramangala@shopperstop.local', password: 'staff12345' },
-    })
-    expect(answer.status()).toBe(200)
-    const { token } = (await answer.json()) as { token: string }
-    return { Authorization: `Bearer ${token}` }
-  })()
-  return staffSignIn
+// Store staff (Koramangala by default), signed in through core's admin route. Memoised per email per worker: core allows 10 sign-ins per email per hour.
+const staffSignIns = new Map<string, Promise<{ Authorization: string }>>()
+export function staffHeaders(request: APIRequestContext, email = 'koramangala@shopperstop.local'): Promise<{ Authorization: string }> {
+  let headers = staffSignIns.get(email)
+  if (!headers) {
+    headers = (async () => {
+      const answer = await request.post('/api/core/v1/admin/auth/sign-in', { data: { email, password: 'staff12345' } })
+      expect(answer.status()).toBe(200)
+      const { token } = (await answer.json()) as { token: string }
+      return { Authorization: `Bearer ${token}` }
+    })()
+    staffSignIns.set(email, headers)
+  }
+  return headers
 }
 
 // A ready order at Koramangala: a fresh shopper places it through core and the store staff move it to ready, as core's API answers.

@@ -6,6 +6,7 @@ import { session } from './session'
 export type Rider = components['schemas']['Rider']
 export type ReadyOrder = components['schemas']['ReadyOrder']
 export type Delivery = components['schemas']['Delivery']
+export type Offer = components['schemas']['Offer']
 export type ApiError = components['schemas']['Error']['error']
 
 let unauthorized = () => {}

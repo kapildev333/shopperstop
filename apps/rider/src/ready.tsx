@@ -6,8 +6,8 @@ import { useSince } from '@shopperstop/ui/app'
 import { deliveryQuery, rider, type ApiError, type Delivery, type ReadyOrder } from './api'
 import { itemCount } from './format'
 
-const readyKey = ['rider', 'ready'] as const
-const assignedKey = ['rider', 'deliveries', 'assigned'] as const
+export const readyKey = ['rider', 'ready'] as const
+export const assignedKey = ['rider', 'deliveries', 'assigned'] as const
 
 // The ready list is read every 10 seconds while the page is open (design Decision 6).
 const readyQuery = {
