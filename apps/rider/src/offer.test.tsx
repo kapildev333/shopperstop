@@ -12,6 +12,7 @@ const READY = 'GET /api/rider/v1/me/ready-orders'
 const DELIVERIES = 'GET /api/rider/v1/me/deliveries'
 const LOCATION = 'PUT /api/rider/v1/me/location'
 const OFFER = 'GET /api/rider/v1/me/offer'
+const AVAILABILITY = 'PUT /api/rider/v1/me/availability'
 const DECLINE_1 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b01/decline'
 const DECLINE_2 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b02/decline'
 const ACCEPT_1 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b01/accept'
@@ -41,6 +42,10 @@ function routes(isOnline: boolean, over: Routes = {}) {
     [READY]: () => json(200, { items: [] }),
     [DELIVERIES]: () => json(200, none),
     [LOCATION]: () => json(204),
+    [AVAILABILITY]: async (request) => {
+      const body = (await request.json()) as { online: boolean }
+      return json(200, { ...arjun, isOnline: body.online })
+    },
     ...over,
   })
 }
@@ -186,4 +191,110 @@ test('accept fails', async () => {
 
   expect(await within(sheet).findByRole('alert')).toHaveTextContent('Could not accept the order. Try again.')
   expect(screen.getByRole('dialog', { name: 'New order SS-AAAA0001' })).toBeInTheDocument()
+})
+
+test('going online again shows no old offer', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  let read: () => Response | Promise<Response> = () => json(200, offer())
+  routes(true, { [OFFER]: () => read() })
+  renderApp('/')
+
+  await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await waitFor(() => expect(geo.watching()).toBe(1))
+  act(() => geo.fail(1))
+  expect(await screen.findByText('Offline')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).toBeNull()
+
+  read = () => new Promise<Response>(() => {})
+  await user.click(screen.getByRole('button', { name: 'Go online' }))
+  expect(await screen.findByText('Online')).toBeInTheDocument()
+  await act(() => vi.advanceTimersByTimeAsync(100))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('going offline clears the offer status', async () => {
+  const same = offer()
+  routes(true, { [OFFER]: () => json(200, same) })
+  renderApp('/')
+
+  await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await act(() => vi.advanceTimersByTimeAsync(30_000))
+  expect(await screen.findByRole('status')).toHaveTextContent('Offer expired')
+
+  await waitFor(() => expect(geo.watching()).toBe(1))
+  act(() => geo.fail(1))
+  expect(await screen.findByText('Offline')).toBeInTheDocument()
+  expect(screen.queryByText('Offer expired')).toBeNull()
+})
+
+test('a new offer clears the old status', async () => {
+  const o1 = offer()
+  let read: () => Response | Promise<Response> = () => json(200, o1)
+  routes(true, { [OFFER]: () => read() })
+  renderApp('/')
+
+  await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await act(() => vi.advanceTimersByTimeAsync(30_000))
+  expect(await screen.findByRole('status')).toHaveTextContent('Offer expired')
+
+  const o2 = offer({ id: '00000000-0000-4000-8000-000000000b02', number: 'SS-AAAA0002' })
+  read = () => json(200, o2)
+  await act(() => vi.advanceTimersByTimeAsync(3_000))
+  await screen.findByRole('dialog', { name: 'New order SS-AAAA0002' })
+
+  read = () => json(204)
+  await act(() => vi.advanceTimersByTimeAsync(3_000))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByText('Offer expired')).toBeNull()
+})
+
+test('close icon declines once', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const declined = { count: 0 }
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [DECLINE_1]: () => {
+      declined.count += 1
+      return json(204)
+    },
+  })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await waitFor(() => expect(declined.count).toBe(1))
+
+  await act(() => vi.advanceTimersByTimeAsync(6_000))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(declined.count).toBe(1)
+})
+
+test('countdown outside any live region', async () => {
+  routes(true, { [OFFER]: () => json(200, offer()) })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  expect(
+    within(sheet).getByText('30 s left').closest('[aria-live], [role="status"], [role="alert"], [role="log"], [role="timer"]'),
+  ).toBeNull()
+})
+
+test('no decline after expiry', async () => {
+  const same = offer()
+  const declined = { count: 0 }
+  routes(true, {
+    [OFFER]: () => json(200, same),
+    [DECLINE_1]: () => {
+      declined.count += 1
+      return json(204)
+    },
+  })
+  renderApp('/')
+
+  await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await act(() => vi.advanceTimersByTimeAsync(36_000))
+  expect(await screen.findByRole('status')).toHaveTextContent('Offer expired')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(declined.count).toBe(0)
 })

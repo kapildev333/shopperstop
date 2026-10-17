@@ -1,5 +1,5 @@
 # rider-P5-L3-T6 - fix: no stale offer after going online again; status cleared (task 6 of rider-app-dispatch)
-Status: brief
+Status: in progress (worker)
 
 ## Brief
 - LANE-ID: rider-P5-L3 (task T6). Area: rider. Model: worker. Starts after T5's `feat:` is committed (T5 edits the same files). Written against `44f0c18`; if T5's feat moved `OfferSheet`'s structure so the steps below do not fit, stop and report.
@@ -31,3 +31,11 @@ In `src/dispatch.tsx`:
 Stop and report under Blockers if test 1 still shows a dialog after the split (that would mean the cache outlives the unmount, and the fix needs `removeQueries`: a design change for the team lead).
 
 ## Log
+- Commit 1 (`test: no stale offer after going online again; status cleared offline and on a new offer; close icon, live region, no decline after expiry`): the six tests in `offer.test.tsx`; `routes()` gains a `PUT /me/availability` echo. Each test holds one fixed `offer()` object (a fresh one per read keeps resetting `expiresAt`, so the countdown never ran out).
+  - Red (`npm run test --workspace apps/rider -- --run src/offer.test.tsx`):
+    - `× going online again shows no old offer`: `AssertionError: expected <div role="dialog" …> to be null` (the cached offer reopens before the new read answers).
+    - `× going offline clears the offer status`: `AssertionError: expected <div role="status" …> to be null` (status survives going offline).
+    - `× a new offer clears the old status`: `AssertionError: expected <div role="status" …> to be null` (the "Offer expired" line comes back after the 204).
+  - Pass on current code (pins): `close icon declines once`, `countdown outside any live region`, `no decline after expiry`.
+  - Existing eight offer tests stay green: `Tests 3 failed | 11 passed (14)`.
+- Ticked 6.1 in `openspec/changes/rider-app-dispatch/tasks.md`.

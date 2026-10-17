@@ -63,7 +63,7 @@ Scenarios: "Offers read while online", "Offer sheet", "Decline an offer" (design
 Starts from: `src/offer.test.tsx` `going online again shows no old offer`, `going offline clears the offer status`, `a new offer clears the old status` (red), and the pins `close icon declines once`, `countdown outside any live region`, `no decline after expiry`.
 Commits: `test: no stale offer after going online again; status cleared offline and on a new offer; close icon, live region, no decline after expiry`, then `fix: drop the offer when going offline; clear the status on a new offer`.
 
-- [ ] 6.1 The six tests; red check (the first three red); commit.
+- [x] 6.1 The six tests; red check (the first three red); commit.
 - [ ] 6.2 `OfferSheet` mounts `OnlineOffer` only while online; a new offer id clears the status; gates plus `make test-web`; tick 6.1 and 6.2; commit.
 
 ## 7. Landing checks (area manager, then team lead)
