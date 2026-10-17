@@ -1,0 +1,476 @@
+diff --git a/services/rider/cmd/rider-admin/main_test.go b/services/rider/cmd/rider-admin/main_test.go
+index a86f0ea..5696729 100644
+--- a/services/rider/cmd/rider-admin/main_test.go
++++ b/services/rider/cmd/rider-admin/main_test.go
+@@ -92,7 +92,7 @@ func TestCreateRider(t *testing.T) {
+ 		t.Fatalf("row: name %q store %q active %v, want Rider at %s, active", name, storeID, active, testStore)
+ 	}
+ 
+-	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, riderClient(t)), nil))
++	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, riderClient(t)), nil, nil))
+ 	defer srv.Close()
+ 	body, _ := json.Marshal(map[string]string{"email": "new@example.com", "password": "password123"})
+ 	resp, err := http.Post(srv.URL+"/api/rider/v1/auth/sign-in", "application/json", bytes.NewReader(body))
+diff --git a/services/rider/cmd/rider/main.go b/services/rider/cmd/rider/main.go
+index e4f43d2..4a284bb 100644
+--- a/services/rider/cmd/rider/main.go
++++ b/services/rider/cmd/rider/main.go
+@@ -73,7 +73,7 @@ func run(cfg config.Config) error {
+ 		}
+ 	}()
+ 	defer func() { stop(); <-ticking }()
+-	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
++	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c), dsp))
+ 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
+ 		return err
+ 	}
+diff --git a/services/rider/internal/app/app.go b/services/rider/internal/app/app.go
+index 701f9e3..85a3cb7 100644
+--- a/services/rider/internal/app/app.go
++++ b/services/rider/internal/app/app.go
+@@ -12,12 +12,14 @@ import (
+ 
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
++	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
+ )
+ 
+ // New returns the rider router. Routes are registered with their full path
+-// so chi.Walk yields the paths openapi.json documents.
+-func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliveries) chi.Router {
++// so chi.Walk yields the paths openapi.json documents. d and dsp may be nil
++// for a router whose tests never reach their routes.
++func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliveries, dsp *dispatch.Dispatcher) chi.Router {
+ 	r := httpx.NewRouter(origins)
+ 	r.Get("/api/rider/v1/healthz", healthz)
+ 	r.Get("/api/rider/v1/readyz", readyz(pool))
+@@ -39,6 +41,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
+ 	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/accept", d.AcceptOffer)
+ 	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/decline", d.DeclineOffer)
+ 	r.Get("/api/rider/v1/orders/{orderId}/delivery", d.OrderDelivery)
++	r.With(a.RequireStaff).Get("/api/rider/v1/admin/orders/{orderId}/dispatch", dsp.AdminOrderDispatch)
+ 	return r
+ }
+ 
+diff --git a/services/rider/internal/app/app_test.go b/services/rider/internal/app/app_test.go
+index 5c2ceae..7d2c370 100644
+--- a/services/rider/internal/app/app_test.go
++++ b/services/rider/internal/app/app_test.go
+@@ -17,6 +17,7 @@ import (
+ 
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
++	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/testdb"
+ )
+ 
+@@ -26,6 +27,8 @@ const testPepper = "test-pepper-test-pepper-test-pepper-00"
+ var (
+ 	srv      *httptest.Server
+ 	testPool *pgxpool.Pool
++	// testDispatch is the shared server's dispatcher: on, with D57's defaults. No loop runs in these tests.
++	testDispatch = dispatch.Config{Enabled: true, OfferTTL: 30 * time.Second, LocationTTL: 2 * time.Minute, SpeedKMH: 20}
+ )
+ 
+ func TestMain(m *testing.M) {
+@@ -33,7 +36,7 @@ func TestMain(m *testing.M) {
+ 	testPool, cleanup = testdb.Migrated("app")
+ 	stopCore := startCore()
+ 	a := auth.New(testPool, testPepper, auth.NewLimiter(1_000_000, 1_000_000, time.Hour, time.Now), coreClient)
+-	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a, delivery.New(testPool, coreClient)))
++	srv = httptest.NewServer(New(testPool, []string{"http://localhost:15175"}, a, delivery.New(testPool, coreClient), dispatch.New(testPool, coreClient, testDispatch)))
+ 	code := m.Run()
+ 	srv.Close()
+ 	stopCore()
+@@ -119,7 +122,7 @@ func TestReadyzWhenDatabaseIsDown(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	t.Cleanup(pool.Close)
+-	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil), nil))
++	down := httptest.NewServer(New(pool, nil, auth.New(pool, testPepper, nil, nil), nil, nil))
+ 	t.Cleanup(down.Close)
+ 
+ 	// healthz never touches the database, so it answers 200 with the pool down.
+diff --git a/services/rider/internal/app/contract_test.go b/services/rider/internal/app/contract_test.go
+index a1fefdf..dbda4f9 100644
+--- a/services/rider/internal/app/contract_test.go
++++ b/services/rider/internal/app/contract_test.go
+@@ -138,7 +138,7 @@ func TestContract(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if problems := contractProblems(New(nil, nil, nil, nil), doc); len(problems) > 0 {
++	if problems := contractProblems(New(nil, nil, nil, nil, nil), doc); len(problems) > 0 {
+ 		t.Fatalf("contract problems:\n%s", strings.Join(problems, "\n"))
+ 	}
+ }
+diff --git a/services/rider/internal/app/deliveries_test.go b/services/rider/internal/app/deliveries_test.go
+index c3de579..9dc1854 100644
+--- a/services/rider/internal/app/deliveries_test.go
++++ b/services/rider/internal/app/deliveries_test.go
+@@ -472,7 +472,7 @@ func TestReadyOrdersWrongServiceToken(t *testing.T) {
+ 	store := newID()
+ 	_, token := riderAt(t, store)
+ 	wrong := core.New(coreFake.URL(), "wrong-token", time.Now)
+-	bad := httptest.NewServer(New(testPool, nil, auth.New(testPool, testPepper, nil, nil), delivery.New(testPool, wrong)))
++	bad := httptest.NewServer(New(testPool, nil, auth.New(testPool, testPepper, nil, nil), delivery.New(testPool, wrong), nil))
+ 	t.Cleanup(bad.Close)
+ 
+ 	status, body := callAt(t, bad.URL, http.MethodGet, readyPath, token, nil)
+diff --git a/services/rider/internal/app/riders_test.go b/services/rider/internal/app/riders_test.go
+index 8ddbf60..61b894d 100644
+--- a/services/rider/internal/app/riders_test.go
++++ b/services/rider/internal/app/riders_test.go
+@@ -235,7 +235,7 @@ func TestRiderSignOutEndsOnlyThatSession(t *testing.T) {
+ // ten attempts for one email pass (wrong passwords), the eleventh is refused.
+ func TestRiderSignInRateLimited(t *testing.T) {
+ 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
+-	limited := httptest.NewServer(New(testPool, nil, a, nil))
++	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
+ 	t.Cleanup(limited.Close)
+ 	email := uniqueEmail(t)
+ 	seedRider(t, email, true)
+@@ -292,7 +292,7 @@ func signedUpEmail(t *testing.T) string {
+ // client port: the key must drop the port, and X-Forwarded-For must not be trusted.
+ func TestRiderSignInRateLimitedPerIP(t *testing.T) {
+ 	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now), nil)
+-	limited := httptest.NewServer(New(testPool, nil, a, nil))
++	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
+ 	t.Cleanup(limited.Close)
+ 	for i, forwarded := range []string{"203.0.113.1", "203.0.113.2"} {
+ 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+@@ -312,7 +312,7 @@ func TestRiderSignInRateLimitedPerForwardedIP(t *testing.T) {
+ 	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+ 	limit.TrustProxy = true
+ 	a := auth.New(testPool, testPepper, limit, nil)
+-	limited := httptest.NewServer(New(testPool, nil, a, nil))
++	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
+ 	t.Cleanup(limited.Close)
+ 	for i, forwarded := range []string{"203.0.113.7", " 203.0.113.7 , 10.0.0.1"} {
+ 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+@@ -336,7 +336,7 @@ func TestRiderSignInEmptyForwardedForFallsBackToConnection(t *testing.T) {
+ 	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
+ 	limit.TrustProxy = true
+ 	a := auth.New(testPool, testPepper, limit, nil)
+-	limited := httptest.NewServer(New(testPool, nil, a, nil))
++	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
+ 	t.Cleanup(limited.Close)
+ 	for i, forwarded := range []string{"", "   "} {
+ 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
+diff --git a/services/rider/internal/dispatch/admin.go b/services/rider/internal/dispatch/admin.go
+new file mode 100644
+index 0000000..31457c1
+--- /dev/null
++++ b/services/rider/internal/dispatch/admin.go
+@@ -0,0 +1,73 @@
++package dispatch
++
++import (
++	"net/http"
++	"strings"
++	"time"
++
++	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
++	"github.com/kapildev333/shopperstop/services/rider/internal/core"
++	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
++)
++
++// OrderDispatch is the staff view of one order's dispatch, for the board line.
++type OrderDispatch struct {
++	Online   int64           `json:"online"`   // online riders at the order's store
++	Dispatch string          `json:"dispatch"` // on | off
++	Offers   []DispatchOffer `json:"offers"`   // the latest 10, newest first
++}
++
++// DispatchOffer is one offer of the order as staff see it.
++type DispatchOffer struct {
++	ID         string     `json:"id"`
++	RiderName  string     `json:"riderName"`
++	Status     string     `json:"status"` // offered | accepted | declined | expired
++	EtaSeconds int        `json:"etaSeconds"`
++	OfferedAt  time.Time  `json:"offeredAt"`
++	AnsweredAt *time.Time `json:"answeredAt,omitempty"`
++}
++
++// AdminOrderDispatch answers an order's dispatch to staff. The order is read
++// from core with the service token: an unknown order is 404, and so is
++// another store's order for store staff.
++func (d *Dispatcher) AdminOrderDispatch(w http.ResponseWriter, r *http.Request) {
++	ctx := r.Context()
++	id, err := httpx.PathID(r, "orderId")
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	order, err := d.core.Order(ctx, id)
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	staff := auth.CurrentStaff(ctx)
++	if staff.Role != "admin" && !strings.EqualFold(staff.StoreID, order.StoreID) {
++		httpx.WriteError(w, r, core.ErrNotFound)
++		return
++	}
++	online, err := d.q.CountOnline(ctx, order.StoreID)
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	rows, err := d.q.OrderOffers(ctx, id)
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	out := OrderDispatch{Online: online, Dispatch: "off", Offers: make([]DispatchOffer, 0, len(rows))}
++	if d.cfg.Enabled {
++		out.Dispatch = "on"
++	}
++	for _, row := range rows {
++		o := DispatchOffer{ID: row.ID, RiderName: row.RiderName, Status: string(row.Status), EtaSeconds: int(row.EtaSeconds), OfferedAt: row.OfferedAt.Time}
++		if row.AnsweredAt.Valid {
++			t := row.AnsweredAt.Time
++			o.AnsweredAt = &t
++		}
++		out.Offers = append(out.Offers, o)
++	}
++	httpx.WriteJSON(w, http.StatusOK, out)
++}
+diff --git a/services/rider/internal/seed/seed_test.go b/services/rider/internal/seed/seed_test.go
+index 3f45368..a1f41fb 100644
+--- a/services/rider/internal/seed/seed_test.go
++++ b/services/rider/internal/seed/seed_test.go
+@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
+ func server(t *testing.T) string {
+ 	t.Helper()
+ 	c := core.New("http://127.0.0.1:1", "unused", time.Now)
+-	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, c), delivery.New(testPool, c)))
++	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, c), delivery.New(testPool, c), nil))
+ 	t.Cleanup(srv.Close)
+ 	return srv.URL
+ }
+diff --git a/services/rider/openapi.json b/services/rider/openapi.json
+index 5d29672..6084409 100644
+--- a/services/rider/openapi.json
++++ b/services/rider/openapi.json
+@@ -1903,6 +1903,115 @@
+           }
+         }
+       }
++    },
++    "/admin/orders/{orderId}/dispatch": {
++      "get": {
++        "operationId": "getOrderDispatch",
++        "summary": "An order's dispatch",
++        "description": "For staff (a core staff token): reads the order from core with the rider's service token, then answers the store's online rider count, whether dispatch is on, and the order's latest offers. Store staff read only their own store's orders; another store's order is 404, as an unknown one is.",
++        "tags": [
++          "dispatch"
++        ],
++        "security": [
++          {
++            "bearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "orderId",
++            "in": "path",
++            "required": true,
++            "description": "Core's order id.",
++            "schema": {
++              "type": "string",
++              "format": "uuid"
++            },
++            "example": "00000000-0000-4000-8000-000000000703"
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "The order's dispatch.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/OrderDispatch"
++                },
++                "example": {
++                  "online": 2,
++                  "dispatch": "on",
++                  "offers": [
++                    {
++                      "id": "00000000-0000-4000-8000-000000000903",
++                      "riderName": "Meera Iyer",
++                      "status": "offered",
++                      "etaSeconds": 90,
++                      "offeredAt": "2026-10-16T09:12:31Z"
++                    },
++                    {
++                      "id": "00000000-0000-4000-8000-000000000902",
++                      "riderName": "Arjun Rao",
++                      "status": "expired",
++                      "etaSeconds": 30,
++                      "offeredAt": "2026-10-16T09:12:00Z",
++                      "answeredAt": "2026-10-16T09:12:30Z"
++                    }
++                  ]
++                }
++              }
++            }
++          },
++          "401": {
++            "description": "No bearer, or a token core does not answer as staff.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "unauthorized",
++                    "message": "sign in required"
++                  }
++                }
++              }
++            }
++          },
++          "404": {
++            "description": "Core does not know the order, it is another store's order (store staff), or the id is not a uuid.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "not_found",
++                    "message": "not found"
++                  }
++                }
++              }
++            }
++          },
++          "502": {
++            "description": "Core failed or could not be reached.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "internal",
++                    "message": "core unavailable"
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+@@ -2536,6 +2645,85 @@
+           }
+         },
+         "additionalProperties": false
++      },
++      "DispatchOffer": {
++        "type": "object",
++        "description": "One offer of an order, as staff see it.",
++        "required": [
++          "id",
++          "riderName",
++          "status",
++          "etaSeconds",
++          "offeredAt"
++        ],
++        "properties": {
++          "id": {
++            "type": "string",
++            "format": "uuid"
++          },
++          "riderName": {
++            "type": "string",
++            "description": "The rider's current name."
++          },
++          "status": {
++            "type": "string",
++            "enum": [
++              "offered",
++              "accepted",
++              "declined",
++              "expired"
++            ]
++          },
++          "etaSeconds": {
++            "type": "integer",
++            "minimum": 0,
++            "description": "The rider's straight-line time to the store when the offer was made."
++          },
++          "offeredAt": {
++            "type": "string",
++            "format": "date-time",
++            "description": "When the dispatcher made the offer."
++          },
++          "answeredAt": {
++            "type": "string",
++            "format": "date-time",
++            "description": "When the offer was accepted, declined or expired; omitted while it is open."
++          }
++        },
++        "additionalProperties": false
++      },
++      "OrderDispatch": {
++        "type": "object",
++        "description": "An order's dispatch: the store's online riders, whether the dispatcher runs for the store, and the order's latest offers.",
++        "required": [
++          "online",
++          "dispatch",
++          "offers"
++        ],
++        "properties": {
++          "online": {
++            "type": "integer",
++            "minimum": 0,
++            "description": "Riders of the order's store who are online now."
++          },
++          "dispatch": {
++            "type": "string",
++            "enum": [
++              "on",
++              "off"
++            ],
++            "description": "off while the dispatcher is turned off (SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0) or the store has no location in core."
++          },
++          "offers": {
++            "type": "array",
++            "maxItems": 10,
++            "items": {
++              "$ref": "#/components/schemas/DispatchOffer"
++            },
++            "description": "The order's latest 10 offers, newest first; empty when it has none."
++          }
++        },
++        "additionalProperties": false
+       }
+     }
+   }
+diff --git a/services/rider/queries/dispatch.sql b/services/rider/queries/dispatch.sql
+index 4bd65c3..d6cc243 100644
+--- a/services/rider/queries/dispatch.sql
++++ b/services/rider/queries/dispatch.sql
+@@ -44,3 +44,13 @@ insert into offers (order_id, order_number, store_id, rider_id, eta_seconds, ite
+ values (@order_id, @order_number, @store_id, @rider_id, @eta_seconds, @item_count, @total_cents,
+     @payment_method, @payment_status, @pincode, @placed_at, @offered_at, @expires_at)
+ returning id;
++
++-- name: CountOnline :one
++select count(*) from riders where store_id = $1 and is_online;
++
++-- name: OrderOffers :many
++select o.id, r.name as rider_name, o.status, o.eta_seconds, o.offered_at, o.answered_at
++from offers o join riders r on r.id = o.rider_id
++where o.order_id = $1
++order by o.offered_at desc, o.id
++limit 10;

@@ -53,6 +53,50 @@ func (ns NullDeliveryStatus) Value() (driver.Value, error) {
 	return string(ns.DeliveryStatus), nil
 }
 
+type OfferStatus string
+
+const (
+	OfferStatusOffered  OfferStatus = "offered"
+	OfferStatusAccepted OfferStatus = "accepted"
+	OfferStatusDeclined OfferStatus = "declined"
+	OfferStatusExpired  OfferStatus = "expired"
+)
+
+func (e *OfferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OfferStatus(s)
+	case string:
+		*e = OfferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OfferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOfferStatus struct {
+	OfferStatus OfferStatus
+	Valid       bool // Valid is true if OfferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOfferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OfferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OfferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOfferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OfferStatus), nil
+}
+
 type Delivery struct {
 	ID             string
 	OrderID        string
@@ -76,6 +120,27 @@ type Delivery struct {
 	PaymentStatus  string
 }
 
+type Offer struct {
+	ID            string
+	OrderID       string
+	OrderNumber   string
+	StoreID       string
+	RiderID       string
+	Status        OfferStatus
+	EtaSeconds    int32
+	ItemCount     int32
+	TotalCents    int64
+	PaymentMethod string
+	PaymentStatus string
+	Pincode       string
+	PlacedAt      pgtype.Timestamptz
+	OfferedAt     pgtype.Timestamptz
+	ExpiresAt     pgtype.Timestamptz
+	AnsweredAt    pgtype.Timestamptz
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
 type Rider struct {
 	ID           string
 	StoreID      string
@@ -86,6 +151,8 @@ type Rider struct {
 	IsActive     bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+	IsOnline     bool
+	OnlineSince  pgtype.Timestamptz
 }
 
 type RiderLocation struct {

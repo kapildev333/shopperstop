@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Go online or offline
+         * @description Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.
+         */
+        put: operations["putAvailability"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/riders": {
         parameters: {
             query?: never;
@@ -276,6 +296,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rider's open offer
+         * @description Answers the signed-in rider's open offer, polled by the rider app while online. An offer past its expiry, or whose order another rider claimed by hand, counts as none before the dispatcher marks it.
+         */
+        get: operations["getMyOffer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/offers/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an offer
+         * @description Accepts the rider's open offer: one transaction marks it accepted and claims the order as POST /me/deliveries does (the delivery, then core's out_for_delivery with the rider as actor). When another rider already claimed the order, or core no longer holds it as ready, the offer is expired and the answer is 409. When core fails the offer stays open.
+         */
+        post: operations["acceptOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/offers/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline an offer
+         * @description Declines the rider's open offer. The dispatcher offers the order to the next rider and does not offer it to this rider again for 2 minutes.
+         */
+        post: operations["declineOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orders/{orderId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An order's dispatch
+         * @description For staff (a core staff token): reads the order from core with the rider's service token, then answers the store's online rider count, whether dispatch is on, and the order's latest offers. Store staff read only their own store's orders; another store's order is 404, as an unknown one is.
+         */
+        get: operations["getOrderDispatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -305,6 +405,8 @@ export interface components {
             /** @description Omitted when the rider has no phone. */
             phone?: string;
             isActive: boolean;
+            /** @description true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10). */
+            isOnline?: boolean;
         };
         RiderSession: {
             /** @description Send as Authorization: Bearer <token>. Shown once. */
@@ -461,6 +563,88 @@ export interface components {
             /** @description The rider's last position, only while the delivery is assigned and recorded after the claim. Omitted otherwise. */
             location?: components["schemas"]["Location"];
         };
+        AvailabilityUpdate: {
+            /** @description true to go online for dispatch offers, false to go offline. */
+            online: boolean;
+        };
+        /** @description The dispatcher's offer of one ready order to one rider, with the order as core showed it when the offer was made. */
+        Offer: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Core's order id.
+             */
+            orderId: string;
+            /** @description Core's order number. */
+            number: string;
+            /**
+             * Format: date-time
+             * @description When the customer placed the order.
+             */
+            placedAt: string;
+            /** @description Units to carry: the sum of the line quantities. */
+            itemCount: number;
+            /**
+             * Format: int64
+             * @description Order total in paise (INR cents).
+             */
+            totalCents: number;
+            /** @enum {string} */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, as core held it when the offer was made.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @description The delivery address's pincode. */
+            pincode: string;
+            /** @description The rider's straight-line time to the store when the offer was made; 0 within 100 m. */
+            etaSeconds: number;
+            /**
+             * Format: date-time
+             * @description When the dispatcher made the offer.
+             */
+            offeredAt: string;
+            /**
+             * Format: date-time
+             * @description After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider.
+             */
+            expiresAt: string;
+        };
+        /** @description One offer of an order, as staff see it. */
+        DispatchOffer: {
+            /** Format: uuid */
+            id: string;
+            /** @description The rider's current name. */
+            riderName: string;
+            /** @enum {string} */
+            status: "offered" | "accepted" | "declined" | "expired";
+            /** @description The rider's straight-line time to the store when the offer was made. */
+            etaSeconds: number;
+            /**
+             * Format: date-time
+             * @description When the dispatcher made the offer.
+             */
+            offeredAt: string;
+            /**
+             * Format: date-time
+             * @description When the offer was accepted, declined or expired; omitted while it is open.
+             */
+            answeredAt?: string;
+        };
+        /** @description An order's dispatch: the store's online riders, whether the dispatcher runs for the store, and the order's latest offers. */
+        OrderDispatch: {
+            /** @description Riders of the order's store who are online now. */
+            online: number;
+            /**
+             * @description off while the dispatcher is turned off (SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0) or the store has no location in core.
+             * @enum {string}
+             */
+            dispatch: "on" | "off";
+            /** @description The order's latest 10 offers, newest first; empty when it has none. */
+            offers: components["schemas"]["DispatchOffer"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -571,7 +755,8 @@ export interface operations {
                      *         "email": "rider1-koramangala@shopperstop.local",
                      *         "name": "Arjun Rao",
                      *         "phone": "+919000000001",
-                     *         "isActive": true
+                     *         "isActive": true,
+                     *         "isOnline": false
                      *       }
                      *     }
                      */
@@ -689,13 +874,89 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
                 };
             };
             /** @description No token, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "online": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["AvailabilityUpdate"];
+            };
+        };
+        responses: {
+            /** @description The rider with the new isOnline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000801",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "email": "rider1-koramangala@shopperstop.local",
+                     *       "name": "Arjun Rao",
+                     *       "phone": "+919000000001",
+                     *       "isActive": true,
+                     *       "isOnline": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Rider"];
+                };
+            };
+            /** @description online missing or null (field online), or not a boolean (no field). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "is required",
+                     *         "field": "online"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -748,7 +1009,8 @@ export interface operations {
                      *           "email": "rider1-koramangala@shopperstop.local",
                      *           "name": "Arjun Rao",
                      *           "phone": "+919000000001",
-                     *           "isActive": true
+                     *           "isActive": true,
+                     *           "isOnline": false
                      *         }
                      *       ],
                      *       "page": 1,
@@ -865,7 +1127,8 @@ export interface operations {
                      *       "email": "ravi.kumar@shopperstop.local",
                      *       "name": "Ravi Kumar",
                      *       "phone": "+919000000099",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
@@ -988,7 +1251,8 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
@@ -1086,7 +1350,8 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": false
+                     *       "isActive": false,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
@@ -1844,6 +2109,365 @@ export interface operations {
                 };
             };
             /** @description Core failed to answer (a 500, a timeout, no connection, or core refused the service token). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "internal",
+                     *         "message": "core unavailable"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMyOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000902",
+                     *       "orderId": "00000000-0000-4000-8000-000000000701",
+                     *       "number": "SS-DEMOAAAB",
+                     *       "placedAt": "2026-10-16T09:00:00Z",
+                     *       "itemCount": 3,
+                     *       "totalCents": 33900,
+                     *       "paymentMethod": "cod",
+                     *       "pincode": "560034",
+                     *       "etaSeconds": 90,
+                     *       "offeredAt": "2026-10-16T09:12:00Z",
+                     *       "expiresAt": "2026-10-16T09:12:30Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Offer"];
+                };
+            };
+            /** @description The rider has no open offer. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    acceptOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The offer's id.
+                 * @example 00000000-0000-4000-8000-000000000902
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rider's new assigned delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000910",
+                     *       "orderId": "00000000-0000-4000-8000-000000000703",
+                     *       "orderNumber": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "status": "assigned",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "cod",
+                     *       "itemCount": 4,
+                     *       "items": [
+                     *         {
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "assignedAt": "2026-10-15T09:05:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Delivery"];
+                };
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the rider's offer, an unknown id, or an id that is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The offer was already answered or expired (offer is no longer open), or the order went to another rider or left ready (order is no longer available). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "offer is no longer open"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core failed or could not be reached; the offer stays open. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "internal",
+                     *         "message": "core unavailable"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    declineOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The offer's id.
+                 * @example 00000000-0000-4000-8000-000000000902
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Declined. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the rider's offer, an unknown id, or an id that is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The offer was already answered or expired. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "offer is no longer open"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getOrderDispatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Core's order id.
+                 * @example 00000000-0000-4000-8000-000000000703
+                 */
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order's dispatch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "online": 2,
+                     *       "dispatch": "on",
+                     *       "offers": [
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000903",
+                     *           "riderName": "Meera Iyer",
+                     *           "status": "offered",
+                     *           "etaSeconds": 90,
+                     *           "offeredAt": "2026-10-16T09:12:31Z"
+                     *         },
+                     *         {
+                     *           "id": "00000000-0000-4000-8000-000000000902",
+                     *           "riderName": "Arjun Rao",
+                     *           "status": "expired",
+                     *           "etaSeconds": 30,
+                     *           "offeredAt": "2026-10-16T09:12:00Z",
+                     *           "answeredAt": "2026-10-16T09:12:30Z"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["OrderDispatch"];
+                };
+            };
+            /** @description No bearer, or a token core does not answer as staff. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core does not know the order, it is another store's order (store staff), or the id is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core failed or could not be reached. */
             502: {
                 headers: {
                     [name: string]: unknown;

@@ -210,7 +210,7 @@ func TestEmbeddedMigrationsApplyOnce(t *testing.T) {
 	if _, err := pool.Exec(ctx, "drop function if exists set_updated_at() cascade"); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"0001_init", "0002_riders", "0003_deliveries", "0004_delivery_payment_status"}
+	want := []string{"0001_init", "0002_riders", "0003_deliveries", "0004_delivery_payment_status", "0005_dispatch"}
 
 	got, err := migrate.Apply(ctx, pool, migrations.FS)
 	if err != nil {

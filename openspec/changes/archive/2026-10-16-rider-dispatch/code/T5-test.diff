@@ -1,0 +1,88 @@
+diff --git a/services/rider/internal/seed/seed_test.go b/services/rider/internal/seed/seed_test.go
+index a1f41fb..1f0a486 100644
+--- a/services/rider/internal/seed/seed_test.go
++++ b/services/rider/internal/seed/seed_test.go
+@@ -203,7 +203,7 @@ func TestLoadTwiceFails(t *testing.T) {
+ 
+ // TestSummaryMatchesSeed: every sign-in seed.Summary prints works and names
+ // the printed store, every id it prints is one row of the table on its line,
+-// and the ids marked Postman are the riderId and deliveryId of
++// and the ids marked Postman are the riderId, deliveryId and offerId of
+ // docs/postman/local.postman_environment.json.
+ func TestSummaryMatchesSeed(t *testing.T) {
+ 	ctx := context.Background()
+@@ -213,7 +213,7 @@ func TestSummaryMatchesSeed(t *testing.T) {
+ 	base := server(t)
+ 	stores := map[string]string{"Koramangala": "00000000-0000-4000-8000-000000000401", "Indiranagar": "00000000-0000-4000-8000-000000000402"}
+ 	summaryID := regexp.MustCompile(`^00000000-0000-4000-8000-000000000[89][0-9a-f]{2}$`)
+-	summaryPostman := regexp.MustCompile(`\(Postman (riderId|deliveryId)\)`)
++	summaryPostman := regexp.MustCompile(`\(Postman (riderId|deliveryId|offerId)\)`)
+ 	postman := map[string]string{}
+ 	seenID := map[string]bool{}
+ 	signIns, ids := 0, 0
+@@ -238,8 +238,8 @@ func TestSummaryMatchesSeed(t *testing.T) {
+ 				t.Errorf("line %q repeats id %s from an earlier line", line, f[0])
+ 			}
+ 			seenID[f[0]] = true
+-			if f[1] != "riders" && f[1] != "deliveries" {
+-				t.Errorf("line %q names table %q, want riders or deliveries", line, f[1])
++			if f[1] != "riders" && f[1] != "deliveries" && f[1] != "offers" {
++				t.Errorf("line %q names table %q, want riders, deliveries or offers", line, f[1])
+ 				continue
+ 			}
+ 			if n := countRows(t, "select count(*) from "+f[1]+" where id = '"+f[0]+"'"); n != 1 {
+@@ -250,10 +250,11 @@ func TestSummaryMatchesSeed(t *testing.T) {
+ 			}
+ 		}
+ 	}
+-	if signIns != 4 || ids != 5 {
+-		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 5", signIns, ids)
++	if signIns != 4 || ids != 6 {
++		t.Fatalf("summary holds %d sign-ins and %d ids, want 4 and 6", signIns, ids)
+ 	}
+-	want := map[string]string{"riderId": "00000000-0000-4000-8000-000000000801", "deliveryId": "00000000-0000-4000-8000-000000000901"}
++	want := map[string]string{"riderId": "00000000-0000-4000-8000-000000000801", "deliveryId": "00000000-0000-4000-8000-000000000901",
++		"offerId": "00000000-0000-4000-8000-000000000902"}
+ 	for key, id := range want {
+ 		if postman[key] != id {
+ 			t.Errorf("summary marks %q as Postman %s, want %s", postman[key], key, id)
+@@ -285,3 +286,39 @@ func TestSummaryMatchesSeed(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// TestSeededOffer: after a reset the first demo rider holds an expired offer of
++// core's delivered demo order, has no open offer, and no rider is online.
++func TestSeededOffer(t *testing.T) {
++	if err := seed.Reset(context.Background(), testPool); err != nil {
++		t.Fatalf("reset: %v", err)
++	}
++	if n := countRows(t, `select count(*) from offers where id = '00000000-0000-4000-8000-000000000902' and status = 'expired'
++		and rider_id = '00000000-0000-4000-8000-000000000801' and order_number = 'SS-DEMOAAAB' and answered_at is not null`); n != 1 {
++		t.Fatalf("seeded expired offer rows: %d, want 1", n)
++	}
++	if n := countRows(t, "select count(*) from riders where is_online"); n != 0 {
++		t.Fatalf("online riders after the seed: %d, want 0", n)
++	}
++	base := server(t)
++	status, body := signIn(t, base, "rider1-koramangala@shopperstop.local", "rider12345")
++	var s struct {
++		Token string `json:"token"`
++	}
++	if status != http.StatusOK || json.Unmarshal(body, &s) != nil {
++		t.Fatalf("sign-in: %d %s, want 200", status, body)
++	}
++	req, err := http.NewRequest(http.MethodGet, base+"/api/rider/v1/me/offer", nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	req.Header.Set("Authorization", "Bearer "+s.Token)
++	resp, err := http.DefaultClient.Do(req)
++	if err != nil {
++		t.Fatal(err)
++	}
++	resp.Body.Close()
++	if resp.StatusCode != http.StatusNoContent {
++		t.Fatalf("GET /me/offer for the demo rider: %d, want 204", resp.StatusCode)
++	}
++}

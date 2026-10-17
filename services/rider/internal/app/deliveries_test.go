@@ -472,7 +472,7 @@ func TestReadyOrdersWrongServiceToken(t *testing.T) {
 	store := newID()
 	_, token := riderAt(t, store)
 	wrong := core.New(coreFake.URL(), "wrong-token", time.Now)
-	bad := httptest.NewServer(New(testPool, nil, auth.New(testPool, testPepper, nil, nil), delivery.New(testPool, wrong)))
+	bad := httptest.NewServer(New(testPool, nil, auth.New(testPool, testPepper, nil, nil), delivery.New(testPool, wrong), nil))
 	t.Cleanup(bad.Close)
 
 	status, body := callAt(t, bad.URL, http.MethodGet, readyPath, token, nil)

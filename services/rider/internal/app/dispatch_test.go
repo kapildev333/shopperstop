@@ -1,0 +1,167 @@
+package app
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+	"github.com/kapildev333/shopperstop/services/rider/internal/core"
+	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
+)
+
+func dispatchPath(orderID string) string {
+	return "/api/rider/v1/admin/orders/" + orderID + "/dispatch"
+}
+
+// locatedStore registers a store with a location (Koramangala's) with the fake core and returns its id.
+func locatedStore(t *testing.T) string {
+	t.Helper()
+	id := newID()
+	coreFake.AddStore(core.Store{ID: id, Name: "Located", IsOpen: true, Location: &core.StoreLocation{Lat: 12.9352, Lng: 77.6245}})
+	return id
+}
+
+// dispatchJSON is the OrderDispatch the staff read answers.
+type dispatchJSON struct {
+	Online   int    `json:"online"`
+	Dispatch string `json:"dispatch"`
+	Offers   []struct {
+		ID         string     `json:"id"`
+		RiderName  string     `json:"riderName"`
+		Status     string     `json:"status"`
+		EtaSeconds int        `json:"etaSeconds"`
+		OfferedAt  time.Time  `json:"offeredAt"`
+		AnsweredAt *time.Time `json:"answeredAt"`
+	} `json:"offers"`
+}
+
+// insertAnsweredOffer inserts an offer of orderID to riderID in status
+// (declined, expired or accepted), offered at offeredAt and answered 30 s later.
+func insertAnsweredOffer(t *testing.T, riderID, store, orderID, status string, offeredAt time.Time) string {
+	t.Helper()
+	var id string
+	err := testPool.QueryRow(context.Background(),
+		`insert into offers (order_id, order_number, store_id, rider_id, status, eta_seconds, item_count, total_cents,
+			payment_method, pincode, placed_at, offered_at, expires_at, answered_at)
+		 values ($1, 'SS-OFFER', $2, $3, $4::offer_status, 60, 3, 33900, 'cod', '560034', $5::timestamptz - interval '5 minutes', $5, $5::timestamptz + interval '30 seconds', $5::timestamptz + interval '30 seconds')
+		 returning id`,
+		orderID, store, riderID, status, offeredAt).Scan(&id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func readDispatch(t *testing.T, base, token, orderID string) dispatchJSON {
+	t.Helper()
+	status, body := callAt(t, base, http.MethodGet, dispatchPath(orderID), token, nil)
+	var d dispatchJSON
+	if status != http.StatusOK || json.Unmarshal(body, &d) != nil {
+		t.Fatalf("dispatch read: got %d %s, want 200", status, body)
+	}
+	return d
+}
+
+func TestOrderDispatchOffersNewestFirst(t *testing.T) {
+	store := locatedStore(t)
+	a, aToken := riderAt(t, store)
+	b, bToken := riderAt(t, store)
+	goOnline(t, aToken)
+	goOnline(t, bToken)
+	riderAt(t, store) // offline: not counted
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+	expired := insertAnsweredOffer(t, a, store, o.ID, "expired", time.Now().Add(-time.Minute))
+	open := insertOffer(t, b, store, o.ID, time.Now().Add(30*time.Second))
+
+	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), adminToken, nil)
+	var d dispatchJSON
+	if status != http.StatusOK || json.Unmarshal(body, &d) != nil {
+		t.Fatalf("dispatch read: got %d %s, want 200", status, body)
+	}
+	if d.Online != 2 || d.Dispatch != "on" || len(d.Offers) != 2 {
+		t.Fatalf("dispatch %s: want online 2, dispatch on and two offers", body)
+	}
+	first, second := d.Offers[0], d.Offers[1]
+	if first.ID != open || first.Status != "offered" || first.AnsweredAt != nil || first.RiderName != "Asha Rao" || first.EtaSeconds != 120 {
+		t.Fatalf("first offer %+v: want B's open offer with no answeredAt", first)
+	}
+	if second.ID != expired || second.Status != "expired" || second.AnsweredAt == nil {
+		t.Fatalf("second offer %+v: want A's expired offer with answeredAt", second)
+	}
+	var raw struct {
+		Offers []map[string]json.RawMessage `json:"offers"`
+	}
+	if json.Unmarshal(body, &raw) != nil || len(raw.Offers) != 2 {
+		t.Fatalf("dispatch %s: offers not an array of objects", body)
+	}
+	if _, ok := raw.Offers[0]["answeredAt"]; ok {
+		t.Fatalf("open offer carries answeredAt: %s", body)
+	}
+}
+
+func TestOrderDispatchLatestTen(t *testing.T) {
+	store := locatedStore(t)
+	id, _ := riderAt(t, store)
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+	base := time.Now().Add(-time.Hour)
+	for i := range 11 {
+		insertAnsweredOffer(t, id, store, o.ID, "declined", base.Add(time.Duration(i)*time.Minute))
+	}
+	d := readDispatch(t, srv.URL, adminToken, o.ID)
+	if len(d.Offers) != 10 || !d.Offers[0].OfferedAt.After(d.Offers[9].OfferedAt) {
+		t.Fatalf("offers %d, want the latest 10 newest first", len(d.Offers))
+	}
+}
+
+func TestOrderDispatchStoreIsolation(t *testing.T) {
+	o := addOrder(t, testStoreB, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+
+	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), staffAToken, nil)
+	expectError(t, "another store's order", status, body, http.StatusNotFound, "not_found")
+	if d := readDispatch(t, srv.URL, staffBToken, o.ID); d.Offers == nil {
+		t.Fatal("offers missing: want an empty array")
+	}
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(unknownUUID), adminToken, nil)
+	expectError(t, "unknown order", status, body, http.StatusNotFound, "not_found")
+}
+
+func TestOrderDispatchOffWhenDispatcherOff(t *testing.T) {
+	off := httptest.NewServer(New(testPool, nil, auth.New(testPool, testPepper, nil, coreClient), nil, dispatch.New(testPool, coreClient, dispatch.Config{})))
+	t.Cleanup(off.Close)
+	o := addOrder(t, newID(), "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+	if d := readDispatch(t, off.URL, adminToken, o.ID); d.Dispatch != "off" {
+		t.Fatalf("dispatch %q with the dispatcher off, want off", d.Dispatch)
+	}
+}
+
+func TestOrderDispatchOffWithoutLocation(t *testing.T) {
+	store := newID()
+	coreFake.AddStore(core.Store{ID: store, Name: "No location", IsOpen: true})
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+	if d := readDispatch(t, srv.URL, adminToken, o.ID); d.Dispatch != "off" {
+		t.Fatalf("dispatch %q for a store without a location, want off", d.Dispatch)
+	}
+}
+
+// TestOrderDispatchRefusals pins the error answers promised to admin-P5-L2
+// (they pass from T4 on; this test only fixes them in place).
+func TestOrderDispatchRefusals(t *testing.T) {
+	o := addOrderFor(t, locatedStore(t), "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC), "customer-token-dispatch")
+
+	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "", nil)
+	expectError(t, "no token", status, body, http.StatusUnauthorized, "unauthorized")
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "customer-token-dispatch", nil)
+	expectError(t, "a customer token", status, body, http.StatusUnauthorized, "unauthorized")
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath("not-a-uuid"), adminToken, nil)
+	expectError(t, "a non-uuid order id", status, body, http.StatusNotFound, "not_found")
+
+	const orderRoute = "GET /api/core/v1/admin/orders/{id}"
+	coreFake.FailRoute(orderRoute, http.StatusInternalServerError)
+	t.Cleanup(func() { coreFake.FailRoute(orderRoute, 0) })
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), adminToken, nil)
+	expectError(t, "core failing", status, body, http.StatusBadGateway, "internal")
+}

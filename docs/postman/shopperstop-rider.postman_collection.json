@@ -269,7 +269,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"token\": \"k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq\",\n  \"rider\": {\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n    \"email\": \"rider1-koramangala@shopperstop.local\",\n    \"name\": \"Arjun Rao\",\n    \"phone\": \"+919000000001\",\n    \"isActive\": true\n  }\n}",
+              "body": "{\n  \"token\": \"k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq\",\n  \"rider\": {\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n    \"email\": \"rider1-koramangala@shopperstop.local\",\n    \"name\": \"Arjun Rao\",\n    \"phone\": \"+919000000001\",\n    \"isActive\": true,\n    \"isOnline\": false\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -630,7 +630,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -663,6 +663,232 @@
                 ],
                 "method": "GET",
                 "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Go online or offline",
+          "request": {
+            "name": "Go online or offline",
+            "description": {
+              "content": "Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "availability"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"online\": true\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The rider with the new isOnline.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": true\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "online missing or null (field online), or not a boolean (no field).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"is required\",\n    \"field\": \"online\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No bearer, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "status": "Unauthorized",
               "code": 401,
@@ -816,7 +1042,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000801\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"email\": \"rider1-koramangala@shopperstop.local\",\n      \"name\": \"Arjun Rao\",\n      \"phone\": \"+919000000001\",\n      \"isActive\": true\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000801\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"email\": \"rider1-koramangala@shopperstop.local\",\n      \"name\": \"Arjun Rao\",\n      \"phone\": \"+919000000001\",\n      \"isActive\": true,\n      \"isOnline\": false\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1214,7 +1440,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000805\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"phone\": \"+919000000099\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000805\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"phone\": \"+919000000099\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1606,7 +1832,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1909,7 +2135,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": false\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": false,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -4061,6 +4287,1068 @@
                       "disabled": false,
                       "description": {
                         "content": "(Required) The order's id (core's order id).",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "orderId"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "dispatch",
+      "description": "Offers of ready orders to online riders: the rider's open offer, accept and decline, and the staff view of an order's dispatch.",
+      "item": [
+        {
+          "name": "The rider's open offer",
+          "request": {
+            "name": "The rider's open offer",
+            "description": {
+              "content": "Answers the signed-in rider's open offer, polled by the rider app while online. An offer past its expiry, or whose order another rider claimed by hand, counts as none before the dispatcher marks it.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "offer"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The open offer.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offer"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000902\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000701\",\n  \"number\": \"SS-DEMOAAAB\",\n  \"placedAt\": \"2026-10-16T09:00:00Z\",\n  \"itemCount\": 3,\n  \"totalCents\": 33900,\n  \"paymentMethod\": \"cod\",\n  \"pincode\": \"560034\",\n  \"etaSeconds\": 90,\n  \"offeredAt\": \"2026-10-16T09:12:00Z\",\n  \"expiresAt\": \"2026-10-16T09:12:30Z\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The rider has no open offer. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offer"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "No bearer, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offer"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Accept an offer",
+          "request": {
+            "name": "Accept an offer",
+            "description": {
+              "content": "Accepts the rider's open offer: one transaction marks it accepted and claims the order as POST /me/deliveries does (the delivery, then core's out_for_delivery with the rider as actor). When another rider already claimed the order, or core no longer holds it as ready, the offer is expired and the answer is 409. When core fails the offer stays open.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "offers",
+                ":id",
+                "accept"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{offerId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The offer's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The rider's new assigned delivery.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000910\",\n  \"orderId\": \"00000000-0000-4000-8000-000000000703\",\n  \"orderNumber\": \"SS-DEMOAAAD\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"status\": \"assigned\",\n  \"customerName\": \"Demo Customer\",\n  \"customerPhone\": \"+919800000000\",\n  \"address\": {\n    \"line1\": \"12 80 Feet Rd, Koramangala\",\n    \"pincode\": \"560034\"\n  },\n  \"totalCents\": 103000,\n  \"paymentMethod\": \"cod\",\n  \"itemCount\": 4,\n  \"items\": [\n    {\n      \"name\": \"Banana Robusta\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 1\n    },\n    {\n      \"name\": \"Pomegranate Bhagwa\",\n      \"unitLabel\": \"1 kg\",\n      \"quantity\": 3\n    }\n  ],\n  \"assignedAt\": \"2026-10-15T09:05:00Z\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No bearer, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The offer was already answered or expired (offer is no longer open), or the order went to another rider or left ready (order is no longer available).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"offer is no longer open\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed or could not be reached; the offer stays open.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"internal\",\n    \"message\": \"core unavailable\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Decline an offer",
+          "request": {
+            "name": "Decline an offer",
+            "description": {
+              "content": "Declines the rider's open offer. The dispatcher offers the order to the next rider and does not offer it to this rider again for 2 minutes.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "offers",
+                ":id",
+                "decline"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{offerId}}",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) The offer's id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Declined. No body.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "decline"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "No bearer, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "decline"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "decline"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "The offer was already answered or expired.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "offers",
+                    ":id",
+                    "decline"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) The offer's id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{offerId}}",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"conflict\",\n    \"message\": \"offer is no longer open\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "An order's dispatch",
+          "request": {
+            "name": "An order's dispatch",
+            "description": {
+              "content": "For staff (a core staff token): reads the order from core with the rider's service token, then answers the store's online rider count, whether dispatch is on, and the order's latest offers. Store staff read only their own store's orders; another store's order is 404, as an unknown one is.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":orderId",
+                "dispatch"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "{{orderId}}",
+                  "key": "orderId",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Core's order id.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The order's dispatch.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":orderId",
+                    "dispatch"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Core's order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "orderId"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"online\": 2,\n  \"dispatch\": \"on\",\n  \"offers\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000903\",\n      \"riderName\": \"Meera Iyer\",\n      \"status\": \"offered\",\n      \"etaSeconds\": 90,\n      \"offeredAt\": \"2026-10-16T09:12:31Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000902\",\n      \"riderName\": \"Arjun Rao\",\n      \"status\": \"expired\",\n      \"etaSeconds\": 30,\n      \"offeredAt\": \"2026-10-16T09:12:00Z\",\n      \"answeredAt\": \"2026-10-16T09:12:30Z\"\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No bearer, or a token core does not answer as staff.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":orderId",
+                    "dispatch"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Core's order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "orderId"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core does not know the order, it is another store's order (store staff), or the id is not a uuid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":orderId",
+                    "dispatch"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Core's order id.",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "{{orderId}}",
+                      "key": "orderId"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"not_found\",\n    \"message\": \"not found\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Core failed or could not be reached.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":orderId",
+                    "dispatch"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Core's order id.",
                         "type": "text/plain"
                       },
                       "type": "any",

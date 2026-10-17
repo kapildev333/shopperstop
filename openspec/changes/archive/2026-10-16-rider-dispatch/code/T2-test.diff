@@ -1,0 +1,361 @@
+diff --git a/services/rider/internal/app/offers_test.go b/services/rider/internal/app/offers_test.go
+new file mode 100644
+index 0000000..2f38576
+--- /dev/null
++++ b/services/rider/internal/app/offers_test.go
+@@ -0,0 +1,355 @@
++package app
++
++import (
++	"encoding/json"
++	"net/http"
++	"sort"
++	"sync"
++	"testing"
++	"time"
++)
++
++const myOfferPath = "/api/rider/v1/me/offer"
++
++func acceptPath(id string) string  { return "/api/rider/v1/me/offers/" + id + "/accept" }
++func declinePath(id string) string { return "/api/rider/v1/me/offers/" + id + "/decline" }
++
++// postCode posts a bodiless request with token and returns its status, or -1
++// when the request fails. It never calls t, so goroutines may use it.
++func postCode(base, token, path string) int {
++	req, err := http.NewRequest(http.MethodPost, base+path, nil)
++	if err != nil {
++		return -1
++	}
++	req.Header.Set("Authorization", "Bearer "+token)
++	resp, err := http.DefaultClient.Do(req)
++	if err != nil {
++		return -1
++	}
++	resp.Body.Close()
++	return resp.StatusCode
++}
++
++// offeredOrder adds a ready order at store and offers it to riderID, open for 30 s.
++func offeredOrder(t *testing.T, store, riderID string) (orderID, offerID string) {
++	t.Helper()
++	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
++	return o.ID, insertOffer(t, riderID, store, o.ID, time.Now().Add(30*time.Second))
++}
++
++func TestMyOffer(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	status, body := callAt(t, srv.URL, http.MethodGet, myOfferPath, token, nil)
++	if status != http.StatusNoContent || len(body) != 0 {
++		t.Fatalf("no offer: got %d %q, want 204 with no body", status, body)
++	}
++	orderID, offerID := offeredOrder(t, store, id)
++
++	status, body = callAt(t, srv.URL, http.MethodGet, myOfferPath, token, nil)
++	var o struct {
++		ID, OrderID, Number, PaymentMethod, Pincode string
++		ItemCount, EtaSeconds                       int
++		TotalCents                                  int64
++		PlacedAt, OfferedAt, ExpiresAt              time.Time
++	}
++	if status != http.StatusOK || json.Unmarshal(body, &o) != nil {
++		t.Fatalf("open offer: got %d %s, want 200", status, body)
++	}
++	if o.ID != offerID || o.OrderID != orderID || o.Number != "SS-OFFER" || o.ItemCount != 3 || o.TotalCents != 33900 ||
++		o.PaymentMethod != "cod" || o.Pincode != "560034" || o.EtaSeconds != 120 || o.PlacedAt.IsZero() || !o.ExpiresAt.After(o.OfferedAt) {
++		t.Fatalf("open offer %s: fields do not match the offer row", body)
++	}
++	want := []string{"etaSeconds", "expiresAt", "id", "itemCount", "offeredAt", "orderId", "number", "paymentMethod", "pincode", "placedAt", "totalCents"}
++	if got := keysOf(t, body); !equalStrings(got, want) {
++		t.Fatalf("open offer keys %v, want %v (no paymentStatus for cash)", got, want)
++	}
++}
++
++func equalStrings(a, b []string) bool {
++	sort.Strings(a)
++	sort.Strings(b)
++	if len(a) != len(b) {
++		return false
++	}
++	for i := range a {
++		if a[i] != b[i] {
++			return false
++		}
++	}
++	return true
++}
++
++func TestMyOfferNoneWhenExpiredOrClaimed(t *testing.T) {
++	store := newID()
++	expiredRider, expiredToken := riderAt(t, store)
++	insertOffer(t, expiredRider, store, newID(), time.Now().Add(-time.Second))
++	claimedRider, claimedToken := riderAt(t, store)
++	other, _ := riderAt(t, store)
++	orderID := newID()
++	insertOffer(t, claimedRider, store, orderID, time.Now().Add(30*time.Second))
++	insertDeliveryOf(t, other, store, orderID)
++
++	for name, token := range map[string]string{"expired": expiredToken, "claimed by another rider": claimedToken} {
++		if status, body := callAt(t, srv.URL, http.MethodGet, myOfferPath, token, nil); status != http.StatusNoContent {
++			t.Fatalf("%s offer: got %d %s, want 204", name, status, body)
++		}
++	}
++}
++
++// insertDeliveryOf inserts an assigned delivery of orderID by riderID straight into the table.
++func insertDeliveryOf(t *testing.T, riderID, store, orderID string) {
++	t.Helper()
++	_, err := testPool.Exec(t.Context(),
++		`insert into deliveries (order_id, order_number, store_id, rider_id, customer_name, address_line1, address_pincode,
++			total_cents, payment_method, item_count, items)
++		 values ($1, 'SS-OFFER', $2, $3, 'Demo Customer', '12 80 Feet Rd', '560034', 33900, 'cod', 3, '[]')`,
++		orderID, store, riderID)
++	if err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestAcceptOffer(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	orderID, offerID := offeredOrder(t, store, id)
++
++	status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), token, nil)
++	var d deliveryJSON
++	if status != http.StatusCreated || json.Unmarshal(body, &d) != nil || d.Status != "assigned" || d.OrderID != orderID {
++		t.Fatalf("accept: got %d %s, want 201 with an assigned delivery of the order", status, body)
++	}
++	if s, answered := offerStatus(t, offerID); s != "accepted" || !answered {
++		t.Fatalf("offer after accept: %s (answered %v), want accepted", s, answered)
++	}
++	changes := coreFake.StatusChanges(orderID)
++	if len(changes) != 1 || changes[0].Status != "out_for_delivery" || changes[0].Actor.Type != "rider" || changes[0].Actor.ID != id {
++		t.Fatalf("core status changes %+v, want one out_for_delivery by the rider", changes)
++	}
++}
++
++func TestAcceptRefusals(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	otherID, _ := riderAt(t, store)
++	othersOrder, othersOffer := offeredOrder(t, store, otherID)
++	expiredOrder := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
++	expiredOffer := insertOffer(t, id, store, expiredOrder.ID, time.Now().Add(-time.Second))
++	before := coreFake.Calls(claimRoute)
++
++	status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(othersOffer), token, nil)
++	expectError(t, "another rider's offer", status, body, http.StatusNotFound, "not_found")
++	status, body = callAt(t, srv.URL, http.MethodPost, acceptPath(unknownUUID), token, nil)
++	expectError(t, "unknown offer", status, body, http.StatusNotFound, "not_found")
++	status, body = callAt(t, srv.URL, http.MethodPost, acceptPath("not-a-uuid"), token, nil)
++	expectError(t, "non-uuid offer", status, body, http.StatusNotFound, "not_found")
++	status, body = callAt(t, srv.URL, http.MethodPost, acceptPath(expiredOffer), token, nil)
++	expectError(t, "expired offer", status, body, http.StatusConflict, "conflict")
++
++	if n := countDeliveries(t, othersOrder) + countDeliveries(t, expiredOrder.ID); n != 0 {
++		t.Fatalf("deliveries after the refusals: %d, want 0", n)
++	}
++	if got := coreFake.Calls(claimRoute) - before; got != 0 {
++		t.Fatalf("core received %d status calls, want 0", got)
++	}
++}
++
++func TestAcceptCoreFails(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	orderID, offerID := offeredOrder(t, store, id)
++	coreFake.FailRoute(claimRoute, http.StatusInternalServerError)
++	t.Cleanup(func() { coreFake.FailRoute(claimRoute, 0) })
++
++	status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), token, nil)
++	expectError(t, "accept with core failing", status, body, http.StatusBadGateway, "internal")
++	if n := countDeliveries(t, orderID); n != 0 {
++		t.Fatalf("deliveries after core failed: %d, want 0", n)
++	}
++	if s, _ := offerStatus(t, offerID); s != "offered" {
++		t.Fatalf("offer after core failed: %s, want offered", s)
++	}
++	coreFake.FailRoute(claimRoute, 0)
++	if status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), token, nil); status != http.StatusCreated {
++		t.Fatalf("retry after core recovered: got %d %s, want 201", status, body)
++	}
++}
++
++func TestHandClaimWhileOffered(t *testing.T) {
++	store := newID()
++	a, aToken := riderAt(t, store)
++	_, bToken := riderAt(t, store)
++	orderID, offerID := offeredOrder(t, store, a)
++
++	if status, body := callAt(t, srv.URL, http.MethodPost, claimPath, bToken, map[string]string{"orderId": orderID}); status != http.StatusCreated {
++		t.Fatalf("hand claim of an offered order: got %d %s, want 201", status, body)
++	}
++	status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), aToken, nil)
++	expectError(t, "accept after the hand claim", status, body, http.StatusConflict, "conflict")
++	if s, _ := offerStatus(t, offerID); s != "expired" {
++		t.Fatalf("offer after losing to a hand claim: %s, want expired", s)
++	}
++	if n := countDeliveries(t, orderID); n != 1 {
++		t.Fatalf("deliveries: %d, want 1", n)
++	}
++	if n := len(coreFake.StatusChanges(orderID)); n != 1 {
++		t.Fatalf("core status changes: %d, want 1", n)
++	}
++}
++
++func TestAcceptOrderLeftReady(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	orderID, offerID := offeredOrder(t, store, id)
++	coreFake.SetOrderStatus(orderID, "cancelled")
++
++	status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), token, nil)
++	expectError(t, "accept of a cancelled order", status, body, http.StatusConflict, "conflict")
++	if s, _ := offerStatus(t, offerID); s != "expired" {
++		t.Fatalf("offer after the order left ready: %s, want expired", s)
++	}
++	if n := countDeliveries(t, orderID); n != 0 {
++		t.Fatalf("deliveries: %d, want 0", n)
++	}
++}
++
++func TestAcceptRacesHandClaims(t *testing.T) {
++	store := newID()
++	a, aToken := riderAt(t, store)
++	orderID, offerID := offeredOrder(t, store, a)
++	tokens := make([]string, 4)
++	for i := range tokens {
++		_, tokens[i] = riderAt(t, store)
++	}
++
++	var acceptCode int
++	codes := make([]int, len(tokens))
++	start := make(chan struct{})
++	var wg sync.WaitGroup
++	wg.Add(1 + len(tokens))
++	go func() {
++		defer wg.Done()
++		<-start
++		acceptCode = postCode(srv.URL, aToken, acceptPath(offerID))
++	}()
++	for i := range tokens {
++		go func() {
++			defer wg.Done()
++			<-start
++			codes[i] = claimCode(srv.URL, tokens[i], orderID)
++		}()
++	}
++	close(start)
++	wg.Wait()
++
++	all := append([]int{acceptCode}, codes...)
++	created := 0
++	for _, c := range all {
++		switch c {
++		case http.StatusCreated:
++			created++
++		case http.StatusConflict:
++		default:
++			t.Fatalf("answers %v: want only 201 and 409", all)
++		}
++	}
++	if created != 1 {
++		t.Fatalf("answers %v: want exactly one 201", all)
++	}
++	if n := countDeliveries(t, orderID); n != 1 {
++		t.Fatalf("deliveries: %d, want 1", n)
++	}
++	if n := len(coreFake.StatusChanges(orderID)); n != 1 {
++		t.Fatalf("core status changes: %d, want 1", n)
++	}
++	want := "expired"
++	if acceptCode == http.StatusCreated {
++		want = "accepted"
++	}
++	if s, _ := offerStatus(t, offerID); s != want {
++		t.Fatalf("offer %s after the race (accept answered %d), want %s", s, acceptCode, want)
++	}
++}
++
++func TestAcceptRacesDecline(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	_, offerID := offeredOrder(t, store, id)
++
++	var accept, decline int
++	start := make(chan struct{})
++	var wg sync.WaitGroup
++	wg.Add(2)
++	go func() { defer wg.Done(); <-start; accept = postCode(srv.URL, token, acceptPath(offerID)) }()
++	go func() { defer wg.Done(); <-start; decline = postCode(srv.URL, token, declinePath(offerID)) }()
++	close(start)
++	wg.Wait()
++
++	s, _ := offerStatus(t, offerID)
++	switch {
++	case accept == http.StatusCreated && decline == http.StatusConflict && s == "accepted":
++	case decline == http.StatusNoContent && accept == http.StatusConflict && s == "declined":
++	default:
++		t.Fatalf("accept %d, decline %d, offer %s: want exactly one to succeed and the status to match it", accept, decline, s)
++	}
++}
++
++func TestDeclineOnce(t *testing.T) {
++	store := newID()
++	id, token := riderAt(t, store)
++	otherID, _ := riderAt(t, store)
++	_, offerID := offeredOrder(t, store, id)
++	_, othersOffer := offeredOrder(t, store, otherID)
++
++	if status, body := callAt(t, srv.URL, http.MethodPost, declinePath(offerID), token, nil); status != http.StatusNoContent {
++		t.Fatalf("decline: got %d %s, want 204", status, body)
++	}
++	if s, answered := offerStatus(t, offerID); s != "declined" || !answered {
++		t.Fatalf("offer after decline: %s (answered %v), want declined", s, answered)
++	}
++	status, body := callAt(t, srv.URL, http.MethodPost, declinePath(offerID), token, nil)
++	expectError(t, "second decline", status, body, http.StatusConflict, "conflict")
++	status, body = callAt(t, srv.URL, http.MethodPost, acceptPath(offerID), token, nil)
++	expectError(t, "accept after decline", status, body, http.StatusConflict, "conflict")
++	status, body = callAt(t, srv.URL, http.MethodPost, declinePath(othersOffer), token, nil)
++	expectError(t, "decline of another rider's offer", status, body, http.StatusNotFound, "not_found")
++	status, body = callAt(t, srv.URL, http.MethodPost, declinePath(unknownUUID), token, nil)
++	expectError(t, "decline of an unknown offer", status, body, http.StatusNotFound, "not_found")
++}
++
++func TestOfferAnswersLogged(t *testing.T) {
++	lines := captureLog(t)
++	store := newID()
++	id, token := riderAt(t, store)
++	acceptedOrder, accepted := offeredOrder(t, store, id)
++	if status, body := callAt(t, srv.URL, http.MethodPost, acceptPath(accepted), token, nil); status != http.StatusCreated {
++		t.Fatalf("accept: got %d %s, want 201", status, body)
++	}
++	other, otherToken := riderAt(t, store)
++	declinedOrder, declined := offeredOrder(t, store, other)
++	if status, body := callAt(t, srv.URL, http.MethodPost, declinePath(declined), otherToken, nil); status != http.StatusNoContent {
++		t.Fatalf("decline: got %d %s, want 204", status, body)
++	}
++
++	want := map[string][4]string{
++		"offer accepted":   {accepted, acceptedOrder, "SS-OFFER", id},
++		"offer declined":   {declined, declinedOrder, "SS-OFFER", other},
++		"delivery claimed": {"", acceptedOrder, "", id},
++	}
++	for msg, w := range want {
++		found := false
++		for _, l := range lines() {
++			if l["msg"] != msg || l["orderId"] != w[1] || l["riderId"] != w[3] || l["requestId"] == "" || l["level"] != "INFO" {
++				continue
++			}
++			if w[0] != "" && (l["offerId"] != w[0] || l["number"] != w[2]) {
++				continue
++			}
++			found = true
++		}
++		if !found {
++			t.Fatalf("no %q line for order %s with offerId, number, riderId and requestId", msg, w[1])
++		}
++	}
++}

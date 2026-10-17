@@ -44,6 +44,7 @@ type Rider struct {
 	Name     string `json:"name"`
 	Phone    string `json:"phone,omitempty"`
 	IsActive bool   `json:"isActive"`
+	IsOnline bool   `json:"isOnline"`
 }
 
 type riderKey struct{}
@@ -121,7 +122,7 @@ func (a *Auth) RequireRider(next http.Handler) http.Handler {
 			httpx.WriteError(w, r, err)
 			return
 		}
-		rider := Rider{ID: s.ID, StoreID: s.StoreID, Email: s.Email, Name: s.Name, Phone: s.Phone, IsActive: s.IsActive}
+		rider := Rider{ID: s.ID, StoreID: s.StoreID, Email: s.Email, Name: s.Name, Phone: s.Phone, IsActive: s.IsActive, IsOnline: s.IsOnline}
 		httpx.SetSubject(ctx, "rider", rider.ID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, riderKey{}, rider)))
 	})
