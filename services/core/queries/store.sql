@@ -13,8 +13,8 @@ select * from stores order by name, id limit $1 offset $2;
 select count(*) from stores;
 
 -- name: CreateStore :one
-insert into stores (name, city, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes)
-values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+insert into stores (name, city, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, lat, lng)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 returning *;
 
 -- name: UpdateStore :one
@@ -27,7 +27,9 @@ set name = coalesce(sqlc.narg(name), name),
     delivery_fee_cents = coalesce(sqlc.narg(delivery_fee_cents), delivery_fee_cents),
     free_delivery_above_cents = coalesce(sqlc.narg(free_delivery_above_cents), free_delivery_above_cents),
     min_order_cents = coalesce(sqlc.narg(min_order_cents), min_order_cents),
-    promised_minutes = coalesce(sqlc.narg(promised_minutes), promised_minutes)
+    promised_minutes = coalesce(sqlc.narg(promised_minutes), promised_minutes),
+    lat = coalesce(sqlc.narg(lat), lat),
+    lng = coalesce(sqlc.narg(lng), lng)
 where id = @id
 returning *;
 
