@@ -9,11 +9,20 @@ import (
 	"time"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
+	"github.com/kapildev333/shopperstop/services/rider/internal/core"
 	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
 )
 
 func dispatchPath(orderID string) string {
 	return "/api/rider/v1/admin/orders/" + orderID + "/dispatch"
+}
+
+// locatedStore registers a store with a location (Koramangala's) with the fake core and returns its id.
+func locatedStore(t *testing.T) string {
+	t.Helper()
+	id := newID()
+	coreFake.AddStore(core.Store{ID: id, Name: "Located", IsOpen: true, Location: &core.StoreLocation{Lat: 12.9352, Lng: 77.6245}})
+	return id
 }
 
 // dispatchJSON is the OrderDispatch the staff read answers.
@@ -58,7 +67,7 @@ func readDispatch(t *testing.T, base, token, orderID string) dispatchJSON {
 }
 
 func TestOrderDispatchOffersNewestFirst(t *testing.T) {
-	store := newID()
+	store := locatedStore(t)
 	a, aToken := riderAt(t, store)
 	b, bToken := riderAt(t, store)
 	goOnline(t, aToken)
@@ -95,7 +104,7 @@ func TestOrderDispatchOffersNewestFirst(t *testing.T) {
 }
 
 func TestOrderDispatchLatestTen(t *testing.T) {
-	store := newID()
+	store := locatedStore(t)
 	id, _ := riderAt(t, store)
 	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
 	base := time.Now().Add(-time.Hour)
@@ -127,4 +136,32 @@ func TestOrderDispatchOffWhenDispatcherOff(t *testing.T) {
 	if d := readDispatch(t, off.URL, adminToken, o.ID); d.Dispatch != "off" {
 		t.Fatalf("dispatch %q with the dispatcher off, want off", d.Dispatch)
 	}
+}
+
+func TestOrderDispatchOffWithoutLocation(t *testing.T) {
+	store := newID()
+	coreFake.AddStore(core.Store{ID: store, Name: "No location", IsOpen: true})
+	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+	if d := readDispatch(t, srv.URL, adminToken, o.ID); d.Dispatch != "off" {
+		t.Fatalf("dispatch %q for a store without a location, want off", d.Dispatch)
+	}
+}
+
+// TestOrderDispatchRefusals pins the error answers promised to admin-P5-L2
+// (they pass from T4 on; this test only fixes them in place).
+func TestOrderDispatchRefusals(t *testing.T) {
+	o := addOrderFor(t, locatedStore(t), "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC), "customer-token-dispatch")
+
+	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "", nil)
+	expectError(t, "no token", status, body, http.StatusUnauthorized, "unauthorized")
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "customer-token-dispatch", nil)
+	expectError(t, "a customer token", status, body, http.StatusUnauthorized, "unauthorized")
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath("not-a-uuid"), adminToken, nil)
+	expectError(t, "a non-uuid order id", status, body, http.StatusNotFound, "not_found")
+
+	const orderRoute = "GET /api/core/v1/admin/orders/{id}"
+	coreFake.FailRoute(orderRoute, http.StatusInternalServerError)
+	t.Cleanup(func() { coreFake.FailRoute(orderRoute, 0) })
+	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), adminToken, nil)
+	expectError(t, "core failing", status, body, http.StatusBadGateway, "internal")
 }
