@@ -266,17 +266,25 @@ func TestResetTwiceLeavesDemoStores(t *testing.T) {
 			('00000000-0000-4000-8000-000000000402', 'Indiranagar', '560038'), ('00000000-0000-4000-8000-000000000402', 'Indiranagar', '560008'))`, 4)
 
 	base := server(t)
-	for pincode, want := range map[string]string{"560095": storeKoramangala, "560008": storeIndiranagar} {
+	for pincode, want := range map[string]struct {
+		id       string
+		lat, lng float64
+	}{"560095": {storeKoramangala, 12.9352, 77.6245}, "560008": {storeIndiranagar, 12.9719, 77.6412}} {
 		status, body := getJSON(t, base+"/api/core/v1/serviceability?pincode="+pincode)
 		var s struct {
 			Store struct {
-				ID     string `json:"id"`
-				City   string `json:"city"`
-				IsOpen bool   `json:"isOpen"`
+				ID       string `json:"id"`
+				City     string `json:"city"`
+				IsOpen   bool   `json:"isOpen"`
+				Location struct {
+					Lat float64 `json:"lat"`
+					Lng float64 `json:"lng"`
+				} `json:"location"`
 			} `json:"store"`
 		}
-		if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Store.ID != want || !s.Store.IsOpen || s.Store.City != "Bengaluru" {
-			t.Fatalf("serviceability %s: got %d %s, want 200 open store %s in Bengaluru", pincode, status, body, want)
+		if status != http.StatusOK || json.Unmarshal(body, &s) != nil || s.Store.ID != want.id || !s.Store.IsOpen || s.Store.City != "Bengaluru" ||
+			s.Store.Location.Lat != want.lat || s.Store.Location.Lng != want.lng {
+			t.Fatalf("serviceability %s: got %d %s, want 200 open store %s in Bengaluru at %v, %v", pincode, status, body, want.id, want.lat, want.lng)
 		}
 	}
 	if status, body := getJSON(t, base+"/api/core/v1/serviceability?pincode=110001"); status != http.StatusNotFound {
