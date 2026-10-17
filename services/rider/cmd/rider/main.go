@@ -20,6 +20,7 @@ import (
 	"github.com/kapildev333/shopperstop/services/rider/internal/config"
 	"github.com/kapildev333/shopperstop/services/rider/internal/core"
 	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
+	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -59,6 +60,19 @@ func run(cfg config.Config) error {
 	limit := auth.NewLimiter(10, 100, time.Hour, time.Now)
 	limit.TrustProxy = cfg.TrustProxy
 	a := auth.New(pool, cfg.SessionPepper, limit, c)
+	dsp := dispatch.New(pool, c, dispatch.Config{
+		Enabled: cfg.DispatchInterval > 0, OfferTTL: cfg.DispatchOfferTTL,
+		LocationTTL: cfg.DispatchLocationTTL, SpeedKMH: cfg.DispatchSpeedKMH,
+	})
+	// The dispatcher stops with ctx; run cancels ctx and waits for it before the pool closes.
+	ticking := make(chan struct{})
+	go func() {
+		defer close(ticking)
+		if cfg.DispatchInterval > 0 {
+			dsp.Run(ctx, cfg.DispatchInterval)
+		}
+	}()
+	defer func() { stop(); <-ticking }()
 	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
 		return err

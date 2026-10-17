@@ -35,8 +35,8 @@ Scenarios: dispatch "Dispatch configuration" (all three), "One dispatcher tick a
 Starts from: `internal/dispatch/dispatch_test.go` `TestTickTwoOrdersTwoRiders`, `TestTickSkipsRidersWhoCannotTakeIt`, `TestTickDeclineMovesOnThenRests`, `TestTickExpiresAndCascades`, `TestTickExpiresOfferOfClaimedOrder`, `TestTickSkipsWhileLocked`, `TestConcurrentTicksOneOffer`, `TestTickCoreFailureSkipsStore`, `TestTickSnapshot`, `TestTickLogs`, `TestRunTicks`; `internal/config/config_test.go` `TestDispatchDefaults`, `TestDispatchOff`, `TestDispatchBadValuesNamed`. Red: `go vet` prints `cfg.DispatchInterval undefined` and `undefined: Dispatcher`.
 Commits: `test: dispatcher config, tick and loop`, then `feat: dispatcher tick offers ready orders to free online riders`.
 
-- [ ] 3.1 `git apply .../code/T3-test.diff`; red check; commit.
-- [ ] 3.2 `git apply .../code/T3-feat.diff`; `make gen postman` (creates `internal/dispatch/db/`; `openapi.json` is untouched, so `rider.d.ts` and Postman do not change); gates; tick 3.1 and 3.2; commit.
+- [x] 3.1 `git apply .../code/T3-test.diff`; red check; commit.
+- [x] 3.2 `git apply .../code/T3-feat.diff`; `make gen postman` (creates `internal/dispatch/db/`; `openapi.json` is untouched, so `rider.d.ts` and Postman do not change); gates; tick 3.1 and 3.2; commit.
 
 ## 4. The staff dispatch read
 
