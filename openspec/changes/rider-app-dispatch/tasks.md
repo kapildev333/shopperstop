@@ -73,9 +73,9 @@ Scenarios: "Decline an offer" (nothing while an accept is pending), "Offer sheet
 Starts from: `src/offer.test.tsx` `nothing answers while an accept is pending` (red on the disabled "Decline"), and the pins `someone else took it (404)`, `accept invalidates the ready and assigned lists`, `a new offer shows no old accept error`.
 Commits: `test: nothing answers while an accept is pending; 404 taken; caches invalidated; no old accept error on a new offer`, `fix: decline is disabled while an accept is pending`, `refactor: one error banner per offer; list keys from ready.tsx`.
 
-- [ ] 7.1 The four tests; red check; guard-deletion runs in the log; commit.
-- [ ] 7.2 "Decline" `disabled={accepting}`; gates; commit.
-- [ ] 7.3 Drop `resetAccept` and its effect, banner only for `accept.variables?.id === offer?.id`; export and reuse the list keys; gates plus `make test-web`; tick 7.1 to 7.3; commit.
+- [x] 7.1 The four tests; red check; guard-deletion runs in the log; commit.
+- [x] 7.2 "Decline" `disabled={accepting}`; gates; commit.
+- [x] 7.3 Drop `resetAccept` and its effect, banner only for `accept.variables?.id === offer?.id`; export and reuse the list keys; gates plus `make test-web`; tick 7.1 to 7.3; commit.
 
 ## 8. Landing checks (area manager, then team lead)
 

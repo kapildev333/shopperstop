@@ -25,7 +25,7 @@ Red: test 1 (the disabled assertion). Tests 2 to 4 are pins; say so in the log. 
 - Gates (paste tails): `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run` (every file green; tests 1 to 4 above unchanged), `npm run build --workspace apps/rider`, `make test-web`, `openspec validate --all --strict`. Tick 7.1 to 7.3. Commit.
 
 ## Log
-Status: doing (commit 1 of 3 ready)
+Status: done
 
 ### Commit 1 (test) log
 - Start check: T6 head d021746 fits the brief (`OnlineOffer`, render-time `seenId` reset, `resetAccept` effect present).
@@ -42,3 +42,14 @@ Status: doing (commit 1 of 3 ready)
 
 ### Commit 3 (refactor) log
 - `resetAccept` and its effect deleted; banner gated on `accept.variables?.id === offer?.id`; the render-time `seenId` status reset from T6 kept as is. `readyKey`/`assignedKey` exported from `ready.tsx` and used in `dispatch.tsx`. offer.test.tsx 18/18 green, lint and typecheck clean.
+
+### Gates (after commit 3, tasks ticked)
+- `npm run lint --workspace apps/rider`, `typecheck`: clean (no output).
+- `npm run test --workspace apps/rider -- --run`: 12 files, 94 tests passed.
+- `npm run build --workspace apps/rider`: built.
+- `openspec validate --all --strict`: Totals: 21 passed, 0 failed (21 items).
+- `make test-web` exit 0: ui 35 files / 104 tests; admin 28 / 343; mobile jest 98 suites / 383 tests and node test 7/7; rider 12 / 94; web 29 / 183; every workspace built.
+- Tasks 7.1 to 7.3 ticked.
+
+## Found
+- Brief pin 3 and test 1 fixture: see the two deviations above (spy on `invalidateQueries`; fixed offer). Both are test-only; T8 and later briefs that reuse `offer()` in a polled route need the same fixed object for an expiry test.
