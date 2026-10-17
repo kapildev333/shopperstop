@@ -382,6 +382,25 @@ test('rider and delivery ids read environment variables', async () => {
   assert.deepEqual(vars('Order delivery'), [['orderId', '{{orderId}}']]);
 });
 
+test('offer ids read environment variables', async () => {
+  const offerFixture = {
+    ...riderFixture,
+    paths: {
+      '/me/offers/{id}/accept': {
+        post: {
+          summary: 'Accept offer',
+          tags: ['deliveries'],
+          security: [{ bearer: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, example: 'f1' }],
+          responses: { 201: { description: 'Accepted.' } },
+        },
+      },
+    },
+  };
+  const c = JSON.parse(await generate(offerFixture, 'rider'));
+  assert.deepEqual(requestNamed(c, 'Accept offer').request.url.variable.map((v) => [v.key, v.value]), [['id', '{{offerId}}']]);
+});
+
 test('rider collection follows the rider contract', async () => {
   const contract = new URL('../services/rider/openapi.json', import.meta.url);
   const collection = '../docs/postman/shopperstop-rider.postman_collection.json';
@@ -473,11 +492,11 @@ test('committed collection matches the contract', async () => {
   assert.equal(committed, await generate(realSpec));
 });
 
-test('environment holds the fourteen variables', () => {
+test('environment holds the fifteen variables', () => {
   const env = JSON.parse(read('../docs/postman/local.postman_environment.json'));
   assert.deepEqual(env.values.map((v) => v.key), [
     'baseUrl', 'customerToken', 'staffToken', 'storeId', 'productId', 'addressId', 'orderId',
-    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId', 'paymentBaseUrl', 'paymentId', 'serviceToken',
+    'riderBaseUrl', 'riderToken', 'riderId', 'deliveryId', 'offerId', 'paymentBaseUrl', 'paymentId', 'serviceToken',
   ]);
   const byKey = Object.fromEntries(env.values.map((v) => [v.key, v.value]));
   const byType = Object.fromEntries(env.values.map((v) => [v.key, v.type]));
@@ -494,6 +513,8 @@ test('environment holds the fourteen variables', () => {
   // The rider seed's first Koramangala rider and the demo delivery (.claude/areas/rider.md).
   assert.equal(byKey.riderId, '00000000-0000-4000-8000-000000000801');
   assert.equal(byKey.deliveryId, '00000000-0000-4000-8000-000000000901');
+  assert.equal(byKey.offerId, '00000000-0000-4000-8000-000000000902');
+  assert.equal(byType.offerId, 'default');
   // The payment seed's paid payment of core's demo online order (.claude/areas/payment.md).
   assert.equal(byKey.paymentId, '00000000-0000-4000-8000-000000000a01');
 });
