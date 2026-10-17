@@ -54,6 +54,11 @@ test('store staff take the placed order to delivered and find it in History', as
     await page.getByRole('button', { name: `${button} SS-DEMOAAAD` }).click()
     await expect(page.getByRole('status').filter({ hasText: `SS-DEMOAAAD is now ${status}.` })).toBeVisible()
     await expect(page.getByRole('region', { name: new RegExp(`^${status}`) }).getByRole('listitem').filter({ hasText: 'SS-DEMOAAAD' })).toBeVisible()
+    // Ready: the rider service has no seeded rider online, so dispatch has nobody to offer the order to.
+    if (status === 'Ready') {
+      await expect(card).toContainText('No rider online')
+      await expectNoAxeViolations(page)
+    }
   }
   await expectNoAxeViolations(page)
   await page.getByRole('button', { name: 'Mark delivered SS-DEMOAAAD' }).click()
