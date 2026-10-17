@@ -3,7 +3,8 @@ Scope: `services/rider/`, `apps/rider/` (D29: one area, one manager, one e2e sui
 Depends on: platform (rider databases, Makefile targets and e2e env, Caddy, CI: platform-P3-L1), core (service tokens and `actor` on the status route: core-P3-L1), ui (`@shopperstop/ui`, and `packages/ui/src/api/rider.d.ts` from ui-P3-L2 for the app)
 Spec: PLAN.md Phase 3 and D29 to D35; Spec 1 §4 (stack), §5 (OpenSpec, TDD), §8 and §10 (UI, binding for `apps/rider`), §11 (API documentation); Spec 2 §4 (status machine, "the rider service will later own out_for_delivery to delivered"), §5 (bearer sessions), §6 (envelope, lists, errors), §9 (service layout), §10 (config), §12 (logging), §13 (testing). The work package below is the brainstorm input; the team leads turn it into OpenSpec changes that seed the capabilities `rider-service`, `deliveries` and `rider-app` (D4).
 ## Doing
-Idle, on the loop (`/loop 5min /manage rider`): rider-P5-L3 `rider-app-dispatch` merged #377, archived #378. The D57 dispatch work (rider-P5-L2, L3) is complete. No lane running, no rider worktrees, not running `make e2e`. Next: the Phase 6/7 rider package (D52, D55) or relayed requests.
+Paused (2026-10-17, owner stop). Nothing open: all rider lanes on main through rider-P5-L3 (#377, archive #378); D57 dispatch complete (rider-P5-L2 #370, rider-P5-L3 #377). No lane running, no rider worktrees, no open rider PRs, not running `make e2e`.
+Resume: `/loop 5min /manage rider`; read this plan and PLAN.md for the next rider package (Phase 6/7: D52 shared Go module, D55 hardening) or a relayed request; backlog ceilings are in `## Found`.
 
 ## Lanes
 | Lane | Task | Scope | Status |
