@@ -313,6 +313,8 @@ type Store struct {
 	CreatedAt              pgtype.Timestamptz
 	UpdatedAt              pgtype.Timestamptz
 	City                   string
+	Lat                    *float64
+	Lng                    *float64
 }
 
 type StoreServiceArea struct {
