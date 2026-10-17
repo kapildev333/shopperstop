@@ -271,3 +271,54 @@ test('the change form shows the location and sends it only when a coordinate cha
   expect(await patches[0].json()).toEqual({ promisedMinutes: 11 })
   expect(await patches[1].json()).toEqual({ location: { lat: 12.9352, lng: 77.625 } })
 })
+
+test('a location the form cannot send is flagged without a request', async () => {
+  setToken('tok')
+  const calls = fakeCore(withStore)
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '12.9352')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter both latitude and longitude, or neither\./)
+  await replace('Latitude', 'north')
+  await replace('Longitude', '180.5')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/Enter a latitude from -90 to 90\./)
+  expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter a longitude from -180 to 180\./)
+  expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(0)
+})
+
+test('a location can be changed but not removed', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...withStore, [`GET ${storePath}`]: () => json(200, located) })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '')
+  await replace('Longitude', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/A location can be changed but not removed\./)
+  expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(0)
+})
+
+test('location errors from core are shown on their fields', async () => {
+  setToken('tok')
+  const answers = [
+    apiError(400, 'validation', 'location.lng must be from -180 to 180', 'location.lng'),
+    apiError(400, 'validation', 'location needs lat and lng', 'location'),
+  ]
+  fakeCore({ ...withStore, [`PATCH ${storePath}`]: () => answers.shift()! })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '12.9352')
+  await replace('Longitude', '77.6245')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter a longitude from -180 to 180\./))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/Enter both latitude and longitude, or neither\./))
+  expect(screen.getByLabelText('Longitude')).not.toHaveAccessibleDescription(/Enter a longitude/)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
