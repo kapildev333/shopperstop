@@ -30,3 +30,4 @@ Red: these six fail (no watch while online). Commit with your log.
 Stop and report under Blockers if `location.test.tsx` needs any change to pass.
 
 ## Log
+- Commit 1 `test: position reported while online; location needed to stay online` (red). `routes` now also returns `sent` (location bodies). Red: `npm run test --workspace apps/rider -- --run src/availability.test.tsx` → 6 failed | 3 passed. Failing: `first fix, then every 10 seconds`, `online on load`, `offline stops the watch`, `sign-out stops the watch`, `permission refused`, `no geolocation api`. Reason: `expected +0 to be 1` (no watch while online) on the five watch tests; `expected [] to deeply equal [ { online: false } ]` on `no geolocation api`.
