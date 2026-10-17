@@ -1,5 +1,5 @@
 # rider-P5-L2-T5 - the offer seed (task 5 of rider-dispatch)
-Status: not started
+Status: blocked at step 2 (feat not committed; see Blockers)
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T5). Area: `rider`.
@@ -23,12 +23,22 @@ Red check, from `services/rider`: `go vet ./...` and `SHOPPERSTOP_RIDER_TEST_DAT
 If a patch does not apply, the red differs from the expected red, a generated file outside the scope changes or a gate fails, stop and write it under Blockers; do not improvise. Never edit `apps/`, other services, `packages/ui` by hand, `docs/postman` by hand, or the lane log `rider-P5-L2.md`.
 
 ## Red run
+test commit `f09c470` (`test: seed holds an expired demo offer`). Before the feat: `go vet ./...` clean. FAIL lines:
+```
+--- FAIL: TestSeededOffer (0.02s)
+--- FAIL: TestSummaryMatchesSeed (0.97s)
+```
+Reasons: `seed_test.go:254: summary holds 4 sign-ins and 5 ids, want 4 and 6`; `seed_test.go:298: seeded expired offer rows: 0, want 1`. Both as stated.
 
 ## Green run
 
 ## Gates
+Step 2 applied `T5-feat.diff` (uncommitted): `go vet ./...` clean; `GOFLAGS=-count=1 make test-rider` exit 0, every package `ok` (seed `ok` 31.3s, dispatch `ok`, app `ok`).
+`make gen postman` exit 0, but it also rewrites `docs/postman/shopperstop-rider.postman_collection.json` (out of scope, see Blockers). `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
 
 ## Found
+- `make gen postman` on the feat tree changes the rider collection: 6 offer request variables move from the literal `00000000-0000-4000-8000-000000000902` to `{{offerId}}` (the `ID_VARS` generator change from platform-P5-L2 503a2a8). The branch's committed collection was generated before that change, so it is stale; origin/main has no offer routes, so the drift is the lane's own T2 routes. The brief expects `make gen postman` to change nothing, and the stop rule names generated files outside scope. No tasks ticked.
 
 ## Blockers
-None yet.
+1. Stop per brief: `make gen postman` modifies `docs/postman/shopperstop-rider.postman_collection.json` (out of the listed scope). Left uncommitted in the worktree with the feat patch applied, for the manager's decision: commit the regenerated collection in the feat commit (it is the lane's own generated artifact and CI diffs it), or re-run it on a later step. Tasks 5.1 and 5.2 remain unticked.
+2. The `feat:` commit and `T6` were not started.
