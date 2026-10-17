@@ -1,5 +1,5 @@
 # rider-P5-L2-T3 - the dispatcher: config, tick, loop (task 3 of rider-dispatch)
-Status: not started
+Status: done. Commits 19ce167 (test: dispatcher config, tick and loop), aec9bba (feat: dispatcher tick offers ready orders to free online riders). Tasks 3.1 and 3.2 ticked in the feat commit.
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T3). Area: `rider`.
@@ -22,12 +22,26 @@ Red check, from `services/rider`: `go vet ./...` and `SHOPPERSTOP_RIDER_TEST_DAT
 If a patch does not apply, the red differs from the expected red, a generated file outside the scope changes or a gate fails, stop and write it under Blockers; do not improvise. Never edit `apps/`, other services, `packages/ui` by hand, `docs/postman` by hand, or the lane log `rider-P5-L2.md`.
 
 ## Red run
+Test patch applied (19ce167 tree). `go vet ./...` from services/rider:
+```
+# github.com/kapildev333/shopperstop/services/rider/internal/config_test
+vet: internal/config/config_test.go:131:9: cfg.DispatchInterval undefined (type config.Config has no field or method DispatchInterval)
+# github.com/kapildev333/shopperstop/services/rider/internal/dispatch
+vet: internal/dispatch/dispatch_test.go:36:12: undefined: Dispatcher
+```
+`go test -count=1 ./internal/...` grep for `--- FAIL`: empty. Both packages fail to compile, so no test reaches a runtime failure. This matches the expected red (the two compile errors named in the brief); the grep is empty because no test binary was built, not because tests passed.
 
 ## Green run
+Feat patch applied, `make gen postman` run (no drift; only `internal/dispatch/db/{db.go,dispatch.sql.go,models.go}` were new). Race tests, `go test -race -count=20 -run 'TestTick|TestConcurrentTicks|TestRunTicks|TestDispatch'` on `./internal/dispatch/` and `./internal/config/`: `ok` for both packages, no failures.
 
 ## Gates
+- `GOFLAGS=-count=1 make test-rider` (exit 0; gofmt and go vet clean): every package `ok` or `[no test files]`. Includes `internal/dispatch` ok (3.012s), `internal/config` ok (2.170s), `internal/app` ok, `internal/seed` ok, `cmd/rider` ok.
+- `make gen postman`: gen clean; postman `# tests 27 # pass 27 # fail 0`. `git status --short` after gen: only the scope files plus the untracked reviewer logs. After the feat commit the tree is clean except the reviewer logs.
+- `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
+- Race: `go test -race -count=20` on the tick tests: `ok` for `internal/dispatch` (6.163s) and `internal/config` (1.262s).
 
 ## Found
+- Nothing unexpected. `openapi.json` and `packages/ui` were not touched by gen.
 
 ## Blockers
-None yet.
+None.
