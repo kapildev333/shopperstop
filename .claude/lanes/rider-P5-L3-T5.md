@@ -42,3 +42,12 @@ Status: in progress (worker)
   - `× someone else took it`: `TestingLibraryElementError: Unable to find role="status"`
   - `× accept fails`: `TestingLibraryElementError: Unable to find role="alert"`
   - `Tests 3 failed | 5 passed (8)`; the five existing offer tests stay green.
+- Commit 2 (`feat: accept an offer and open its delivery`): `OfferSheet` in `dispatch.tsx` gets a `useMutation` (POST accept, `onSuccess` sets the answer, seeds the delivery query, invalidates ready and assigned, navigates to `/deliveries/$deliveryId`; `onError` for `conflict` or `not_found` closes with "Someone else took <number>.", other failures keep the sheet with `ErrorBanner`). Accept shows `loading` while pending; decline, the sheet's close and the countdown's expiry do nothing while pending. The mutation resets when the offer id changes, so an old error does not show on the next offer.
+- Gates (worktree root):
+  - `npm run lint --workspace apps/rider`: no output, eslint clean.
+  - `npm run typecheck --workspace apps/rider`: no output, tsc clean.
+  - `npm run test --workspace apps/rider -- --run`: `Test Files 12 passed (12)`, `Tests 84 passed (84)`; the three accept tests green.
+  - `npm run build --workspace apps/rider`: `✓ built`.
+  - `openspec validate --all --strict`: `Totals: 21 passed, 0 failed (21 items)`.
+  - `make test-web`: exit 0. Per workspace: `packages/ui` 35 files / 104 tests; `apps/admin` 28 / 343; `apps/rider` 12 / 84; `apps/web` 29 / 183; `apps/mobile` (jest) 98 suites / 383 tests. Every build and lint step green.
+- Ticked 5.0, 5.1 and 5.2 in `openspec/changes/rider-app-dispatch/tasks.md`.

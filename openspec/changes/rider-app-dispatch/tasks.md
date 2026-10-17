@@ -52,9 +52,9 @@ Scenarios: "Accept an offer" (Accepted, Someone else took it, Accept fails).
 Starts from: `src/offer.test.tsx` `accepted`, `someone else took it`, `accept fails`.
 Commits: `test: accept an offer`, then `feat: accept an offer and open its delivery`.
 
-- [ ] 5.0 R3 finding: the geolocation fake records options; `availability.test.tsx` `online watch options` pins `{ enableHighAccuracy: false, maximumAge: 10_000 }` (a `test:` pin, shown to fail with the option swapped); scenario "Position reported while online".
-- [ ] 5.1 The three tests; red check; commit.
-- [ ] 5.2 The accept mutation; gates plus `make test-web`; tick 5.0, 5.1 and 5.2; commit.
+- [x] 5.0 R3 finding: the geolocation fake records options; `availability.test.tsx` `online watch options` pins `{ enableHighAccuracy: false, maximumAge: 10_000 }` (a `test:` pin, shown to fail with the option swapped); scenario "Position reported while online".
+- [x] 5.1 The three tests; red check; commit.
+- [x] 5.2 The accept mutation; gates plus `make test-web`; tick 5.0, 5.1 and 5.2; commit.
 
 ## 6. Fix: no stale offer after going online again; status cleared (review R4)
 

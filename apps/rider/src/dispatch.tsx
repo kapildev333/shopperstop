@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useEffectEvent, useState } from 'react'
-import { Badge, Button, Price, Sheet, StatusMessage } from '@shopperstop/ui'
+import { Badge, Button, ErrorBanner, Price, Sheet, StatusMessage } from '@shopperstop/ui'
 import { itemCount } from './format'
-import { meQuery, rider, type Offer } from './api'
+import { deliveryQuery, meQuery, rider, type ApiError, type Offer } from './api'
 import { useOnlineReport } from './location'
 
 // The banner's availability. The state is the rider query's `isOnline` (design Decision 2); the answer is written back into that query.
@@ -55,7 +56,19 @@ function secondsLeft(expiresAt: string) {
 }
 
 // Keyed by the offer id in the sheet, so each offer starts its own countdown.
-function OfferBody({ offer, onDecline, onExpire }: { offer: Offer; onDecline: () => void; onExpire: () => void }) {
+function OfferBody({
+  offer,
+  accepting,
+  onAccept,
+  onDecline,
+  onExpire,
+}: {
+  offer: Offer
+  accepting: boolean
+  onAccept: () => void
+  onDecline: () => void
+  onExpire: () => void
+}) {
   const [left, setLeft] = useState(() => secondsLeft(offer.expiresAt))
   const expire = useEffectEvent(onExpire)
 
@@ -84,7 +97,7 @@ function OfferBody({ offer, onDecline, onExpire }: { offer: Offer; onDecline: ()
         <Price cents={offer.totalCents} className="text-h3" />
         {offer.paymentMethod === 'cod' && <Badge>Cash</Badge>}
       </div>
-      <Button size="lg" className="w-full">
+      <Button size="lg" className="w-full" loading={accepting} onClick={onAccept}>
         Accept
       </Button>
       <Button size="lg" variant="secondary" className="w-full" onClick={onDecline}>
@@ -99,6 +112,8 @@ export function OfferSheet() {
   const online = useQuery(meQuery).data?.isOnline ?? false
   const [answered, setAnswered] = useState<string>()
   const [status, setStatus] = useState<string>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // ponytail: polling every 3 s, no push or SSE (D57). A failed read shows nothing.
   const offer = useQuery({
@@ -116,14 +131,44 @@ export function OfferSheet() {
 
   const open = online && offer != null && offer.id !== answered
 
-  // ponytail: fire-and-forget decline; a failed decline lets the offer run out its 30 s.
+  // Accepting: a 201 opens the delivery; a 409 or 404 means someone else has the order; any other failure keeps the sheet.
+  const accept = useMutation({
+    mutationFn: async (o: Offer) => {
+      const { data, error } = await rider.POST('/me/offers/{id}/accept', { params: { path: { id: o.id } } })
+      if (error) throw error.error
+      return data
+    },
+    onSuccess: async (delivery, o) => {
+      setAnswered(o.id)
+      setStatus(undefined)
+      queryClient.setQueryData(deliveryQuery(delivery.id).queryKey, delivery)
+      void queryClient.invalidateQueries({ queryKey: ['rider', 'ready'] })
+      void queryClient.invalidateQueries({ queryKey: ['rider', 'deliveries', 'assigned'] })
+      await navigate({ to: '/deliveries/$deliveryId', params: { deliveryId: delivery.id } })
+    },
+    onError: (error, o) => {
+      const code = (error as Partial<ApiError>).code
+      if (code !== 'conflict' && code !== 'not_found') return
+      setAnswered(o.id)
+      setStatus(`Someone else took ${o.number}.`)
+    },
+  })
+
+  // A new offer starts with no error from the last one (as ReadyPage's pick resets its claim).
+  const resetAccept = accept.reset
+  useEffect(() => resetAccept(), [offer?.id, resetAccept])
+
+  // ponytail: fire-and-forget decline; a failed decline lets the offer run out its 30 s. Nothing answers while an accept is in flight.
   function decline(o: Offer) {
+    if (accept.isPending) return
     setAnswered(o.id)
     setStatus(undefined)
     void rider.POST('/me/offers/{id}/decline', { params: { path: { id: o.id } } }).catch(() => undefined)
   }
 
+  // The countdown reaching 0 does not close a sheet whose accept is in flight: the answer decides.
   function expire(o: Offer) {
+    if (accept.isPending) return
     setAnswered(o.id)
     setStatus('Offer expired')
   }
@@ -132,8 +177,16 @@ export function OfferSheet() {
     <>
       <Sheet open={open} onClose={() => offer && decline(offer)} title={offer ? `New order ${offer.number}` : ''}>
         {offer && (
-          <OfferBody key={offer.id} offer={offer} onDecline={() => decline(offer)} onExpire={() => expire(offer)} />
+          <OfferBody
+            key={offer.id}
+            offer={offer}
+            accepting={accept.isPending}
+            onAccept={() => accept.mutate(offer)}
+            onDecline={() => decline(offer)}
+            onExpire={() => expire(offer)}
+          />
         )}
+        {accept.isError && <ErrorBanner message="Could not accept the order. Try again." className="mt-4" />}
       </Sheet>
       {!open && status && (
         <StatusMessage tone="warning" className="mb-4">
