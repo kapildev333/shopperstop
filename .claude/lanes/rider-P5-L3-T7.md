@@ -25,3 +25,14 @@ Red: test 1 (the disabled assertion). Tests 2 to 4 are pins; say so in the log. 
 - Gates (paste tails): `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run` (every file green; tests 1 to 4 above unchanged), `npm run build --workspace apps/rider`, `make test-web`, `openspec validate --all --strict`. Tick 7.1 to 7.3. Commit.
 
 ## Log
+Status: doing (commit 1 of 3 ready)
+
+### Commit 1 (test) log
+- Start check: T6 head d021746 fits the brief (`OnlineOffer`, render-time `seenId` reset, `resetAccept` effect present).
+- Deviation 1 (pin 3, `accept invalidates the ready and assigned lists`): the brief's `isInvalidated` check is false after accept. The Pick up page is still mounted when `invalidateQueries` runs, so the ready list refetches and clears the flag; the assigned query has no observer at that point. The test spies `qc.invalidateQueries` and asserts the two keys instead. Same intent (the calls happen), exact keys, survives commit 3.
+- Deviation 2 (test 1): the brief's `offer()` per poll never expires: each poll moves `expiresAt` forward 30 s, so the countdown never reaches 0. Test 1 uses one fixed `const same = offer()`, as `offer expires` does.
+- Bite proof (brief asks for Escape and 30 s failures; test 1 cannot reach them while Decline is enabled): for each run the `disabled={accepting}` line was applied temporarily, then one guard removed. Restored after each run.
+  - Decline guard removed (`function decline` first line deleted): FAIL `TestingLibraryElementError: Unable to find an accessible element with the role "dialog" and name "New order SS-AAAA0001"` at `offer.test.tsx:325`. Escape closed the sheet.
+  - Expire guard removed: same failure at `offer.test.tsx:325`. The 30 s countdown closed the sheet.
+  - Restored: `dispatch.tsx` byte-equal to d021746.
+- Red on the committed tree (baseline, no fix): `expect(element).toBeDisabled()` `offer.test.tsx:320`, Received element is not disabled. 17 of 18 green (tests 2 to 4 pass).

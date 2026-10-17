@@ -298,3 +298,92 @@ test('no decline after expiry', async () => {
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(declined.count).toBe(0)
 })
+
+test('nothing answers while an accept is pending', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const declined = { count: 0 }
+  // One fixed offer: a fresh one per poll would push its expiry back and the countdown would never run out.
+  const same = offer()
+  routes(true, {
+    [OFFER]: () => json(200, same),
+    [ACCEPT_1]: () => new Promise<Response>(() => {}),
+    [DECLINE_1]: () => {
+      declined.count += 1
+      return json(204)
+    },
+  })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+  const decline = within(sheet).getByRole('button', { name: 'Decline' })
+  expect(decline).toBeDisabled()
+  await user.click(decline)
+  await user.keyboard('{Escape}')
+  await act(() => vi.advanceTimersByTimeAsync(30_000))
+
+  expect(screen.getByRole('dialog', { name: 'New order SS-AAAA0001' })).toBeInTheDocument()
+  expect(declined.count).toBe(0)
+  expect(screen.queryByText('Offer expired')).toBeNull()
+})
+
+test('someone else took it (404)', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [ACCEPT_1]: () => apiError(404, 'not_found'),
+  })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+
+  expect(await screen.findByRole('status')).toHaveTextContent('Someone else took SS-AAAA0001.')
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('accept invalidates the ready and assigned lists', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [ACCEPT_1]: () => json(201, delivery({ id: 'd1' })),
+    'GET /api/rider/v1/me/deliveries/d1': () => json(200, delivery({ id: 'd1' })),
+  })
+  const router = renderApp('/')
+
+  // The refetch of the mounted ready list clears its flag, so the calls are spied rather than the cache state read.
+  const qc = router.options.context.queryClient
+  const invalidate = vi.spyOn(qc, 'invalidateQueries')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-AAAA0001' })).toBeInTheDocument()
+
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['rider', 'ready'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['rider', 'deliveries', 'assigned'] })
+})
+
+test('a new offer shows no old accept error', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const o1 = offer()
+  const o2 = offer({ id: '00000000-0000-4000-8000-000000000b02', number: 'SS-AAAA0002' })
+  let current = o1
+  routes(true, {
+    [OFFER]: () => json(200, current),
+    [ACCEPT_1]: () => apiError(502, 'internal'),
+    [DECLINE_1]: () => {
+      current = o2
+      return json(204)
+    },
+  })
+  renderApp('/')
+
+  const first = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(first).getByRole('button', { name: 'Accept' }))
+  expect(await within(first).findByRole('alert')).toHaveTextContent('Could not accept the order. Try again.')
+
+  await user.click(within(first).getByRole('button', { name: 'Decline' }))
+  await act(() => vi.advanceTimersByTimeAsync(3_000))
+  const second = await screen.findByRole('dialog', { name: 'New order SS-AAAA0002' })
+  expect(within(second).queryByRole('alert')).toBeNull()
+})
