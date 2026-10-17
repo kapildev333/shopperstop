@@ -42,8 +42,8 @@ Starts from: `src/offer.test.tsx` `offline sends no offer read`, `polled every 3
 Commits: `test: offers read while online, offer sheet, decline`, then `feat: offer sheet with countdown and decline`.
 
 - [x] 4.0 (done-by-pin, no fix) R2 findings, test first: `availability.test.tsx` `toggle disabled while pending` and `failure message cleared by a later success` (`test:`), then a successful change clears only the failure message (`fix:`); scenario "Availability in the banner".
-- [ ] 4.1 The five tests; red check; commit.
-- [ ] 4.2 `OfferSheet` in `dispatch.tsx` (an "Accept" button that does nothing yet is allowed; task 5 wires it), rendered by the shell; gates; tick 4.0, 4.1 and 4.2; commit.
+- [x] 4.1 The five tests; red check; commit.
+- [x] 4.2 `OfferSheet` in `dispatch.tsx` (an "Accept" button that does nothing yet is allowed; task 5 wires it), rendered by the shell; gates; tick 4.0, 4.1 and 4.2; commit.
 
 ## 5. Accept an offer
 

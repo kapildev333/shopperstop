@@ -5,7 +5,7 @@ import { rider, storeQuery } from '../api'
 import { riderLinks } from '../nav'
 import { NotFound } from '../not-found'
 import { clearToken } from '../session'
-import { Availability } from '../dispatch'
+import { Availability, OfferSheet } from '../dispatch'
 
 // The store's name, read from core. A pending or failed read shows no name and blocks nothing.
 function StoreName({ storeId }: { storeId: string }) {
@@ -53,6 +53,7 @@ function RootLayout() {
         )}
       </header>
       <main className="mx-auto max-w-xl px-4 py-6">
+        {me && <OfferSheet />}
         <Outlet />
       </main>
     </>
