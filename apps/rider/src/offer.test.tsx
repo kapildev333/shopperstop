@@ -85,7 +85,8 @@ test('offer shown', async () => {
 })
 
 test('offer expires', async () => {
-  routes(true, { [OFFER]: () => json(200, offer()) })
+  const same = offer()
+  routes(true, { [OFFER]: () => json(200, same) })
   renderApp('/')
 
   await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
