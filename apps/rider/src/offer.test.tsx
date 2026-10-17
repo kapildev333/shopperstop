@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
-import { arjun, fakeApi, json, offer, signedInRoutes } from './fake-api'
+import { apiError, arjun, delivery, fakeApi, json, offer, signedInRoutes } from './fake-api'
 import { fakeGeolocation } from './fake-geolocation'
 import { renderApp } from './render-app'
 
@@ -14,6 +14,7 @@ const LOCATION = 'PUT /api/rider/v1/me/location'
 const OFFER = 'GET /api/rider/v1/me/offer'
 const DECLINE_1 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b01/decline'
 const DECLINE_2 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b02/decline'
+const ACCEPT_1 = 'POST /api/rider/v1/me/offers/00000000-0000-4000-8000-000000000b01/accept'
 
 const none = { items: [], page: 1, pageSize: 24, total: 0 }
 
@@ -131,4 +132,58 @@ test('decline closes the sheet', async () => {
 
   await act(() => vi.advanceTimersByTimeAsync(6_000))
   expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('accepted', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const accepted = { count: 0 }
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [ACCEPT_1]: () => {
+      accepted.count += 1
+      return json(201, delivery({ id: 'd1' }))
+    },
+    'GET /api/rider/v1/me/deliveries/d1': () => json(200, delivery({ id: 'd1' })),
+  })
+  const router = renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Order SS-AAAA0001' })).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/deliveries/d1')
+  expect(accepted.count).toBe(1)
+})
+
+test('someone else took it', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [ACCEPT_1]: () => apiError(409, 'conflict'),
+  })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+
+  expect(await screen.findByRole('status')).toHaveTextContent('Someone else took SS-AAAA0001.')
+  expect(screen.queryByRole('dialog')).toBeNull()
+
+  await act(() => vi.advanceTimersByTimeAsync(6_000))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('accept fails', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  routes(true, {
+    [OFFER]: () => json(200, offer()),
+    [ACCEPT_1]: () => apiError(502, 'internal'),
+  })
+  renderApp('/')
+
+  const sheet = await screen.findByRole('dialog', { name: 'New order SS-AAAA0001' })
+  await user.click(within(sheet).getByRole('button', { name: 'Accept' }))
+
+  expect(await within(sheet).findByRole('alert')).toHaveTextContent('Could not accept the order. Try again.')
+  expect(screen.getByRole('dialog', { name: 'New order SS-AAAA0001' })).toBeInTheDocument()
 })

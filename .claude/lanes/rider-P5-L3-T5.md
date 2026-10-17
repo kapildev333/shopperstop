@@ -32,3 +32,13 @@ In `OfferSheet` (`src/dispatch.tsx`), a `useMutation` like `ReadyPage`'s claim (
 - Gates (paste tails): `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run`, `npm run build --workspace apps/rider`, `openspec validate --all --strict`, then `make test-web` from the worktree root (every workspace green). Tick 5.1 and 5.2. Commit.
 
 ## Log
+Status: in progress (worker)
+
+- Section 0 (commit `ad1c142`, `test: online position watch uses low accuracy and a 10 s maximum age`): `fake-geolocation.ts` records `options` per watch and exposes `options()`; pin `online watch options` in `availability.test.tsx`.
+  - Passes on current code (12/12 in `availability.test.tsx`).
+  - Bite proof: `location.ts` line 64 `enableHighAccuracy: false` swapped to `true`, run: `FAIL src/availability.test.tsx > online watch options` / `AssertionError: expected [ { enableHighAccuracy: true, …(1) } ] to deeply equal [ { enableHighAccuracy: false, …(1) } ]`; 1 failed, 11 passed. Reverted; `location.ts` not in any commit.
+- Commit 1 (`test: accept an offer`): `accepted`, `someone else took it`, `accept fails` added to `offer.test.tsx`. Red run (`npm run test --workspace apps/rider -- --run src/offer.test.tsx`):
+  - `× accepted`: `TestingLibraryElementError: Unable to find role="heading" and name "Order SS-AAAA0001"`
+  - `× someone else took it`: `TestingLibraryElementError: Unable to find role="status"`
+  - `× accept fails`: `TestingLibraryElementError: Unable to find role="alert"`
+  - `Tests 3 failed | 5 passed (8)`; the five existing offer tests stay green.
