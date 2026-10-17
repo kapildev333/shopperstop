@@ -43,17 +43,53 @@ index 31457c1..2fa2973 100644
  	for _, row := range rows {
  		o := DispatchOffer{ID: row.ID, RiderName: row.RiderName, Status: string(row.Status), EtaSeconds: int(row.EtaSeconds), OfferedAt: row.OfferedAt.Time}
 diff --git a/services/rider/internal/dispatch/dispatch.go b/services/rider/internal/dispatch/dispatch.go
-index aae90cb..b39927c 100644
+index aae90cb..395ed6a 100644
 --- a/services/rider/internal/dispatch/dispatch.go
 +++ b/services/rider/internal/dispatch/dispatch.go
-@@ -125,9 +125,14 @@ func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store str
- 	if err != nil || len(rows) == 0 {
+@@ -58,8 +58,8 @@ func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) {
+ 		select {
+ 		case <-ctx.Done():
+ 			return
+-		case now := <-t.C:
+-			if err := d.Tick(ctx, now); err != nil && ctx.Err() == nil {
++		case <-t.C:
++			if err := d.Tick(ctx, time.Now()); err != nil && ctx.Err() == nil {
+ 				slog.ErrorContext(ctx, "dispatch tick failed", "err", err)
+ 			}
+ 		}
+@@ -69,6 +69,8 @@ func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) {
+ // Tick runs one dispatch round at now, in one transaction holding the tick
+ // lock; when another transaction holds it, Tick returns nil having done
+ // nothing. now is the only clock Tick reads, so tests pass their own.
++// ponytail: the lock is held across core calls (up to two 5 s calls per store
++// with work), so a rider going offline can wait that long; commit per store if it bites.
+ func (d *Dispatcher) Tick(ctx context.Context, now time.Time) error {
+ 	return pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
+ 		q := d.q.WithTx(tx)
+@@ -109,6 +111,12 @@ type candidate struct {
+ // A core failure skips the store (the core client logged it); only database
+ // errors are returned.
+ func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store string, now time.Time) error {
++	// Candidates first: a store whose online riders are all busy, stale or offered costs no core call.
++	rows, err := q.Candidates(ctx, db.CandidatesParams{StoreID: store, LocatedAfter: ts(now.Add(-d.cfg.LocationTTL))})
++	if err != nil || len(rows) == 0 {
++		return err
++	}
++	// ponytail: core's first page of 100 ready orders, newest first; beyond 100 the oldest wait for the hand claim. Page through core then.
+ 	orders, err := d.core.StoreOrders(ctx, store, "ready")
+ 	if err != nil || len(orders) == 0 {
+ 		return nil
+@@ -121,13 +129,14 @@ func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store str
+ 	if err != nil {
  		return err
  	}
+-	rows, err := q.Candidates(ctx, db.CandidatesParams{StoreID: store, LocatedAfter: ts(now.Add(-d.cfg.LocationTTL))})
+-	if err != nil || len(rows) == 0 {
+-		return err
 +	loc, err := d.storeLocation(ctx, store)
 +	if err != nil || loc == nil {
 +		return nil // core failed (logged by the client), or the store has no location: dispatch is off there
-+	}
+ 	}
  	cands := make([]candidate, len(rows))
  	for i, r := range rows {
 -		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time}
@@ -62,7 +98,7 @@ index aae90cb..b39927c 100644
  	}
  	rank(cands)
  	sort.SliceStable(orders, func(i, j int) bool { return orders[i].PlacedAt.Before(orders[j].PlacedAt) })
-@@ -178,4 +183,18 @@ func rank(cs []candidate) {
+@@ -178,4 +187,18 @@ func rank(cs []candidate) {
  	})
  }
  

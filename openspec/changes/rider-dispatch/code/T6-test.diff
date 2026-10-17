@@ -1,5 +1,5 @@
 diff --git a/services/rider/internal/app/dispatch_test.go b/services/rider/internal/app/dispatch_test.go
-index 4b770ce..cf21bcb 100644
+index 4b770ce..555cbab 100644
 --- a/services/rider/internal/app/dispatch_test.go
 +++ b/services/rider/internal/app/dispatch_test.go
 @@ -9,6 +9,7 @@ import (
@@ -43,7 +43,7 @@ index 4b770ce..cf21bcb 100644
  	id, _ := riderAt(t, store)
  	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
  	base := time.Now().Add(-time.Hour)
-@@ -128,3 +137,12 @@ func TestOrderDispatchOffWhenDispatcherOff(t *testing.T) {
+@@ -128,3 +137,31 @@ func TestOrderDispatchOffWhenDispatcherOff(t *testing.T) {
  		t.Fatalf("dispatch %q with the dispatcher off, want off", d.Dispatch)
  	}
  }
@@ -56,8 +56,27 @@ index 4b770ce..cf21bcb 100644
 +		t.Fatalf("dispatch %q for a store without a location, want off", d.Dispatch)
 +	}
 +}
++
++// TestOrderDispatchRefusals pins the error answers promised to admin-P5-L2
++// (they pass from T4 on; this test only fixes them in place).
++func TestOrderDispatchRefusals(t *testing.T) {
++	o := addOrderFor(t, locatedStore(t), "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC), "customer-token-dispatch")
++
++	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "", nil)
++	expectError(t, "no token", status, body, http.StatusUnauthorized, "unauthorized")
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "customer-token-dispatch", nil)
++	expectError(t, "a customer token", status, body, http.StatusUnauthorized, "unauthorized")
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath("not-a-uuid"), adminToken, nil)
++	expectError(t, "a non-uuid order id", status, body, http.StatusNotFound, "not_found")
++
++	const orderRoute = "GET /api/core/v1/admin/orders/{id}"
++	coreFake.FailRoute(orderRoute, http.StatusInternalServerError)
++	t.Cleanup(func() { coreFake.FailRoute(orderRoute, 0) })
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), adminToken, nil)
++	expectError(t, "core failing", status, body, http.StatusBadGateway, "internal")
++}
 diff --git a/services/rider/internal/dispatch/dispatch_test.go b/services/rider/internal/dispatch/dispatch_test.go
-index 448ad0d..b1ffc2e 100644
+index 448ad0d..67ae1ac 100644
 --- a/services/rider/internal/dispatch/dispatch_test.go
 +++ b/services/rider/internal/dispatch/dispatch_test.go
 @@ -6,6 +6,7 @@ import (
@@ -110,7 +129,7 @@ index 448ad0d..b1ffc2e 100644
  // rider inserts a rider of store, online for onlineFor when online, with a
  // position at lat, lng recorded locatedAgo ago, and returns its id.
  func rider(t *testing.T, store string, online bool, onlineFor time.Duration, lat, lng float64, locatedAgo time.Duration) string {
-@@ -453,3 +479,97 @@ func TestRunTicks(t *testing.T) {
+@@ -453,3 +479,112 @@ func TestRunTicks(t *testing.T) {
  		t.Fatal("the loop did not stop when its context ended")
  	}
  }
@@ -206,5 +225,20 @@ index 448ad0d..b1ffc2e 100644
 +	tick(t, time.Now())
 +	if n := countOffers(t); n != 0 {
 +		t.Fatalf("offers at a store without a location: %d, want 0", n)
++	}
++}
++
++// TestTickNoCandidateNoCoreCall: a store whose only online rider cannot take an
++// order (a stale position here) costs the tick no core call.
++func TestTickNoCandidateNoCoreCall(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	rider(t, store, true, time.Minute, storeLat, storeLng, 3*time.Minute)
++	readyOrder(t, store, t0)
++	before := coreFake.Calls(ordersRoute)
++
++	tick(t, time.Now())
++	if got := coreFake.Calls(ordersRoute) - before; got != 0 {
++		t.Fatalf("core ready-orders calls for a store with no candidate: %d, want 0", got)
 +	}
 +}

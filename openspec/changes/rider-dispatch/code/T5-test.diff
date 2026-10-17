@@ -1,18 +1,16 @@
 diff --git a/services/rider/internal/seed/seed_test.go b/services/rider/internal/seed/seed_test.go
-index a1f41fb..9c797c5 100644
+index a1f41fb..1f0a486 100644
 --- a/services/rider/internal/seed/seed_test.go
 +++ b/services/rider/internal/seed/seed_test.go
-@@ -203,8 +203,8 @@ func TestLoadTwiceFails(t *testing.T) {
+@@ -203,7 +203,7 @@ func TestLoadTwiceFails(t *testing.T) {
  
  // TestSummaryMatchesSeed: every sign-in seed.Summary prints works and names
  // the printed store, every id it prints is one row of the table on its line,
 -// and the ids marked Postman are the riderId and deliveryId of
--// docs/postman/local.postman_environment.json.
-+// the ids marked Postman are the riderId, deliveryId and offerId, and the first
-+// two are those of docs/postman/local.postman_environment.json.
++// and the ids marked Postman are the riderId, deliveryId and offerId of
+ // docs/postman/local.postman_environment.json.
  func TestSummaryMatchesSeed(t *testing.T) {
  	ctx := context.Background()
- 	if err := seed.Reset(ctx, testPool); err != nil {
 @@ -213,7 +213,7 @@ func TestSummaryMatchesSeed(t *testing.T) {
  	base := server(t)
  	stores := map[string]string{"Koramangala": "00000000-0000-4000-8000-000000000401", "Indiranagar": "00000000-0000-4000-8000-000000000402"}
@@ -48,17 +46,7 @@ index a1f41fb..9c797c5 100644
  	for key, id := range want {
  		if postman[key] != id {
  			t.Errorf("summary marks %q as Postman %s, want %s", postman[key], key, id)
-@@ -274,7 +275,8 @@ func TestSummaryMatchesSeed(t *testing.T) {
- 	for _, v := range env.Values {
- 		envValue[v.Key] = v.Value
- 	}
--	for key := range want {
-+	// ponytail: offerId joins this list once platform adds it to the environment (rider-dispatch design.md Decision 15).
-+	for _, key := range []string{"riderId", "deliveryId"} {
- 		v, ok := envValue[key]
- 		if !ok {
- 			t.Errorf("Postman environment has no %s", key)
-@@ -285,3 +287,39 @@ func TestSummaryMatchesSeed(t *testing.T) {
+@@ -285,3 +286,39 @@ func TestSummaryMatchesSeed(t *testing.T) {
  		}
  	}
  }

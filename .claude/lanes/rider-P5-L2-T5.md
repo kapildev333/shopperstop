@@ -7,7 +7,8 @@ Status: not started
 - Change: `openspec/changes/rider-dispatch/`, task 5 (`tasks.md` section 5). Read `design.md` Decisions 13, 15. Every hand-written change is a patch in `openspec/changes/rider-dispatch/code/`; you apply it, you do not write it.
 - Scenarios: dispatch "Offer demo seed"; rider-service "Rider demo seed" stays green.
 - Scope paths (nothing else): `services/rider/internal/seed/{seed,summary}.go`, test `services/rider/internal/seed/seed_test.go`; `openspec/changes/rider-dispatch/tasks.md` (ticks 5.1, 5.2); this file.
-- Failing tests to start from: `services/rider/internal/seed/seed_test.go` `TestSeededOffer`, `TestSummaryMatchesSeed` (6 ids, `offerId`).
+- Failing tests to start from: `services/rider/internal/seed/seed_test.go` `TestSeededOffer`, `TestSummaryMatchesSeed` (6 ids; `riderId`, `deliveryId` and `offerId` tied to the Postman environment).
+- Precondition: the lane branch has merged origin/main at or after 503a2a8 (platform-P5-L2 #365); `grep offerId docs/postman/local.postman_environment.json` finds `00000000-0000-4000-8000-000000000902`. If not, stop and report.
 - Expected red: `go vet` clean; FAIL lines: `TestSeededOffer`, `TestSummaryMatchesSeed`.
 
 ## Steps and commits
