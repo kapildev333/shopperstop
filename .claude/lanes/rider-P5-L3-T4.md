@@ -43,3 +43,10 @@ In `src/dispatch.tsx`, `export function OfferSheet()`:
 Stop and report under Blockers if `Sheet` cannot be used as above without a change in `packages/ui`.
 
 ## Log
+- 2026-10-16 worker (Haiku 5.5), section 0 (R2 findings):
+  - Added `toggle disabled while pending` and `failure message cleared by a later success` to `src/availability.test.tsx` (after `change fails`), uncommitted.
+  - Red check: `npm run test --workspace apps/rider -- --run src/availability.test.tsx` → 1 file, 11 tests passed, 0 failed. Both new tests PASS on the current code (a969dfc).
+  - `toggle disabled while pending`: passes already, as the brief anticipated (`Button loading` disables and keeps its name). It pins the spec's "disabled while pending".
+  - `failure message cleared by a later success`: also passes, so the brief's expected red does not hold. Reason: `Availability` has one `message` state. The refusal path sets `'Allow location to go online'` before `mutate(false)`, which overwrites the failure text, so no failure text can linger next to the refusal message. The `fix:` (0b) would be a no-op for this flow.
+  - Stopped before 0b and before commit 1, per the rule for a red that differs. No commits made in this session. Decision needed from the manager: drop 0b, or find a flow where the failure lingers, or keep the test as a pin only.
+- Manager decision (2026-10-16): drop 0b. Both new tests are committed as one `test:` commit pinning existing behaviour (disabled while pending; a later success replaces the failure text; R2 finding 2 does not occur; no fix needed). Task 4.0 ticked as done-by-pin.

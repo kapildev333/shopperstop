@@ -91,6 +91,47 @@ test('change fails', async () => {
   expect(within(banner).getByText('Offline')).toBeInTheDocument()
 })
 
+test('toggle disabled while pending', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  let release!: (r: Response) => void
+  routes({ [AVAILABILITY]: () => new Promise<Response>((r) => { release = r }) })
+  renderApp('/')
+
+  const banner = await screen.findByRole('banner')
+  await user.click(await within(banner).findByRole('button', { name: 'Go online' }))
+  expect(within(banner).getByRole('button', { name: 'Go online' })).toBeDisabled()
+
+  act(() => release(json(200, { ...arjun, isOnline: true })))
+  expect(await within(banner).findByRole('button', { name: 'Go offline' })).toBeEnabled()
+})
+
+test('failure message cleared by a later success', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  let answers = 0
+  routes({
+    ...online,
+    [AVAILABILITY]: async (request) => {
+      answers += 1
+      if (answers === 1) return apiError(502, 'internal')
+      const body = (await request.json()) as { online: boolean }
+      return json(200, { ...arjun, isOnline: body.online })
+    },
+  })
+  renderApp('/')
+
+  const banner = await screen.findByRole('banner')
+  await user.click(await within(banner).findByRole('button', { name: 'Go offline' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Could not change your status. Try again.')
+  expect(within(banner).getByText('Online')).toBeInTheDocument()
+
+  await waitFor(() => expect(geo.watching()).toBe(1))
+  act(() => geo.fail(1))
+
+  expect(await within(banner).findByText('Offline')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Allow location to go online')
+  expect(screen.queryByText('Could not change your status. Try again.')).toBeNull()
+})
+
 test('first fix, then every 10 seconds', async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   const { sent } = routes()
