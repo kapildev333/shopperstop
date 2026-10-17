@@ -18,8 +18,8 @@ Scope: `apps/admin/src/store-form.tsx`, `store-form.test.tsx`, `apps/admin/e2e/s
 
 Scope: `apps/admin/src/dispatch.tsx` (new), `order-board.tsx`, `order-sheet.tsx`, `orders-dispatch.test.tsx` (new), `riders-fake.ts`, `apps/admin/e2e/orders.spec.ts`. Scenarios: "Order dispatch line" > all three; "Order dispatch line follows the board" > "Failed read, then the poll"; "Dispatch against core" (written here, run in task 4). Starts only once rider-P5-L2's regenerated `packages/ui/src/api/rider.d.ts` (with `OrderDispatch` and `/admin/orders/{orderId}/dispatch`) is on main and the branch is rebased onto it.
 
-- [ ] 3.1 `test:` apply `patches/3.1-dispatch-line-tests.diff`: `dispatchRoute` and `isOnline` on the rider fixtures in `riders-fake.ts`; `orders-dispatch.test.tsx` (4 tests); the Ready-step assertion in `e2e/orders.spec.ts`; see 4 fail (343 total)
-- [ ] 3.2 `feat:` apply `patches/3.2-dispatch-line.diff`: `dispatch.tsx` (`dispatchQuery`, `dispatchText`, `DispatchLine`), the line on the card and in the sheet; 343 pass
+- [x] 3.1 `test:` apply `patches/3.1-dispatch-line-tests.diff`: `dispatchRoute` and `isOnline` on the rider fixtures in `riders-fake.ts`; `orders-dispatch.test.tsx` (4 tests); the Ready-step assertion in `e2e/orders.spec.ts`; see 4 fail (343 total)
+- [x] 3.2 `feat:` apply `patches/3.2-dispatch-line.diff`: `dispatch.tsx` (`dispatchQuery`, `dispatchText`, `DispatchLine`), the line on the card and in the sheet; 343 pass
 
 ## 4. e2e against core and the rider service (area manager)
 
