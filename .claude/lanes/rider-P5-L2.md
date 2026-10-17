@@ -1,7 +1,7 @@
 # rider-P5-L2 - rider dispatch (OpenSpec change rider-dispatch)
 Status: accepted
 ## Doing
-Team lead, 2026-10-16: acceptance (`/opsx:verify rider-dispatch`) at 3941b82: PASS. 7.2 ticked with evidence; 7.1 carries the manager's evidence and waits only for the `make e2e` totals.
+Team lead, 2026-10-16: acceptance (`/opsx:verify rider-dispatch`) at 3941b82: PASS. 7.1 and 7.2 ticked with evidence (`make e2e` green: admin 16, mobile 28, rider 7, web 47). Every task is done.
 ## Found
 - Change `openspec/changes/rider-dispatch/`: new capability `dispatch` (13 requirements) and `rider-service` (ADDED "Riders go online and offline"; MODIFIED sign-in (`Rider.isOnline`), sign-out, staff read and update (deactivation goes offline), migrations (0005)). No `deliveries` delta: the claim, the ready list and the delivery reads are unchanged (design.md Decision 3). Every requirement is 500 characters or fewer (longest 499, "A tick offers free ready orders to free candidates").
 - Every hand-written change is a patch in `openspec/changes/rider-dispatch/code/` (13 files: `T1-test`, `T1-feat`, `T2-fix`, `T2-test`, `T2-feat`, ..., `T6-feat`). They were spiked on a scratch copy of 150d5e5 and checked there: the patches apply in order to a clean checkout; after `sqlc generate`, `GOFLAGS=-count=1 make test-rider` is green with all 11 packages ok, every feat state is green, and every test state is red with the failures listed in tasks.md. Under `-race`, the accept-versus-claim and accept-versus-decline race tests passed 60 runs.
