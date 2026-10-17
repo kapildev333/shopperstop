@@ -12,6 +12,11 @@ Status: ready
 - Known: `make test-web` fails with TS2741 in `apps/admin/src/store-form.tsx` (lines 16 and 29) until admin's `type Field = Exclude<keyof StoreCreate, 'location'>` is on main and merged into this branch by the manager. If that is the only failure, commit anyway and record it here. Do not edit `apps/admin`.
 - Never: `make e2e`, `make dev`, `make seed`, `core-admin migrate` or `seed-demo` against a real database, `check-wiring.sh`, `docker`.
 ## Doing
+2026-10-16: tasks 1.1 and 1.2 done; commits fe69af6 (test) and 4026192 (feat); ticks in a chore commit.
+2026-10-16: task 1.1 and 1.2 done; commits fe69af6 (test), 4026192 (feat). Gates below; ticks committed separately.
 ## Found
+- Five tests red before code: TestCreateStoreValidation (201 for lat 90.5), TestCreateStoreLocation (no location), TestPatchStoreLocation (no location), TestPublicStoreLocation (column "lat" does not exist), TestResetTwiceLeavesDemoStores (no location).
+- Gates green: gofmt empty, go vet clean, go test -race -count=1 ./... all 15 packages ok; make gen postman 27/27; openspec validate --all --strict 20 passed.
+- make test-web fails only with TS2741 in apps/admin/src/store-form.tsx (lines 16 and 29): the admin line is not on main yet. Make stopped there, so the rest ran per workspace: lint all ok; typecheck ui, mobile, rider, web ok; npm run test --workspaces all green (35/35, 27/27, 10/10, 29/29 files; 104, 334, 64, 183 tests); npm run build --workspaces exit 0. apps/admin not edited.
 ## Requests
 ## Blockers
