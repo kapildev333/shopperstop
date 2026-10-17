@@ -23,4 +23,4 @@ Scope: `apps/admin/src/dispatch.tsx` (new), `order-board.tsx`, `order-sheet.tsx`
 
 ## 4. e2e against core and the rider service (area manager)
 
-- [ ] 4.1 (area manager) `make e2e` with the slot, after task 3: admin `stores.spec.ts` and `orders.spec.ts` pass with the new steps, and every other suite stays green
+- [x] 4.1 (area manager) `make e2e` with the slot, after task 3: admin `stores.spec.ts` and `orders.spec.ts` pass with the new steps, and every other suite stays green
