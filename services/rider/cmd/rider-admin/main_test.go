@@ -92,7 +92,7 @@ func TestCreateRider(t *testing.T) {
 		t.Fatalf("row: name %q store %q active %v, want Rider at %s, active", name, storeID, active, testStore)
 	}
 
-	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, riderClient(t)), nil))
+	srv := httptest.NewServer(app.New(testPool, nil, auth.New(testPool, testPepper, nil, riderClient(t)), nil, nil))
 	defer srv.Close()
 	body, _ := json.Marshal(map[string]string{"email": "new@example.com", "password": "password123"})
 	resp, err := http.Post(srv.URL+"/api/rider/v1/auth/sign-in", "application/json", bytes.NewReader(body))

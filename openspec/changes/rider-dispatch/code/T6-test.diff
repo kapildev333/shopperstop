@@ -1,0 +1,244 @@
+diff --git a/services/rider/internal/app/dispatch_test.go b/services/rider/internal/app/dispatch_test.go
+index 4b770ce..555cbab 100644
+--- a/services/rider/internal/app/dispatch_test.go
++++ b/services/rider/internal/app/dispatch_test.go
+@@ -9,6 +9,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
++	"github.com/kapildev333/shopperstop/services/rider/internal/core"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
+ )
+ 
+@@ -16,6 +17,14 @@ func dispatchPath(orderID string) string {
+ 	return "/api/rider/v1/admin/orders/" + orderID + "/dispatch"
+ }
+ 
++// locatedStore registers a store with a location (Koramangala's) with the fake core and returns its id.
++func locatedStore(t *testing.T) string {
++	t.Helper()
++	id := newID()
++	coreFake.AddStore(core.Store{ID: id, Name: "Located", IsOpen: true, Location: &core.StoreLocation{Lat: 12.9352, Lng: 77.6245}})
++	return id
++}
++
+ // dispatchJSON is the OrderDispatch the staff read answers.
+ type dispatchJSON struct {
+ 	Online   int    `json:"online"`
+@@ -58,7 +67,7 @@ func readDispatch(t *testing.T, base, token, orderID string) dispatchJSON {
+ }
+ 
+ func TestOrderDispatchOffersNewestFirst(t *testing.T) {
+-	store := newID()
++	store := locatedStore(t)
+ 	a, aToken := riderAt(t, store)
+ 	b, bToken := riderAt(t, store)
+ 	goOnline(t, aToken)
+@@ -95,7 +104,7 @@ func TestOrderDispatchOffersNewestFirst(t *testing.T) {
+ }
+ 
+ func TestOrderDispatchLatestTen(t *testing.T) {
+-	store := newID()
++	store := locatedStore(t)
+ 	id, _ := riderAt(t, store)
+ 	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
+ 	base := time.Now().Add(-time.Hour)
+@@ -128,3 +137,31 @@ func TestOrderDispatchOffWhenDispatcherOff(t *testing.T) {
+ 		t.Fatalf("dispatch %q with the dispatcher off, want off", d.Dispatch)
+ 	}
+ }
++
++func TestOrderDispatchOffWithoutLocation(t *testing.T) {
++	store := newID()
++	coreFake.AddStore(core.Store{ID: store, Name: "No location", IsOpen: true})
++	o := addOrder(t, store, "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC))
++	if d := readDispatch(t, srv.URL, adminToken, o.ID); d.Dispatch != "off" {
++		t.Fatalf("dispatch %q for a store without a location, want off", d.Dispatch)
++	}
++}
++
++// TestOrderDispatchRefusals pins the error answers promised to admin-P5-L2
++// (they pass from T4 on; this test only fixes them in place).
++func TestOrderDispatchRefusals(t *testing.T) {
++	o := addOrderFor(t, locatedStore(t), "ready", time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC), "customer-token-dispatch")
++
++	status, body := callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "", nil)
++	expectError(t, "no token", status, body, http.StatusUnauthorized, "unauthorized")
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), "customer-token-dispatch", nil)
++	expectError(t, "a customer token", status, body, http.StatusUnauthorized, "unauthorized")
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath("not-a-uuid"), adminToken, nil)
++	expectError(t, "a non-uuid order id", status, body, http.StatusNotFound, "not_found")
++
++	const orderRoute = "GET /api/core/v1/admin/orders/{id}"
++	coreFake.FailRoute(orderRoute, http.StatusInternalServerError)
++	t.Cleanup(func() { coreFake.FailRoute(orderRoute, 0) })
++	status, body = callAt(t, srv.URL, http.MethodGet, dispatchPath(o.ID), adminToken, nil)
++	expectError(t, "core failing", status, body, http.StatusBadGateway, "internal")
++}
+diff --git a/services/rider/internal/dispatch/dispatch_test.go b/services/rider/internal/dispatch/dispatch_test.go
+index 448ad0d..67ae1ac 100644
+--- a/services/rider/internal/dispatch/dispatch_test.go
++++ b/services/rider/internal/dispatch/dispatch_test.go
+@@ -6,6 +6,7 @@ import (
+ 	"encoding/json"
+ 	"fmt"
+ 	"log/slog"
++	"math"
+ 	"net/http"
+ 	"os"
+ 	"strings"
+@@ -62,14 +63,39 @@ func reset(t *testing.T) {
+ 	}
+ }
+ 
+-// newStore registers a store with the fake core and returns its id.
++// newStore registers a store at storeLat, storeLng with the fake core and returns its id.
+ func newStore(t *testing.T) string {
+ 	t.Helper()
+ 	id := newID()
+-	coreFake.AddStore(core.Store{ID: id, Name: "Test store", IsOpen: true})
++	coreFake.AddStore(core.Store{ID: id, Name: "Test store", IsOpen: true, Location: &core.StoreLocation{Lat: storeLat, Lng: storeLng}})
+ 	return id
+ }
+ 
++// bareStore registers a store core holds without a location and returns its id.
++func bareStore(t *testing.T) string {
++	t.Helper()
++	id := newID()
++	coreFake.AddStore(core.Store{ID: id, Name: "Store without a location", IsOpen: true})
++	return id
++}
++
++// metresNorth is the latitude metres north of the store: along a meridian the
++// haversine distance is exactly the arc.
++func metresNorth(metres float64) float64 {
++	return storeLat + metres/(earthRadiusMetres*math.Pi/180)
++}
++
++// etaOf returns the eta_seconds of riderID's offer of orderID.
++func etaOf(t *testing.T, orderID, riderID string) int {
++	t.Helper()
++	var eta int
++	if err := testPool.QueryRow(context.Background(),
++		"select eta_seconds from offers where order_id = $1 and rider_id = $2", orderID, riderID).Scan(&eta); err != nil {
++		t.Fatal(err)
++	}
++	return eta
++}
++
+ // rider inserts a rider of store, online for onlineFor when online, with a
+ // position at lat, lng recorded locatedAgo ago, and returns its id.
+ func rider(t *testing.T, store string, online bool, onlineFor time.Duration, lat, lng float64, locatedAgo time.Duration) string {
+@@ -453,3 +479,112 @@ func TestRunTicks(t *testing.T) {
+ 		t.Fatal("the loop did not stop when its context ended")
+ 	}
+ }
++
++func TestETA(t *testing.T) {
++	koramangala, indiranagar := distance(12.9352, 77.6245, 12.9719, 77.6412), 0.0
++	if koramangala < 4400 || koramangala > 4550 {
++		t.Fatalf("Koramangala to Indiranagar: %.0f m, want about 4.5 km", koramangala)
++	}
++	if d := distance(storeLat, storeLng, metresNorth(500), storeLng); math.Abs(d-500) > 0.01 {
++		t.Fatalf("500 m north: %.3f m", d)
++	}
++	for _, c := range []struct {
++		metres float64
++		want   int32
++	}{{indiranagar, 0}, {50, 0}, {100, 0}, {101, 18}, {500, 90}, {2000, 360}} {
++		if got := etaSeconds(c.metres, 20); got != c.want {
++			t.Errorf("etaSeconds(%v m, 20 km/h) = %d, want %d", c.metres, got, c.want)
++		}
++	}
++}
++
++func TestTickNearerRiderFirst(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	far := rider(t, store, true, 10*time.Minute, metresNorth(2000), storeLng, 0)
++	near := rider(t, store, true, 5*time.Minute, metresNorth(500), storeLng, 0)
++	o := readyOrder(t, store, t0)
++
++	tick(t, time.Now())
++	if got := openOffer(t, o.ID); got != near {
++		t.Fatalf("offer to %q, want the nearer rider %s (not %s)", got, near, far)
++	}
++	if eta := etaOf(t, o.ID, near); eta != 90 {
++		t.Fatalf("ETA %d s, want 90 for 500 m at 20 km/h", eta)
++	}
++}
++
++func TestTickSameMinuteLongerIdle(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	longer := rider(t, store, true, 10*time.Minute, metresNorth(300), storeLng, 0)
++	rider(t, store, true, 5*time.Minute, metresNorth(150), storeLng, 0)
++	o := readyOrder(t, store, t0)
++
++	tick(t, time.Now())
++	if got := openOffer(t, o.ID); got != longer {
++		t.Fatalf("offer to %q, want the longer idle rider %s in the same minute", got, longer)
++	}
++	if eta := etaOf(t, o.ID, longer); eta != 54 {
++		t.Fatalf("ETA %d s, want 54 for 300 m", eta)
++	}
++}
++
++func TestTickIdleCountsFromLastDelivery(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	back := freeRider(t, store, 10*time.Minute) // online longer, but delivered a minute ago
++	waiting := freeRider(t, store, 5*time.Minute)
++	if _, err := testPool.Exec(context.Background(),
++		`insert into deliveries (order_id, order_number, store_id, rider_id, status, customer_name, address_line1, address_pincode,
++			total_cents, payment_method, item_count, items, assigned_at, delivered_at)
++		 values ($1, 'SS-DONE', $2, $3, 'delivered', 'C', 'L', '560034', 1, 'cod', 1, '[]', now() - interval '9 minutes', now() - interval '1 minute')`,
++		newID(), store, back); err != nil {
++		t.Fatal(err)
++	}
++	o := readyOrder(t, store, t0)
++
++	tick(t, time.Now())
++	if got := openOffer(t, o.ID); got != waiting {
++		t.Fatalf("offer to %q, want %s, idle since going online 5 minutes ago", got, waiting)
++	}
++}
++
++func TestTickWithin100mIsZero(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	r := rider(t, store, true, time.Minute, metresNorth(50), storeLng, 0)
++	o := readyOrder(t, store, t0)
++
++	tick(t, time.Now())
++	if eta := etaOf(t, o.ID, r); eta != 0 {
++		t.Fatalf("ETA %d s at 50 m, want 0", eta)
++	}
++}
++
++func TestTickStoreWithoutLocation(t *testing.T) {
++	reset(t)
++	store := bareStore(t)
++	freeRider(t, store, time.Minute)
++	readyOrder(t, store, t0)
++
++	tick(t, time.Now())
++	if n := countOffers(t); n != 0 {
++		t.Fatalf("offers at a store without a location: %d, want 0", n)
++	}
++}
++
++// TestTickNoCandidateNoCoreCall: a store whose only online rider cannot take an
++// order (a stale position here) costs the tick no core call.
++func TestTickNoCandidateNoCoreCall(t *testing.T) {
++	reset(t)
++	store := newStore(t)
++	rider(t, store, true, time.Minute, storeLat, storeLng, 3*time.Minute)
++	readyOrder(t, store, t0)
++	before := coreFake.Calls(ordersRoute)
++
++	tick(t, time.Now())
++	if got := coreFake.Calls(ordersRoute) - before; got != 0 {
++		t.Fatalf("core ready-orders calls for a store with no candidate: %d, want 0", got)
++	}
++}

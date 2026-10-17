@@ -64,6 +64,7 @@ type riderJSON struct {
 	Name     string `json:"name"`
 	Phone    string `json:"phone"`
 	IsActive bool   `json:"isActive"`
+	IsOnline bool   `json:"isOnline"`
 }
 
 // signInBody is the 200 body of sign-in.
@@ -160,6 +161,9 @@ func TestRiderSignIn(t *testing.T) {
 	if strings.Contains(string(body), `"phone"`) {
 		t.Fatalf("phone present although empty: %s", body)
 	}
+	if !strings.Contains(string(body), `"isOnline":false`) {
+		t.Fatalf("sign-in rider lacks isOnline false: %s", body)
+	}
 	status, body = callAt(t, srv.URL, http.MethodGet, "/api/rider/v1/me", s.Token, nil)
 	var me riderJSON
 	if status != http.StatusOK || json.Unmarshal(body, &me) != nil || me != want {
@@ -231,7 +235,7 @@ func TestRiderSignOutEndsOnlyThatSession(t *testing.T) {
 // ten attempts for one email pass (wrong passwords), the eleventh is refused.
 func TestRiderSignInRateLimited(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(10, 100, time.Hour, time.Now), nil)
-	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
 	t.Cleanup(limited.Close)
 	email := uniqueEmail(t)
 	seedRider(t, email, true)
@@ -288,7 +292,7 @@ func signedUpEmail(t *testing.T) string {
 // client port: the key must drop the port, and X-Forwarded-For must not be trusted.
 func TestRiderSignInRateLimitedPerIP(t *testing.T) {
 	a := auth.New(testPool, testPepper, auth.NewLimiter(100, 2, time.Hour, time.Now), nil)
-	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
 	t.Cleanup(limited.Close)
 	for i, forwarded := range []string{"203.0.113.1", "203.0.113.2"} {
 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
@@ -308,7 +312,7 @@ func TestRiderSignInRateLimitedPerForwardedIP(t *testing.T) {
 	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
 	limit.TrustProxy = true
 	a := auth.New(testPool, testPepper, limit, nil)
-	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
 	t.Cleanup(limited.Close)
 	for i, forwarded := range []string{"203.0.113.7", " 203.0.113.7 , 10.0.0.1"} {
 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {
@@ -332,7 +336,7 @@ func TestRiderSignInEmptyForwardedForFallsBackToConnection(t *testing.T) {
 	limit := auth.NewLimiter(100, 2, time.Hour, time.Now)
 	limit.TrustProxy = true
 	a := auth.New(testPool, testPepper, limit, nil)
-	limited := httptest.NewServer(New(testPool, nil, a, nil))
+	limited := httptest.NewServer(New(testPool, nil, a, nil, nil))
 	t.Cleanup(limited.Close)
 	for i, forwarded := range []string{"", "   "} {
 		if status, body := signInFrom(t, limited.URL, signedUpEmail(t), forwarded); status != http.StatusOK {

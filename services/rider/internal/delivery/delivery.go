@@ -164,7 +164,7 @@ func (d *Deliveries) Claim(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, core.ErrNotFound)
 		return
 	}
-	row, err := d.claim(ctx, rider, order)
+	row, err := d.claim(ctx, rider, order, "")
 	switch {
 	case pg.IsUnique(err):
 		httpx.WriteError(w, r, errClaimed)
@@ -186,10 +186,12 @@ func (d *Deliveries) Claim(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, out)
 }
 
-// claim is the transaction of Claim. The insert takes the order's unique slot
-// first, so concurrent claims serialise on it; core's move runs last, so its
-// refusal or failure returns from the function and rolls the insert back.
-func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order) (db.Delivery, error) {
+// claim is the transaction of Claim and of AcceptOffer. With an offerID it
+// first marks that offer accepted (errOfferClosed when it is no longer the
+// rider's open, unexpired offer). The insert takes the order's unique slot, so
+// concurrent claims serialise on it; core's move runs last, so its refusal or
+// failure returns from the function and rolls the insert (and the accept) back.
+func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order, offerID string) (db.Delivery, error) {
 	lines := o.Items
 	if lines == nil {
 		lines = []core.OrderItem{}
@@ -204,8 +206,16 @@ func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order) 
 	}
 	var row db.Delivery
 	err = pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
+		q := d.q.WithTx(tx)
+		if offerID != "" {
+			if _, err := q.AcceptOffer(ctx, db.AcceptOfferParams{ID: offerID, RiderID: rider.ID}); errors.Is(err, pgx.ErrNoRows) {
+				return errOfferClosed
+			} else if err != nil {
+				return err
+			}
+		}
 		var err error
-		row, err = d.q.WithTx(tx).CreateDelivery(ctx, db.CreateDeliveryParams{
+		row, err = q.CreateDelivery(ctx, db.CreateDeliveryParams{
 			OrderID: o.ID, OrderNumber: o.Number, StoreID: o.StoreID, RiderID: rider.ID,
 			CustomerName: o.CustomerName, CustomerPhone: o.CustomerPhone,
 			AddressLine1: o.Address.Line1, AddressLine2: o.Address.Line2, AddressPincode: o.Address.Pincode,

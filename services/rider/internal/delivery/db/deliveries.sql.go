@@ -11,6 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const acceptOffer = `-- name: AcceptOffer :one
+update offers set status = 'accepted', answered_at = now()
+where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
+returning id
+`
+
+type AcceptOfferParams struct {
+	ID      string
+	RiderID string
+}
+
+func (q *Queries) AcceptOffer(ctx context.Context, arg AcceptOfferParams) (string, error) {
+	row := q.db.QueryRow(ctx, acceptOffer, arg.ID, arg.RiderID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const claimedOrders = `-- name: ClaimedOrders :many
 select order_id from deliveries where order_id = any($1::uuid[])
 `
@@ -119,6 +137,29 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 	return i, err
 }
 
+const declineOffer = `-- name: DeclineOffer :one
+update offers set status = 'declined', answered_at = now()
+where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
+returning order_id, order_number
+`
+
+type DeclineOfferParams struct {
+	ID      string
+	RiderID string
+}
+
+type DeclineOfferRow struct {
+	OrderID     string
+	OrderNumber string
+}
+
+func (q *Queries) DeclineOffer(ctx context.Context, arg DeclineOfferParams) (DeclineOfferRow, error) {
+	row := q.db.QueryRow(ctx, declineOffer, arg.ID, arg.RiderID)
+	var i DeclineOfferRow
+	err := row.Scan(&i.OrderID, &i.OrderNumber)
+	return i, err
+}
+
 const lockRiderDelivery = `-- name: LockRiderDelivery :one
 select id, order_id, order_number, store_id, rider_id, status, customer_name, customer_phone, address_line1, address_line2, address_pincode, total_cents, payment_method, item_count, items, assigned_at, delivered_at, created_at, updated_at, payment_status from deliveries where id = $1 and rider_id = $2 for update
 `
@@ -184,6 +225,39 @@ func (q *Queries) MarkDelivered(ctx context.Context, id string) (Delivery, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaymentStatus,
+	)
+	return i, err
+}
+
+const openOffer = `-- name: OpenOffer :one
+select o.id, o.order_id, o.order_number, o.store_id, o.rider_id, o.status, o.eta_seconds, o.item_count, o.total_cents, o.payment_method, o.payment_status, o.pincode, o.placed_at, o.offered_at, o.expires_at, o.answered_at, o.created_at, o.updated_at from offers o
+where o.rider_id = $1 and o.status = 'offered' and o.expires_at > now()
+  and not exists (select 1 from deliveries d where d.order_id = o.order_id)
+`
+
+// The rider's open offer; one past its expiry, or whose order a delivery holds, counts as none.
+func (q *Queries) OpenOffer(ctx context.Context, riderID string) (Offer, error) {
+	row := q.db.QueryRow(ctx, openOffer, riderID)
+	var i Offer
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.OrderNumber,
+		&i.StoreID,
+		&i.RiderID,
+		&i.Status,
+		&i.EtaSeconds,
+		&i.ItemCount,
+		&i.TotalCents,
+		&i.PaymentMethod,
+		&i.PaymentStatus,
+		&i.Pincode,
+		&i.PlacedAt,
+		&i.OfferedAt,
+		&i.ExpiresAt,
+		&i.AnsweredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -313,6 +387,65 @@ func (q *Queries) RiderDelivery(ctx context.Context, arg RiderDeliveryParams) (D
 	return i, err
 }
 
+const riderOffer = `-- name: RiderOffer :one
+select o.id, o.order_id, o.order_number, o.store_id, o.rider_id, o.status, o.eta_seconds, o.item_count, o.total_cents, o.payment_method, o.payment_status, o.pincode, o.placed_at, o.offered_at, o.expires_at, o.answered_at, o.created_at, o.updated_at, (o.status = 'offered' and o.expires_at > now())::boolean as open
+from offers o where o.id = $1 and o.rider_id = $2
+`
+
+type RiderOfferParams struct {
+	ID      string
+	RiderID string
+}
+
+type RiderOfferRow struct {
+	ID            string
+	OrderID       string
+	OrderNumber   string
+	StoreID       string
+	RiderID       string
+	Status        OfferStatus
+	EtaSeconds    int32
+	ItemCount     int32
+	TotalCents    int64
+	PaymentMethod string
+	PaymentStatus string
+	Pincode       string
+	PlacedAt      pgtype.Timestamptz
+	OfferedAt     pgtype.Timestamptz
+	ExpiresAt     pgtype.Timestamptz
+	AnsweredAt    pgtype.Timestamptz
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	Open          bool
+}
+
+func (q *Queries) RiderOffer(ctx context.Context, arg RiderOfferParams) (RiderOfferRow, error) {
+	row := q.db.QueryRow(ctx, riderOffer, arg.ID, arg.RiderID)
+	var i RiderOfferRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.OrderNumber,
+		&i.StoreID,
+		&i.RiderID,
+		&i.Status,
+		&i.EtaSeconds,
+		&i.ItemCount,
+		&i.TotalCents,
+		&i.PaymentMethod,
+		&i.PaymentStatus,
+		&i.Pincode,
+		&i.PlacedAt,
+		&i.OfferedAt,
+		&i.ExpiresAt,
+		&i.AnsweredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Open,
+	)
+	return i, err
+}
+
 const upsertLocation = `-- name: UpsertLocation :exec
 insert into rider_locations (rider_id, lat, lng) values ($1, $2, $3)
 on conflict (rider_id) do update set lat = excluded.lat, lng = excluded.lng, recorded_at = now()
@@ -326,5 +459,15 @@ type UpsertLocationParams struct {
 
 func (q *Queries) UpsertLocation(ctx context.Context, arg UpsertLocationParams) error {
 	_, err := q.db.Exec(ctx, upsertLocation, arg.RiderID, arg.Lat, arg.Lng)
+	return err
+}
+
+const voidOffer = `-- name: VoidOffer :exec
+update offers set status = 'expired', answered_at = now() where id = $1 and status = 'offered'
+`
+
+// The offer's order went to another rider or left ready: the offer can never be accepted.
+func (q *Queries) VoidOffer(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, voidOffer, id)
 	return err
 }

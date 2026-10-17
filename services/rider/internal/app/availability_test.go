@@ -1,0 +1,219 @@
+package app
+
+import (
+	"context"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+)
+
+const (
+	availabilityPath = "/api/rider/v1/me/availability"
+	// lockDispatch takes the advisory lock of a dispatcher tick (queries/dispatch.sql, queries/auth.sql).
+	lockDispatch = "select pg_advisory_xact_lock(727102, hashtext(current_schema()))"
+)
+
+// goOnline puts the rider online through the API.
+func goOnline(t *testing.T, token string) {
+	t.Helper()
+	if status, body := callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]bool{"online": true}); status != http.StatusOK {
+		t.Fatalf("go online: got %d %s, want 200", status, body)
+	}
+}
+
+// insertOffer inserts an offered offer of orderID at store to riderID straight
+// into the table, offered now and expiring at expiresAt, and returns its id.
+func insertOffer(t *testing.T, riderID, store, orderID string, expiresAt time.Time) string {
+	t.Helper()
+	var id string
+	err := testPool.QueryRow(context.Background(),
+		`insert into offers (order_id, order_number, store_id, rider_id, eta_seconds, item_count, total_cents,
+			payment_method, pincode, placed_at, offered_at, expires_at)
+		 values ($1, 'SS-OFFER', $2, $3, 120, 3, 33900, 'cod', '560034', now() - interval '5 minutes', now() - interval '1 second', $4)
+		 returning id`,
+		orderID, store, riderID, expiresAt).Scan(&id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// offerStatus returns the status of offer id and whether it has an answeredAt.
+func offerStatus(t *testing.T, id string) (string, bool) {
+	t.Helper()
+	var status string
+	var answered bool
+	if err := testPool.QueryRow(context.Background(),
+		"select status::text, answered_at is not null from offers where id = $1", id).Scan(&status, &answered); err != nil {
+		t.Fatal(err)
+	}
+	return status, answered
+}
+
+// onlineSince returns the rider's online_since, or nil when offline.
+func onlineSince(t *testing.T, riderID string) *time.Time {
+	t.Helper()
+	var since *time.Time
+	if err := testPool.QueryRow(context.Background(), "select online_since from riders where id = $1", riderID).Scan(&since); err != nil {
+		t.Fatal(err)
+	}
+	return since
+}
+
+func TestAvailabilityOnlineThenOffline(t *testing.T) {
+	id, token := riderAt(t, newID())
+
+	status, body := callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]bool{"online": true})
+	if status != http.StatusOK || !decodeRider(t, body).IsOnline {
+		t.Fatalf("go online: got %d %s, want 200 with isOnline true", status, body)
+	}
+	first := onlineSince(t, id)
+	if first == nil {
+		t.Fatal("online_since not set after going online")
+	}
+	status, body = callAt(t, srv.URL, http.MethodGet, "/api/rider/v1/me", token, nil)
+	if status != http.StatusOK || !decodeRider(t, body).IsOnline {
+		t.Fatalf("GET /me online: got %d %s, want isOnline true", status, body)
+	}
+	if status, body := callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]bool{"online": true}); status != http.StatusOK {
+		t.Fatalf("go online again: got %d %s, want 200", status, body)
+	}
+	if again := onlineSince(t, id); again == nil || !again.Equal(*first) {
+		t.Fatalf("online_since %v after going online again, want %v unchanged", again, first)
+	}
+	status, body = callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]bool{"online": false})
+	if status != http.StatusOK || !strings.Contains(string(body), `"isOnline":false`) {
+		t.Fatalf("go offline: got %d %s, want 200 with isOnline false", status, body)
+	}
+	if since := onlineSince(t, id); since != nil {
+		t.Fatalf("online_since %v after going offline, want none", since)
+	}
+}
+
+func TestOfflineVoidsOpenOffer(t *testing.T) {
+	store := newID()
+	id, token := riderAt(t, store)
+	goOnline(t, token)
+	offer := insertOffer(t, id, store, newID(), time.Now().Add(30*time.Second))
+
+	if status, body := callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]bool{"online": false}); status != http.StatusOK {
+		t.Fatalf("go offline: got %d %s, want 200", status, body)
+	}
+	if status, answered := offerStatus(t, offer); status != "expired" || !answered {
+		t.Fatalf("offer after going offline: %s (answered %v), want expired with answeredAt", status, answered)
+	}
+}
+
+// TestOfflineWaitsForTick holds the dispatch key in a transaction, as a running
+// tick does: going offline must not answer until the key is released.
+func TestOfflineWaitsForTick(t *testing.T) {
+	_, token := riderAt(t, newID())
+	goOnline(t, token)
+	ctx := context.Background()
+	tx, err := testPool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, lockDispatch); err != nil {
+		t.Fatal(err)
+	}
+
+	type answer struct {
+		status int
+		body   []byte
+	}
+	done := make(chan answer, 1)
+	go func() {
+		status, body := availabilityCode(srv.URL, token, false)
+		done <- answer{status, body}
+	}()
+	select {
+	case a := <-done:
+		t.Fatalf("going offline answered %d %s while a tick held the dispatch key", a.status, a.body)
+	case <-time.After(300 * time.Millisecond):
+	}
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		if a.status != http.StatusOK || !strings.Contains(string(a.body), `"isOnline":false`) {
+			t.Fatalf("going offline after the tick: got %d %s, want 200 with isOnline false", a.status, a.body)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("going offline did not answer after the dispatch key was released")
+	}
+}
+
+// availabilityCode puts online for token without t, so a goroutine may call it;
+// it returns -1 when the request fails.
+func availabilityCode(base, token string, online bool) (int, []byte) {
+	body := `{"online":false}`
+	if online {
+		body = `{"online":true}`
+	}
+	req, err := http.NewRequest(http.MethodPut, base+availabilityPath, strings.NewReader(body))
+	if err != nil {
+		return -1, nil
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return -1, nil
+	}
+	defer resp.Body.Close()
+	var b strings.Builder
+	buf := make([]byte, 4096)
+	for {
+		n, err := resp.Body.Read(buf)
+		b.Write(buf[:n])
+		if err != nil {
+			break
+		}
+	}
+	return resp.StatusCode, []byte(b.String())
+}
+
+func TestAvailabilityRefusesMissingValue(t *testing.T) {
+	_, token := riderAt(t, newID())
+	status, body := callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]any{})
+	if e := expectError(t, "empty body", status, body, http.StatusBadRequest, "validation"); e.Error.Field != "online" {
+		t.Fatalf("empty body: field %q, want online", e.Error.Field)
+	}
+	status, body = callAt(t, srv.URL, http.MethodPut, availabilityPath, token, map[string]string{"online": "yes"})
+	expectError(t, "online as a string", status, body, http.StatusBadRequest, "validation")
+}
+
+func TestSignOutGoesOffline(t *testing.T) {
+	store := newID()
+	id, token := riderAt(t, store)
+	goOnline(t, token)
+	offer := insertOffer(t, id, store, newID(), time.Now().Add(30*time.Second))
+
+	if status, body := callAt(t, srv.URL, http.MethodPost, "/api/rider/v1/auth/sign-out", token, nil); status != http.StatusNoContent {
+		t.Fatalf("sign-out: got %d %s, want 204", status, body)
+	}
+	if onlineSince(t, id) != nil {
+		t.Fatal("rider still online after sign-out")
+	}
+	if status, _ := offerStatus(t, offer); status != "expired" {
+		t.Fatalf("offer after sign-out: %s, want expired", status)
+	}
+}
+
+func TestDeactivationGoesOffline(t *testing.T) {
+	id, token := riderAt(t, testStore)
+	goOnline(t, token)
+	offer := insertOffer(t, id, testStore, newID(), time.Now().Add(30*time.Second))
+
+	status, body := callAt(t, srv.URL, http.MethodPatch, ridersPath+"/"+id, adminToken, map[string]bool{"isActive": false})
+	if status != http.StatusOK || !strings.Contains(string(body), `"isOnline":false`) {
+		t.Fatalf("deactivate: got %d %s, want 200 with isOnline false", status, body)
+	}
+	if status, _ := offerStatus(t, offer); status != "expired" {
+		t.Fatalf("offer after deactivation: %s, want expired", status)
+	}
+}

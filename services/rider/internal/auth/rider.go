@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/kapildev333/shopperstop/services/rider/internal/auth/db"
 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
 )
 
@@ -118,13 +120,14 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	rider := Rider{ID: row.ID, StoreID: row.StoreID, Email: row.Email, Name: row.Name, Phone: row.Phone, IsActive: row.IsActive}
+	rider := Rider{ID: row.ID, StoreID: row.StoreID, Email: row.Email, Name: row.Name, Phone: row.Phone, IsActive: row.IsActive, IsOnline: row.IsOnline}
 	httpx.WriteJSON(w, http.StatusOK, riderSession{Token: token, Rider: rider})
 }
 
-// SignOut deletes the session of the bearer token and answers 204. It runs
-// behind RequireRider, which has checked the token; the session id is looked
-// up again because the middleware keeps only the rider in the context.
+// SignOut deletes the session of the bearer token, takes the rider offline as
+// going offline does, and answers 204. It runs behind RequireRider, which has
+// checked the token; the session id is looked up again because the middleware
+// keeps only the rider in the context.
 func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s, err := a.q.RiderSession(ctx, a.tokenHash(Bearer(r)))
@@ -136,7 +139,14 @@ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if err := a.q.DeleteSession(ctx, s.SessionID); err != nil {
+	err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
+		q := a.q.WithTx(tx)
+		if _, err := goOffline(ctx, q, s.ID); err != nil {
+			return err
+		}
+		return q.DeleteSession(ctx, s.SessionID)
+	})
+	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
 	}
@@ -146,4 +156,55 @@ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
 // Me answers 200 with the signed-in rider.
 func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, CurrentRider(r.Context()))
+}
+
+type availabilityRequest struct {
+	Online *bool `json:"online"`
+}
+
+// goOffline waits for a running dispatcher tick (LockDispatch, the first
+// statement of the transaction), sets the rider offline and expires their open
+// offer, so no tick can offer to a rider who is offline. q must be in a transaction.
+func goOffline(ctx context.Context, q *db.Queries, riderID string) (db.SetAvailabilityRow, error) {
+	if err := q.LockDispatch(ctx); err != nil {
+		return db.SetAvailabilityRow{}, err
+	}
+	row, err := q.SetAvailability(ctx, db.SetAvailabilityParams{Online: false, ID: riderID})
+	if err != nil {
+		return db.SetAvailabilityRow{}, err
+	}
+	return row, q.ExpireRiderOffers(ctx, riderID)
+}
+
+// PutAvailability sets the signed-in rider online or offline and answers 200
+// with the rider. Going online keeps online_since while the rider stays online;
+// going offline is goOffline in one transaction.
+func (a *Auth) PutAvailability(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var in availabilityRequest
+	if err := httpx.ReadJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	if in.Online == nil {
+		httpx.WriteError(w, r, invalid("online", "is required"))
+		return
+	}
+	id := CurrentRider(ctx).ID
+	var row db.SetAvailabilityRow
+	var err error
+	if *in.Online {
+		row, err = a.q.SetAvailability(ctx, db.SetAvailabilityParams{Online: true, ID: id})
+	} else {
+		err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
+			var err error
+			row, err = goOffline(ctx, a.q.WithTx(tx), id)
+			return err
+		})
+	}
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
 }

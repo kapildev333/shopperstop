@@ -19,7 +19,7 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"rider_locations", "deliveries", "sessions", "riders"}
+var truncateTables = []string{"offers", "rider_locations", "deliveries", "sessions", "riders"}
 
 const (
 	storeKoramangala = "00000000-0000-4000-8000-000000000401"
@@ -29,6 +29,9 @@ const (
 	// delivered demo order (design.md Data model); Summary prints it.
 	demoDeliveryID = "00000000-0000-4000-8000-000000000901"
 	demoOrderID    = "00000000-0000-4000-8000-000000000701"
+	// demoOfferID is the first demo rider's expired offer of the same order
+	// (rider-dispatch, the Postman offerId); Summary prints it.
+	demoOfferID = "00000000-0000-4000-8000-000000000902"
 )
 
 type demoRider struct{ id, email, name, phone, store string }
@@ -52,7 +55,7 @@ var hashDemo = sync.OnceValues(func() (string, error) {
 })
 
 // Reset empties the rider tables (sessions go with their riders) and loads the
-// demo riders and delivery, in one transaction.
+// demo riders (offline), delivery and offer, in one transaction.
 func Reset(ctx context.Context, pool *pgxpool.Pool) error {
 	hash, err := hashDemo()
 	if err != nil {
@@ -96,6 +99,15 @@ func load(ctx context.Context, tx pgx.Tx, hash string) error {
 		now() - interval '2 days' + interval '6 minutes', now() - interval '2 days' + interval '11 minutes')`,
 		demoDeliveryID, demoOrderID, storeKoramangala, demoRiders[0].id); err != nil {
 		return fmt.Errorf("insert demo delivery %s: %w", demoDeliveryID, err)
+	}
+	// The offer the dispatcher made for that order before the rider claimed it, left to expire.
+	if _, err := tx.Exec(ctx, `insert into offers (id, order_id, order_number, store_id, rider_id, status, eta_seconds,
+		item_count, total_cents, payment_method, pincode, placed_at, offered_at, expires_at, answered_at)
+		values ($1, $2, 'SS-DEMOAAAB', $3, $4, 'expired', 120, 3, 33900, 'cod', '560034',
+		now() - interval '2 days', now() - interval '2 days' + interval '4 minutes',
+		now() - interval '2 days' + interval '4 minutes 30 seconds', now() - interval '2 days' + interval '4 minutes 30 seconds')`,
+		demoOfferID, demoOrderID, storeKoramangala, demoRiders[0].id); err != nil {
+		return fmt.Errorf("insert demo offer %s: %w", demoOfferID, err)
 	}
 	return nil
 }

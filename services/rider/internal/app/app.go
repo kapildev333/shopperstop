@@ -12,18 +12,21 @@ import (
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
 	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
+	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
 )
 
 // New returns the rider router. Routes are registered with their full path
-// so chi.Walk yields the paths openapi.json documents.
-func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliveries) chi.Router {
+// so chi.Walk yields the paths openapi.json documents. d and dsp may be nil
+// for a router whose tests never reach their routes.
+func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliveries, dsp *dispatch.Dispatcher) chi.Router {
 	r := httpx.NewRouter(origins)
 	r.Get("/api/rider/v1/healthz", healthz)
 	r.Get("/api/rider/v1/readyz", readyz(pool))
 	r.Post("/api/rider/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireRider).Post("/api/rider/v1/auth/sign-out", a.SignOut)
 	r.With(a.RequireRider).Get("/api/rider/v1/me", a.Me)
+	r.With(a.RequireRider).Put("/api/rider/v1/me/availability", a.PutAvailability)
 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders", a.ListRiders)
 	r.With(a.RequireStaff).Post("/api/rider/v1/admin/riders", a.AdminCreateRider)
 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders/{id}", a.AdminGetRider)
@@ -34,7 +37,11 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
 	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries/{id}", d.Get)
 	r.With(a.RequireRider).Post("/api/rider/v1/me/deliveries/{id}/delivered", d.Delivered)
 	r.With(a.RequireRider).Put("/api/rider/v1/me/location", d.PutLocation)
+	r.With(a.RequireRider).Get("/api/rider/v1/me/offer", d.MyOffer)
+	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/accept", d.AcceptOffer)
+	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/decline", d.DeclineOffer)
 	r.Get("/api/rider/v1/orders/{orderId}/delivery", d.OrderDelivery)
+	r.With(a.RequireStaff).Get("/api/rider/v1/admin/orders/{orderId}/dispatch", dsp.AdminOrderDispatch)
 	return r
 }
 

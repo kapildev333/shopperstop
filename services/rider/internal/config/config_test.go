@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kapildev333/shopperstop/services/rider/internal/config"
 )
@@ -117,6 +118,51 @@ func TestLoadTrustProxy(t *testing.T) {
 		_, err := config.Load(env(vars))
 		if err == nil || !strings.Contains(err.Error(), "SHOPPERSTOP_RIDER_TRUST_PROXY must be true or false") {
 			t.Fatalf("Load with %q: %v, want an error naming SHOPPERSTOP_RIDER_TRUST_PROXY", value, err)
+		}
+	}
+}
+
+// TestDispatchDefaults: none of the four dispatch variables set gives D57's defaults.
+func TestDispatchDefaults(t *testing.T) {
+	cfg, err := config.Load(env(valid()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DispatchInterval != 3*time.Second || cfg.DispatchOfferTTL != 30*time.Second ||
+		cfg.DispatchLocationTTL != 2*time.Minute || cfg.DispatchSpeedKMH != 20 {
+		t.Fatalf("dispatch defaults %v %v %v %v, want 3s 30s 2m0s 20", cfg.DispatchInterval, cfg.DispatchOfferTTL, cfg.DispatchLocationTTL, cfg.DispatchSpeedKMH)
+	}
+}
+
+// TestDispatchOff: an interval of 0 loads and turns the dispatcher off.
+func TestDispatchOff(t *testing.T) {
+	vars := valid()
+	vars["SHOPPERSTOP_RIDER_DISPATCH_INTERVAL"] = "0"
+	cfg, err := config.Load(env(vars))
+	if err != nil || cfg.DispatchInterval != 0 {
+		t.Fatalf("interval 0: got %v, %v; want 0 and no error", cfg.DispatchInterval, err)
+	}
+}
+
+// TestDispatchBadValuesNamed: each bad dispatch value is named in the one error.
+func TestDispatchBadValuesNamed(t *testing.T) {
+	vars := valid()
+	vars["SHOPPERSTOP_RIDER_DISPATCH_INTERVAL"] = "3"
+	vars["SHOPPERSTOP_RIDER_DISPATCH_OFFER_TTL"] = "-1s"
+	vars["SHOPPERSTOP_RIDER_DISPATCH_LOCATION_TTL"] = "0"
+	vars["SHOPPERSTOP_RIDER_DISPATCH_SPEED_KMH"] = "fast"
+	_, err := config.Load(env(vars))
+	if err == nil {
+		t.Fatal("bad dispatch values: want error, got nil")
+	}
+	for _, name := range []string{
+		"SHOPPERSTOP_RIDER_DISPATCH_INTERVAL",
+		"SHOPPERSTOP_RIDER_DISPATCH_OFFER_TTL",
+		"SHOPPERSTOP_RIDER_DISPATCH_LOCATION_TTL",
+		"SHOPPERSTOP_RIDER_DISPATCH_SPEED_KMH",
+	} {
+		if !strings.Contains(err.Error(), name) {
+			t.Errorf("error does not name %s: %v", name, err)
 		}
 	}
 }

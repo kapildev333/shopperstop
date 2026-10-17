@@ -238,12 +238,16 @@ func (f *Fake) adminOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	f.mu.Lock()
 	o, found := f.orders[r.PathValue("id")]
+	var out core.Order
+	if found {
+		out = o.Order // copied under the lock: setStatus writes o.Status concurrently
+	}
 	f.mu.Unlock()
 	if !found {
 		httpx.WriteError(w, r, core.ErrNotFound)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, o.Order)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // setStatus applies core's rules for a service move: the actor is required,

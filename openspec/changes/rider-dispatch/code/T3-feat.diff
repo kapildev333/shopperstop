@@ -1,0 +1,359 @@
+diff --git a/services/rider/cmd/rider/main.go b/services/rider/cmd/rider/main.go
+index 65167eb..e4f43d2 100644
+--- a/services/rider/cmd/rider/main.go
++++ b/services/rider/cmd/rider/main.go
+@@ -20,6 +20,7 @@ import (
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/config"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/core"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/delivery"
++	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch"
+ )
+ 
+ const shutdownGrace = 10 * time.Second
+@@ -59,6 +60,19 @@ func run(cfg config.Config) error {
+ 	limit := auth.NewLimiter(10, 100, time.Hour, time.Now)
+ 	limit.TrustProxy = cfg.TrustProxy
+ 	a := auth.New(pool, cfg.SessionPepper, limit, c)
++	dsp := dispatch.New(pool, c, dispatch.Config{
++		Enabled: cfg.DispatchInterval > 0, OfferTTL: cfg.DispatchOfferTTL,
++		LocationTTL: cfg.DispatchLocationTTL, SpeedKMH: cfg.DispatchSpeedKMH,
++	})
++	// The dispatcher stops with ctx; run cancels ctx and waits for it before the pool closes.
++	ticking := make(chan struct{})
++	go func() {
++		defer close(ticking)
++		if cfg.DispatchInterval > 0 {
++			dsp.Run(ctx, cfg.DispatchInterval)
++		}
++	}()
++	defer func() { stop(); <-ticking }()
+ 	srv := newHTTPServer(app.New(pool, cfg.WebOrigins, a, delivery.New(pool, c)))
+ 	if err := serve(ctx, srv, ln, shutdownGrace); err != nil {
+ 		return err
+diff --git a/services/rider/internal/config/config.go b/services/rider/internal/config/config.go
+index 5b51e36..23876ee 100644
+--- a/services/rider/internal/config/config.go
++++ b/services/rider/internal/config/config.go
+@@ -5,8 +5,11 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"log/slog"
++	"math"
+ 	"net/url"
++	"strconv"
+ 	"strings"
++	"time"
+ )
+ 
+ const minPepperBytes = 32
+@@ -23,6 +26,12 @@ type Config struct {
+ 	// TrustProxy is SHOPPERSTOP_RIDER_TRUST_PROXY: "true" or "false", optional,
+ 	// default false. True makes the rate limiter key on X-Forwarded-For.
+ 	TrustProxy bool
++
++	// The dispatcher (rider-dispatch), each optional with a default:
++	DispatchInterval    time.Duration // SHOPPERSTOP_RIDER_DISPATCH_INTERVAL, default 3s, 0 turns the dispatcher off
++	DispatchOfferTTL    time.Duration // SHOPPERSTOP_RIDER_DISPATCH_OFFER_TTL, default 30s, > 0
++	DispatchLocationTTL time.Duration // SHOPPERSTOP_RIDER_DISPATCH_LOCATION_TTL, default 2m, > 0
++	DispatchSpeedKMH    float64       // SHOPPERSTOP_RIDER_DISPATCH_SPEED_KMH, default 20, > 0
+ }
+ 
+ // Load reads the configuration through getenv and reports every problem
+@@ -97,6 +106,33 @@ func Load(getenv func(string) string) (Config, error) {
+ 		problems = append(problems, fmt.Errorf("SHOPPERSTOP_RIDER_TRUST_PROXY must be true or false (got %q)", v))
+ 	}
+ 
++	duration := func(name string, def time.Duration, zeroOK bool) time.Duration {
++		v := strings.TrimSpace(getenv(name))
++		if v == "" {
++			return def
++		}
++		d, err := time.ParseDuration(v)
++		if err != nil || d < 0 || (d == 0 && !zeroOK) {
++			least := "above zero"
++			if zeroOK {
++				least = "zero or above"
++			}
++			problems = append(problems, fmt.Errorf("%s must be a Go duration such as 30s, %s (got %q)", name, least, v))
++		}
++		return d
++	}
++	cfg.DispatchInterval = duration("SHOPPERSTOP_RIDER_DISPATCH_INTERVAL", 3*time.Second, true)
++	cfg.DispatchOfferTTL = duration("SHOPPERSTOP_RIDER_DISPATCH_OFFER_TTL", 30*time.Second, false)
++	cfg.DispatchLocationTTL = duration("SHOPPERSTOP_RIDER_DISPATCH_LOCATION_TTL", 2*time.Minute, false)
++	cfg.DispatchSpeedKMH = 20
++	if v := strings.TrimSpace(getenv("SHOPPERSTOP_RIDER_DISPATCH_SPEED_KMH")); v != "" {
++		speed, err := strconv.ParseFloat(v, 64)
++		if err != nil || !(speed > 0) || math.IsInf(speed, 0) {
++			problems = append(problems, fmt.Errorf("SHOPPERSTOP_RIDER_DISPATCH_SPEED_KMH must be a positive number (got %q)", v))
++		}
++		cfg.DispatchSpeedKMH = speed
++	}
++
+ 	if len(problems) > 0 {
+ 		return Config{}, errors.Join(problems...)
+ 	}
+diff --git a/services/rider/internal/dispatch/dispatch.go b/services/rider/internal/dispatch/dispatch.go
+new file mode 100644
+index 0000000..aae90cb
+--- /dev/null
++++ b/services/rider/internal/dispatch/dispatch.go
+@@ -0,0 +1,181 @@
++// Package dispatch offers ready orders to online riders (rider-dispatch, D57):
++// Uber's dispatch reduced to a dark store, where every trip starts at the store.
++// Tick expires open offers that ran out, then offers each free ready order,
++// oldest first, to the best free candidate of its store for a short time.
++// The rider answers through internal/delivery; the hand claim stays the fallback.
++//
++// ponytail ceilings (D57): one order per offer (batching needs drop coordinates,
++// which addresses lack); no forward dispatch to a rider still on a delivery; no
++// windowed global assignment; the tick polls core's ready list per store every
++// interval (core's events feed when it hurts); the rider app polls, no push.
++package dispatch
++
++import (
++	"context"
++	"log/slog"
++	"slices"
++	"sort"
++	"time"
++
++	"github.com/jackc/pgx/v5"
++	"github.com/jackc/pgx/v5/pgtype"
++	"github.com/jackc/pgx/v5/pgxpool"
++
++	"github.com/kapildev333/shopperstop/services/rider/internal/core"
++	"github.com/kapildev333/shopperstop/services/rider/internal/dispatch/db"
++)
++
++// refusalRest is how long a rider who declined an order, or let its offer
++// expire, is not offered that order again.
++const refusalRest = 2 * time.Minute
++
++// Config is the dispatcher's part of config.Config.
++type Config struct {
++	Enabled     bool          // the loop runs: SHOPPERSTOP_RIDER_DISPATCH_INTERVAL > 0
++	OfferTTL    time.Duration // how long an offer stays open
++	LocationTTL time.Duration // how old a rider's position may be
++	SpeedKMH    float64       // the one speed every ETA assumes
++}
++
++// Dispatcher runs ticks and serves the staff dispatch read. It is safe for concurrent use.
++type Dispatcher struct {
++	pool *pgxpool.Pool
++	q    *db.Queries
++	core *core.Client
++	cfg  Config
++}
++
++// New returns a dispatcher over pool; c reads core's ready orders and stores.
++func New(pool *pgxpool.Pool, c *core.Client, cfg Config) *Dispatcher {
++	return &Dispatcher{pool: pool, q: db.New(pool), core: c, cfg: cfg}
++}
++
++// Run calls Tick every interval until ctx ends. A failed tick is logged and the next one runs.
++func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) {
++	t := time.NewTicker(interval)
++	defer t.Stop()
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case now := <-t.C:
++			if err := d.Tick(ctx, now); err != nil && ctx.Err() == nil {
++				slog.ErrorContext(ctx, "dispatch tick failed", "err", err)
++			}
++		}
++	}
++}
++
++// Tick runs one dispatch round at now, in one transaction holding the tick
++// lock; when another transaction holds it, Tick returns nil having done
++// nothing. now is the only clock Tick reads, so tests pass their own.
++func (d *Dispatcher) Tick(ctx context.Context, now time.Time) error {
++	return pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
++		q := d.q.WithTx(tx)
++		locked, err := q.TryTickLock(ctx)
++		if err != nil || !locked {
++			return err
++		}
++		expired, err := q.ExpireOffers(ctx, ts(now))
++		if err != nil {
++			return err
++		}
++		for _, o := range expired {
++			slog.InfoContext(ctx, "offer expired", "offerId", o.ID, "orderId", o.OrderID, "number", o.OrderNumber, "riderId", o.RiderID)
++		}
++		stores, err := q.OnlineStores(ctx)
++		if err != nil {
++			return err
++		}
++		for _, store := range stores {
++			if err := d.dispatchStore(ctx, q, store, now); err != nil {
++				return err
++			}
++		}
++		return nil
++	})
++}
++
++// candidate is one rider a tick may offer an order to.
++type candidate struct {
++	id         string
++	lat, lng   float64
++	idleSince  time.Time
++	etaSeconds int32
++}
++
++// dispatchStore offers the store's free ready orders, oldest first, each to
++// the best candidate that has not refused it lately; a rider gets at most one.
++// A core failure skips the store (the core client logged it); only database
++// errors are returned.
++func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store string, now time.Time) error {
++	orders, err := d.core.StoreOrders(ctx, store, "ready")
++	if err != nil || len(orders) == 0 {
++		return nil
++	}
++	ids := make([]string, len(orders))
++	for i, o := range orders {
++		ids[i] = o.ID
++	}
++	busy, err := q.BusyOrders(ctx, ids)
++	if err != nil {
++		return err
++	}
++	rows, err := q.Candidates(ctx, db.CandidatesParams{StoreID: store, LocatedAfter: ts(now.Add(-d.cfg.LocationTTL))})
++	if err != nil || len(rows) == 0 {
++		return err
++	}
++	cands := make([]candidate, len(rows))
++	for i, r := range rows {
++		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time}
++	}
++	rank(cands)
++	sort.SliceStable(orders, func(i, j int) bool { return orders[i].PlacedAt.Before(orders[j].PlacedAt) })
++	for _, o := range orders {
++		if slices.Contains(busy, o.ID) || len(cands) == 0 {
++			continue
++		}
++		refused, err := q.RecentlyRefused(ctx, db.RecentlyRefusedParams{OrderID: o.ID, AnsweredAfter: ts(now.Add(-refusalRest))})
++		if err != nil {
++			return err
++		}
++		i := slices.IndexFunc(cands, func(c candidate) bool { return !slices.Contains(refused, c.id) })
++		if i < 0 {
++			continue
++		}
++		c := cands[i]
++		units := 0
++		for _, l := range o.Items {
++			units += l.Quantity
++		}
++		id, err := q.CreateOffer(ctx, db.CreateOfferParams{
++			OrderID: o.ID, OrderNumber: o.Number, StoreID: store, RiderID: c.id, EtaSeconds: c.etaSeconds,
++			ItemCount: int32(units), TotalCents: o.TotalCents, PaymentMethod: o.PaymentMethod,
++			PaymentStatus: o.PaymentStatus, Pincode: o.Address.Pincode, PlacedAt: ts(o.PlacedAt),
++			OfferedAt: ts(now), ExpiresAt: ts(now.Add(d.cfg.OfferTTL)),
++		})
++		if err != nil {
++			return err
++		}
++		slog.InfoContext(ctx, "offer made", "offerId", id, "orderId", o.ID, "number", o.Number, "riderId", c.id, "etaSeconds", c.etaSeconds)
++		cands = slices.Delete(cands, i, i+1)
++	}
++	return nil
++}
++
++// rank sorts candidates best first: ETA floored to the minute, then the
++// longest idle (earliest idleSince), then rider id.
++func rank(cs []candidate) {
++	sort.Slice(cs, func(i, j int) bool {
++		a, b := cs[i], cs[j]
++		if a.etaSeconds/60 != b.etaSeconds/60 {
++			return a.etaSeconds/60 < b.etaSeconds/60
++		}
++		if !a.idleSince.Equal(b.idleSince) {
++			return a.idleSince.Before(b.idleSince)
++		}
++		return a.id < b.id
++	})
++}
++
++func ts(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }
+diff --git a/services/rider/queries/dispatch.sql b/services/rider/queries/dispatch.sql
+new file mode 100644
+index 0000000..4bd65c3
+--- /dev/null
++++ b/services/rider/queries/dispatch.sql
+@@ -0,0 +1,46 @@
++-- name: TryTickLock :one
++-- One dispatcher tick at a time across every rider process sharing the schema
++-- (the schema in the key keeps parallel test packages apart; migrate holds
++-- 727101 alone). queries/auth.sql LockDispatch waits for the same key.
++select pg_try_advisory_xact_lock(727102, hashtext(current_schema())) as locked;
++
++-- name: ExpireOffers :many
++-- Open offers past their expiry, or whose order a delivery now holds (a hand claim won).
++update offers o set status = 'expired', answered_at = @now
++where o.status = 'offered'
++  and (o.expires_at <= @now or exists (select 1 from deliveries d where d.order_id = o.order_id))
++returning o.id, o.order_id, o.order_number, o.rider_id;
++
++-- name: OnlineStores :many
++select distinct store_id from riders where is_online order by store_id;
++
++-- name: BusyOrders :many
++-- The orders among order_ids that a delivery or an open offer holds.
++select order_id from deliveries where order_id = any(sqlc.arg(order_ids)::uuid[])
++union
++select order_id from offers where status = 'offered' and order_id = any(sqlc.arg(order_ids)::uuid[]);
++
++-- name: Candidates :many
++-- The store's online riders with a position recorded after located_after, no
++-- assigned delivery and no open offer; idle_since is the later of going online
++-- and their last delivery.
++select r.id, l.lat, l.lng,
++       greatest(r.online_since, (select max(d.delivered_at) from deliveries d where d.rider_id = r.id))::timestamptz as idle_since
++from riders r
++join rider_locations l on l.rider_id = r.id
++where r.store_id = @store_id and r.is_online and l.recorded_at > @located_after
++  and not exists (select 1 from deliveries d where d.rider_id = r.id and d.status = 'assigned')
++  and not exists (select 1 from offers o where o.rider_id = r.id and o.status = 'offered')
++order by r.id;
++
++-- name: RecentlyRefused :many
++-- Riders who declined the order, or let an offer of it expire, after answered_after.
++select distinct rider_id from offers
++where order_id = @order_id and status in ('declined', 'expired') and answered_at > @answered_after;
++
++-- name: CreateOffer :one
++insert into offers (order_id, order_number, store_id, rider_id, eta_seconds, item_count, total_cents,
++    payment_method, payment_status, pincode, placed_at, offered_at, expires_at)
++values (@order_id, @order_number, @store_id, @rider_id, @eta_seconds, @item_count, @total_cents,
++    @payment_method, @payment_status, @pincode, @placed_at, @offered_at, @expires_at)
++returning id;
+diff --git a/services/rider/sqlc.yaml b/services/rider/sqlc.yaml
+index 8c0ac67..32775a0 100644
+--- a/services/rider/sqlc.yaml
++++ b/services/rider/sqlc.yaml
+@@ -34,3 +34,20 @@ sql:
+             go_type:
+               type: string
+               pointer: true
++  - engine: postgresql
++    schema: migrations
++    queries: queries/dispatch.sql
++    gen:
++      go:
++        package: db
++        out: internal/dispatch/db
++        sql_package: pgx/v5
++        emit_pointers_for_null_types: true
++        overrides:
++          - db_type: uuid
++            go_type: string
++          - db_type: uuid
++            nullable: true
++            go_type:
++              type: string
++              pointer: true
