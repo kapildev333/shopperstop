@@ -1,0 +1,542 @@
+diff --git a/services/rider/internal/app/app.go b/services/rider/internal/app/app.go
+index b089dff..e62a3ff 100644
+--- a/services/rider/internal/app/app.go
++++ b/services/rider/internal/app/app.go
+@@ -24,6 +24,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
+ 	r.Post("/api/rider/v1/auth/sign-in", a.SignIn)
+ 	r.With(a.RequireRider).Post("/api/rider/v1/auth/sign-out", a.SignOut)
+ 	r.With(a.RequireRider).Get("/api/rider/v1/me", a.Me)
++	r.With(a.RequireRider).Put("/api/rider/v1/me/availability", a.PutAvailability)
+ 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders", a.ListRiders)
+ 	r.With(a.RequireStaff).Post("/api/rider/v1/admin/riders", a.AdminCreateRider)
+ 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders/{id}", a.AdminGetRider)
+diff --git a/services/rider/internal/auth/auth.go b/services/rider/internal/auth/auth.go
+index d260b78..0e8fba9 100644
+--- a/services/rider/internal/auth/auth.go
++++ b/services/rider/internal/auth/auth.go
+@@ -44,6 +44,7 @@ type Rider struct {
+ 	Name     string `json:"name"`
+ 	Phone    string `json:"phone,omitempty"`
+ 	IsActive bool   `json:"isActive"`
++	IsOnline bool   `json:"isOnline"`
+ }
+ 
+ type riderKey struct{}
+@@ -121,7 +122,7 @@ func (a *Auth) RequireRider(next http.Handler) http.Handler {
+ 			httpx.WriteError(w, r, err)
+ 			return
+ 		}
+-		rider := Rider{ID: s.ID, StoreID: s.StoreID, Email: s.Email, Name: s.Name, Phone: s.Phone, IsActive: s.IsActive}
++		rider := Rider{ID: s.ID, StoreID: s.StoreID, Email: s.Email, Name: s.Name, Phone: s.Phone, IsActive: s.IsActive, IsOnline: s.IsOnline}
+ 		httpx.SetSubject(ctx, "rider", rider.ID)
+ 		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, riderKey{}, rider)))
+ 	})
+diff --git a/services/rider/internal/auth/rider.go b/services/rider/internal/auth/rider.go
+index fd4831b..781a820 100644
+--- a/services/rider/internal/auth/rider.go
++++ b/services/rider/internal/auth/rider.go
+@@ -1,6 +1,7 @@
+ package auth
+ 
+ import (
++	"context"
+ 	"errors"
+ 	"net"
+ 	"net/http"
+@@ -10,6 +11,7 @@ import (
+ 
+ 	"github.com/jackc/pgx/v5"
+ 
++	"github.com/kapildev333/shopperstop/services/rider/internal/auth/db"
+ 	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
+ )
+ 
+@@ -118,13 +120,14 @@ func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
+ 		httpx.WriteError(w, r, err)
+ 		return
+ 	}
+-	rider := Rider{ID: row.ID, StoreID: row.StoreID, Email: row.Email, Name: row.Name, Phone: row.Phone, IsActive: row.IsActive}
++	rider := Rider{ID: row.ID, StoreID: row.StoreID, Email: row.Email, Name: row.Name, Phone: row.Phone, IsActive: row.IsActive, IsOnline: row.IsOnline}
+ 	httpx.WriteJSON(w, http.StatusOK, riderSession{Token: token, Rider: rider})
+ }
+ 
+-// SignOut deletes the session of the bearer token and answers 204. It runs
+-// behind RequireRider, which has checked the token; the session id is looked
+-// up again because the middleware keeps only the rider in the context.
++// SignOut deletes the session of the bearer token, takes the rider offline as
++// going offline does, and answers 204. It runs behind RequireRider, which has
++// checked the token; the session id is looked up again because the middleware
++// keeps only the rider in the context.
+ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
+ 	ctx := r.Context()
+ 	s, err := a.q.RiderSession(ctx, a.tokenHash(Bearer(r)))
+@@ -136,7 +139,14 @@ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
+ 		httpx.WriteError(w, r, err)
+ 		return
+ 	}
+-	if err := a.q.DeleteSession(ctx, s.SessionID); err != nil {
++	err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
++		q := a.q.WithTx(tx)
++		if _, err := goOffline(ctx, q, s.ID); err != nil {
++			return err
++		}
++		return q.DeleteSession(ctx, s.SessionID)
++	})
++	if err != nil {
+ 		httpx.WriteError(w, r, err)
+ 		return
+ 	}
+@@ -147,3 +157,54 @@ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) {
+ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
+ 	httpx.WriteJSON(w, http.StatusOK, CurrentRider(r.Context()))
+ }
++
++type availabilityRequest struct {
++	Online *bool `json:"online"`
++}
++
++// goOffline waits for a running dispatcher tick (LockDispatch, the first
++// statement of the transaction), sets the rider offline and expires their open
++// offer, so no tick can offer to a rider who is offline. q must be in a transaction.
++func goOffline(ctx context.Context, q *db.Queries, riderID string) (db.SetAvailabilityRow, error) {
++	if err := q.LockDispatch(ctx); err != nil {
++		return db.SetAvailabilityRow{}, err
++	}
++	row, err := q.SetAvailability(ctx, db.SetAvailabilityParams{Online: false, ID: riderID})
++	if err != nil {
++		return db.SetAvailabilityRow{}, err
++	}
++	return row, q.ExpireRiderOffers(ctx, riderID)
++}
++
++// PutAvailability sets the signed-in rider online or offline and answers 200
++// with the rider. Going online keeps online_since while the rider stays online;
++// going offline is goOffline in one transaction.
++func (a *Auth) PutAvailability(w http.ResponseWriter, r *http.Request) {
++	ctx := r.Context()
++	var in availabilityRequest
++	if err := httpx.ReadJSON(w, r, &in); err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	if in.Online == nil {
++		httpx.WriteError(w, r, invalid("online", "is required"))
++		return
++	}
++	id := CurrentRider(ctx).ID
++	var row db.SetAvailabilityRow
++	var err error
++	if *in.Online {
++		row, err = a.q.SetAvailability(ctx, db.SetAvailabilityParams{Online: true, ID: id})
++	} else {
++		err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
++			var err error
++			row, err = goOffline(ctx, a.q.WithTx(tx), id)
++			return err
++		})
++	}
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
++}
+diff --git a/services/rider/internal/auth/staff.go b/services/rider/internal/auth/staff.go
+index d94c45f..3da2529 100644
+--- a/services/rider/internal/auth/staff.go
++++ b/services/rider/internal/auth/staff.go
+@@ -57,8 +57,8 @@ func inScope(s core.Staff, storeID string) bool {
+ }
+ 
+ // riderOf is the API view of one rider row.
+-func riderOf(id, storeID, email, name, phone string, active bool) Rider {
+-	return Rider{ID: id, StoreID: storeID, Email: email, Name: name, Phone: phone, IsActive: active}
++func riderOf(id, storeID, email, name, phone string, active, online bool) Rider {
++	return Rider{ID: id, StoreID: storeID, Email: email, Name: name, Phone: phone, IsActive: active, IsOnline: online}
+ }
+ 
+ // NewRider is a rider to create. Phone is optional; the rest are required.
+@@ -145,7 +145,7 @@ func CreateRider(ctx context.Context, pool *pgxpool.Pool, c *core.Client, in New
+ 	if err != nil {
+ 		return Rider{}, err
+ 	}
+-	return riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive), nil
++	return riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline), nil
+ }
+ 
+ // ListRiders answers one page of riders ordered by email: every store's for an
+@@ -187,7 +187,7 @@ func (a *Auth) ListRiders(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 	items := make([]Rider, 0, len(rows))
+ 	for _, row := range rows {
+-		items = append(items, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
++		items = append(items, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
+ 	}
+ 	httpx.WriteJSON(w, http.StatusOK, httpx.NewList(items, page, pageSize, total))
+ }
+@@ -233,13 +233,14 @@ func (a *Auth) AdminGetRider(w http.ResponseWriter, r *http.Request) {
+ 		httpx.WriteError(w, r, errNotFound)
+ 		return
+ 	}
+-	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
++	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
+ }
+ 
+ // AdminUpdateRider changes name, phone (empty clears it), isActive and password
+ // of the rider in the path and answers 200 with it. The row is locked for the
+-// update; setting isActive false deletes the rider's sessions in the same
+-// transaction. Another store's rider is 404.
++// update; setting isActive false takes the rider offline (UpdateRider clears
++// is_online, after LockDispatch as the first statement) and deletes the rider's
++// sessions and expires their open offer in the same transaction. Another store's rider is 404.
+ func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
+ 	id, err := httpx.PathID(r, "id")
+ 	if err != nil {
+@@ -281,9 +282,16 @@ func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 	ctx := r.Context()
+ 	staff := CurrentStaff(ctx)
++	deactivate := in.IsActive != nil && !*in.IsActive
+ 	var row db.UpdateRiderRow
+ 	err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
+ 		q := a.q.WithTx(tx)
++		if deactivate {
++			// Before LockRider: the tick's offer insert takes a key-share lock on the rider row.
++			if err := q.LockDispatch(ctx); err != nil {
++				return err
++			}
++		}
+ 		locked, err := q.LockRider(ctx, id)
+ 		if err != nil {
+ 			return err
+@@ -295,14 +303,17 @@ func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if in.IsActive != nil && !*in.IsActive {
+-			return q.DeleteRiderSessions(ctx, id)
++		if !deactivate {
++			return nil
++		}
++		if err := q.DeleteRiderSessions(ctx, id); err != nil {
++			return err
+ 		}
+-		return nil
++		return q.ExpireRiderOffers(ctx, id)
+ 	})
+ 	if err != nil {
+ 		httpx.WriteError(w, r, pg.Map(err))
+ 		return
+ 	}
+-	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
++	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
+ }
+diff --git a/services/rider/internal/seed/seed.go b/services/rider/internal/seed/seed.go
+index 9164eb9..2f94451 100644
+--- a/services/rider/internal/seed/seed.go
++++ b/services/rider/internal/seed/seed.go
+@@ -19,7 +19,7 @@ import (
+ )
+ 
+ // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
+-var truncateTables = []string{"rider_locations", "deliveries", "sessions", "riders"}
++var truncateTables = []string{"offers", "rider_locations", "deliveries", "sessions", "riders"}
+ 
+ const (
+ 	storeKoramangala = "00000000-0000-4000-8000-000000000401"
+diff --git a/services/rider/migrations/0005_dispatch.sql b/services/rider/migrations/0005_dispatch.sql
+new file mode 100644
+index 0000000..19ce77e
+--- /dev/null
++++ b/services/rider/migrations/0005_dispatch.sql
+@@ -0,0 +1,35 @@
++-- Dispatch (rider-dispatch, D57): riders go online and offline, and the dispatcher offers
++-- one ready order at a time to one online rider for a short time.
++alter table riders add column is_online boolean not null default false;
++alter table riders add column online_since timestamptz;
++alter table riders add constraint riders_online_since check (is_online = (online_since is not null));
++alter table riders add constraint riders_online_active check (is_active or not is_online);
++
++create type offer_status as enum ('offered', 'accepted', 'declined', 'expired');
++
++create table offers (
++    id             uuid primary key default gen_random_uuid(),
++    order_id       uuid not null, -- core's order id, no foreign key (D32)
++    order_number   text not null,
++    store_id       uuid not null, -- core's store id
++    rider_id       uuid not null references riders (id),
++    status         offer_status not null default 'offered',
++    eta_seconds    integer not null check (eta_seconds >= 0),
++    item_count     integer not null check (item_count > 0),
++    total_cents    bigint not null check (total_cents >= 0),
++    payment_method text not null,
++    payment_status text not null default '',
++    pincode        text not null,
++    placed_at      timestamptz not null,
++    offered_at     timestamptz not null,
++    expires_at     timestamptz not null,
++    answered_at    timestamptz,
++    created_at     timestamptz not null default now(),
++    updated_at     timestamptz not null default now(),
++    check (expires_at > offered_at),
++    check ((status = 'offered') = (answered_at is null))
++);
++create unique index offers_open_order on offers (order_id) where status = 'offered';
++create unique index offers_open_rider on offers (rider_id) where status = 'offered';
++create index offers_order_rider_answered on offers (order_id, rider_id, answered_at);
++create trigger offers_updated_at before update on offers for each row execute function set_updated_at();
+diff --git a/services/rider/openapi.json b/services/rider/openapi.json
+index 465e047..a55ba1a 100644
+--- a/services/rider/openapi.json
++++ b/services/rider/openapi.json
+@@ -129,7 +129,8 @@
+                     "email": "rider1-koramangala@shopperstop.local",
+                     "name": "Arjun Rao",
+                     "phone": "+919000000001",
+-                    "isActive": true
++                    "isActive": true,
++                    "isOnline": false
+                   }
+                 }
+               }
+@@ -250,7 +251,8 @@
+                   "email": "rider1-koramangala@shopperstop.local",
+                   "name": "Arjun Rao",
+                   "phone": "+919000000001",
+-                  "isActive": true
++                  "isActive": true,
++                  "isOnline": false
+                 }
+               }
+             }
+@@ -274,6 +276,88 @@
+         }
+       }
+     },
++    "/me/availability": {
++      "put": {
++        "operationId": "putAvailability",
++        "summary": "Go online or offline",
++        "description": "Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.",
++        "tags": [
++          "rider-service"
++        ],
++        "security": [
++          {
++            "bearer": []
++          }
++        ],
++        "requestBody": {
++          "required": true,
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/AvailabilityUpdate"
++              },
++              "example": {
++                "online": true
++              }
++            }
++          }
++        },
++        "responses": {
++          "200": {
++            "description": "The rider with the new isOnline.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Rider"
++                },
++                "example": {
++                  "id": "00000000-0000-4000-8000-000000000801",
++                  "storeId": "00000000-0000-4000-8000-000000000401",
++                  "email": "rider1-koramangala@shopperstop.local",
++                  "name": "Arjun Rao",
++                  "phone": "+919000000001",
++                  "isActive": true,
++                  "isOnline": true
++                }
++              }
++            }
++          },
++          "400": {
++            "description": "online missing or null (field online), or not a boolean (no field).",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "validation",
++                    "message": "is required",
++                    "field": "online"
++                  }
++                }
++              }
++            }
++          },
++          "401": {
++            "description": "No bearer, or a token that is not a live session of an active rider.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "unauthorized",
++                    "message": "sign in required"
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
++    },
+     "/admin/riders": {
+       "get": {
+         "operationId": "listAdminRiders",
+@@ -339,7 +423,8 @@
+                       "email": "rider1-koramangala@shopperstop.local",
+                       "name": "Arjun Rao",
+                       "phone": "+919000000001",
+-                      "isActive": true
++                      "isActive": true,
++                      "isOnline": false
+                     }
+                   ],
+                   "page": 1,
+@@ -459,7 +544,8 @@
+                   "email": "ravi.kumar@shopperstop.local",
+                   "name": "Ravi Kumar",
+                   "phone": "+919000000099",
+-                  "isActive": true
++                  "isActive": true,
++                  "isOnline": false
+                 }
+               }
+             }
+@@ -589,7 +675,8 @@
+                   "email": "rider1-koramangala@shopperstop.local",
+                   "name": "Arjun Rao",
+                   "phone": "+919000000001",
+-                  "isActive": true
++                  "isActive": true,
++                  "isOnline": false
+                 }
+               }
+             }
+@@ -698,7 +785,8 @@
+                   "email": "rider1-koramangala@shopperstop.local",
+                   "name": "Arjun Rao",
+                   "phone": "+919000000001",
+-                  "isActive": false
++                  "isActive": false,
++                  "isOnline": false
+                 }
+               }
+             }
+@@ -1633,6 +1721,10 @@
+           },
+           "isActive": {
+             "type": "boolean"
++          },
++          "isOnline": {
++            "type": "boolean",
++            "description": "true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10)."
+           }
+         },
+         "additionalProperties": false
+@@ -2070,6 +2162,19 @@
+           }
+         },
+         "additionalProperties": false
++      },
++      "AvailabilityUpdate": {
++        "type": "object",
++        "required": [
++          "online"
++        ],
++        "properties": {
++          "online": {
++            "type": "boolean",
++            "description": "true to go online for dispatch offers, false to go offline."
++          }
++        },
++        "additionalProperties": false
+       }
+     }
+   }
+diff --git a/services/rider/queries/auth.sql b/services/rider/queries/auth.sql
+index 26359fd..23c15e0 100644
+--- a/services/rider/queries/auth.sql
++++ b/services/rider/queries/auth.sql
+@@ -1,19 +1,19 @@
+ -- name: CreateRider :one
+ insert into riders (store_id, email, name, phone, password_hash)
+ values ($1, $2, $3, $4, $5)
+-returning id, store_id, email, name, phone, is_active;
++returning id, store_id, email, name, phone, is_active, is_online;
+ 
+ -- name: RiderByEmail :one
+-select id, store_id, email, name, phone, password_hash, is_active from riders where email = $1;
++select id, store_id, email, name, phone, password_hash, is_active, is_online from riders where email = $1;
+ 
+ -- name: RiderByID :one
+-select id, store_id, email, name, phone, is_active from riders where id = $1;
++select id, store_id, email, name, phone, is_active, is_online from riders where id = $1;
+ 
+ -- name: LockRider :one
+ select id, store_id from riders where id = $1 for update;
+ 
+ -- name: ListRiders :many
+-select id, store_id, email, name, phone, is_active from riders
++select id, store_id, email, name, phone, is_active, is_online from riders
+ where sqlc.narg(store_id)::uuid is null or store_id = sqlc.narg(store_id)::uuid
+ order by email limit sqlc.arg(page_limit) offset sqlc.arg(page_offset);
+ 
+@@ -26,16 +26,19 @@ update riders
+ set name = coalesce(sqlc.narg(name), name),
+     phone = coalesce(sqlc.narg(phone), phone),
+     password_hash = coalesce(sqlc.narg(password_hash), password_hash),
+-    is_active = coalesce(sqlc.narg(is_active), is_active)
++    is_active = coalesce(sqlc.narg(is_active), is_active),
++    -- deactivation takes the rider offline (riders_online_active)
++    is_online = is_online and coalesce(sqlc.narg(is_active), is_active),
++    online_since = case when is_online and coalesce(sqlc.narg(is_active), is_active) then online_since end
+ where id = @id
+-returning id, store_id, email, name, phone, is_active;
++returning id, store_id, email, name, phone, is_active, is_online;
+ 
+ -- name: CreateSession :exec
+ insert into sessions (rider_id, token_hash, expires_at)
+ values ($1, $2, now() + interval '30 days');
+ 
+ -- name: RiderSession :one
+-select s.id as session_id, r.id, r.store_id, r.email, r.name, r.phone, r.is_active
++select s.id as session_id, r.id, r.store_id, r.email, r.name, r.phone, r.is_active, r.is_online
+ from sessions s join riders r on r.id = s.rider_id
+ where s.token_hash = $1 and s.expires_at > now() and r.is_active;
+ 
+@@ -53,3 +56,19 @@ delete from sessions where id = $1;
+ 
+ -- name: DeleteRiderSessions :exec
+ delete from sessions where rider_id = $1;
++
++-- name: LockDispatch :exec
++-- Waits for a running dispatcher tick (queries/dispatch.sql TryTickLock, the same
++-- key), so a rider going offline never races the tick's offer to them.
++select pg_advisory_xact_lock(727102, hashtext(current_schema()));
++
++-- name: SetAvailability :one
++-- online_since keeps its value when the rider is already online.
++update riders
++set is_online = sqlc.arg(online)::boolean,
++    online_since = case when sqlc.arg(online)::boolean then coalesce(online_since, now()) end
++where id = sqlc.arg(id)
++returning id, store_id, email, name, phone, is_active, is_online;
++
++-- name: ExpireRiderOffers :exec
++update offers set status = 'expired', answered_at = now() where rider_id = $1 and status = 'offered';

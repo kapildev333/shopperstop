@@ -1,0 +1,624 @@
+diff --git a/services/rider/internal/app/app.go b/services/rider/internal/app/app.go
+index e62a3ff..701f9e3 100644
+--- a/services/rider/internal/app/app.go
++++ b/services/rider/internal/app/app.go
+@@ -35,6 +35,9 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
+ 	r.With(a.RequireRider).Get("/api/rider/v1/me/deliveries/{id}", d.Get)
+ 	r.With(a.RequireRider).Post("/api/rider/v1/me/deliveries/{id}/delivered", d.Delivered)
+ 	r.With(a.RequireRider).Put("/api/rider/v1/me/location", d.PutLocation)
++	r.With(a.RequireRider).Get("/api/rider/v1/me/offer", d.MyOffer)
++	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/accept", d.AcceptOffer)
++	r.With(a.RequireRider).Post("/api/rider/v1/me/offers/{id}/decline", d.DeclineOffer)
+ 	r.Get("/api/rider/v1/orders/{orderId}/delivery", d.OrderDelivery)
+ 	return r
+ }
+diff --git a/services/rider/internal/delivery/delivery.go b/services/rider/internal/delivery/delivery.go
+index 9b2e6ca..8e246f2 100644
+--- a/services/rider/internal/delivery/delivery.go
++++ b/services/rider/internal/delivery/delivery.go
+@@ -164,7 +164,7 @@ func (d *Deliveries) Claim(w http.ResponseWriter, r *http.Request) {
+ 		httpx.WriteError(w, r, core.ErrNotFound)
+ 		return
+ 	}
+-	row, err := d.claim(ctx, rider, order)
++	row, err := d.claim(ctx, rider, order, "")
+ 	switch {
+ 	case pg.IsUnique(err):
+ 		httpx.WriteError(w, r, errClaimed)
+@@ -186,10 +186,12 @@ func (d *Deliveries) Claim(w http.ResponseWriter, r *http.Request) {
+ 	httpx.WriteJSON(w, http.StatusCreated, out)
+ }
+ 
+-// claim is the transaction of Claim. The insert takes the order's unique slot
+-// first, so concurrent claims serialise on it; core's move runs last, so its
+-// refusal or failure returns from the function and rolls the insert back.
+-func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order) (db.Delivery, error) {
++// claim is the transaction of Claim and of AcceptOffer. With an offerID it
++// first marks that offer accepted (errOfferClosed when it is no longer the
++// rider's open, unexpired offer). The insert takes the order's unique slot, so
++// concurrent claims serialise on it; core's move runs last, so its refusal or
++// failure returns from the function and rolls the insert (and the accept) back.
++func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order, offerID string) (db.Delivery, error) {
+ 	lines := o.Items
+ 	if lines == nil {
+ 		lines = []core.OrderItem{}
+@@ -204,8 +206,16 @@ func (d *Deliveries) claim(ctx context.Context, rider auth.Rider, o core.Order)
+ 	}
+ 	var row db.Delivery
+ 	err = pgx.BeginFunc(ctx, d.pool, func(tx pgx.Tx) error {
++		q := d.q.WithTx(tx)
++		if offerID != "" {
++			if _, err := q.AcceptOffer(ctx, db.AcceptOfferParams{ID: offerID, RiderID: rider.ID}); errors.Is(err, pgx.ErrNoRows) {
++				return errOfferClosed
++			} else if err != nil {
++				return err
++			}
++		}
+ 		var err error
+-		row, err = d.q.WithTx(tx).CreateDelivery(ctx, db.CreateDeliveryParams{
++		row, err = q.CreateDelivery(ctx, db.CreateDeliveryParams{
+ 			OrderID: o.ID, OrderNumber: o.Number, StoreID: o.StoreID, RiderID: rider.ID,
+ 			CustomerName: o.CustomerName, CustomerPhone: o.CustomerPhone,
+ 			AddressLine1: o.Address.Line1, AddressLine2: o.Address.Line2, AddressPincode: o.Address.Pincode,
+diff --git a/services/rider/internal/delivery/offer.go b/services/rider/internal/delivery/offer.go
+new file mode 100644
+index 0000000..b03d40f
+--- /dev/null
++++ b/services/rider/internal/delivery/offer.go
+@@ -0,0 +1,138 @@
++package delivery
++
++import (
++	"errors"
++	"log/slog"
++	"net/http"
++	"time"
++
++	"github.com/jackc/pgx/v5"
++
++	"github.com/kapildev333/shopperstop/services/rider/internal/auth"
++	"github.com/kapildev333/shopperstop/services/rider/internal/core"
++	"github.com/kapildev333/shopperstop/services/rider/internal/delivery/db"
++	"github.com/kapildev333/shopperstop/services/rider/internal/httpx"
++	"github.com/kapildev333/shopperstop/services/rider/internal/pg"
++)
++
++// Offer is the dispatcher's offer of one ready order to one rider (rider-dispatch).
++type Offer struct {
++	ID            string    `json:"id"`
++	OrderID       string    `json:"orderId"`
++	Number        string    `json:"number"`
++	PlacedAt      time.Time `json:"placedAt"`
++	ItemCount     int       `json:"itemCount"`
++	TotalCents    int64     `json:"totalCents"`
++	PaymentMethod string    `json:"paymentMethod"`
++	PaymentStatus string    `json:"paymentStatus,omitempty"`
++	Pincode       string    `json:"pincode"`
++	EtaSeconds    int       `json:"etaSeconds"`
++	OfferedAt     time.Time `json:"offeredAt"`
++	ExpiresAt     time.Time `json:"expiresAt"`
++}
++
++var errOfferClosed = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "offer is no longer open"}
++var errOrderGone = &httpx.Error{Status: http.StatusConflict, Code: "conflict", Message: "order is no longer available"}
++
++// MyOffer answers the signed-in rider's open offer, or 204 when there is none.
++func (d *Deliveries) MyOffer(w http.ResponseWriter, r *http.Request) {
++	o, err := d.q.OpenOffer(r.Context(), auth.CurrentRider(r.Context()).ID)
++	if errors.Is(err, pgx.ErrNoRows) {
++		w.WriteHeader(http.StatusNoContent)
++		return
++	}
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	httpx.WriteJSON(w, http.StatusOK, Offer{
++		ID: o.ID, OrderID: o.OrderID, Number: o.OrderNumber, PlacedAt: o.PlacedAt.Time,
++		ItemCount: int(o.ItemCount), TotalCents: o.TotalCents, PaymentMethod: o.PaymentMethod,
++		PaymentStatus: o.PaymentStatus, Pincode: o.Pincode, EtaSeconds: int(o.EtaSeconds),
++		OfferedAt: o.OfferedAt.Time, ExpiresAt: o.ExpiresAt.Time,
++	})
++}
++
++// AcceptOffer accepts the rider's open offer and answers 201 with the delivery:
++// the claim transaction, opened by marking the offer accepted. Another rider's
++// or an unknown offer is 404; an answered or expired one 409 with no core call.
++// When the order went to someone else or left ready the offer is voided and the
++// answer is 409; when core fails the offer stays open and the answer is 502.
++func (d *Deliveries) AcceptOffer(w http.ResponseWriter, r *http.Request) {
++	ctx := r.Context()
++	id, err := httpx.PathID(r, "id")
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	rider := auth.CurrentRider(ctx)
++	offer, err := d.q.RiderOffer(ctx, db.RiderOfferParams{ID: id, RiderID: rider.ID})
++	if err != nil {
++		httpx.WriteError(w, r, pg.Map(err))
++		return
++	}
++	if !offer.Open {
++		httpx.WriteError(w, r, errOfferClosed)
++		return
++	}
++	order, err := d.core.Order(ctx, offer.OrderID)
++	var row db.Delivery
++	if err == nil {
++		row, err = d.claim(ctx, rider, order, offer.ID)
++	}
++	switch {
++	case err == nil:
++	case errors.Is(err, errOfferClosed):
++		httpx.WriteError(w, r, errOfferClosed)
++		return
++	case pg.IsUnique(err), errors.Is(err, core.ErrConflict), errors.Is(err, core.ErrNotFound):
++		if err := d.q.VoidOffer(ctx, offer.ID); err != nil {
++			httpx.WriteError(w, r, err)
++			return
++		}
++		httpx.WriteError(w, r, errOrderGone)
++		return
++	default:
++		httpx.WriteError(w, r, err)
++		return
++	}
++	slog.InfoContext(ctx, "delivery claimed", "deliveryId", row.ID, "orderId", row.OrderID,
++		"number", row.OrderNumber, "riderId", rider.ID, "requestId", httpx.RequestID(ctx))
++	slog.InfoContext(ctx, "offer accepted", "offerId", offer.ID, "orderId", offer.OrderID,
++		"number", offer.OrderNumber, "riderId", rider.ID, "requestId", httpx.RequestID(ctx))
++	out, err := toDelivery(row)
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	httpx.WriteJSON(w, http.StatusCreated, out)
++}
++
++// DeclineOffer declines the rider's open offer and answers 204. Another
++// rider's or an unknown offer is 404; an answered or expired one 409.
++func (d *Deliveries) DeclineOffer(w http.ResponseWriter, r *http.Request) {
++	ctx := r.Context()
++	id, err := httpx.PathID(r, "id")
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	rider := auth.CurrentRider(ctx)
++	row, err := d.q.DeclineOffer(ctx, db.DeclineOfferParams{ID: id, RiderID: rider.ID})
++	if errors.Is(err, pgx.ErrNoRows) {
++		// Not declined: 404 when it is not the rider's offer, else it was already answered or expired.
++		if _, err := d.q.RiderOffer(ctx, db.RiderOfferParams{ID: id, RiderID: rider.ID}); err != nil {
++			httpx.WriteError(w, r, pg.Map(err))
++			return
++		}
++		httpx.WriteError(w, r, errOfferClosed)
++		return
++	}
++	if err != nil {
++		httpx.WriteError(w, r, err)
++		return
++	}
++	slog.InfoContext(ctx, "offer declined", "offerId", id, "orderId", row.OrderID,
++		"number", row.OrderNumber, "riderId", rider.ID, "requestId", httpx.RequestID(ctx))
++	w.WriteHeader(http.StatusNoContent)
++}
+diff --git a/services/rider/openapi.json b/services/rider/openapi.json
+index a55ba1a..5d29672 100644
+--- a/services/rider/openapi.json
++++ b/services/rider/openapi.json
+@@ -22,6 +22,10 @@
+     {
+       "name": "deliveries",
+       "description": "Ready orders, claims, deliveries, rider location and the customer's view of a delivery."
++    },
++    {
++      "name": "dispatch",
++      "description": "Offers of ready orders to online riders: the rider's open offer, accept and decline, and the staff view of an order's dispatch."
+     }
+   ],
+   "paths": {
+@@ -1626,6 +1630,279 @@
+           }
+         }
+       }
++    },
++    "/me/offer": {
++      "get": {
++        "operationId": "getMyOffer",
++        "summary": "The rider's open offer",
++        "description": "Answers the signed-in rider's open offer, polled by the rider app while online. An offer past its expiry, or whose order another rider claimed by hand, counts as none before the dispatcher marks it.",
++        "tags": [
++          "dispatch"
++        ],
++        "security": [
++          {
++            "bearer": []
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "The open offer.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Offer"
++                },
++                "example": {
++                  "id": "00000000-0000-4000-8000-000000000902",
++                  "orderId": "00000000-0000-4000-8000-000000000701",
++                  "number": "SS-DEMOAAAB",
++                  "placedAt": "2026-10-16T09:00:00Z",
++                  "itemCount": 3,
++                  "totalCents": 33900,
++                  "paymentMethod": "cod",
++                  "pincode": "560034",
++                  "etaSeconds": 90,
++                  "offeredAt": "2026-10-16T09:12:00Z",
++                  "expiresAt": "2026-10-16T09:12:30Z"
++                }
++              }
++            }
++          },
++          "204": {
++            "description": "The rider has no open offer. No body."
++          },
++          "401": {
++            "description": "No bearer, or a token that is not a live session of an active rider.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "unauthorized",
++                    "message": "sign in required"
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/me/offers/{id}/accept": {
++      "post": {
++        "operationId": "acceptOffer",
++        "summary": "Accept an offer",
++        "description": "Accepts the rider's open offer: one transaction marks it accepted and claims the order as POST /me/deliveries does (the delivery, then core's out_for_delivery with the rider as actor). When another rider already claimed the order, or core no longer holds it as ready, the offer is expired and the answer is 409. When core fails the offer stays open.",
++        "tags": [
++          "dispatch"
++        ],
++        "security": [
++          {
++            "bearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "id",
++            "in": "path",
++            "required": true,
++            "description": "The offer's id.",
++            "schema": {
++              "type": "string",
++              "format": "uuid"
++            },
++            "example": "00000000-0000-4000-8000-000000000902"
++          }
++        ],
++        "responses": {
++          "201": {
++            "description": "The rider's new assigned delivery.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Delivery"
++                },
++                "example": {
++                  "id": "00000000-0000-4000-8000-000000000910",
++                  "orderId": "00000000-0000-4000-8000-000000000703",
++                  "orderNumber": "SS-DEMOAAAD",
++                  "storeId": "00000000-0000-4000-8000-000000000401",
++                  "status": "assigned",
++                  "customerName": "Demo Customer",
++                  "customerPhone": "+919800000000",
++                  "address": {
++                    "line1": "12 80 Feet Rd, Koramangala",
++                    "pincode": "560034"
++                  },
++                  "totalCents": 103000,
++                  "paymentMethod": "cod",
++                  "itemCount": 4,
++                  "items": [
++                    {
++                      "name": "Banana Robusta",
++                      "unitLabel": "1 kg",
++                      "quantity": 1
++                    },
++                    {
++                      "name": "Pomegranate Bhagwa",
++                      "unitLabel": "1 kg",
++                      "quantity": 3
++                    }
++                  ],
++                  "assignedAt": "2026-10-15T09:05:00Z"
++                }
++              }
++            }
++          },
++          "401": {
++            "description": "No bearer, or a token that is not a live session of an active rider.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "unauthorized",
++                    "message": "sign in required"
++                  }
++                }
++              }
++            }
++          },
++          "404": {
++            "description": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "not_found",
++                    "message": "not found"
++                  }
++                }
++              }
++            }
++          },
++          "409": {
++            "description": "The offer was already answered or expired (offer is no longer open), or the order went to another rider or left ready (order is no longer available).",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "conflict",
++                    "message": "offer is no longer open"
++                  }
++                }
++              }
++            }
++          },
++          "502": {
++            "description": "Core failed or could not be reached; the offer stays open.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "internal",
++                    "message": "core unavailable"
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/me/offers/{id}/decline": {
++      "post": {
++        "operationId": "declineOffer",
++        "summary": "Decline an offer",
++        "description": "Declines the rider's open offer. The dispatcher offers the order to the next rider and does not offer it to this rider again for 2 minutes.",
++        "tags": [
++          "dispatch"
++        ],
++        "security": [
++          {
++            "bearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "id",
++            "in": "path",
++            "required": true,
++            "description": "The offer's id.",
++            "schema": {
++              "type": "string",
++              "format": "uuid"
++            },
++            "example": "00000000-0000-4000-8000-000000000902"
++          }
++        ],
++        "responses": {
++          "204": {
++            "description": "Declined. No body."
++          },
++          "401": {
++            "description": "No bearer, or a token that is not a live session of an active rider.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "unauthorized",
++                    "message": "sign in required"
++                  }
++                }
++              }
++            }
++          },
++          "404": {
++            "description": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "not_found",
++                    "message": "not found"
++                  }
++                }
++              }
++            }
++          },
++          "409": {
++            "description": "The offer was already answered or expired.",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/Error"
++                },
++                "example": {
++                  "error": {
++                    "code": "conflict",
++                    "message": "offer is no longer open"
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+@@ -2175,6 +2452,90 @@
+           }
+         },
+         "additionalProperties": false
++      },
++      "Offer": {
++        "type": "object",
++        "description": "The dispatcher's offer of one ready order to one rider, with the order as core showed it when the offer was made.",
++        "required": [
++          "id",
++          "orderId",
++          "number",
++          "placedAt",
++          "itemCount",
++          "totalCents",
++          "paymentMethod",
++          "pincode",
++          "etaSeconds",
++          "offeredAt",
++          "expiresAt"
++        ],
++        "properties": {
++          "id": {
++            "type": "string",
++            "format": "uuid"
++          },
++          "orderId": {
++            "type": "string",
++            "format": "uuid",
++            "description": "Core's order id."
++          },
++          "number": {
++            "type": "string",
++            "description": "Core's order number."
++          },
++          "placedAt": {
++            "type": "string",
++            "format": "date-time",
++            "description": "When the customer placed the order."
++          },
++          "itemCount": {
++            "type": "integer",
++            "minimum": 1,
++            "description": "Units to carry: the sum of the line quantities."
++          },
++          "totalCents": {
++            "type": "integer",
++            "format": "int64",
++            "minimum": 0,
++            "description": "Order total in paise (INR cents)."
++          },
++          "paymentMethod": {
++            "type": "string",
++            "enum": [
++              "cod",
++              "online"
++            ]
++          },
++          "paymentStatus": {
++            "type": "string",
++            "enum": [
++              "pending",
++              "paid",
++              "refunded"
++            ],
++            "description": "Online orders only, as core held it when the offer was made."
++          },
++          "pincode": {
++            "type": "string",
++            "description": "The delivery address's pincode."
++          },
++          "etaSeconds": {
++            "type": "integer",
++            "minimum": 0,
++            "description": "The rider's straight-line time to the store when the offer was made; 0 within 100 m."
++          },
++          "offeredAt": {
++            "type": "string",
++            "format": "date-time",
++            "description": "When the dispatcher made the offer."
++          },
++          "expiresAt": {
++            "type": "string",
++            "format": "date-time",
++            "description": "After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider."
++          }
++        },
++        "additionalProperties": false
+       }
+     }
+   }
+diff --git a/services/rider/queries/deliveries.sql b/services/rider/queries/deliveries.sql
+index e2b2513..eb01854 100644
+--- a/services/rider/queries/deliveries.sql
++++ b/services/rider/queries/deliveries.sql
+@@ -35,3 +35,27 @@ join riders r on r.id = d.rider_id
+ left join rider_locations l
+   on l.rider_id = d.rider_id and d.status = 'assigned' and l.recorded_at >= d.assigned_at
+ where d.order_id = $1;
++
++-- name: OpenOffer :one
++-- The rider's open offer; one past its expiry, or whose order a delivery holds, counts as none.
++select o.* from offers o
++where o.rider_id = $1 and o.status = 'offered' and o.expires_at > now()
++  and not exists (select 1 from deliveries d where d.order_id = o.order_id);
++
++-- name: RiderOffer :one
++select o.*, (o.status = 'offered' and o.expires_at > now())::boolean as open
++from offers o where o.id = $1 and o.rider_id = $2;
++
++-- name: AcceptOffer :one
++update offers set status = 'accepted', answered_at = now()
++where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
++returning id;
++
++-- name: DeclineOffer :one
++update offers set status = 'declined', answered_at = now()
++where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
++returning order_id, order_number;
++
++-- name: VoidOffer :exec
++-- The offer's order went to another rider or left ready: the offer can never be accepted.
++update offers set status = 'expired', answered_at = now() where id = $1 and status = 'offered';

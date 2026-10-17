@@ -1,0 +1,94 @@
+## Context
+
+See proposal.md for why. Inputs read: PLAN.md D57 (and the Phase 5 dispatch table), `.claude/areas/rider.md` (work package "rider-P5-L2 `rider-dispatch`", `## Requests`), `openspec/specs/rider-service` and `deliveries`, `openspec/config.yaml`, all of `services/rider` at `150d5e5`, core's `openapi.json` (`Store`, `StoreLocation` as merged by core-P5-L2 #360), the lane logs rider-P5-L1 and rider-P3-L2, and the coordinator's relayed core-P5-L2 contract: optional `location {lat, lng}` on the public `GET /stores/{id}`, omitted when unset, replaceable but never cleared, demo stores seeded at Koramangala 12.9352, 77.6245 and Indiranagar 12.9719, 77.6412.
+
+**Every hand-written change is a verbatim patch in `code/`** (`T<n>-test.diff`, `T<n>-feat.diff`, and `T2-fix.diff`), with paths from the repository root. They were spiked on a scratch copy of `150d5e5`, then reverted. All 13 apply in order with `git apply`. After `sqlc generate`, `GOFLAGS=-count=1 make test-rider` is green at every feat state and red at every test state, with the failures listed in tasks.md. The patches leave out sqlc output (`services/rider/internal/{auth,delivery,dispatch}/db/*.go`), `packages/ui/src/api/rider.d.ts` and the rider Postman collection: `make gen postman` writes those. A worker applies, regenerates, runs the gates and commits. A patch that does not apply, or a red or green that differs from tasks.md, is a stop-and-report, not a fix.
+
+## Goals / Non-Goals
+
+**Goals:** every requirement in `specs/dispatch` and `specs/rider-service`, with the Phase 3 claim flow, its tests and the e2e suites unchanged; the races named below proven by tests.
+
+**Non-Goals:** `apps/rider` (rider-P5-L3); the admin board line (admin-P5-L2); any change to the ready list or the hand claim (Decision 3); the D57 ceilings (listed at the end).
+
+## Decisions
+
+1. **Module boundaries.** Availability lives in `internal/auth`, which owns `riders`, sign-out and deactivation. The rider's offer routes live in `internal/delivery` (`offer.go`), because accept *is* the claim transaction. The dispatcher and the staff dispatch read live in a new `internal/dispatch` with its own sqlc package (`queries/dispatch.sql` → `internal/dispatch/db`, a third `sqlc.yaml` entry). `dispatch` imports `auth` (for `CurrentStaff`) and `core`; nothing imports `dispatch` except `app` and `cmd/rider`. `app.New` gains a fifth parameter `dsp *dispatch.Dispatcher` (T4); callers that never reach the dispatch route pass `nil`, as with `delivery` in Phase 3.
+2. **Clocks.** `Tick(ctx, now)` uses its `now` for every time it writes or compares (`offered_at`, `expires_at`, the expiry `answered_at`, the location cutoff, the 2-minute rest). The HTTP routes use the database clock `now()`. Tests call `Tick` with `time.Now()`-relative times and never sleep. The only waits are bounded polls: the loop test, and the 300 ms "still blocked" window of the lock test.
+3. **No `deliveries` delta; the hand claim stays as it is.** The ready list keeps offered orders and `POST /me/deliveries` does not look at offers, so the D57 fallback ("any rider claims it by hand as today") holds and the Phase 3 tests and e2e do not move. A hand claim of an offered order leaves that offer `offered` until it is cleaned up three ways: `GET /me/offer` hides an offer whose order has a delivery; the next tick's `ExpireOffers` expires it; and an accept of it hits the unique `deliveries.order_id`, then `VoidOffer` and 409. I dropped the alternative of expiring open offers inside the claim transaction. It would touch the Phase 3 claim for a gain of one tick (3 s) of the offered rider's availability.
+4. **Accept = `AcceptOffer` + the claim, one transaction.** `delivery.claim(ctx, rider, order, offerID)` gains the offer id. When the id is non-empty, the transaction's first statement is the conditional update `AcceptOffer`: rider, `offered`, unexpired. No row means `errOfferClosed` (409). Then the Phase 3 insert and core move run unchanged. Before the transaction, `RiderOffer` (404 for another rider's or an unknown offer; `open` false means 409 with no core call) and `core.Order` (the claim's snapshots) run. After a rollback caused by the unique `order_id` (hand claim won), core's 409 (order left `ready`) or core's 404, `VoidOffer` marks the offer `expired` and the answer is 409 "order is no longer available". A core failure (502) leaves the offer open, so the rider can retry until it expires. Accept logs both `delivery claimed` (it is a claim) and `offer accepted`.
+5. **The dispatch lock is per schema, and the offline paths wait for it.** Key `(727102, hashtext(current_schema()))`, the two-int advisory form. `migrate` holds the one-int `727101`, a separate lock space. The tick takes `pg_try_advisory_xact_lock` as its first statement and skips when the key is held. Every offline path (`PUT /me/availability` false, sign-out, and deactivation before `LockRider`) takes the blocking `pg_advisory_xact_lock` as its first statement (`LockDispatch`), then sets `is_online` false and expires the rider's open offer. Two reasons for the schema in the key: production runs one schema, so the key is effectively global there, while `make test-rider` runs the `app` and `dispatch` packages in parallel on one database with a schema each, and a test holding a plain key in one package would make the other package's ticks skip. Row locks on `riders` were rejected; see Race analysis R5.
+6. **Ranking.** `rank` sorts by `etaSeconds/60`, then the earlier `idleSince` (`greatest(online_since, max(delivered_at))`), then id. Until T6 every ETA is 0, so T3 ranks by idle time; T6 only fills the ETA and adds the store gate, leaving `rank` alone. The ETA is the haversine distance (stdlib `math`, R = 6,371,000 m) divided by `speedKMH / 3.6`, rounded to the second, and 0 at or within 100 m.
+7. **Store location: read live, no cache.** `core.Store` gains `Location *StoreLocation` (`omitempty`), read from the public `GET /stores/{id}` that `Client.Store` already calls. No token is needed, and the coretest fake serves it with no change because it encodes `core.Store`. The tick reads it only for a store that has a free ready order and a candidate. A core failure or a missing location skips the store; the missing location logs at debug, and the staff read shows "Dispatch off" instead. The work package's 30-second cache is dropped. Ceiling: one public store read per store per tick with work to do (≤ 20 a minute per store); cache it if core notices.
+8. **Config.** Four optional variables in `config.Config` (`DispatchInterval`, `DispatchOfferTTL`, `DispatchLocationTTL`, `DispatchSpeedKMH`), parsed with `time.ParseDuration` and `strconv.ParseFloat`, with each bad value appended to the one error as the other variables are. Nothing goes in the Makefile, `deploy/` or the e2e env: `make dev` and `make e2e` run the 3 s default. Every seeded and test rider is offline, so no offer appears in the Phase 3 suites.
+9. **Loop and shutdown.** `cmd/rider` builds the dispatcher always (the staff read needs `Enabled`) and runs `Run(ctx, interval)` in a goroutine only when the interval is above 0. `run` defers `stop(); <-ticking`, so the pool closes after the loop ends, including when `serve` fails before any signal.
+10. **`Rider.isOnline` is always sent but not `required` in `openapi.json`.** `apps/admin/src/riders-fake.ts` and `apps/rider/src/fake-api.ts` build typed `Rider` literals. A required member would break `make test-web` typecheck in two areas this lane cannot edit. The spec and the Go struct (no `omitempty`) make it always present. Follow-up: once admin-P5-L2 and rider-P5-L3 have added `isOnline` to those fixtures, a rider lane adds it to `required`.
+11. **Staff dispatch read.** `GET /admin/orders/{orderId}/dispatch` behind `RequireStaff`. It reads the order with the service token (core's 404 passes through), returns 404 for store staff of another store, counts `is_online` riders at the order's store, lists `OrderOffers` (riders joined for the current name, `offered_at desc, id`, limit 10), and sets `dispatch` to `on` only when `Enabled` and the store read shows a location. A failed store read is the core client's 502. Exact shape in "Contract for admin-P5-L2" below.
+12. **Availability SQL.** `SetAvailability` keeps `online_since` while online (`coalesce`) and clears it offline. Two checks keep the state honest: `riders_online_since` (`is_online = (online_since is not null)`) and `riders_online_active` (`is_active or not is_online`). `UpdateRider` clears `is_online` and `online_since` in the same statement that sets `is_active` false.
+13. **Seed.** Offer `...0902` (`expired`, rider `...0801`, order `...0701` `SS-DEMOAAAB`, store `...0401`, ETA 120, cash, `560034`, offered two days ago and expired 30 s later). `offers` is added to `truncateTables` in T1, because the migration makes `riders` unrecoverable by truncate without it (the P3-L2 lesson). The summary prints the offer with `(Postman offerId)`.
+14. **Logs.** `offer made` (offerId, orderId, number, riderId, etaSeconds) and `offer expired` (offerId, orderId, number, riderId) from the tick; `offer accepted` and `offer declined` (offerId, orderId, number, riderId, requestId) from the routes; all at info. The offline paths expire an offer silently: the staff read shows it.
+15. **Postman `offerId` needs platform.** `scripts/postman.mjs` `ID_VARS` has no `offers` entry and the environment has no `offerId`, and both are platform files. Until platform adds `offers: 'offerId'` and `offerId = ...0902`, the contract's path example `...0902` puts the literal id in the collection, and `TestSummaryMatchesSeed` ties only `riderId` and `deliveryId` to the environment (the `ponytail:` comment names the one-line follow-up).
+16. **No `docs/design/rider-P5-L2.md`**: this file and `code/` carry the design.
+
+## Race analysis
+
+| # | Race | What makes it safe | Test (red before the code, green after) |
+|---|------|--------------------|------------------------------------------|
+| R1 | Two ticks (two processes, or two loops) | `pg_try_advisory_xact_lock` first; the loser returns nil having done nothing. Partial unique indexes back it up. | `TestTickSkipsWhileLocked`: deterministic, a test transaction holds the key; red without the try-lock (the tick offers). `TestConcurrentTicksOneOffer`: smoke, both nil and one offer. |
+| R2 | Accept vs hand claims of the same order | Both insert into unique `deliveries.order_id`. The loser rolls back (409). An accept that loses voids its offer after the rollback. | `TestHandClaimWhileOffered`: deterministic, red without `VoidOffer`. `TestAcceptRacesHandClaims`: one accept and four claims at once give one 201, one delivery, one core move, and the offer `accepted` iff the accept won. 60 runs green under `-race`. |
+| R3 | Accept vs decline (double tap) | Both are conditional `UPDATE ... where status = 'offered' and expires_at > now()`. The row lock serialises them and the second re-checks after the first commits. | `TestAcceptRacesDecline`, `TestDeclineOnce`. |
+| R4 | Accept vs tick expiry | Same conditional update. The tick's `ExpireOffers` waits on the accept's row lock, then skips the now-`accepted` row; or it expires first and the accept finds no row (409). | `TestAcceptRefusals` (expired offer gives 409 and no core call). The interleaving itself is the database's row-lock rule, so no timing test. |
+| R5 | Going offline vs a tick offering to that rider | Offline paths take the dispatch key (blocking) first. A tick in flight finishes, then the offline transaction expires the new offer; or offline commits first and the tick's `Candidates` sees `is_online` false. Rejected alternative: a `FOR UPDATE` on the rider row in the tick. The tick's `ExpireOffers` can lock offer X of rider R, then want R's row, while going offline holds R's row and wants X, which is a deadlock. Deactivation's `LockRider` (`FOR UPDATE`) also conflicts with the key-share lock that the offer insert's foreign key takes. One lock taken first in every path has no cycle. | `TestOfflineWaitsForTick`: a test transaction holds the key, `PUT /me/availability` false does not answer within 300 ms, then answers 200 after release; red without `LockDispatch` (answers at once). `TestOfflineVoidsOpenOffer`, `TestSignOutGoesOffline`, `TestDeactivationGoesOffline`, `TestTickSkipsRidersWhoCannotTakeIt` (offline rider). |
+| R6 | Hand claim between the tick's `BusyOrders` read and its offer insert | The claim's uncommitted delivery is invisible to the tick, which may offer a just-claimed order. `GET /me/offer` hides it (`not exists` delivery); the next tick expires it; an accept gives 409 and voids it. | `TestMyOfferNoneWhenExpiredOrClaimed`, `TestTickExpiresOfferOfClaimedOrder`, `TestHandClaimWhileOffered`. |
+| R7 | Order cancelled in core while offered | No live check: the offer stays visible until its TTL. An accept gets core's 409, voids the offer and answers 409. | `TestAcceptOrderLeftReady`. Ceiling: up to the offer TTL (30 s) of a stale offer on the rider's screen. |
+| R8 | Core fails during accept | The claim rolls back (no delivery, the offer is still `offered`); the answer is 502 and a retry succeeds. | `TestAcceptCoreFails`. |
+
+Found on the way: `coretest.adminOrder` read `o.Order` after unlocking while `setStatus` wrote it, a data race in the fake that `TestAcceptRacesHandClaims` exposed under `-race` (1 in about 15 runs). `T2-fix.diff` copies the order under the lock. It lands before T2's test commit as a `fix:`; its red is the race report.
+
+Deadlock check, for the reviewer. The tick takes the key, then offer rows (`ExpireOffers`), then inserts offers (key-share on `riders` rows). It takes no other row lock. Offline paths take the key, then the rider row, then offer rows. Accept and claim take one offer row, then the `deliveries` unique slot, and never the key. No two paths wait on each other in opposite orders.
+
+## Data model
+
+`services/rider/migrations/0005_dispatch.sql` (in `code/T1-feat.diff`):
+
+```sql
+alter table riders add column is_online boolean not null default false;
+alter table riders add column online_since timestamptz;
+alter table riders add constraint riders_online_since check (is_online = (online_since is not null));
+alter table riders add constraint riders_online_active check (is_active or not is_online);
+create type offer_status as enum ('offered', 'accepted', 'declined', 'expired');
+create table offers (id, order_id, order_number, store_id, rider_id references riders, status, eta_seconds >= 0,
+    item_count > 0, total_cents >= 0, payment_method, payment_status default '', pincode, placed_at, offered_at,
+    expires_at, answered_at null, created_at, updated_at,
+    check (expires_at > offered_at), check ((status = 'offered') = (answered_at is null)));
+create unique index offers_open_order on offers (order_id) where status = 'offered';
+create unique index offers_open_rider on offers (rider_id) where status = 'offered';
+create index offers_order_rider_answered on offers (order_id, rider_id, answered_at);
+-- plus the updated_at trigger
+```
+
+Queries (verbatim in the patches): `auth.sql` `LockDispatch`, `SetAvailability`, `ExpireRiderOffers`, and `is_online` on every rider read and on `UpdateRider`'s deactivation (T1); `deliveries.sql` `OpenOffer`, `RiderOffer` (with `open`), `AcceptOffer`, `DeclineOffer`, `VoidOffer` (T2); `dispatch.sql` `TryTickLock`, `ExpireOffers`, `OnlineStores`, `BusyOrders`, `Candidates`, `RecentlyRefused`, `CreateOffer` (T3), `CountOnline`, `OrderOffers` (T4).
+
+## Contract for admin-P5-L2
+
+`GET /api/rider/v1/admin/orders/{orderId}/dispatch`, bearer = a core staff token.
+
+- 200 `OrderDispatch`: `{online: integer ≥ 0, dispatch: "on" | "off", offers: DispatchOffer[] (0 to 10, newest first, always present)}`.
+- `DispatchOffer`: `{id: uuid, riderName: string, status: "offered" | "accepted" | "declined" | "expired", etaSeconds: integer ≥ 0, offeredAt: date-time, answeredAt?: date-time}`. `answeredAt` is omitted while the offer is `offered`.
+- `dispatch` is `off` while `SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0` or the store has no location in core.
+- 401 `unauthorized` (no token, or one core does not answer as staff); 404 `not_found` (unknown order, another store's order for store staff, a non-uuid id); 502 `internal` (core failed).
+- Board copy (PLAN.md): an `offered` first offer reads "Offered to <riderName>, <ceil(etaSeconds/60)> min away"; `online` 0 reads "No rider online"; `dispatch` `off` reads "Dispatch off: store has no location".
+
+## Ceilings (each a `ponytail:` comment in the code)
+
+Straight-line ETA at one speed (a routing API later). One order per offer (batching needs drop coordinates). No forward dispatch to a rider still on a delivery. No windowed global assignment. The tick polls core's ready list per store each interval (core's events feed, D51, when it hurts). The rider app polls. The store location is read per tick, uncached (Decision 7). A stale offer shows for up to the offer TTL after its order is cancelled (R7). Going offline waits for a running tick, normally milliseconds and at worst a slow core call. The ready list keeps showing offered orders (Decision 3).
+
+## Files
+
+All under `services/rider/` unless noted; generated files in brackets.
+
+- T1: `migrations/0005_dispatch.sql` (new), `queries/auth.sql`, `internal/auth/{auth,rider,staff}.go`, `internal/app/app.go`, `internal/seed/seed.go`, `openapi.json`; tests `internal/app/{availability_test,riders_test}.go`, `internal/migrate/migrate_test.go`, `internal/seed/seed_test.go`; [`internal/auth/db/*`, `internal/delivery/db/models.go`, `rider.d.ts`, Postman].
+- T2: `internal/coretest/coretest.go` (fix), `queries/deliveries.sql`, `internal/delivery/{delivery,offer}.go`, `internal/app/app.go`, `openapi.json`; test `internal/app/offers_test.go`; [`internal/delivery/db/*`, `rider.d.ts`, Postman].
+- T3: `sqlc.yaml`, `queries/dispatch.sql` (new), `internal/dispatch/dispatch.go` (new), `internal/config/config.go`, `cmd/rider/main.go`; tests `internal/dispatch/dispatch_test.go`, `internal/config/config_test.go`; [`internal/dispatch/db/*`].
+- T4: `queries/dispatch.sql`, `internal/dispatch/admin.go` (new), `internal/app/app.go`, `cmd/rider/main.go`, `openapi.json`, and the `nil` argument in `internal/app/{app_test,riders_test,deliveries_test,contract_test}.go`, `internal/seed/seed_test.go`, `cmd/rider-admin/main_test.go`; test `internal/app/dispatch_test.go`; [`internal/dispatch/db/*`, `rider.d.ts`, Postman].
+- T5: `internal/seed/{seed,summary}.go`; test `internal/seed/seed_test.go`.
+- T6: `internal/core/core.go`, `internal/dispatch/{dispatch,admin}.go`, `internal/dispatch/eta.go` (new); tests `internal/dispatch/dispatch_test.go`, `internal/app/dispatch_test.go`.

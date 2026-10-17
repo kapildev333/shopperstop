@@ -1,0 +1,112 @@
+diff --git a/services/rider/internal/core/core.go b/services/rider/internal/core/core.go
+index 57fd86d..508f0af 100644
+--- a/services/rider/internal/core/core.go
++++ b/services/rider/internal/core/core.go
+@@ -35,9 +35,16 @@ type Staff struct {
+ 
+ // Store is the part of core's public Store the rider reads.
+ type Store struct {
+-	ID     string `json:"id"`
+-	Name   string `json:"name"`
+-	IsOpen bool   `json:"isOpen"`
++	ID       string         `json:"id"`
++	Name     string         `json:"name"`
++	IsOpen   bool           `json:"isOpen"`
++	Location *StoreLocation `json:"location,omitempty"` // omitted while the store has none (core-store-location)
++}
++
++// StoreLocation is core's StoreLocation: where the store is.
++type StoreLocation struct {
++	Lat float64 `json:"lat"`
++	Lng float64 `json:"lng"`
+ }
+ 
+ // OrderAddress is the part of core's OrderAddress the rider keeps.
+diff --git a/services/rider/internal/dispatch/admin.go b/services/rider/internal/dispatch/admin.go
+index 31457c1..2fa2973 100644
+--- a/services/rider/internal/dispatch/admin.go
++++ b/services/rider/internal/dispatch/admin.go
+@@ -59,7 +59,14 @@ func (d *Dispatcher) AdminOrderDispatch(w http.ResponseWriter, r *http.Request)
+ 	}
+ 	out := OrderDispatch{Online: online, Dispatch: "off", Offers: make([]DispatchOffer, 0, len(rows))}
+ 	if d.cfg.Enabled {
+-		out.Dispatch = "on"
++		loc, err := d.storeLocation(ctx, order.StoreID)
++		if err != nil {
++			httpx.WriteError(w, r, err)
++			return
++		}
++		if loc != nil {
++			out.Dispatch = "on"
++		}
+ 	}
+ 	for _, row := range rows {
+ 		o := DispatchOffer{ID: row.ID, RiderName: row.RiderName, Status: string(row.Status), EtaSeconds: int(row.EtaSeconds), OfferedAt: row.OfferedAt.Time}
+diff --git a/services/rider/internal/dispatch/dispatch.go b/services/rider/internal/dispatch/dispatch.go
+index aae90cb..b39927c 100644
+--- a/services/rider/internal/dispatch/dispatch.go
++++ b/services/rider/internal/dispatch/dispatch.go
+@@ -125,9 +125,14 @@ func (d *Dispatcher) dispatchStore(ctx context.Context, q *db.Queries, store str
+ 	if err != nil || len(rows) == 0 {
+ 		return err
+ 	}
++	loc, err := d.storeLocation(ctx, store)
++	if err != nil || loc == nil {
++		return nil // core failed (logged by the client), or the store has no location: dispatch is off there
++	}
+ 	cands := make([]candidate, len(rows))
+ 	for i, r := range rows {
+-		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time}
++		cands[i] = candidate{id: r.ID, lat: r.Lat, lng: r.Lng, idleSince: r.IdleSince.Time,
++			etaSeconds: etaSeconds(distance(r.Lat, r.Lng, loc.Lat, loc.Lng), d.cfg.SpeedKMH)}
+ 	}
+ 	rank(cands)
+ 	sort.SliceStable(orders, func(i, j int) bool { return orders[i].PlacedAt.Before(orders[j].PlacedAt) })
+@@ -178,4 +183,18 @@ func rank(cs []candidate) {
+ 	})
+ }
+ 
++// storeLocation reads the store's location from core's public store read; nil
++// when the store has none. ponytail: one core read per store per tick that has
++// an order and a candidate; cache it for 30 s if core feels it.
++func (d *Dispatcher) storeLocation(ctx context.Context, store string) (*core.StoreLocation, error) {
++	s, err := d.core.Store(ctx, store)
++	if err != nil {
++		return nil, err
++	}
++	if s.Location == nil {
++		slog.DebugContext(ctx, "dispatch skips a store without a location", "storeId", store)
++	}
++	return s.Location, nil
++}
++
+ func ts(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }
+diff --git a/services/rider/internal/dispatch/eta.go b/services/rider/internal/dispatch/eta.go
+new file mode 100644
+index 0000000..0b21f70
+--- /dev/null
++++ b/services/rider/internal/dispatch/eta.go
+@@ -0,0 +1,23 @@
++package dispatch
++
++import "math"
++
++const earthRadiusMetres = 6371000.0
++
++// distance is the haversine distance in metres between two positions in degrees.
++func distance(aLat, aLng, bLat, bLng float64) float64 {
++	rad := math.Pi / 180
++	dLat, dLng := (bLat-aLat)*rad, (bLng-aLng)*rad
++	h := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(aLat*rad)*math.Cos(bLat*rad)*math.Sin(dLng/2)*math.Sin(dLng/2)
++	return 2 * earthRadiusMetres * math.Asin(math.Sqrt(h))
++}
++
++// etaSeconds is the time to cover metres at speedKMH, rounded to the second;
++// within 100 m the rider is at the store, 0.
++// ponytail: straight line at one speed; a routing API's travel time when ranking needs roads.
++func etaSeconds(metres, speedKMH float64) int32 {
++	if metres <= 100 {
++		return 0
++	}
++	return int32(math.Round(metres / (speedKMH / 3.6)))
++}
