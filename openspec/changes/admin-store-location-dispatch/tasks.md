@@ -11,8 +11,8 @@ Scope: `apps/admin/src/store-form.tsx`, `store-form.test.tsx`. Scenarios: "Store
 
 Scope: `apps/admin/src/store-form.tsx`, `store-form.test.tsx`, `apps/admin/e2e/stores.spec.ts`. Scenarios: "Store location the form cannot send" > "Half a location, or out of range", "Location emptied"; "Store location errors from core" > "Location refused by core"; "Store location against core" (written here, run in task 4).
 
-- [ ] 2.1 `test:` apply `patches/2.1-location-errors-tests.diff`: "a location the form cannot send is flagged without a request", "a location can be changed but not removed", "location errors from core are shown on their fields", and the location steps at the end of `e2e/stores.spec.ts` "admin edits a store and meets the pincode conflict"; see 3 fail (339 total)
-- [ ] 2.2 `feat:` apply `patches/2.2-location-errors.diff`: coordinate checks, the pair and not-removed messages in `parse(values, store)`, `coreFields` and `fieldError()`; 339 pass
+- [x] 2.1 `test:` apply `patches/2.1-location-errors-tests.diff`: "a location the form cannot send is flagged without a request", "a location can be changed but not removed", "location errors from core are shown on their fields", and the location steps at the end of `e2e/stores.spec.ts` "admin edits a store and meets the pincode conflict"; see 3 fail (339 total)
+- [x] 2.2 `feat:` apply `patches/2.2-location-errors.diff`: coordinate checks, the pair and not-removed messages in `parse(values, store)`, `coreFields` and `fieldError()`; 339 pass
 
 ## 3. Dispatch line on ready cards and the sheet (admin-P5-L2-T3, waits on rider-P5-L2 on main)
 
