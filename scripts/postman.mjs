@@ -10,6 +10,7 @@ const ID_VARS = {
   orders: 'orderId',
   riders: 'riderId',
   deliveries: 'deliveryId',
+  offers: 'offerId',
   payments: 'paymentId',
 };
 

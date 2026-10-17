@@ -1,5 +1,5 @@
 # platform-P5-L2-T1 - offerId in the Postman generator and environment (worker brief)
-Status: not started
+Status: done (commits 023a835 test, feat below)
 ## Brief
 - LANE-ID: platform-P5-L2-T1 (team lead platform-P5-L2). Area: platform.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/platform-P5-L2. Branch: lane/platform-P5-L2-postman-offer-id. Commit as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no attribution trailers; never push.
@@ -17,3 +17,10 @@ Status: not started
 - Never run `make db`, `make dev`, `make prod-local`, `make core`, `make rider`, `make payment`, `make e2e`, the archived `check-wiring.sh` or `check-mobile-wiring.sh`; never touch containers.
 - Stop and write here, without guessing, if: the red count is not exactly two; any collection changes; a seed test fails on the environment file; anything needs a file outside scope.
 ## Log
+- Red (`node --test scripts/postman.test.mjs`, before feat): `# pass 26`, `# fail 2`: `not ok 17 - offer ids read environment variables` (path var stayed `f1`), `not ok 27 - environment holds the fifteen variables`.
+- Commit 1: `test: offerId postman variable` (023a835), only scripts/postman.test.mjs.
+- Green (after feat): `node --test scripts/postman.test.mjs` `# pass 28`, `# fail 0`.
+- `make postman` run twice, both exit 0; `git status --porcelain` shows only the feat files (environment, postman.mjs, tasks.md); no collection changed.
+- `make test-core` exit 0 (all packages ok); `make test-rider` exit 0 (pg and seed ok, seed 30.0s).
+- `openspec validate --all --strict`: 20 passed, 0 failed.
+- Commit 2: `feat: offerId postman variable`: `offers: 'offerId'` in ID_VARS, offerId env entry after deliveryId, tasks 1.1 to 1.3 ticked.
