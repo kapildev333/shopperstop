@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Badge, Button, StatusMessage } from '@shopperstop/ui'
 import { meQuery, rider } from './api'
+import { useOnlineReport } from './location'
 
 // The banner's availability. The state is the rider query's `isOnline` (design Decision 2); the answer is written back into that query.
 export function Availability() {
@@ -17,6 +18,11 @@ export function Availability() {
     },
     onSuccess: (answered) => queryClient.setQueryData(meQuery.queryKey, answered),
     onError: () => setMessage('Could not change your status. Try again.'),
+  })
+
+  useOnlineReport(online, () => {
+    setMessage('Allow location to go online')
+    toggle.mutate(false)
   })
 
   return (
