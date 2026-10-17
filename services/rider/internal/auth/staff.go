@@ -57,8 +57,8 @@ func inScope(s core.Staff, storeID string) bool {
 }
 
 // riderOf is the API view of one rider row.
-func riderOf(id, storeID, email, name, phone string, active bool) Rider {
-	return Rider{ID: id, StoreID: storeID, Email: email, Name: name, Phone: phone, IsActive: active}
+func riderOf(id, storeID, email, name, phone string, active, online bool) Rider {
+	return Rider{ID: id, StoreID: storeID, Email: email, Name: name, Phone: phone, IsActive: active, IsOnline: online}
 }
 
 // NewRider is a rider to create. Phone is optional; the rest are required.
@@ -145,7 +145,7 @@ func CreateRider(ctx context.Context, pool *pgxpool.Pool, c *core.Client, in New
 	if err != nil {
 		return Rider{}, err
 	}
-	return riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive), nil
+	return riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline), nil
 }
 
 // ListRiders answers one page of riders ordered by email: every store's for an
@@ -187,7 +187,7 @@ func (a *Auth) ListRiders(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]Rider, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
+		items = append(items, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewList(items, page, pageSize, total))
 }
@@ -233,13 +233,14 @@ func (a *Auth) AdminGetRider(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
+	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
 }
 
 // AdminUpdateRider changes name, phone (empty clears it), isActive and password
 // of the rider in the path and answers 200 with it. The row is locked for the
-// update; setting isActive false deletes the rider's sessions in the same
-// transaction. Another store's rider is 404.
+// update; setting isActive false takes the rider offline (UpdateRider clears
+// is_online, after LockDispatch as the first statement) and deletes the rider's
+// sessions and expires their open offer in the same transaction. Another store's rider is 404.
 func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathID(r, "id")
 	if err != nil {
@@ -281,9 +282,16 @@ func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	staff := CurrentStaff(ctx)
+	deactivate := in.IsActive != nil && !*in.IsActive
 	var row db.UpdateRiderRow
 	err = pgx.BeginFunc(ctx, a.pool, func(tx pgx.Tx) error {
 		q := a.q.WithTx(tx)
+		if deactivate {
+			// Before LockRider: the tick's offer insert takes a key-share lock on the rider row.
+			if err := q.LockDispatch(ctx); err != nil {
+				return err
+			}
+		}
 		locked, err := q.LockRider(ctx, id)
 		if err != nil {
 			return err
@@ -295,14 +303,17 @@ func (a *Auth) AdminUpdateRider(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		if in.IsActive != nil && !*in.IsActive {
-			return q.DeleteRiderSessions(ctx, id)
+		if !deactivate {
+			return nil
 		}
-		return nil
+		if err := q.DeleteRiderSessions(ctx, id); err != nil {
+			return err
+		}
+		return q.ExpireRiderOffers(ctx, id)
 	})
 	if err != nil {
 		httpx.WriteError(w, r, pg.Map(err))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive))
+	httpx.WriteJSON(w, http.StatusOK, riderOf(row.ID, row.StoreID, row.Email, row.Name, row.Phone, row.IsActive, row.IsOnline))
 }

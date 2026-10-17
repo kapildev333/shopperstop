@@ -1,5 +1,5 @@
 # rider-P5-L2-T1 - riders go online and offline (task 1 of rider-dispatch)
-Status: step 1 red accepted by the manager (brief over-predicted 3 seed failures; the run shows 1); committing test, then feat
+Status: done; test commit 3976bfe, feat commit pending gate-log commit; tasks 1.1 and 1.2 ticked
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T1). Area: `rider`.
@@ -53,7 +53,17 @@ The app, migrate and auth/config/core/httpx/pg packages match the brief. In the 
 
 ## Green run
 
+`npm ci` at the worktree root: exit 0 (Node 22.23.3). `git apply T1-feat.diff`: clean. `make gen postman`: exit 0, postman suite 27 pass, 0 fail. Files changed beyond the feat patch: `docs/postman/shopperstop-rider.postman_collection.json`, `packages/ui/src/api/rider.d.ts`, `services/rider/internal/auth/db/{auth.sql.go,models.go}`, `services/rider/internal/delivery/db/models.go`, all in scope.
+
 ## Gates
+
+`GOFLAGS=-count=1 make test-rider`: exit 0. Every package `ok` (cmd/rider, cmd/rider-admin, internal/app 30.8s, auth, config, core, httpx, migrate, pg, seed 33.1s). 0 FAIL lines. Log: `/private/tmp/claude-501/test-rider-rider-P5-L2.log`.
+
+`gofmt -l services/rider`: empty.
+
+`openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
+
+`git status --short` after `make gen postman`: only scope files (listed under Green run).
 
 ## Found
 

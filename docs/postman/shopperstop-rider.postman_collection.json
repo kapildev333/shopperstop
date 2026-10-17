@@ -269,7 +269,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"token\": \"k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq\",\n  \"rider\": {\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n    \"email\": \"rider1-koramangala@shopperstop.local\",\n    \"name\": \"Arjun Rao\",\n    \"phone\": \"+919000000001\",\n    \"isActive\": true\n  }\n}",
+              "body": "{\n  \"token\": \"k3Vt9wQ2zXbN7pLr4YhM8sJd1FgCa6Eu0TiRoPvWyZq\",\n  \"rider\": {\n    \"id\": \"00000000-0000-4000-8000-000000000801\",\n    \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n    \"email\": \"rider1-koramangala@shopperstop.local\",\n    \"name\": \"Arjun Rao\",\n    \"phone\": \"+919000000001\",\n    \"isActive\": true,\n    \"isOnline\": false\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -630,7 +630,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -663,6 +663,232 @@
                 ],
                 "method": "GET",
                 "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"unauthorized\",\n    \"message\": \"sign in required\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Go online or offline",
+          "request": {
+            "name": "Go online or offline",
+            "description": {
+              "content": "Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "me",
+                "availability"
+              ],
+              "host": [
+                "{{riderBaseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"online\": true\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{riderToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "The rider with the new isOnline.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": true\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "online missing or null (field online), or not a boolean (no field).",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"validation\",\n    \"message\": \"is required\",\n    \"field\": \"online\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No bearer, or a token that is not a live session of an active rider.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "me",
+                    "availability"
+                  ],
+                  "host": [
+                    "{{riderBaseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"online\": true\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "status": "Unauthorized",
               "code": 401,
@@ -816,7 +1042,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000801\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"email\": \"rider1-koramangala@shopperstop.local\",\n      \"name\": \"Arjun Rao\",\n      \"phone\": \"+919000000001\",\n      \"isActive\": true\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000801\",\n      \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n      \"email\": \"rider1-koramangala@shopperstop.local\",\n      \"name\": \"Arjun Rao\",\n      \"phone\": \"+919000000001\",\n      \"isActive\": true,\n      \"isOnline\": false\n    }\n  ],\n  \"page\": 1,\n  \"pageSize\": 24,\n  \"total\": 1\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1214,7 +1440,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000805\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"phone\": \"+919000000099\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000805\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"ravi.kumar@shopperstop.local\",\n  \"name\": \"Ravi Kumar\",\n  \"phone\": \"+919000000099\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1606,7 +1832,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": true,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -1909,7 +2135,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": false\n}",
+              "body": "{\n  \"id\": \"00000000-0000-4000-8000-000000000801\",\n  \"storeId\": \"00000000-0000-4000-8000-000000000401\",\n  \"email\": \"rider1-koramangala@shopperstop.local\",\n  \"name\": \"Arjun Rao\",\n  \"phone\": \"+919000000001\",\n  \"isActive\": false,\n  \"isOnline\": false\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },

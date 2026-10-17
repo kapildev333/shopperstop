@@ -129,7 +129,8 @@
                     "email": "rider1-koramangala@shopperstop.local",
                     "name": "Arjun Rao",
                     "phone": "+919000000001",
-                    "isActive": true
+                    "isActive": true,
+                    "isOnline": false
                   }
                 }
               }
@@ -250,13 +251,96 @@
                   "email": "rider1-koramangala@shopperstop.local",
                   "name": "Arjun Rao",
                   "phone": "+919000000001",
-                  "isActive": true
+                  "isActive": true,
+                  "isOnline": false
                 }
               }
             }
           },
           "401": {
             "description": "No token, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/availability": {
+      "put": {
+        "operationId": "putAvailability",
+        "summary": "Go online or offline",
+        "description": "Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.",
+        "tags": [
+          "rider-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvailabilityUpdate"
+              },
+              "example": {
+                "online": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The rider with the new isOnline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rider"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000801",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "email": "rider1-koramangala@shopperstop.local",
+                  "name": "Arjun Rao",
+                  "phone": "+919000000001",
+                  "isActive": true,
+                  "isOnline": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "online missing or null (field online), or not a boolean (no field).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "validation",
+                    "message": "is required",
+                    "field": "online"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
             "content": {
               "application/json": {
                 "schema": {
@@ -339,7 +423,8 @@
                       "email": "rider1-koramangala@shopperstop.local",
                       "name": "Arjun Rao",
                       "phone": "+919000000001",
-                      "isActive": true
+                      "isActive": true,
+                      "isOnline": false
                     }
                   ],
                   "page": 1,
@@ -459,7 +544,8 @@
                   "email": "ravi.kumar@shopperstop.local",
                   "name": "Ravi Kumar",
                   "phone": "+919000000099",
-                  "isActive": true
+                  "isActive": true,
+                  "isOnline": false
                 }
               }
             }
@@ -589,7 +675,8 @@
                   "email": "rider1-koramangala@shopperstop.local",
                   "name": "Arjun Rao",
                   "phone": "+919000000001",
-                  "isActive": true
+                  "isActive": true,
+                  "isOnline": false
                 }
               }
             }
@@ -698,7 +785,8 @@
                   "email": "rider1-koramangala@shopperstop.local",
                   "name": "Arjun Rao",
                   "phone": "+919000000001",
-                  "isActive": false
+                  "isActive": false,
+                  "isOnline": false
                 }
               }
             }
@@ -1633,6 +1721,10 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "isOnline": {
+            "type": "boolean",
+            "description": "true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10)."
           }
         },
         "additionalProperties": false
@@ -2067,6 +2159,19 @@
           "location": {
             "$ref": "#/components/schemas/Location",
             "description": "The rider's last position, only while the delivery is assigned and recorded after the claim. Omitted otherwise."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityUpdate": {
+        "type": "object",
+        "required": [
+          "online"
+        ],
+        "properties": {
+          "online": {
+            "type": "boolean",
+            "description": "true to go online for dispatch offers, false to go offline."
           }
         },
         "additionalProperties": false

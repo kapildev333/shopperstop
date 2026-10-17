@@ -19,7 +19,7 @@ import (
 )
 
 // truncateTables is every table Reset empties, in one statement. Later lanes add theirs here.
-var truncateTables = []string{"rider_locations", "deliveries", "sessions", "riders"}
+var truncateTables = []string{"offers", "rider_locations", "deliveries", "sessions", "riders"}
 
 const (
 	storeKoramangala = "00000000-0000-4000-8000-000000000401"

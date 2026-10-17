@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Go online or offline
+         * @description Sets the signed-in rider online (offered orders by the dispatcher) or offline (the default). Going online keeps the time the rider first went online while they stay online. Going offline waits for a running dispatcher tick, then sets the rider offline and expires their open offer in one transaction. Signing out and staff deactivation also take the rider offline.
+         */
+        put: operations["putAvailability"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/riders": {
         parameters: {
             query?: never;
@@ -305,6 +325,8 @@ export interface components {
             /** @description Omitted when the rider has no phone. */
             phone?: string;
             isActive: boolean;
+            /** @description true while the rider is online for dispatch offers (PUT /me/availability). Always present; not listed in required only so existing typed fixtures in the apps keep compiling (rider-dispatch design.md Decision 10). */
+            isOnline?: boolean;
         };
         RiderSession: {
             /** @description Send as Authorization: Bearer <token>. Shown once. */
@@ -461,6 +483,10 @@ export interface components {
             /** @description The rider's last position, only while the delivery is assigned and recorded after the claim. Omitted otherwise. */
             location?: components["schemas"]["Location"];
         };
+        AvailabilityUpdate: {
+            /** @description true to go online for dispatch offers, false to go offline. */
+            online: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -571,7 +597,8 @@ export interface operations {
                      *         "email": "rider1-koramangala@shopperstop.local",
                      *         "name": "Arjun Rao",
                      *         "phone": "+919000000001",
-                     *         "isActive": true
+                     *         "isActive": true,
+                     *         "isOnline": false
                      *       }
                      *     }
                      */
@@ -689,13 +716,89 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
                 };
             };
             /** @description No token, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "online": true
+                 *     }
+                 */
+                "application/json": components["schemas"]["AvailabilityUpdate"];
+            };
+        };
+        responses: {
+            /** @description The rider with the new isOnline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000801",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "email": "rider1-koramangala@shopperstop.local",
+                     *       "name": "Arjun Rao",
+                     *       "phone": "+919000000001",
+                     *       "isActive": true,
+                     *       "isOnline": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Rider"];
+                };
+            };
+            /** @description online missing or null (field online), or not a boolean (no field). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "validation",
+                     *         "message": "is required",
+                     *         "field": "online"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -748,7 +851,8 @@ export interface operations {
                      *           "email": "rider1-koramangala@shopperstop.local",
                      *           "name": "Arjun Rao",
                      *           "phone": "+919000000001",
-                     *           "isActive": true
+                     *           "isActive": true,
+                     *           "isOnline": false
                      *         }
                      *       ],
                      *       "page": 1,
@@ -865,7 +969,8 @@ export interface operations {
                      *       "email": "ravi.kumar@shopperstop.local",
                      *       "name": "Ravi Kumar",
                      *       "phone": "+919000000099",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
@@ -988,7 +1093,8 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": true
+                     *       "isActive": true,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];
@@ -1086,7 +1192,8 @@ export interface operations {
                      *       "email": "rider1-koramangala@shopperstop.local",
                      *       "name": "Arjun Rao",
                      *       "phone": "+919000000001",
-                     *       "isActive": false
+                     *       "isActive": false,
+                     *       "isOnline": false
                      *     }
                      */
                     "application/json": components["schemas"]["Rider"];

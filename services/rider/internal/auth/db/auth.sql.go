@@ -24,7 +24,7 @@ func (q *Queries) CountRiders(ctx context.Context, storeID *string) (int64, erro
 const createRider = `-- name: CreateRider :one
 insert into riders (store_id, email, name, phone, password_hash)
 values ($1, $2, $3, $4, $5)
-returning id, store_id, email, name, phone, is_active
+returning id, store_id, email, name, phone, is_active, is_online
 `
 
 type CreateRiderParams struct {
@@ -42,6 +42,7 @@ type CreateRiderRow struct {
 	Name     string
 	Phone    string
 	IsActive bool
+	IsOnline bool
 }
 
 func (q *Queries) CreateRider(ctx context.Context, arg CreateRiderParams) (CreateRiderRow, error) {
@@ -60,6 +61,7 @@ func (q *Queries) CreateRider(ctx context.Context, arg CreateRiderParams) (Creat
 		&i.Name,
 		&i.Phone,
 		&i.IsActive,
+		&i.IsOnline,
 	)
 	return i, err
 }
@@ -108,8 +110,17 @@ func (q *Queries) DeleteSession(ctx context.Context, id string) error {
 	return err
 }
 
+const expireRiderOffers = `-- name: ExpireRiderOffers :exec
+update offers set status = 'expired', answered_at = now() where rider_id = $1 and status = 'offered'
+`
+
+func (q *Queries) ExpireRiderOffers(ctx context.Context, riderID string) error {
+	_, err := q.db.Exec(ctx, expireRiderOffers, riderID)
+	return err
+}
+
 const listRiders = `-- name: ListRiders :many
-select id, store_id, email, name, phone, is_active from riders
+select id, store_id, email, name, phone, is_active, is_online from riders
 where $1::uuid is null or store_id = $1::uuid
 order by email limit $3 offset $2
 `
@@ -127,6 +138,7 @@ type ListRidersRow struct {
 	Name     string
 	Phone    string
 	IsActive bool
+	IsOnline bool
 }
 
 func (q *Queries) ListRiders(ctx context.Context, arg ListRidersParams) ([]ListRidersRow, error) {
@@ -145,6 +157,7 @@ func (q *Queries) ListRiders(ctx context.Context, arg ListRidersParams) ([]ListR
 			&i.Name,
 			&i.Phone,
 			&i.IsActive,
+			&i.IsOnline,
 		); err != nil {
 			return nil, err
 		}
@@ -154,6 +167,17 @@ func (q *Queries) ListRiders(ctx context.Context, arg ListRidersParams) ([]ListR
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockDispatch = `-- name: LockDispatch :exec
+select pg_advisory_xact_lock(727102, hashtext(current_schema()))
+`
+
+// Waits for a running dispatcher tick (queries/dispatch.sql TryTickLock, the same
+// key), so a rider going offline never races the tick's offer to them.
+func (q *Queries) LockDispatch(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockDispatch)
+	return err
 }
 
 const lockRider = `-- name: LockRider :one
@@ -173,7 +197,7 @@ func (q *Queries) LockRider(ctx context.Context, id string) (LockRiderRow, error
 }
 
 const riderByEmail = `-- name: RiderByEmail :one
-select id, store_id, email, name, phone, password_hash, is_active from riders where email = $1
+select id, store_id, email, name, phone, password_hash, is_active, is_online from riders where email = $1
 `
 
 type RiderByEmailRow struct {
@@ -184,6 +208,7 @@ type RiderByEmailRow struct {
 	Phone        string
 	PasswordHash string
 	IsActive     bool
+	IsOnline     bool
 }
 
 func (q *Queries) RiderByEmail(ctx context.Context, email string) (RiderByEmailRow, error) {
@@ -197,12 +222,13 @@ func (q *Queries) RiderByEmail(ctx context.Context, email string) (RiderByEmailR
 		&i.Phone,
 		&i.PasswordHash,
 		&i.IsActive,
+		&i.IsOnline,
 	)
 	return i, err
 }
 
 const riderByID = `-- name: RiderByID :one
-select id, store_id, email, name, phone, is_active from riders where id = $1
+select id, store_id, email, name, phone, is_active, is_online from riders where id = $1
 `
 
 type RiderByIDRow struct {
@@ -212,6 +238,7 @@ type RiderByIDRow struct {
 	Name     string
 	Phone    string
 	IsActive bool
+	IsOnline bool
 }
 
 func (q *Queries) RiderByID(ctx context.Context, id string) (RiderByIDRow, error) {
@@ -224,12 +251,13 @@ func (q *Queries) RiderByID(ctx context.Context, id string) (RiderByIDRow, error
 		&i.Name,
 		&i.Phone,
 		&i.IsActive,
+		&i.IsOnline,
 	)
 	return i, err
 }
 
 const riderSession = `-- name: RiderSession :one
-select s.id as session_id, r.id, r.store_id, r.email, r.name, r.phone, r.is_active
+select s.id as session_id, r.id, r.store_id, r.email, r.name, r.phone, r.is_active, r.is_online
 from sessions s join riders r on r.id = s.rider_id
 where s.token_hash = $1 and s.expires_at > now() and r.is_active
 `
@@ -242,6 +270,7 @@ type RiderSessionRow struct {
 	Name      string
 	Phone     string
 	IsActive  bool
+	IsOnline  bool
 }
 
 func (q *Queries) RiderSession(ctx context.Context, tokenHash []byte) (RiderSessionRow, error) {
@@ -255,6 +284,46 @@ func (q *Queries) RiderSession(ctx context.Context, tokenHash []byte) (RiderSess
 		&i.Name,
 		&i.Phone,
 		&i.IsActive,
+		&i.IsOnline,
+	)
+	return i, err
+}
+
+const setAvailability = `-- name: SetAvailability :one
+update riders
+set is_online = $1::boolean,
+    online_since = case when $1::boolean then coalesce(online_since, now()) end
+where id = $2
+returning id, store_id, email, name, phone, is_active, is_online
+`
+
+type SetAvailabilityParams struct {
+	Online bool
+	ID     string
+}
+
+type SetAvailabilityRow struct {
+	ID       string
+	StoreID  string
+	Email    string
+	Name     string
+	Phone    string
+	IsActive bool
+	IsOnline bool
+}
+
+// online_since keeps its value when the rider is already online.
+func (q *Queries) SetAvailability(ctx context.Context, arg SetAvailabilityParams) (SetAvailabilityRow, error) {
+	row := q.db.QueryRow(ctx, setAvailability, arg.Online, arg.ID)
+	var i SetAvailabilityRow
+	err := row.Scan(
+		&i.ID,
+		&i.StoreID,
+		&i.Email,
+		&i.Name,
+		&i.Phone,
+		&i.IsActive,
+		&i.IsOnline,
 	)
 	return i, err
 }
@@ -274,9 +343,12 @@ update riders
 set name = coalesce($1, name),
     phone = coalesce($2, phone),
     password_hash = coalesce($3, password_hash),
-    is_active = coalesce($4, is_active)
+    is_active = coalesce($4, is_active),
+    -- deactivation takes the rider offline (riders_online_active)
+    is_online = is_online and coalesce($4, is_active),
+    online_since = case when is_online and coalesce($4, is_active) then online_since end
 where id = $5
-returning id, store_id, email, name, phone, is_active
+returning id, store_id, email, name, phone, is_active, is_online
 `
 
 type UpdateRiderParams struct {
@@ -294,6 +366,7 @@ type UpdateRiderRow struct {
 	Name     string
 	Phone    string
 	IsActive bool
+	IsOnline bool
 }
 
 func (q *Queries) UpdateRider(ctx context.Context, arg UpdateRiderParams) (UpdateRiderRow, error) {
@@ -312,6 +385,7 @@ func (q *Queries) UpdateRider(ctx context.Context, arg UpdateRiderParams) (Updat
 		&i.Name,
 		&i.Phone,
 		&i.IsActive,
+		&i.IsOnline,
 	)
 	return i, err
 }

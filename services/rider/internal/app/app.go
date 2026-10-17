@@ -24,6 +24,7 @@ func New(pool *pgxpool.Pool, origins []string, a *auth.Auth, d *delivery.Deliver
 	r.Post("/api/rider/v1/auth/sign-in", a.SignIn)
 	r.With(a.RequireRider).Post("/api/rider/v1/auth/sign-out", a.SignOut)
 	r.With(a.RequireRider).Get("/api/rider/v1/me", a.Me)
+	r.With(a.RequireRider).Put("/api/rider/v1/me/availability", a.PutAvailability)
 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders", a.ListRiders)
 	r.With(a.RequireStaff).Post("/api/rider/v1/admin/riders", a.AdminCreateRider)
 	r.With(a.RequireStaff).Get("/api/rider/v1/admin/riders/{id}", a.AdminGetRider)

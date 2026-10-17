@@ -14,8 +14,8 @@ Scenarios: rider-service "Riders go online and offline" (all four), "Riders sign
 Starts from: `internal/app/availability_test.go` `TestAvailabilityOnlineThenOffline`, `TestOfflineVoidsOpenOffer`, `TestOfflineWaitsForTick`, `TestAvailabilityRefusesMissingValue`, `TestSignOutGoesOffline`, `TestDeactivationGoesOffline`; `riders_test.go` `TestRiderSignIn`; `migrate_test.go` `TestEmbeddedMigrationsApplyOnce`. Red: those eight plus the seed tests that truncate (`TestLoadTwiceFails`, `TestResetTwiceLeavesDemoRiders`, `TestSeededDeliveryInHistory`, `TestSummaryMatchesSeed`; the relation `offers` does not exist yet).
 Commits: `test: riders go online and offline, and offline voids the open offer`, then `feat: rider availability, offers table, offline waits for the dispatch lock`.
 
-- [ ] 1.1 `git apply openspec/changes/rider-dispatch/code/T1-test.diff`; red check; commit the four test files and the log.
-- [ ] 1.2 `git apply .../code/T1-feat.diff`; `make gen postman`; gates; tick 1.1 and 1.2; commit.
+- [x] 1.1 `git apply openspec/changes/rider-dispatch/code/T1-test.diff`; red check; commit the four test files and the log.
+- [x] 1.2 `git apply .../code/T1-feat.diff`; `make gen postman`; gates; tick 1.1 and 1.2; commit.
 
 ## 2. The rider's offer: read, accept, decline
 
