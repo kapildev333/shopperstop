@@ -14,4 +14,4 @@ Commits: `test: offerId postman variable`, then `feat: offerId postman variable`
 ## 2. Acceptance and archive (team lead, area manager)
 
 - [x] 2.1 Acceptance (`/opsx:verify platform-postman-offer-id`, team lead): every scenario in the delta has a passing test, task 1 is done, nothing outside scope landed
-- [ ] 2.2 Archive by PR after the feature merges (area manager)
+- [x] 2.2 Archive by PR after the feature merges (area manager)
