@@ -7,7 +7,7 @@ import { api, type ApiError } from './api'
 import { storeQuery, toCents, toRupees, type AdminStore } from './stores'
 
 type StoreCreate = components['schemas']['StoreCreate']
-type Field = keyof StoreCreate
+type Field = Exclude<keyof StoreCreate, 'location'>
 type Values = Record<Field, string>
 
 const rupees = 'Enter 0 to 100000 rupees, at most two decimals.'
