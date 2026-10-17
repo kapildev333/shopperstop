@@ -28,6 +28,7 @@ Non-goals: clearing a location (core cannot), a map, geocoding the address, a st
 - "Dispatch off" without a reason also covers the rider service's dispatcher turned off (`SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0`), which the line cannot tell apart from other `off` causes; only dev and test configs do it.
 - The rider service caches the store for 30 s, so a location just set can read "Dispatch off" for up to one more poll.
 - No location column, no map, no geocoding; a location cannot be removed from the panel because core has no clear.
+- A coordinate below 1e-6 in magnitude (other than 0) is shown by `String()` in scientific notation (`1e-7`), which the form's coordinate check refuses, so any save of such a store is blocked until the field is retyped (review R1). No real store sits within 0.1 m of the equator or the prime meridian; the fix, if ever needed, is `toFixed(7)` with trailing zeros trimmed in `initial()`.
 
 ## Files
 

@@ -1,7 +1,13 @@
 # admin-P5-L2 - admin store location and dispatch line (OpenSpec change admin-store-location-dispatch)
-Status: started
+Status: done (acceptance passed; task 4.1, the two e2e scenarios, is the manager's `make e2e`)
 ## Doing
-2026-10-16: change proposed and committed; `openspec validate admin-store-location-dispatch --strict` valid, `--all --strict` 20 passed. Worker briefs T1, T2, T3 in the team lead's report; T1 and T2 can start now, T3 waits on rider-P5-L2 on main. Then acceptance with `/opsx:verify`. I answer worker questions relayed here.
+2026-10-16: acceptance (`/opsx:verify` semantics) at e3ac612 (main merged at 3bf186c, base b68ef53): PASS except task 4.1, the manager's `make e2e`, running now.
+- Scenarios: 11 in the deltas. The 9 Vitest ones map to tests that exist by name (design.md "Tests"): 5 in `store-form.test.tsx`, 4 in `orders-dispatch.test.tsx`. Per R1 and R2 they pass (339 and 343 on HEAD, test commits red 2, 3 and 4). I ran no npm during acceptance because the manager's gates hold this worktree. The 2 e2e scenarios ("Admin moves a store's location and puts it back" in `e2e/stores.spec.ts`, "No rider online for a ready order" in `e2e/orders.spec.ts`) are written and wait on task 4.1. No `.only` or `.skip` under `apps/admin/src` or `e2e`.
+- Tasks: 1.1 to 3.2 ticked; 4.1 open, the manager's.
+- Nothing extra: `git diff --stat b68ef53 HEAD` holds only the 9 `apps/admin` files in design.md "Files", the change folder and this log. The six patches applied with `git apply --cached` onto b68ef53 give a tree with 0 diff lines from HEAD under `apps/admin`. Commit order is test then feat for every task.
+- The contract on main matches the design: `OrderDispatch`, `DispatchOffer` and `Rider.isOnline` (optional) in `packages/ui/src/api/rider.d.ts`.
+- Review notes: R1's scientific-notation point is recorded in design.md ceilings. R2's two low notes stay as is: the `...{ isOnline: false }` spread is harmless now that `isOnline` is optional, and a failed store read leaves the line at "Dispatch off".
+- `openspec validate admin-store-location-dispatch --strict` valid.
 ## Found
 - Change: proposal.md; `specs/admin-app/spec.md` with 7 ADDED requirements (longest 434 characters), no MODIFIED; design.md (9 decisions, ceilings, scenario-to-test map, gates, risks); tasks.md (3 worker tasks + the manager's e2e); `patches/` (6 patches, `git apply` in order). No `docs/design/admin-P5-L2.md`: design.md settles every choice.
 - Spiked on this branch at 3db68a3, replayed in order on a clean `apps/admin` (identical to the spike), tree restored; `git apply --check` clean in order on 3db68a3. Admin Vitest: base 334; 1.1 red 2 / 336; 1.2 336; 2.1 red 3 / 339; 2.2 339; 3.1 red 4 / 343; 3.2 343. Lint, typecheck, `vite build` clean on the final tree.
@@ -12,4 +18,4 @@ Status: started
 ## Requests
 - to rider (rider-P5-L2, information): admin's e2e expects "No rider online" on Koramangala's SS-DEMOAAAD at Ready, so `make e2e`'s rider must run the dispatcher (no `SHOPPERSTOP_RIDER_DISPATCH_INTERVAL=0`) and no suite may leave a Koramangala rider online.
 ## Blockers
-Task 3 waits on rider-P5-L2 merged to main (regenerated `packages/ui/src/api/rider.d.ts`).
+None.
