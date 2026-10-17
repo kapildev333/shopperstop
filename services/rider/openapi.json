@@ -22,6 +22,10 @@
     {
       "name": "deliveries",
       "description": "Ready orders, claims, deliveries, rider location and the customer's view of a delivery."
+    },
+    {
+      "name": "dispatch",
+      "description": "Offers of ready orders to online riders: the rider's open offer, accept and decline, and the staff view of an order's dispatch."
     }
   ],
   "paths": {
@@ -1626,6 +1630,279 @@
           }
         }
       }
+    },
+    "/me/offer": {
+      "get": {
+        "operationId": "getMyOffer",
+        "summary": "The rider's open offer",
+        "description": "Answers the signed-in rider's open offer, polled by the rider app while online. An offer past its expiry, or whose order another rider claimed by hand, counts as none before the dispatcher marks it.",
+        "tags": [
+          "dispatch"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The open offer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Offer"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000902",
+                  "orderId": "00000000-0000-4000-8000-000000000701",
+                  "number": "SS-DEMOAAAB",
+                  "placedAt": "2026-10-16T09:00:00Z",
+                  "itemCount": 3,
+                  "totalCents": 33900,
+                  "paymentMethod": "cod",
+                  "pincode": "560034",
+                  "etaSeconds": 90,
+                  "offeredAt": "2026-10-16T09:12:00Z",
+                  "expiresAt": "2026-10-16T09:12:30Z"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "The rider has no open offer. No body."
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/offers/{id}/accept": {
+      "post": {
+        "operationId": "acceptOffer",
+        "summary": "Accept an offer",
+        "description": "Accepts the rider's open offer: one transaction marks it accepted and claims the order as POST /me/deliveries does (the delivery, then core's out_for_delivery with the rider as actor). When another rider already claimed the order, or core no longer holds it as ready, the offer is expired and the answer is 409. When core fails the offer stays open.",
+        "tags": [
+          "dispatch"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The offer's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000902"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The rider's new assigned delivery.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000910",
+                  "orderId": "00000000-0000-4000-8000-000000000703",
+                  "orderNumber": "SS-DEMOAAAD",
+                  "storeId": "00000000-0000-4000-8000-000000000401",
+                  "status": "assigned",
+                  "customerName": "Demo Customer",
+                  "customerPhone": "+919800000000",
+                  "address": {
+                    "line1": "12 80 Feet Rd, Koramangala",
+                    "pincode": "560034"
+                  },
+                  "totalCents": 103000,
+                  "paymentMethod": "cod",
+                  "itemCount": 4,
+                  "items": [
+                    {
+                      "name": "Banana Robusta",
+                      "unitLabel": "1 kg",
+                      "quantity": 1
+                    },
+                    {
+                      "name": "Pomegranate Bhagwa",
+                      "unitLabel": "1 kg",
+                      "quantity": 3
+                    }
+                  ],
+                  "assignedAt": "2026-10-15T09:05:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The offer was already answered or expired (offer is no longer open), or the order went to another rider or left ready (order is no longer available).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "offer is no longer open"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Core failed or could not be reached; the offer stays open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "internal",
+                    "message": "core unavailable"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/offers/{id}/decline": {
+      "post": {
+        "operationId": "declineOffer",
+        "summary": "Decline an offer",
+        "description": "Declines the rider's open offer. The dispatcher offers the order to the next rider and does not offer it to this rider again for 2 minutes.",
+        "tags": [
+          "dispatch"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The offer's id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000902"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Declined. No body."
+          },
+          "401": {
+            "description": "No bearer, or a token that is not a live session of an active rider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "sign in required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the rider's offer, an unknown id, or an id that is not a uuid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "not_found",
+                    "message": "not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The offer was already answered or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "conflict",
+                    "message": "offer is no longer open"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2172,6 +2449,90 @@
           "online": {
             "type": "boolean",
             "description": "true to go online for dispatch offers, false to go offline."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Offer": {
+        "type": "object",
+        "description": "The dispatcher's offer of one ready order to one rider, with the order as core showed it when the offer was made.",
+        "required": [
+          "id",
+          "orderId",
+          "number",
+          "placedAt",
+          "itemCount",
+          "totalCents",
+          "paymentMethod",
+          "pincode",
+          "etaSeconds",
+          "offeredAt",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Core's order id."
+          },
+          "number": {
+            "type": "string",
+            "description": "Core's order number."
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the customer placed the order."
+          },
+          "itemCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Units to carry: the sum of the line quantities."
+          },
+          "totalCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Order total in paise (INR cents)."
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cod",
+              "online"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "refunded"
+            ],
+            "description": "Online orders only, as core held it when the offer was made."
+          },
+          "pincode": {
+            "type": "string",
+            "description": "The delivery address's pincode."
+          },
+          "etaSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The rider's straight-line time to the store when the offer was made; 0 within 100 m."
+          },
+          "offeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the dispatcher made the offer."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider."
           }
         },
         "additionalProperties": false

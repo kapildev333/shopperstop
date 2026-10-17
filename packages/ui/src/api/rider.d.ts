@@ -296,6 +296,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rider's open offer
+         * @description Answers the signed-in rider's open offer, polled by the rider app while online. An offer past its expiry, or whose order another rider claimed by hand, counts as none before the dispatcher marks it.
+         */
+        get: operations["getMyOffer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/offers/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an offer
+         * @description Accepts the rider's open offer: one transaction marks it accepted and claims the order as POST /me/deliveries does (the delivery, then core's out_for_delivery with the rider as actor). When another rider already claimed the order, or core no longer holds it as ready, the offer is expired and the answer is 409. When core fails the offer stays open.
+         */
+        post: operations["acceptOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/offers/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline an offer
+         * @description Declines the rider's open offer. The dispatcher offers the order to the next rider and does not offer it to this rider again for 2 minutes.
+         */
+        post: operations["declineOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -486,6 +546,51 @@ export interface components {
         AvailabilityUpdate: {
             /** @description true to go online for dispatch offers, false to go offline. */
             online: boolean;
+        };
+        /** @description The dispatcher's offer of one ready order to one rider, with the order as core showed it when the offer was made. */
+        Offer: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Core's order id.
+             */
+            orderId: string;
+            /** @description Core's order number. */
+            number: string;
+            /**
+             * Format: date-time
+             * @description When the customer placed the order.
+             */
+            placedAt: string;
+            /** @description Units to carry: the sum of the line quantities. */
+            itemCount: number;
+            /**
+             * Format: int64
+             * @description Order total in paise (INR cents).
+             */
+            totalCents: number;
+            /** @enum {string} */
+            paymentMethod: "cod" | "online";
+            /**
+             * @description Online orders only, as core held it when the offer was made.
+             * @enum {string}
+             */
+            paymentStatus?: "pending" | "paid" | "refunded";
+            /** @description The delivery address's pincode. */
+            pincode: string;
+            /** @description The rider's straight-line time to the store when the offer was made; 0 within 100 m. */
+            etaSeconds: number;
+            /**
+             * Format: date-time
+             * @description When the dispatcher made the offer.
+             */
+            offeredAt: string;
+            /**
+             * Format: date-time
+             * @description After this the offer can no longer be accepted; the dispatcher then offers the order to the next rider.
+             */
+            expiresAt: string;
         };
     };
     responses: never;
@@ -1961,6 +2066,265 @@ export interface operations {
                      *       "error": {
                      *         "code": "internal",
                      *         "message": "core unavailable"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMyOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000902",
+                     *       "orderId": "00000000-0000-4000-8000-000000000701",
+                     *       "number": "SS-DEMOAAAB",
+                     *       "placedAt": "2026-10-16T09:00:00Z",
+                     *       "itemCount": 3,
+                     *       "totalCents": 33900,
+                     *       "paymentMethod": "cod",
+                     *       "pincode": "560034",
+                     *       "etaSeconds": 90,
+                     *       "offeredAt": "2026-10-16T09:12:00Z",
+                     *       "expiresAt": "2026-10-16T09:12:30Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Offer"];
+                };
+            };
+            /** @description The rider has no open offer. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    acceptOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The offer's id.
+                 * @example 00000000-0000-4000-8000-000000000902
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rider's new assigned delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "00000000-0000-4000-8000-000000000910",
+                     *       "orderId": "00000000-0000-4000-8000-000000000703",
+                     *       "orderNumber": "SS-DEMOAAAD",
+                     *       "storeId": "00000000-0000-4000-8000-000000000401",
+                     *       "status": "assigned",
+                     *       "customerName": "Demo Customer",
+                     *       "customerPhone": "+919800000000",
+                     *       "address": {
+                     *         "line1": "12 80 Feet Rd, Koramangala",
+                     *         "pincode": "560034"
+                     *       },
+                     *       "totalCents": 103000,
+                     *       "paymentMethod": "cod",
+                     *       "itemCount": 4,
+                     *       "items": [
+                     *         {
+                     *           "name": "Banana Robusta",
+                     *           "unitLabel": "1 kg",
+                     *           "quantity": 1
+                     *         },
+                     *         {
+                     *           "name": "Pomegranate Bhagwa",
+                     *           "unitLabel": "1 kg",
+                     *           "quantity": 3
+                     *         }
+                     *       ],
+                     *       "assignedAt": "2026-10-15T09:05:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Delivery"];
+                };
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the rider's offer, an unknown id, or an id that is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The offer was already answered or expired (offer is no longer open), or the order went to another rider or left ready (order is no longer available). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "offer is no longer open"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Core failed or could not be reached; the offer stays open. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "internal",
+                     *         "message": "core unavailable"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    declineOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The offer's id.
+                 * @example 00000000-0000-4000-8000-000000000902
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Declined. No body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No bearer, or a token that is not a live session of an active rider. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "sign in required"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the rider's offer, an unknown id, or an id that is not a uuid. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "not_found",
+                     *         "message": "not found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The offer was already answered or expired. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "offer is no longer open"
                      *       }
                      *     }
                      */

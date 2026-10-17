@@ -35,3 +35,27 @@ join riders r on r.id = d.rider_id
 left join rider_locations l
   on l.rider_id = d.rider_id and d.status = 'assigned' and l.recorded_at >= d.assigned_at
 where d.order_id = $1;
+
+-- name: OpenOffer :one
+-- The rider's open offer; one past its expiry, or whose order a delivery holds, counts as none.
+select o.* from offers o
+where o.rider_id = $1 and o.status = 'offered' and o.expires_at > now()
+  and not exists (select 1 from deliveries d where d.order_id = o.order_id);
+
+-- name: RiderOffer :one
+select o.*, (o.status = 'offered' and o.expires_at > now())::boolean as open
+from offers o where o.id = $1 and o.rider_id = $2;
+
+-- name: AcceptOffer :one
+update offers set status = 'accepted', answered_at = now()
+where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
+returning id;
+
+-- name: DeclineOffer :one
+update offers set status = 'declined', answered_at = now()
+where id = $1 and rider_id = $2 and status = 'offered' and expires_at > now()
+returning order_id, order_number;
+
+-- name: VoidOffer :exec
+-- The offer's order went to another rider or left ready: the offer can never be accepted.
+update offers set status = 'expired', answered_at = now() where id = $1 and status = 'offered';

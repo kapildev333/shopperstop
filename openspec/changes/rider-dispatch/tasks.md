@@ -24,9 +24,9 @@ Scenarios: dispatch "Riders read their open offer" (both), "Riders accept an off
 Starts from: `internal/app/offers_test.go` `TestMyOffer`, `TestMyOfferNoneWhenExpiredOrClaimed`, `TestAcceptOffer`, `TestAcceptRefusals`, `TestAcceptCoreFails`, `TestHandClaimWhileOffered`, `TestAcceptOrderLeftReady`, `TestAcceptRacesHandClaims`, `TestAcceptRacesDecline`, `TestDeclineOnce`, `TestOfferAnswersLogged`. Red: exactly those 11, because the routes are not served.
 Commits: `fix: fake core copies an order under its lock` (`T2-fix.diff`; red is a `-race` report on `TestConcurrentClaims`/`TestAcceptRacesHandClaims`, design.md Race analysis, so no separate test commit), `test: riders read, accept and decline offers; an offer never beats a claim`, `feat: rider offer routes, accept runs the claim`.
 
-- [ ] 2.1 `git apply .../code/T2-fix.diff`; `GOFLAGS=-count=1 make test-rider` green; commit.
-- [ ] 2.2 `git apply .../code/T2-test.diff`; red check; commit.
-- [ ] 2.3 `git apply .../code/T2-feat.diff`; `make gen postman`; gates; also `cd services/rider && go test -race -count=20 -run 'TestAcceptRaces|TestConcurrentClaims' ./internal/app/` (with the test URL) green; tick 2.1 to 2.3; commit.
+- [x] 2.1 `git apply .../code/T2-fix.diff`; `GOFLAGS=-count=1 make test-rider` green; commit.
+- [x] 2.2 `git apply .../code/T2-test.diff`; red check; commit.
+- [x] 2.3 `git apply .../code/T2-feat.diff`; `make gen postman`; gates; also `cd services/rider && go test -race -count=20 -run 'TestAcceptRaces|TestConcurrentClaims' ./internal/app/` (with the test URL) green; tick 2.1 to 2.3; commit.
 
 ## 3. The dispatcher: config, tick, loop
 

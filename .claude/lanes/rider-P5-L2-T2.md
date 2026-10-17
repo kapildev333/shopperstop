@@ -1,5 +1,5 @@
 # rider-P5-L2-T2 - the rider's offer: read, accept, decline (task 2 of rider-dispatch)
-Status: not started
+Status: done (feat committed as the next commit on the lane branch)
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T2). Area: `rider`.
@@ -23,12 +23,36 @@ Red check, from `services/rider`: `go vet ./...` and `SHOPPERSTOP_RIDER_TEST_DAT
 If a patch does not apply, the red differs from the expected red, a generated file outside the scope changes or a gate fails, stop and write it under Blockers; do not improvise. Never edit `apps/`, other services, `packages/ui` by hand, `docs/postman` by hand, or the lane log `rider-P5-L2.md`.
 
 ## Red run
+Commits: `67b1d0e fix: fake core copies an order under its lock` (clean `make test-rider` green before the test commit); `3a20dee test: riders read, accept and decline offers; an offer never beats a claim`.
+`go vet ./...` exit 0. `go test -count=1 ./internal/...` exit 1; `--- FAIL` lines (sorted, unique):
+```
+--- FAIL: TestAcceptCoreFails
+--- FAIL: TestAcceptOffer
+--- FAIL: TestAcceptOrderLeftReady
+--- FAIL: TestAcceptRacesDecline
+--- FAIL: TestAcceptRacesHandClaims
+--- FAIL: TestAcceptRefusals
+--- FAIL: TestDeclineOnce
+--- FAIL: TestHandClaimWhileOffered
+--- FAIL: TestMyOffer
+--- FAIL: TestMyOfferNoneWhenExpiredOrClaimed
+--- FAIL: TestOfferAnswersLogged
+```
+Exactly the 11 named tests; every other package `ok`. Each failure is the route not served (404 `not_found`), e.g. `offers_test.go:45: no offer: got 404 ... want 204`, `offers_test.go:254: answers [404 409 409 409 201]: want only 201 and 409`.
 
 ## Green run
+After the feat patch, `GOFLAGS=-count=1 make test-rider`: exit 0, every package `ok` (10 packages with tests, the rest `no test files`).
+Race: from `services/rider`, `go test -race -count=20 -run 'TestAcceptRaces|TestConcurrentClaims' ./internal/app/`: `ok`, exit 0, 0 `DATA RACE` lines.
 
 ## Gates
+- `GOFLAGS=-count=1 make test-rider`: exit 0 (all packages ok).
+- `make gen postman`: exit 0; postman suite 27 pass, 0 fail. Changed (scope only): `services/rider/internal/delivery/db/deliveries.sql.go` (`models.go` unchanged), `packages/ui/src/api/rider.d.ts`, `docs/postman/shopperstop-rider.postman_collection.json`.
+- `git status --short` after gen: only the feat files, scope paths, plus the untracked reviewer file `.claude/lanes/rider-P5-L2-R1.md` (left alone).
+- `openspec validate --all --strict`: `Totals: 20 passed, 0 failed (20 items)`.
 
 ## Found
+- `coretest.adminOrder` race fixed in `67b1d0e` (as the brief orders) before the T2 tests; without it the race tests flake under `-race`.
+- `deliveries.sql.go` regenerated; `models.go` produced no diff.
 
 ## Blockers
-None yet.
+None.
