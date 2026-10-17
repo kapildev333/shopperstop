@@ -3,7 +3,7 @@ Scope: root files, `deploy/`, `.github/`, `openspec/`, `docs/`, `Makefile`, `REA
 Depends on: none
 Spec: Spec 1 §3, §5.1, §6, §7, §11, §12; plan tasks 1, 3, 4, 12, 13, 15 (tasks 1 and 2 done by the orchestrator)
 ## Doing
-Nothing running; no `make e2e`. platform-P5-L2 done 2026-10-17 (#365, archived #367). Next: platform-P6-L1 (receipt wiring) when the orchestrator opens it. CI jobs start but run no steps (billing), so local gates remain the only gate.
+Paused 2026-10-17 (owner stopping for the day). Nothing running; no worktree, branch or open PR; no `make e2e`. Pending, waiting on the owner's explicit approval (CLAUDE.md is changed only on the owner's word): the two CLAUDE.md nits from the platform-P5-L1 T3 review (see Backlog): `make test-payment` in the "Agents:" paragraph, and the `services/payment/` layout line moved directly after `services/rider/`. Resume: start `/loop 5min /manage platform`; if the owner approves, land both as one `chore` PR (gates: `openspec validate --all --strict`, the archived `check-payment-wiring.sh docs`, `check-docs.sh`); then idle until the orchestrator opens platform-P6-L1 (receipt wiring). CI jobs run no steps (billing), so local gates are the only gate.
 
 ## Lanes
 | Lane | Task | Scope | Status |
