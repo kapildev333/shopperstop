@@ -5,6 +5,7 @@ import type { components } from '@shopperstop/ui/api/rider'
 type Rider = components['schemas']['Rider']
 type ReadyOrder = components['schemas']['ReadyOrder']
 type Delivery = components['schemas']['Delivery']
+type Offer = components['schemas']['Offer']
 type Store = core['schemas']['Store']
 
 type Handler = (request: Request) => Response | Promise<Response>
@@ -15,6 +16,7 @@ export const arjun: Rider = {
   email: 'arjun@example.test',
   name: 'Arjun Rao',
   isActive: true,
+  isOnline: false,
 }
 
 export const koramangala: Store = {
@@ -57,6 +59,15 @@ export function delivery(over: Partial<Delivery> = {}): Delivery {
     items: [{ name: 'Banana Robusta', unitLabel: '1 kg', quantity: 2 }],
     assignedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
     ...over,
+  }
+}
+
+export function offer(over: Partial<Offer> = {}): Offer {
+  const now = Date.now()
+  return {
+    id: '00000000-0000-4000-8000-000000000b01', orderId: '00000000-0000-4000-8000-000000000a01', number: 'SS-AAAA0001',
+    placedAt: new Date(now - 5 * 60_000).toISOString(), itemCount: 3, totalCents: 33900, paymentMethod: 'cod', pincode: '560034',
+    etaSeconds: 90, offeredAt: new Date(now).toISOString(), expiresAt: new Date(now + 30_000).toISOString(), ...over,
   }
 }
 

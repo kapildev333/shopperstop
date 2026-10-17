@@ -40,3 +40,4 @@ Status: brief
 Stop and report under Blockers if `Badge`, `Button` or `StatusMessage` cannot do the above without a change in `packages/ui` (not your scope), or if an existing test breaks for a reason other than the banner's new content.
 
 ## Log
+- 2026-10-16 worker: merged origin/main (63e635e already on branch; no conflict), `npm ci`, ui built. Commit 1 `test: availability in the banner` adds `isOnline: false` on `arjun`, `offer()` fixture, `availability.test.tsx`. The banner is awaited with `findByRole` (the header renders after the guard). Red: `offline rider` (Unable to find text "Offline"), `go online, then offline` (no button "Go online"), `change fails` (no button "Go online"); all three fail for their stated reason. Typecheck and lint green at this commit.
