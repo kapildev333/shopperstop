@@ -1,7 +1,7 @@
 # rider-P5-L3 - rider app dispatch: online toggle, position while online, offer sheet (OpenSpec change rider-app-dispatch)
 Status: started
 ## Doing
-Team lead, 2026-10-16: change proposed and validated (`openspec validate rider-app-dispatch --strict`, `--all --strict` 21 passed); five worker briefs written (`rider-P5-L3-T1.md` to `-T5.md`); waiting for the manager to launch T1.
+Team lead, 2026-10-16: T1 to T5 landed; T6 (R4 fix: no stale offer, status clearing) building; T7 (R5: pending guards, decline disabled, simpler banner) briefed (`86b3afa`) to run after T6; then 8.1 manager e2e and walk, 8.2 my `/opsx:verify`.
 ## Found
 - Change `openspec/changes/rider-app-dispatch/`: `rider-app` ADDED only (8 requirements, longest 439 characters): availability in the banner, location needed to stay online, position while online, offers read while online, offer sheet, decline, accept, online dispatch e2e. No existing requirement is modified: the shell, ready list, hand claim and delivery page keep their wording and tests.
 - Tasks, strictly in order: T1 e2e `online.spec.ts` (test only, written before the pages), T2 banner toggle (+ `isOnline` on the `arjun` fixture, `offer()` fixture), T3 position while online and refusal goes offline (`location.ts` shares `watchAndSend` with the delivery page's report), T4 offer poll, sheet, countdown, decline, T5 accept. Then the manager's `make e2e` and phone walk (6.1), and my `/opsx:verify` (6.2).
