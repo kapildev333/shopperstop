@@ -104,3 +104,24 @@ One commit: `test: online rider offered a readied order (e2e)` with both files, 
 Stop and report under Blockers (do not improvise) if a helper change would alter what an existing spec sends.
 
 ## Log
+Status: done (task 1.1; commit `test:` only, the spec is red until tasks 2 to 5 land)
+
+Gates (run from the worktree root, Node 22.23.3; `packages/ui` built first because the rider's unit and build gates import `@shopperstop/ui/app`, which needs `packages/ui/dist`):
+- `npm run lint --workspace apps/rider`: exit 0, eslint . with no output.
+- `npm run typecheck --workspace apps/rider`: exit 0 (tsconfig includes `e2e`, so the new spec and helpers type-check).
+- `npm run test --workspace apps/rider -- --run`: exit 0, 10 files, 64 tests passed (unchanged).
+- `npm run build --workspace apps/rider`: exit 0, `built in 194ms`.
+- `openspec validate --all --strict`: exit 0, `Totals: 21 passed, 0 failed (21 items)`.
+- The first run of test and build failed with "Failed to resolve import @shopperstop/ui/app" because `packages/ui/dist` was not built in this worktree; `npm run build --workspace packages/ui` fixed it. No code change.
+- Not run, per brief: `make e2e`, `make db`, `make dev`, docker.
+
+Changes:
+- `apps/rider/e2e/helpers.ts`: additive. Added `indiranagar`; `storePick(request, storeId)` (first in-stock item at or above 2000 cents that covers `minOrderCents`, no quantity-10 filter; throws naming the store); `fillCart(..., storeId = koramangala)`; `addAddress(request, shopper, pincode = '560034', line1 = '12 80 Feet Rd, Koramangala')`; `staffHeaders(request, email = 'koramangala@shopperstop.local')` memoised per email in a Map. Existing callers and defaults unchanged.
+- `apps/rider/e2e/online.spec.ts`: new, as briefed, with the coordinator's change applied: both `aria-pressed` checks are now `.not.toHaveAttribute('aria-pressed')` (lines 23 and 29), since the toggle no longer uses `aria-pressed`.
+- `openspec/changes/rider-app-dispatch/tasks.md`: 1.1 ticked.
+
+Deviation: none from the brief's helper bodies beyond the `aria-pressed` change. Helpers take the optional parameters as the brief specifies.
+
+Found: the brief's Found section (for the manager) — `readyOrder` and `orderPick` in helpers are untouched; `riderToken` memo unchanged.
+
+Red check: the spec is e2e, not a vitest file, so no failing names are pasted; it will fail at the offline/online banner assertions until tasks 2 to 5.

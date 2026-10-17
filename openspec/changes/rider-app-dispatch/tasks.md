@@ -12,7 +12,7 @@ Scope: `apps/rider/e2e/helpers.ts`, `apps/rider/e2e/online.spec.ts` (new); this 
 Scenario: "Online dispatch flow end to end" / Online rider offered a readied order.
 Starts from: `e2e/online.spec.ts` `online rider offered a readied order`. It cannot pass until task 5; it is not run by the worker (the manager's `make e2e`). Commit: `test: online rider offered a readied order (e2e)`; no `feat:` (the pages come in tasks 2 to 5). Lint and typecheck must pass; the existing specs' behaviour must not change (helpers keep their Koramangala defaults).
 
-- [ ] 1.1 Generalise the helpers to a store (default Koramangala), add `indiranagar`, write `online.spec.ts`; lint and typecheck; commit.
+- [x] 1.1 Generalise the helpers to a store (default Koramangala), add `indiranagar`, write `online.spec.ts`; lint and typecheck; commit.
 
 ## 2. Availability in the banner
 
