@@ -1,0 +1,17 @@
+# core-P5-L2-t1 - store location (task 1 of core-store-location)
+Status: ready
+## Brief
+- LANE-ID: core-P5-L2 (task 1 of 1). Area: core. Role: worker.
+- Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L2. Branch: lane/core-P5-L2-store-location. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout or any container.
+- OpenSpec change: `openspec/changes/core-store-location/`, task 1 in `tasks.md` (1.1, 1.2). Every code block you need is verbatim in `design.md` under "Code": the test diff, the feat diff (it creates migration 0012) and the `openapi.json` script. Save each block to a file in your scratchpad and `git apply` it from the worktree root; run the script with `python3 -I <file>` from `services/core`. A choice neither file settles: stop and report.
+- Scope paths: `services/core/migrations/0012_store_location.sql` (new), `services/core/queries/store.sql` (`CreateStore`, `UpdateStore` only), sqlc output (`services/core/internal/store/db/store.sql.go` and every `services/core/internal/*/db/models.go`, regenerated only), `services/core/internal/store/store.go`, `services/core/internal/store/handlers.go`, `services/core/internal/seed/seed.go`, `services/core/internal/seed/seed_test.go`, `services/core/internal/app/admin_stores_test.go`, `services/core/internal/app/stores_test.go`, `services/core/openapi.json`, generated `packages/ui/src/api/core.d.ts` and `docs/postman/shopperstop-core.postman_collection.json`, `openspec/changes/core-store-location/tasks.md` (ticks only), this file.
+- Scenarios: serviceability "Public store view" (all four); admin-stores "Admins create stores" (all three), "Store locations" (all four), "Demo stores" / Reset twice; "Admins list and read stores" stays green.
+- Failing tests to start from (all five must fail before any code): `services/core/internal/app/admin_stores_test.go` `TestCreateStoreValidation` (201 for `location.lat` 90.5), `TestCreateStoreLocation` (no location), `TestPatchStoreLocation` (no location after the set); `services/core/internal/app/stores_test.go` `TestPublicStoreLocation` (column `lat` does not exist); `services/core/internal/seed/seed_test.go` `TestResetTwiceLeavesDemoStores` (no location in serviceability).
+- Commits, in order: `test: stores carry a location`, then `feat: store location (migration 0012, admin create and change, demo stores)`.
+- Gates (from `services/core`, `SHOPPERSTOP_CORE_TEST_DATABASE_URL=postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable`): `gofmt -l .` empty, `go vet ./...`, `go test -race -count=1 ./...`. From the worktree root with `PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (`npm ci` once if `node_modules` is missing): `make gen postman`, `git status --short` clean after the last commit, `make test-web`, `openspec validate --all --strict`.
+- Known: `make test-web` fails with TS2741 in `apps/admin/src/store-form.tsx` (lines 16 and 29) until admin's `type Field = Exclude<keyof StoreCreate, 'location'>` is on main and merged into this branch by the manager. If that is the only failure, commit anyway and record it here. Do not edit `apps/admin`.
+- Never: `make e2e`, `make dev`, `make seed`, `core-admin migrate` or `seed-demo` against a real database, `check-wiring.sh`, `docker`.
+## Doing
+## Found
+## Requests
+## Blockers
