@@ -107,11 +107,17 @@ function OfferBody({
   )
 }
 
-// The offer the rider is shown while online (design Decisions 5 to 8). The offer is read every 3 seconds; an offer already answered here stays closed.
+// The offer the rider is shown while online (design Decisions 5 to 8). Mounted only while online: going offline unmounts it, which drops its answer, its status and, with no observer left, the cached offer.
 export function OfferSheet() {
   const online = useQuery(meQuery).data?.isOnline ?? false
+  return online ? <OnlineOffer /> : null
+}
+
+// The offer is read every 3 seconds while mounted; an offer already answered here stays closed.
+function OnlineOffer() {
   const [answered, setAnswered] = useState<string>()
   const [status, setStatus] = useState<string>()
+  const [seenId, setSeenId] = useState<string>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -123,13 +129,18 @@ export function OfferSheet() {
       if (error) throw error.error
       return response.status === 204 ? null : (data ?? null)
     },
-    enabled: online,
     refetchInterval: 3_000,
     gcTime: 0,
     retry: false,
   }).data
 
-  const open = online && offer != null && offer.id !== answered
+  // A new offer clears the last status; an offer going to none does not, so "Someone else took" survives the next 204.
+  if (offer && offer.id !== seenId) {
+    setSeenId(offer.id)
+    setStatus(undefined)
+  }
+
+  const open = offer != null && offer.id !== answered
 
   // Accepting: a 201 opens the delivery; a 409 or 404 means someone else has the order; any other failure keeps the sheet.
   const accept = useMutation({

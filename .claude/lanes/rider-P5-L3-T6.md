@@ -1,5 +1,5 @@
 # rider-P5-L3-T6 - fix: no stale offer after going online again; status cleared (task 6 of rider-app-dispatch)
-Status: in progress (worker)
+Status: done (worker)
 
 ## Brief
 - LANE-ID: rider-P5-L3 (task T6). Area: rider. Model: worker. Starts after T5's `feat:` is committed (T5 edits the same files). Written against `44f0c18`; if T5's feat moved `OfferSheet`'s structure so the steps below do not fit, stop and report.
@@ -39,3 +39,13 @@ Stop and report under Blockers if test 1 still shows a dialog after the split (t
   - Pass on current code (pins): `close icon declines once`, `countdown outside any live region`, `no decline after expiry`.
   - Existing eight offer tests stay green: `Tests 3 failed | 11 passed (14)`.
 - Ticked 6.1 in `openspec/changes/rider-app-dispatch/tasks.md`.
+- Commit 2 (`fix: drop the offer when going offline; clear the status on a new offer`): `dispatch.tsx` splits `OfferSheet`. The exported `OfferSheet` reads `online` from `meQuery` and returns `online ? <OnlineOffer /> : null`; `OnlineOffer` holds the query (no `enabled`), `answered`, `status`, accept, decline and expire. A render-time `seenId` check clears `status` only when a non-null offer id differs from the last seen one. The `removeQueries` fallback was not needed: test 1 went green with the split alone.
+  - Test 1 (`going online again shows no old offer`) and the other two red tests turned green; no test was changed in commit 2.
+  - Gates (worktree root):
+    - `npm run lint --workspace apps/rider`: no output, eslint clean.
+    - `npm run typecheck --workspace apps/rider`: no output, tsc clean.
+    - `npm run test --workspace apps/rider -- --run`: `Test Files 12 passed (12)`, `Tests 90 passed (90)` (was 84; the six new tests in `offer.test.tsx`).
+    - `npm run build --workspace apps/rider`: `✓ built in 189ms`.
+    - `openspec validate --all --strict`: `Totals: 21 passed, 0 failed (21 items)`.
+    - `make test-web`: exit 0. Per workspace: `packages/ui` 35 files / 104 tests; `apps/admin` 28 / 343; `apps/rider` 12 / 90; `apps/web` 29 / 183; `apps/mobile` (jest) green (exit 0).
+- Ticked 6.2 in `openspec/changes/rider-app-dispatch/tasks.md`. Status: done (worker).
