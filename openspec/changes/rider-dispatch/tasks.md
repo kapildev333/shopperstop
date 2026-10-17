@@ -56,8 +56,8 @@ Scenarios: dispatch "Offer demo seed".
 Starts from: `internal/seed/seed_test.go` `TestSeededOffer`, `TestSummaryMatchesSeed` (now 6 ids, and `offerId` tied to the environment like `riderId` and `deliveryId`). Red: exactly those two.
 Commits: `test: seed holds an expired demo offer`, then `feat: seed an expired offer for the delivered demo order`.
 
-- [ ] 5.1 `git apply .../code/T5-test.diff`; red check; commit.
-- [ ] 5.2 `git apply .../code/T5-feat.diff`; gates (`make gen postman` changes nothing); tick 5.1 and 5.2; commit.
+- [x] 5.1 `git apply .../code/T5-test.diff`; red check; commit.
+- [x] 5.2 `git apply .../code/T5-feat.diff`; gates (`make gen postman` changes nothing); tick 5.1 and 5.2; commit.
 
 ## 6. Store location and ETA ranking
 
