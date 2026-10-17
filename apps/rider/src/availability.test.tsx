@@ -155,6 +155,15 @@ test('online on load', async () => {
   await waitFor(() => expect(geo.watching()).toBe(1))
 })
 
+test('online watch options', async () => {
+  routes({ ...online, [DELIVERIES]: () => json(200, none) })
+  renderApp('/history')
+
+  await screen.findByRole('heading', { level: 1, name: 'History' })
+  await waitFor(() => expect(geo.watching()).toBe(1))
+  expect(geo.options()).toEqual([{ enableHighAccuracy: false, maximumAge: 10_000 }])
+})
+
 test('offline stops the watch', async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   const { sent } = routes(online)

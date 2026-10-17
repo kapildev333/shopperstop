@@ -1,4 +1,4 @@
-type Watch = { success: PositionCallback; failure: PositionErrorCallback | null }
+type Watch = { success: PositionCallback; failure: PositionErrorCallback | null; options: PositionOptions | undefined }
 
 // The test fake of navigator.geolocation, installed on the navigator (jsdom has none): one entry per watchPosition, until clearWatch.
 export function fakeGeolocation() {
@@ -7,8 +7,8 @@ export function fakeGeolocation() {
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: {
-      watchPosition(success: PositionCallback, failure?: PositionErrorCallback | null) {
-        watches.set(next, { success, failure: failure ?? null })
+      watchPosition(success: PositionCallback, failure?: PositionErrorCallback | null, options?: PositionOptions) {
+        watches.set(next, { success, failure: failure ?? null, options })
         return next++
       },
       clearWatch(id: number) {
@@ -24,6 +24,7 @@ export function fakeGeolocation() {
       for (const { failure } of watches.values()) failure?.({ code, message: 'fake' } as GeolocationPositionError)
     },
     watching: () => watches.size,
+    options: () => [...watches.values()].map((watch) => watch.options),
     remove() {
       delete (navigator as { geolocation?: Geolocation }).geolocation
     },
