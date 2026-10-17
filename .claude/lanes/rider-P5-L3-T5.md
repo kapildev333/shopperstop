@@ -4,9 +4,16 @@ Status: brief
 ## Brief
 - LANE-ID: rider-P5-L3 (task T5). Area: rider. Model: worker. Starts after T4 is committed.
 - Worktree: `/Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/rider-P5-L3`, branch `lane/rider-P5-L3-app-dispatch`. Commit as `kapildev333 <47056817+kapildev333@users.noreply.github.com>`, no trailers. Never push. Never run `make e2e`, `make db`, `make dev` or `docker`.
-- Scope (edit only these): `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`, `openspec/changes/rider-app-dispatch/tasks.md` (tick 5.1, 5.2), this file (log).
+- Scope (edit only these): `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`, `apps/rider/src/fake-geolocation.ts` and `apps/rider/src/availability.test.tsx` (R3 finding only, section 0), `openspec/changes/rider-app-dispatch/tasks.md` (tick 5.1, 5.2), this file (log).
 - Change and task: `openspec/changes/rider-app-dispatch/`, task 5. Scenarios: "Accept an offer" (Accepted, Someone else took it, Accept fails). Read design.md Decision 9.
 - Setup: `export PATH=$HOME/.local/node-v22.23.3/bin:$PATH`; `test -d node_modules || npm ci`.
+
+### 0. R3 finding first (T3 review, `.claude/lanes/rider-P5-L3-R3.md`), scenario "Position reported while online"
+`fakeGeolocation` ignores the options, so swapping `useOnlineReport`'s `{ enableHighAccuracy: false, maximumAge: 10_000 }` would still pass.
+Commit 0, `test: online position watch uses low accuracy and a 10 s maximum age`:
+- `src/fake-geolocation.ts`: `watchPosition(success, failure?, options?)` stores `options` in its `Watch` entry; add `options: () => [...watches.values()].map((watch) => watch.options)` to the returned object. Nothing else changes; every existing test stays green.
+- `src/availability.test.tsx`, test `online watch options`: an online rider opens `/history` (no delivery page, so the only watch is the online one); once `geo.watching()` is 1, `expect(geo.options()).toEqual([{ enableHighAccuracy: false, maximumAge: 10_000 }])`.
+This is a pin: it passes on the current code. Prove it bites before committing: temporarily change `enableHighAccuracy` to `true` in `location.ts`'s `useOnlineReport`, see the test fail, revert (do not commit `location.ts`), and paste both runs in your log. No `feat:`/`fix:` for this section.
 
 ### Commit 1, `test: accept an offer`
 Add to `src/offer.test.tsx` (online rider, the offer answers `json(200, offer())`; route `POST /api/rider/v1/me/offers/${offer().id}/accept` per test, counted):

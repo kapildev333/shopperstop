@@ -47,13 +47,14 @@ Commits: `test: offers read while online, offer sheet, decline`, then `feat: off
 
 ## 5. Accept an offer
 
-Scope: `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`; this file.
+Scope: `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`, `apps/rider/src/fake-geolocation.ts` and `apps/rider/src/availability.test.tsx` (R3 finding); this file.
 Scenarios: "Accept an offer" (Accepted, Someone else took it, Accept fails).
 Starts from: `src/offer.test.tsx` `accepted`, `someone else took it`, `accept fails`.
 Commits: `test: accept an offer`, then `feat: accept an offer and open its delivery`.
 
+- [ ] 5.0 R3 finding: the geolocation fake records options; `availability.test.tsx` `online watch options` pins `{ enableHighAccuracy: false, maximumAge: 10_000 }` (a `test:` pin, shown to fail with the option swapped); scenario "Position reported while online".
 - [ ] 5.1 The three tests; red check; commit.
-- [ ] 5.2 The accept mutation; gates plus `make test-web`; tick 5.1 and 5.2; commit.
+- [ ] 5.2 The accept mutation; gates plus `make test-web`; tick 5.0, 5.1 and 5.2; commit.
 
 ## 6. Landing checks (area manager, then team lead)
 
