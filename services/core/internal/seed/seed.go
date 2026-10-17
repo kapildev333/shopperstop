@@ -120,9 +120,9 @@ func load(ctx context.Context, tx pgx.Tx, h hashes) error {
 		homeID, workID, customerID); err != nil {
 		return fmt.Errorf("insert demo addresses: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `insert into stores (id, name, city, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes) values
-		($1, 'Koramangala', 'Bengaluru', '80 Feet Rd, Koramangala', '560034', true, 2500, 19900, 9900, 10),
-		($2, 'Indiranagar', 'Bengaluru', '100 Feet Rd, Indiranagar', '560038', true, 2500, 19900, 9900, 12)`,
+	if _, err := tx.Exec(ctx, `insert into stores (id, name, city, address_line, pincode, is_open, delivery_fee_cents, free_delivery_above_cents, min_order_cents, promised_minutes, lat, lng) values
+		($1, 'Koramangala', 'Bengaluru', '80 Feet Rd, Koramangala', '560034', true, 2500, 19900, 9900, 10, 12.9352, 77.6245),
+		($2, 'Indiranagar', 'Bengaluru', '100 Feet Rd, Indiranagar', '560038', true, 2500, 19900, 9900, 12, 12.9719, 77.6412)`,
 		storeKoramangala, storeIndiranagar); err != nil {
 		return fmt.Errorf("insert demo stores: %w", err)
 	}

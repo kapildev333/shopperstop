@@ -372,6 +372,8 @@ type Store struct {
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 	City                   string
+	Lat                    *float64
+	Lng                    *float64
 }
 
 type StoreServiceArea struct {

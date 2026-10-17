@@ -100,10 +100,11 @@ func Create(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, err)
 			return
 		}
+		lat, lng := f.latLng()
 		row, err := db.New(pool).CreateStore(r.Context(), db.CreateStoreParams{
 			Name: *f.Name, City: *f.City, AddressLine: *f.AddressLine, Pincode: *f.Pincode, IsOpen: *f.IsOpen,
 			DeliveryFeeCents: *f.DeliveryFeeCents, FreeDeliveryAboveCents: *f.FreeDeliveryAboveCents,
-			MinOrderCents: *f.MinOrderCents, PromisedMinutes: *f.PromisedMinutes,
+			MinOrderCents: *f.MinOrderCents, PromisedMinutes: *f.PromisedMinutes, Lat: lat, Lng: lng,
 		})
 		if err != nil {
 			httpx.WriteError(w, r, err)
@@ -148,10 +149,11 @@ func Update(pool *pgxpool.Pool) http.HandlerFunc {
 			httpx.WriteError(w, r, err)
 			return
 		}
+		lat, lng := f.latLng()
 		row, err := db.New(pool).UpdateStore(r.Context(), db.UpdateStoreParams{
 			ID: id, Name: f.Name, City: f.City, AddressLine: f.AddressLine, Pincode: f.Pincode, IsOpen: f.IsOpen,
 			DeliveryFeeCents: f.DeliveryFeeCents, FreeDeliveryAboveCents: f.FreeDeliveryAboveCents,
-			MinOrderCents: f.MinOrderCents, PromisedMinutes: f.PromisedMinutes,
+			MinOrderCents: f.MinOrderCents, PromisedMinutes: f.PromisedMinutes, Lat: lat, Lng: lng,
 		})
 		if err != nil {
 			httpx.WriteError(w, r, pg.Map(err))

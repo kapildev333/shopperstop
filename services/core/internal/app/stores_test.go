@@ -167,3 +167,29 @@ func TestPublicStoreCity(t *testing.T) {
 		}
 	}
 }
+
+func TestPublicStoreLocation(t *testing.T) {
+	id := insertStore(t, true, "561105")
+	if _, err := testPool.Exec(context.Background(), "update stores set lat = 12.9352, lng = 77.6245 where id = $1", id); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Join(sortedCopy(append([]string{"location"}, publicStoreKeys...)), ",")
+	for _, path := range []string{"/api/core/v1/stores/" + id, "/api/core/v1/serviceability?pincode=561105"} {
+		status, body := call(t, http.MethodGet, path, "", nil)
+		var wrapper struct {
+			Store json.RawMessage `json:"store"`
+		}
+		if status != http.StatusOK || json.Unmarshal(body, &wrapper) != nil {
+			t.Fatalf("GET %s: got %d %s, want 200", path, status, body)
+		}
+		if wrapper.Store != nil {
+			body = wrapper.Store
+		}
+		var s struct {
+			Location map[string]float64 `json:"location"`
+		}
+		if got := strings.Join(keysOf(t, body), ","); got != want || json.Unmarshal(body, &s) != nil || len(s.Location) != 2 || s.Location["lat"] != 12.9352 || s.Location["lng"] != 77.6245 {
+			t.Fatalf("GET %s: got %s, want keys %s and location {lat 12.9352, lng 77.6245}", path, body, want)
+		}
+	}
+}

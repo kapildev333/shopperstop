@@ -18,14 +18,21 @@ import (
 
 // Store is the public view of a store: what checkout shows.
 type Store struct {
-	ID                     string `json:"id"`
-	Name                   string `json:"name"`
-	City                   string `json:"city,omitempty"`
-	IsOpen                 bool   `json:"isOpen"`
-	DeliveryFeeCents       int64  `json:"deliveryFeeCents"`
-	FreeDeliveryAboveCents int64  `json:"freeDeliveryAboveCents"`
-	MinOrderCents          int64  `json:"minOrderCents"`
-	PromisedMinutes        int32  `json:"promisedMinutes"`
+	ID                     string    `json:"id"`
+	Name                   string    `json:"name"`
+	City                   string    `json:"city,omitempty"`
+	Location               *Location `json:"location,omitempty"`
+	IsOpen                 bool      `json:"isOpen"`
+	DeliveryFeeCents       int64     `json:"deliveryFeeCents"`
+	FreeDeliveryAboveCents int64     `json:"freeDeliveryAboveCents"`
+	MinOrderCents          int64     `json:"minOrderCents"`
+	PromisedMinutes        int32     `json:"promisedMinutes"`
+}
+
+// Location is where a store is, in degrees; nil on Store when it has none.
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 // AdminStore is the admin view: Store plus the store's own address.
@@ -72,11 +79,15 @@ func All(ctx context.Context, q db.DBTX) ([]Store, error) {
 }
 
 func public(row db.Store) Store {
-	return Store{
+	s := Store{
 		ID: row.ID, Name: row.Name, City: row.City, IsOpen: row.IsOpen,
 		DeliveryFeeCents: row.DeliveryFeeCents, FreeDeliveryAboveCents: row.FreeDeliveryAboveCents,
 		MinOrderCents: row.MinOrderCents, PromisedMinutes: row.PromisedMinutes,
 	}
+	if row.Lat != nil && row.Lng != nil {
+		s.Location = &Location{Lat: *row.Lat, Lng: *row.Lng}
+	}
+	return s
 }
 
 // admin is the admin view of a stored row.
@@ -90,15 +101,31 @@ const maxMoney = 10_000_000
 // fields is the create and change body. On change a nil member is absent and
 // stays unchanged; on create withDefaults fills every nil member first.
 type fields struct {
-	Name                   *string `json:"name"`
-	City                   *string `json:"city"`
-	AddressLine            *string `json:"addressLine"`
-	Pincode                *string `json:"pincode"`
-	IsOpen                 *bool   `json:"isOpen"`
-	DeliveryFeeCents       *int64  `json:"deliveryFeeCents"`
-	FreeDeliveryAboveCents *int64  `json:"freeDeliveryAboveCents"`
-	MinOrderCents          *int64  `json:"minOrderCents"`
-	PromisedMinutes        *int32  `json:"promisedMinutes"`
+	Name                   *string         `json:"name"`
+	City                   *string         `json:"city"`
+	Location               *locationFields `json:"location"`
+	AddressLine            *string         `json:"addressLine"`
+	Pincode                *string         `json:"pincode"`
+	IsOpen                 *bool           `json:"isOpen"`
+	DeliveryFeeCents       *int64          `json:"deliveryFeeCents"`
+	FreeDeliveryAboveCents *int64          `json:"freeDeliveryAboveCents"`
+	MinOrderCents          *int64          `json:"minOrderCents"`
+	PromisedMinutes        *int32          `json:"promisedMinutes"`
+}
+
+// locationFields is a location in a create or change body; check refuses one without both members.
+type locationFields struct {
+	Lat *float64 `json:"lat"`
+	Lng *float64 `json:"lng"`
+}
+
+// latLng is the location to write: both nil when absent (create: none; change: unchanged).
+// check has made sure a present location has both.
+func (f *fields) latLng() (lat, lng *float64) {
+	if f.Location == nil {
+		return nil, nil
+	}
+	return f.Location.Lat, f.Location.Lng
 }
 
 // withDefaults gives each absent member its zero value: a new store is closed,
@@ -136,6 +163,16 @@ func check(f *fields) error {
 		*f.City = strings.TrimSpace(*f.City)
 		if utf8.RuneCountInString(*f.City) > 100 {
 			return invalid("city", "city must be at most 100 characters")
+		}
+	}
+	if l := f.Location; l != nil {
+		switch {
+		case l.Lat == nil || l.Lng == nil:
+			return invalid("location", "location needs both lat and lng")
+		case *l.Lat < -90 || *l.Lat > 90:
+			return invalid("location.lat", "lat must be -90 to 90")
+		case *l.Lng < -180 || *l.Lng > 180:
+			return invalid("location.lng", "lng must be -180 to 180")
 		}
 	}
 	if f.AddressLine != nil {

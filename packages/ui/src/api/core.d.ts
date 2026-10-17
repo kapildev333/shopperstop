@@ -583,7 +583,7 @@ export interface paths {
         put?: never;
         /**
          * Create a store
-         * @description Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city means none. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.
+         * @description Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, location, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city or location means none. A location needs both lat and lng: one without the other answers 400 field location, an out-of-range one 400 field location.lat or location.lng. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.
          */
         post: operations["createStore"];
         delete?: never;
@@ -615,7 +615,7 @@ export interface paths {
         head?: never;
         /**
          * Change a store
-         * @description Admins only. Changes only the fields present: name, city (empty clears it), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.
+         * @description Admins only. Changes only the fields present: name, city (empty clears it), location (both lat and lng; it replaces the location and cannot be cleared), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.
          */
         patch: operations["updateStore"];
         trace?: never;
@@ -1099,6 +1099,8 @@ export interface components {
              * @example Bengaluru
              */
             city?: string;
+            /** @description Where the store is. Omitted when the store has none; such a store gets no rider dispatch. */
+            location?: components["schemas"]["StoreLocation"];
             isOpen: boolean;
             /** Format: int64 */
             deliveryFeeCents: number;
@@ -1116,6 +1118,8 @@ export interface components {
             name: string;
             /** @description At most 100 characters after trimming. Absent or empty: no city. */
             city?: string;
+            /** @description Both lat and lng. Absent: no location. */
+            location?: components["schemas"]["StoreLocation"];
             /** @description 1 to 200 characters after trimming. */
             addressLine: string;
             /** @description Six digits, the first from 1 to 9. */
@@ -1146,6 +1150,8 @@ export interface components {
             name?: string;
             /** @description At most 100 characters after trimming; empty clears the city. */
             city?: string;
+            /** @description Both lat and lng; replaces the location. Absent: unchanged. It cannot be cleared (null is refused). */
+            location?: components["schemas"]["StoreLocation"];
             addressLine?: string;
             pincode?: string;
             isOpen?: boolean;
@@ -1282,6 +1288,8 @@ export interface components {
              * @example Bengaluru
              */
             city?: string;
+            /** @description Where the store is. Omitted when the store has none; such a store gets no rider dispatch. */
+            location?: components["schemas"]["StoreLocation"];
             /** @description false when the store is closed; it still appears in serviceability answers. */
             isOpen: boolean;
             /**
@@ -1698,6 +1706,25 @@ export interface components {
             actorType: "customer" | "staff" | "system" | "rider";
             /** Format: date-time */
             createdAt: string;
+        };
+        /**
+         * @description Where a store is, in degrees (WGS 84). The rider service ranks riders by their distance to it (dispatch).
+         * @example {
+         *       "lat": 12.9352,
+         *       "lng": 77.6245
+         *     }
+         */
+        StoreLocation: {
+            /**
+             * Format: double
+             * @description Latitude, -90 to 90.
+             */
+            lat: number;
+            /**
+             * Format: double
+             * @description Longitude, -180 to 180.
+             */
+            lng: number;
         };
     };
     responses: never;
@@ -4534,6 +4561,10 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000401",
                      *           "name": "Koramangala",
                      *           "city": "Bengaluru",
+                     *           "location": {
+                     *             "lat": 12.9352,
+                     *             "lng": 77.6245
+                     *           },
                      *           "addressLine": "80 Feet Rd, Koramangala",
                      *           "pincode": "560034",
                      *           "isOpen": true,
@@ -4546,6 +4577,10 @@ export interface operations {
                      *           "id": "00000000-0000-4000-8000-000000000402",
                      *           "name": "Indiranagar",
                      *           "city": "Bengaluru",
+                     *           "location": {
+                     *             "lat": 12.9719,
+                     *             "lng": 77.6412
+                     *           },
                      *           "addressLine": "100 Feet Rd, Indiranagar",
                      *           "pincode": "560038",
                      *           "isOpen": true,
@@ -4630,6 +4665,10 @@ export interface operations {
                  * @example {
                  *       "name": "HSR Layout",
                  *       "city": "Bengaluru",
+                 *       "location": {
+                 *         "lat": 12.9116,
+                 *         "lng": 77.6474
+                 *       },
                  *       "addressLine": "27th Main, HSR Layout",
                  *       "pincode": "560102",
                  *       "promisedMinutes": 12,
@@ -4653,6 +4692,10 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
                      *       "city": "Bengaluru",
+                     *       "location": {
+                     *         "lat": 12.9352,
+                     *         "lng": 77.6245
+                     *       },
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4665,7 +4708,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminStore"];
                 };
             };
-            /** @description A field is missing or out of range. The field names it; nothing is written. */
+            /** @description A field is missing or out of range. The field names it; nothing is written. A location's errors name location (lat or lng missing), location.lat or location.lng (out of range). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4745,6 +4788,10 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
                      *       "city": "Bengaluru",
+                     *       "location": {
+                     *         "lat": 12.9352,
+                     *         "lng": 77.6245
+                     *       },
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4937,6 +4984,10 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
                      *       "city": "Bengaluru",
+                     *       "location": {
+                     *         "lat": 12.9352,
+                     *         "lng": 77.6245
+                     *       },
                      *       "addressLine": "80 Feet Rd, Koramangala",
                      *       "pincode": "560034",
                      *       "isOpen": true,
@@ -4949,7 +5000,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminStore"];
                 };
             };
-            /** @description A present field is null or out of range. The field names it; nothing is changed. */
+            /** @description A present field is null or out of range. The field names it; nothing is changed. A location's errors name location (lat or lng missing), location.lat or location.lng (out of range). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5662,6 +5713,10 @@ export interface operations {
                      *         "id": "00000000-0000-4000-8000-000000000401",
                      *         "name": "Koramangala",
                      *         "city": "Bengaluru",
+                     *         "location": {
+                     *           "lat": 12.9352,
+                     *           "lng": 77.6245
+                     *         },
                      *         "isOpen": true,
                      *         "deliveryFeeCents": 2500,
                      *         "freeDeliveryAboveCents": 19900,
@@ -5736,6 +5791,10 @@ export interface operations {
                      *       "id": "00000000-0000-4000-8000-000000000401",
                      *       "name": "Koramangala",
                      *       "city": "Bengaluru",
+                     *       "location": {
+                     *         "lat": 12.9352,
+                     *         "lng": 77.6245
+                     *       },
                      *       "isOpen": true,
                      *       "deliveryFeeCents": 2500,
                      *       "freeDeliveryAboveCents": 19900,

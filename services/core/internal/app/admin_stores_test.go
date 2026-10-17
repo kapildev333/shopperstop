@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,16 +13,23 @@ const adminStoresPath = "/api/core/v1/admin/stores"
 
 // adminStore is the admin view of a store as the admin routes answer it.
 type adminStore struct {
-	ID                     string `json:"id"`
-	Name                   string `json:"name"`
-	City                   string `json:"city"`
-	AddressLine            string `json:"addressLine"`
-	Pincode                string `json:"pincode"`
-	IsOpen                 bool   `json:"isOpen"`
-	DeliveryFeeCents       int64  `json:"deliveryFeeCents"`
-	FreeDeliveryAboveCents int64  `json:"freeDeliveryAboveCents"`
-	MinOrderCents          int64  `json:"minOrderCents"`
-	PromisedMinutes        int32  `json:"promisedMinutes"`
+	ID                     string         `json:"id"`
+	Name                   string         `json:"name"`
+	City                   string         `json:"city"`
+	Location               *storeLocation `json:"location"`
+	AddressLine            string         `json:"addressLine"`
+	Pincode                string         `json:"pincode"`
+	IsOpen                 bool           `json:"isOpen"`
+	DeliveryFeeCents       int64          `json:"deliveryFeeCents"`
+	FreeDeliveryAboveCents int64          `json:"freeDeliveryAboveCents"`
+	MinOrderCents          int64          `json:"minOrderCents"`
+	PromisedMinutes        int32          `json:"promisedMinutes"`
+}
+
+// storeLocation is a store's location as the store routes answer it.
+type storeLocation struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 // adminToken signs the shared admin in and returns the token.
@@ -102,6 +110,10 @@ func TestCreateStoreValidation(t *testing.T) {
 		{"promisedMinutes", with("promisedMinutes", 241)},
 		{"city", with("city", strings.Repeat("x", 101))},
 		{"city", with("city", nil)},
+		{"location.lat", with("location", map[string]any{"lat": 90.5, "lng": 77.6})},
+		{"location.lng", with("location", map[string]any{"lat": 12.9, "lng": -180.5})},
+		{"location", with("location", map[string]any{"lat": 12.9})},
+		{"location", with("location", nil)},
 	}
 	var before int
 	if err := testPool.QueryRow(t.Context(), "select count(*) from stores").Scan(&before); err != nil {
@@ -298,5 +310,62 @@ func TestPatchStoreCity(t *testing.T) {
 	}
 	if status, raw := patch(map[string]any{"city": ""}); status != http.StatusOK || strings.Contains(string(raw), `"city"`) {
 		t.Fatalf("clear city: got %d %s, want 200 without a city member", status, raw)
+	}
+}
+
+func TestCreateStoreLocation(t *testing.T) {
+	token := adminToken(t)
+	with := newStoreBody("Located Layout", "561214")
+	with["location"] = map[string]any{"lat": 12.9352, "lng": 77.6245}
+	s := createStore(t, token, with)
+	if got := getAdminStore(t, token, s.ID).Location; s.Location == nil || got == nil || *s.Location != *got || got.Lat != 12.9352 || got.Lng != 77.6245 {
+		t.Fatalf("create with location: got %+v then %+v, want lat 12.9352, lng 77.6245 stored", s.Location, got)
+	}
+	edge := newStoreBody("Edge Layout", "561215")
+	edge["location"] = map[string]any{"lat": -90, "lng": 180}
+	if e := createStore(t, token, edge).Location; e == nil || e.Lat != -90 || e.Lng != 180 {
+		t.Fatalf("create at the range edges: got %+v, want lat -90, lng 180", e)
+	}
+	status, raw := call(t, http.MethodPost, adminStoresPath, token, newStoreBody("Unlocated Layout", "561216"))
+	if status != http.StatusCreated || strings.Contains(string(raw), `"location"`) {
+		t.Fatalf("create without location: got %d %s, want 201 without a location member", status, raw)
+	}
+}
+
+func TestPatchStoreLocation(t *testing.T) {
+	token := adminToken(t)
+	id := insertStore(t, true, "561217")
+	patch := func(body map[string]any) (int, []byte) {
+		return call(t, http.MethodPatch, adminStoresPath+"/"+id, token, body)
+	}
+	at := func() string {
+		l := getAdminStore(t, token, id).Location
+		if l == nil {
+			return "none"
+		}
+		return fmt.Sprint(l.Lat, ",", l.Lng)
+	}
+	if status, raw := patch(map[string]any{"location": map[string]any{"lat": 12.9719, "lng": 77.6412}}); status != http.StatusOK || at() != "12.9719,77.6412" {
+		t.Fatalf("set location: got %d %s, want 200 and 12.9719,77.6412", status, raw)
+	}
+	if status, raw := patch(map[string]any{"name": "Renamed"}); status != http.StatusOK || at() != "12.9719,77.6412" {
+		t.Fatalf("patch without location: got %d %s, want the location unchanged", status, raw)
+	}
+	for _, c := range []struct {
+		field string
+		body  map[string]any
+	}{
+		{"location.lat", map[string]any{"location": map[string]any{"lat": -91, "lng": 77.6}}},
+		{"location.lng", map[string]any{"location": map[string]any{"lat": 12.9, "lng": 181}}},
+		{"location", map[string]any{"location": map[string]any{"lng": 77.6}}},
+		{"location", map[string]any{"location": nil}},
+	} {
+		status, raw := patch(c.body)
+		if e := decodeError(t, raw); status != http.StatusBadRequest || e.Error.Code != "validation" || e.Error.Field != c.field || at() != "12.9719,77.6412" {
+			t.Fatalf("patch %v: got %d %s, want 400 validation field %s and the location unchanged", c.body, status, raw, c.field)
+		}
+	}
+	if _, err := testPool.Exec(t.Context(), "update stores set lat = null where id = $1", id); err == nil {
+		t.Fatal("lat without lng: the database accepted it, want the both-or-neither check to refuse")
 	}
 }

@@ -3399,6 +3399,10 @@
                       "id": "00000000-0000-4000-8000-000000000401",
                       "name": "Koramangala",
                       "city": "Bengaluru",
+                      "location": {
+                        "lat": 12.9352,
+                        "lng": 77.6245
+                      },
                       "addressLine": "80 Feet Rd, Koramangala",
                       "pincode": "560034",
                       "isOpen": true,
@@ -3411,6 +3415,10 @@
                       "id": "00000000-0000-4000-8000-000000000402",
                       "name": "Indiranagar",
                       "city": "Bengaluru",
+                      "location": {
+                        "lat": 12.9719,
+                        "lng": 77.6412
+                      },
                       "addressLine": "100 Feet Rd, Indiranagar",
                       "pincode": "560038",
                       "isOpen": true,
@@ -3449,7 +3457,7 @@
       "post": {
         "operationId": "createStore",
         "summary": "Create a store",
-        "description": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city means none. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.",
+        "description": "Admins only. Creates a store from name, addressLine, pincode and promisedMinutes, plus any of city, location, isOpen, deliveryFeeCents, freeDeliveryAboveCents and minOrderCents. A new store is closed unless isOpen is true, and an absent money field is 0. The store serves no pincode until its service areas are set. An absent city or location means none. A location needs both lat and lng: one without the other answers 400 field location, an out-of-range one 400 field location.lat or location.lng. Name, city and addressLine are trimmed; an explicit null is refused, and every bad field answers 400 validation naming it, and nothing is written.",
         "tags": [
           "admin-stores"
         ],
@@ -3468,6 +3476,10 @@
               "example": {
                 "name": "HSR Layout",
                 "city": "Bengaluru",
+                "location": {
+                  "lat": 12.9116,
+                  "lng": 77.6474
+                },
                 "addressLine": "27th Main, HSR Layout",
                 "pincode": "560102",
                 "promisedMinutes": 12,
@@ -3522,6 +3534,10 @@
                   "id": "00000000-0000-4000-8000-000000000401",
                   "name": "Koramangala",
                   "city": "Bengaluru",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245
+                  },
                   "addressLine": "80 Feet Rd, Koramangala",
                   "pincode": "560034",
                   "isOpen": true,
@@ -3534,7 +3550,7 @@
             }
           },
           "400": {
-            "description": "A field is missing or out of range. The field names it; nothing is written.",
+            "description": "A field is missing or out of range. The field names it; nothing is written. A location's errors name location (lat or lng missing), location.lat or location.lng (out of range).",
             "content": {
               "application/json": {
                 "schema": {
@@ -3624,6 +3640,10 @@
                   "id": "00000000-0000-4000-8000-000000000401",
                   "name": "Koramangala",
                   "city": "Bengaluru",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245
+                  },
                   "addressLine": "80 Feet Rd, Koramangala",
                   "pincode": "560034",
                   "isOpen": true,
@@ -3656,7 +3676,7 @@
       "patch": {
         "operationId": "updateStore",
         "summary": "Change a store",
-        "description": "Admins only. Changes only the fields present: name, city (empty clears it), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.",
+        "description": "Admins only. Changes only the fields present: name, city (empty clears it), location (both lat and lng; it replaces the location and cannot be cleared), addressLine, pincode, isOpen (false closes the store at once), and the money and minutes fields. Each present value is checked as on create; a bad one answers 400 naming it and changes nothing. A null value is refused with 400 naming the field. {} answers the store unchanged. An unknown id answers 404.",
         "tags": [
           "admin-stores"
         ],
@@ -3735,6 +3755,10 @@
                   "id": "00000000-0000-4000-8000-000000000401",
                   "name": "Koramangala",
                   "city": "Bengaluru",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245
+                  },
                   "addressLine": "80 Feet Rd, Koramangala",
                   "pincode": "560034",
                   "isOpen": true,
@@ -3747,7 +3771,7 @@
             }
           },
           "400": {
-            "description": "A present field is null or out of range. The field names it; nothing is changed.",
+            "description": "A present field is null or out of range. The field names it; nothing is changed. A location's errors name location (lat or lng missing), location.lat or location.lng (out of range).",
             "content": {
               "application/json": {
                 "schema": {
@@ -4630,6 +4654,10 @@
                     "id": "00000000-0000-4000-8000-000000000401",
                     "name": "Koramangala",
                     "city": "Bengaluru",
+                    "location": {
+                      "lat": 12.9352,
+                      "lng": 77.6245
+                    },
                     "isOpen": true,
                     "deliveryFeeCents": 2500,
                     "freeDeliveryAboveCents": 19900,
@@ -4709,6 +4737,10 @@
                   "id": "00000000-0000-4000-8000-000000000401",
                   "name": "Koramangala",
                   "city": "Bengaluru",
+                  "location": {
+                    "lat": 12.9352,
+                    "lng": 77.6245
+                  },
                   "isOpen": true,
                   "deliveryFeeCents": 2500,
                   "freeDeliveryAboveCents": 19900,
@@ -6868,6 +6900,10 @@
             "description": "The city the store is in, for the customer's header (\"560034, Bengaluru\"). Omitted when the store has none.",
             "example": "Bengaluru"
           },
+          "location": {
+            "$ref": "#/components/schemas/StoreLocation",
+            "description": "Where the store is. Omitted when the store has none; such a store gets no rider dispatch."
+          },
           "isOpen": {
             "type": "boolean"
           },
@@ -6920,6 +6956,10 @@
             "type": "string",
             "maxLength": 100,
             "description": "At most 100 characters after trimming. Absent or empty: no city."
+          },
+          "location": {
+            "$ref": "#/components/schemas/StoreLocation",
+            "description": "Both lat and lng. Absent: no location."
           },
           "addressLine": {
             "type": "string",
@@ -6979,6 +7019,10 @@
             "type": "string",
             "maxLength": 100,
             "description": "At most 100 characters after trimming; empty clears the city."
+          },
+          "location": {
+            "$ref": "#/components/schemas/StoreLocation",
+            "description": "Both lat and lng; replaces the location. Absent: unchanged. It cannot be cleared (null is refused)."
           },
           "addressLine": {
             "type": "string",
@@ -7364,6 +7408,10 @@
             "maxLength": 100,
             "description": "The city the store is in, for the customer's header (\"560034, Bengaluru\"). Omitted when the store has none.",
             "example": "Bengaluru"
+          },
+          "location": {
+            "$ref": "#/components/schemas/StoreLocation",
+            "description": "Where the store is. Omitted when the store has none; such a store gets no rider dispatch."
           },
           "isOpen": {
             "type": "boolean",
@@ -8484,6 +8532,35 @@
             "type": "string",
             "format": "date-time"
           }
+        }
+      },
+      "StoreLocation": {
+        "type": "object",
+        "description": "Where a store is, in degrees (WGS 84). The rider service ranks riders by their distance to it (dispatch).",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitude, -90 to 90."
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitude, -180 to 180."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "lat": 12.9352,
+          "lng": 77.6245
         }
       }
     }
