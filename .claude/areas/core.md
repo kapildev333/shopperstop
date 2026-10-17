@@ -3,7 +3,7 @@ Scope: `services/core/`
 Depends on: platform (`deploy/initdb.sql` and `make db` from task 4, landed #4; `.github/workflows/ci.yml` core job from task 13, landed #15; CI blocked by account billing, see PLAN.md)
 Spec: Spec 1 §3, §4, §11; Spec 2 §9, §10, §12, §13; plan tasks 5, 6, 7, 8 (sequential, one module, one feature)
 ## Doing
-Idle 2026-10-16 after core-P5-L2 (#360, archived #361). "to core" requests from other areas become the next core lane; backlog below. No core worktree, branch or PR open. No `make e2e` from core.
+Paused 2026-10-17 by the owner. Nothing open: core-P5-L1 (#335, archived #336) and core-P5-L2 (#360, archived #361) merged; no core worktree, branch or PR. Resume: `/loop 5m /manage core`; the next core lane comes from the orchestrator (a new package here or a "to core" request relayed by message); `## Backlog` holds the mail-link and verification rate-limit items. No `make e2e` from core.
 ## Lanes
 | Lane | Task | Scope | Status |
 |------|------|-------|--------|
