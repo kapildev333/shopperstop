@@ -1,0 +1,15 @@
+# rider-P5-L3 - rider app dispatch: online toggle, position while online, offer sheet (OpenSpec change rider-app-dispatch)
+Status: started
+## Doing
+Team lead, 2026-10-16: change proposed and validated (`openspec validate rider-app-dispatch --strict`, `--all --strict` 21 passed); five worker briefs written (`rider-P5-L3-T1.md` to `-T5.md`); waiting for the manager to launch T1.
+## Found
+- Change `openspec/changes/rider-app-dispatch/`: `rider-app` ADDED only (8 requirements, longest 439 characters): availability in the banner, location needed to stay online, position while online, offers read while online, offer sheet, decline, accept, online dispatch e2e. No existing requirement is modified: the shell, ready list, hand claim and delivery page keep their wording and tests.
+- Tasks, strictly in order: T1 e2e `online.spec.ts` (test only, written before the pages), T2 banner toggle (+ `isOnline` on the `arjun` fixture, `offer()` fixture), T3 position while online and refusal goes offline (`location.ts` shares `watchAndSend` with the delivery page's report), T4 offer poll, sheet, countdown, decline, T5 accept. Then the manager's `make e2e` and phone walk (6.1), and my `/opsx:verify` (6.2).
+- `Rider.isOnline` stays optional in `services/rider/openapi.json`: `apps/admin/src/riders-fake.ts` on main (b68ef53, also origin/main ad34fb1) has no `isOnline`, so marking it required would break admin's typecheck. This lane adds it only to the rider app's fixture (half of rider-P5-L2's request). design.md Decision 13.
+- e2e isolation (design.md Decision 12): `make e2e` runs workspace suites one after another (admin, mobile, rider, web); the rider suite resets both databases in its global setup and runs files in parallel. `online.spec.ts` uses Indiranagar (`...0402`, rider `rider1-indiranagar@shopperstop.local`, staff `indiranagar@shopperstop.local`, pincode 560038, store at 12.9719, 77.6412); the dispatcher is per store and every other rider spec is at Koramangala with riders who never go online, so nothing can collide. The spec ends with "Go offline" asserted and a `finally` that puts `{online: false}` through the API.
+- Decisions taken (design.md): going online sends the PUT first and one effect watches, so the toggle, a reload while online and a refusal share one path (Decision 3); positions on a 10 s interval from the first fix, not per change, because Chromium only calls back on change and a still rider would go stale after the 2-minute location TTL (Decision 4); Close and Escape decline (Decision 8); countdown on the device clock (Decision 7); `aria-pressed` kept with the changing label as the work package says (Decision 11).
+## Requests
+- to rider (a later rider lane), via the area plan: once admin-P5-L2 lands with `isOnline` in `apps/admin/src/riders-fake.ts`, add `isOnline` to `Rider.required` in `services/rider/openapi.json` and regenerate `rider.d.ts` and Postman.
+- to admin (admin-P5-L2), via the orchestrator: add `isOnline` to the `Rider` fixtures in `apps/admin/src/riders-fake.ts` (rider-P5-L2's request, still open on main).
+## Blockers
+None.
