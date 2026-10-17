@@ -5,6 +5,7 @@ import { Badge, Button, ErrorBanner, Price, Sheet, StatusMessage } from '@shoppe
 import { itemCount } from './format'
 import { deliveryQuery, meQuery, rider, type ApiError, type Offer } from './api'
 import { useOnlineReport } from './location'
+import { assignedKey, readyKey } from './ready'
 
 // The banner's availability. The state is the rider query's `isOnline` (design Decision 2); the answer is written back into that query.
 export function Availability() {
@@ -153,8 +154,8 @@ function OnlineOffer() {
       setAnswered(o.id)
       setStatus(undefined)
       queryClient.setQueryData(deliveryQuery(delivery.id).queryKey, delivery)
-      void queryClient.invalidateQueries({ queryKey: ['rider', 'ready'] })
-      void queryClient.invalidateQueries({ queryKey: ['rider', 'deliveries', 'assigned'] })
+      void queryClient.invalidateQueries({ queryKey: readyKey })
+      void queryClient.invalidateQueries({ queryKey: assignedKey })
       await navigate({ to: '/deliveries/$deliveryId', params: { deliveryId: delivery.id } })
     },
     onError: (error, o) => {
@@ -164,10 +165,6 @@ function OnlineOffer() {
       setStatus(`Someone else took ${o.number}.`)
     },
   })
-
-  // A new offer starts with no error from the last one (as ReadyPage's pick resets its claim).
-  const resetAccept = accept.reset
-  useEffect(() => resetAccept(), [offer?.id, resetAccept])
 
   // ponytail: fire-and-forget decline; a failed decline lets the offer run out its 30 s. Nothing answers while an accept is in flight.
   function decline(o: Offer) {
@@ -197,7 +194,9 @@ function OnlineOffer() {
             onExpire={() => expire(offer)}
           />
         )}
-        {accept.isError && <ErrorBanner message="Could not accept the order. Try again." className="mt-4" />}
+        {accept.isError && accept.variables?.id === offer?.id && (
+          <ErrorBanner message="Could not accept the order. Try again." className="mt-4" />
+        )}
       </Sheet>
       {!open && status && (
         <StatusMessage tone="warning" className="mb-4">

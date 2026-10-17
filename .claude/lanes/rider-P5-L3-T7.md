@@ -39,3 +39,6 @@ Status: doing (commit 1 of 3 ready)
 
 ### Commit 2 (fix) log
 - Decline `disabled={accepting}`; the `isPending` guards in `decline` and `expire` kept. offer.test.tsx 18/18 green. lint and typecheck clean.
+
+### Commit 3 (refactor) log
+- `resetAccept` and its effect deleted; banner gated on `accept.variables?.id === offer?.id`; the render-time `seenId` status reset from T6 kept as is. `readyKey`/`assignedKey` exported from `ready.tsx` and used in `dispatch.tsx`. offer.test.tsx 18/18 green, lint and typecheck clean.
