@@ -1,0 +1,94 @@
+diff --git a/apps/admin/src/dispatch.tsx b/apps/admin/src/dispatch.tsx
+new file mode 100644
+index 0000000..9931542
+--- /dev/null
++++ b/apps/admin/src/dispatch.tsx
+@@ -0,0 +1,48 @@
++import { queryOptions, useQuery } from '@tanstack/react-query'
++import type { components } from '@shopperstop/ui/api/rider'
++import { api, riderApi } from './api'
++import { pollMs, type Order } from './orders'
++
++type OrderDispatch = components['schemas']['OrderDispatch']
++
++// ['rider', 'dispatch', orderId]: the card and the sheet share one read, asked again with the board's poll.
++// ponytail: one read per ready order per poll; ask the rider service for a per-store read if stores hold many ready orders.
++export const dispatchQuery = (orderId: string) =>
++  queryOptions({
++    queryKey: ['rider', 'dispatch', orderId],
++    queryFn: async () => {
++      const { data, error } = await riderApi.GET('/admin/orders/{orderId}/dispatch', { params: { path: { orderId } } })
++      if (error) throw error.error
++      return data
++    },
++    refetchInterval: pollMs,
++  })
++
++// The store as customers see it (both staff roles may read it): only its `location` is used, to say why dispatch is off.
++const storeQuery = (storeId: string) =>
++  queryOptions({
++    queryKey: ['stores', storeId],
++    queryFn: async () => {
++      const { data, error } = await api.GET('/stores/{id}', { params: { path: { id: storeId } } })
++      if (error) throw error.error
++      return data
++    },
++  })
++
++// D57's line: the open offer first, then why there is none. `located` is false only for a loaded store without a location.
++export function dispatchText({ online, dispatch, offers }: OrderDispatch, located: boolean) {
++  const open = offers.find((offer) => offer.status === 'offered')
++  if (open) return `Offered to ${open.riderName}, ${Math.ceil(open.etaSeconds / 60)} min away`
++  if (dispatch === 'off') return located ? 'Dispatch off' : 'Dispatch off: store has no location'
++  return online === 0 ? 'No rider online' : 'Waiting for a rider'
++}
++
++// While the order is ready: one line from the rider service, none until it answers or when it cannot be read.
++// The store is read only when dispatch is off (its location says why); until it answers the line is "Dispatch off".
++export function DispatchLine({ order, className }: { order: Order; className?: string }) {
++  const ready = order.status === 'ready'
++  const { data } = useQuery({ ...dispatchQuery(order.id), enabled: ready })
++  const store = useQuery({ ...storeQuery(order.storeId), enabled: ready && data?.dispatch === 'off' })
++  const located = store.data === undefined || store.data.location !== undefined
++  return ready && data ? <p className={className}>{dispatchText(data, located)}</p> : null
++}
+diff --git a/apps/admin/src/order-board.tsx b/apps/admin/src/order-board.tsx
+index 4b2a305..9a1d496 100644
+--- a/apps/admin/src/order-board.tsx
++++ b/apps/admin/src/order-board.tsx
+@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
+ import { useEffect, useRef, useState } from 'react'
+ import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
+ import { useSince } from '@shopperstop/ui/app'
++import { DispatchLine } from './dispatch'
+ import { OrderSheet, PaymentBadge } from './order-sheet'
+ import { activeStatuses, awaitsPayment, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, type Order } from './orders'
+ 
+@@ -28,6 +29,7 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
+         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
+       </p>
+       {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
++      <DispatchLine order={order} className="text-small text-ink" />
+       <div className="flex flex-wrap items-center justify-between gap-2">
+         <Price cents={order.totalCents} />
+         <PaymentBadge order={order} id={`payment-${order.id}`} />
+diff --git a/apps/admin/src/order-sheet.tsx b/apps/admin/src/order-sheet.tsx
+index b695c40..dd72ed1 100644
+--- a/apps/admin/src/order-sheet.tsx
++++ b/apps/admin/src/order-sheet.tsx
+@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
+ import { useEffect, useRef, useState, type FormEvent } from 'react'
+ import { Badge, Button, Dialog, DialogFooter, ErrorBanner, FormField, Input, Price, Sheet, StatusMessage } from '@shopperstop/ui'
+ import { when } from '@shopperstop/ui/app'
++import { DispatchLine } from './dispatch'
+ import { orderQuery, payment, paymentBadge, statusBadge, statusLabel, useSetStatus, type Order } from './orders'
+ 
+ // Core takes a note of at most 500 characters (services/core/internal/order/handlers.go).
+@@ -24,6 +25,7 @@ function Details({ order }: { order: Order }) {
+       </p>
+       {order.cancelReason && <p>Reason for cancelling: {order.cancelReason}</p>}
+       {order.riderName && <p>Rider: {order.riderName}</p>}
++      <DispatchLine order={order} />
+       {order.paymentReference && (
+         <p>
+           Payment reference: <span className="tabular-nums">{order.paymentReference}</span>

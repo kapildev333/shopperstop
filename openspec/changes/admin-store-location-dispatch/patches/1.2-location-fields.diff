@@ -1,0 +1,73 @@
+diff --git a/apps/admin/src/store-form.tsx b/apps/admin/src/store-form.tsx
+index 32960a3..b83b52d 100644
+--- a/apps/admin/src/store-form.tsx
++++ b/apps/admin/src/store-form.tsx
+@@ -7,7 +7,9 @@ import { api, type ApiError } from './api'
+ import { storeQuery, toCents, toRupees, type AdminStore } from './stores'
+ 
+ type StoreCreate = components['schemas']['StoreCreate']
+-type Field = Exclude<keyof StoreCreate, 'location'>
++type StorePatch = components['schemas']['StorePatch']
++// Every field as typed; the location is two of them, `lat` and `lng`, and becomes `location` on submit.
++type Field = keyof Omit<StoreCreate, 'location'> | 'lat' | 'lng'
+ type Values = Record<Field, string>
+ 
+ const rupees = 'Enter 0 to 100000 rupees, at most two decimals.'
+@@ -23,6 +25,8 @@ const messages: Record<Field, string> = {
+   freeDeliveryAboveCents: rupees,
+   minOrderCents: rupees,
+   promisedMinutes: 'Enter 1 to 240 minutes.',
++  lat: 'Enter a latitude from -90 to 90.',
++  lng: 'Enter a longitude from -180 to 180.',
+ }
+ 
+ function initial(store?: AdminStore): Values {
+@@ -36,6 +40,8 @@ function initial(store?: AdminStore): Values {
+     freeDeliveryAboveCents: toRupees(store?.freeDeliveryAboveCents ?? 0),
+     minOrderCents: toRupees(store?.minOrderCents ?? 0),
+     promisedMinutes: store ? String(store.promisedMinutes) : '',
++    lat: store?.location ? String(store.location.lat) : '',
++    lng: store?.location ? String(store.location.lng) : '',
+   }
+ }
+ 
+@@ -49,6 +55,10 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
+   }
+   const minutes = /^\d{1,3}$/.test(values.promisedMinutes.trim()) ? Number(values.promisedMinutes) : undefined
+   if (minutes === undefined) errors.promisedMinutes = messages.promisedMinutes
++  // Both coordinates, or no location.
++  const lat = values.lat.trim()
++  const lng = values.lng.trim()
++  const location = lat && lng ? { lat: Number(lat), lng: Number(lng) } : undefined
+   const body: StoreCreate = {
+     name: values.name,
+     city: values.city,
+@@ -59,13 +69,16 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
+     freeDeliveryAboveCents: cents('freeDeliveryAboveCents'),
+     minOrderCents: cents('minOrderCents'),
+     promisedMinutes: minutes ?? 0,
++    ...(location && { location }),
+   }
+   return [body, errors]
+ }
+ 
+-// PATCH sends only what differs from the loaded store; never null.
+-function changed(body: StoreCreate, store: AdminStore) {
+-  return Object.fromEntries(Object.entries(body).filter(([key, value]) => (store[key as Field] ?? '') !== value))
++// PATCH sends only what differs from the loaded store; never null. The location goes whole when either coordinate moved.
++function changed({ location, ...body }: StoreCreate, store: AdminStore): StorePatch {
++  const patch: StorePatch = Object.fromEntries(Object.entries(body).filter(([key, value]) => (store[key as keyof typeof body] ?? '') !== value))
++  if (location && (location.lat !== store.location?.lat || location.lng !== store.location?.lng)) patch.location = location
++  return patch
+ }
+ 
+ // Create when there is no store (then open it), change it otherwise.
+@@ -117,6 +130,8 @@ export function StoreForm({ store }: { store?: AdminStore }) {
+       {text('name', 'Name')}
+       {text('addressLine', 'Address')}
+       {text('city', 'City', { hint: 'Optional.' })}
++      {text('lat', 'Latitude', { hint: 'Optional, with the longitude. Degrees, for example 12.9352.' })}
++      {text('lng', 'Longitude', { hint: 'Optional, with the latitude. Degrees, for example 77.6245.' })}
+       {text('pincode', 'Pincode', { inputMode: 'numeric' })}
+       {text('deliveryFeeCents', 'Delivery fee (₹)', { inputMode: 'decimal' })}
+       {text('freeDeliveryAboveCents', 'Free delivery above (₹)', { inputMode: 'decimal', hint: '0 means delivery is always free.' })}

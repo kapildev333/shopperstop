@@ -64,6 +64,23 @@ test('admin edits a store and meets the pincode conflict', async ({ page }) => {
   await page.getByRole('button', { name: 'Remove 560001' }).click()
   await savePincodes(page)
   await expect(pincodes).not.toContainText('560001')
+
+  // The location, as the seed has it: half of it is refused before a request, then it moves and comes back.
+  // In this test rather than its own, so the run signs admin@ in once less (core's 10 sign-ins per hour).
+  await expect(page.getByLabel('Latitude')).toHaveValue('12.9352')
+  await expect(page.getByLabel('Longitude')).toHaveValue('77.6245')
+  await page.getByLabel('Longitude').fill('')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByLabel('Longitude')).toHaveAccessibleDescription(/Enter both latitude and longitude, or neither\./)
+  await expectNoAxeViolations(page)
+  for (const lat of ['12.9353', '12.9352']) {
+    await page.getByLabel('Latitude').fill(lat)
+    await page.getByLabel('Longitude').fill('77.6245')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Store saved.' })).toBeVisible()
+    await page.reload()
+    await expect(page.getByLabel('Latitude')).toHaveValue(lat)
+  }
 })
 
 test('store staff open the stores page', async ({ page }) => {

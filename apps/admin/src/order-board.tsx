@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, Card, Dialog, DialogFooter, EmptyState, ErrorBanner, Price, Skeleton, StatusMessage, VisuallyHidden } from '@shopperstop/ui'
 import { useSince } from '@shopperstop/ui/app'
+import { DispatchLine } from './dispatch'
 import { OrderSheet, PaymentBadge } from './order-sheet'
 import { activeStatuses, awaitsPayment, boardQuery, isActive, itemCount, nextLabel, nextStatus, orderQuery, statusLabel, useSetStatus, type Order } from './orders'
 
@@ -28,6 +29,7 @@ function OrderCard({ order, busy, saving, onNext, onOpen }: { order: Order; busy
         {itemCount(order)}, pincode <span className="tabular-nums">{order.address.pincode}</span>
       </p>
       {order.riderName && <p className="text-small text-ink">Rider: {order.riderName}</p>}
+      <DispatchLine order={order} className="text-small text-ink" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Price cents={order.totalCents} />
         <PaymentBadge order={order} id={`payment-${order.id}`} />

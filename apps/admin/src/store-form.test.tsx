@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { clearToken, setToken } from './session'
 import { admin, apiError, fakeCore, json, koramangala, storeList } from './fake-core'
 import { renderApp } from './render-app'
+import type { AdminStore } from './stores'
 
 afterEach(() => {
   clearToken()
@@ -176,8 +177,8 @@ test('an unknown store shows not found', async () => {
 })
 
 // A fake core that keeps the store: PATCH merges the body, GETs answer the current values.
-function keepsStore() {
-  let current = { ...koramangala }
+function keepsStore(start: AdminStore = koramangala) {
+  let current = { ...start }
   return fakeCore({
     ...signedIn,
     'GET /admin/stores': () => storeList([current]),
@@ -219,4 +220,105 @@ test('the stores table shows a saved change', async () => {
   await userEvent.click(within(screen.getByRole('navigation', { name: 'Admin' })).getByRole('link', { name: 'Stores' }))
 
   expect(await within(await screen.findByRole('table', { name: 'Stores' })).findByText('11 min')).toBeInTheDocument()
+})
+
+// Koramangala as the demo seed has it (services/core/internal/seed).
+const located: AdminStore = { ...koramangala, location: { lat: 12.9352, lng: 77.6245 } }
+
+test('create a store with a location sends both coordinates', async () => {
+  setToken('tok')
+  const created = { ...koramangala, id: '00000000-0000-4000-8000-000000000499', name: 'HSR Layout', location: { lat: 12.9116, lng: 77.6389 } }
+  const calls = fakeCore({
+    ...signedIn,
+    'POST /admin/stores': () => json(201, created),
+    [`GET /admin/stores/${created.id}/service-areas`]: () => json(200, { pincodes: [] }),
+    [`GET /admin/stores/${created.id}`]: () => json(200, created),
+  })
+
+  renderApp('/stores/new')
+  await replace('Name', 'HSR Layout')
+  await replace('Address', '27th Main, HSR Layout')
+  await replace('Latitude', '12.9116')
+  await replace('Longitude', '77.6389')
+  await replace('Pincode', '560102')
+  await replace('Promised minutes', '12')
+  await userEvent.click(screen.getByRole('button', { name: 'Create store' }))
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'HSR Layout' })).toBeInTheDocument()
+  const post = calls.find((call) => call.method === 'POST')!
+  expect(await post.json()).toMatchObject({ name: 'HSR Layout', location: { lat: 12.9116, lng: 77.6389 } })
+  expect(screen.getByLabelText('Latitude')).toHaveValue('12.9116')
+  expect(screen.getByLabelText('Longitude')).toHaveValue('77.6389')
+})
+
+test('the change form shows the location and sends it only when a coordinate changed', async () => {
+  setToken('tok')
+  const calls = keepsStore(located)
+
+  renderApp(`/stores/${koramangala.id}`)
+  expect(await screen.findByLabelText('Latitude')).toHaveValue('12.9352')
+  expect(screen.getByLabelText('Longitude')).toHaveValue('77.6245')
+  // The same number written longer is no change.
+  await replace('Latitude', '12.93520')
+  await replace('Promised minutes', '11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Store saved.')
+  await replace('Longitude', '77.625')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(2))
+
+  const patches = calls.filter((call) => call.method === 'PATCH')
+  expect(await patches[0].json()).toEqual({ promisedMinutes: 11 })
+  expect(await patches[1].json()).toEqual({ location: { lat: 12.9352, lng: 77.625 } })
+})
+
+test('a location the form cannot send is flagged without a request', async () => {
+  setToken('tok')
+  const calls = fakeCore(withStore)
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '12.9352')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter both latitude and longitude, or neither\./)
+  await replace('Latitude', 'north')
+  await replace('Longitude', '180.5')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/Enter a latitude from -90 to 90\./)
+  expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter a longitude from -180 to 180\./)
+  expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(0)
+})
+
+test('a location can be changed but not removed', async () => {
+  setToken('tok')
+  const calls = fakeCore({ ...withStore, [`GET ${storePath}`]: () => json(200, located) })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '')
+  await replace('Longitude', '')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/A location can be changed but not removed\./)
+  expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(0)
+})
+
+test('location errors from core are shown on their fields', async () => {
+  setToken('tok')
+  const answers = [
+    apiError(400, 'validation', 'location.lng must be from -180 to 180', 'location.lng'),
+    apiError(400, 'validation', 'location needs lat and lng', 'location'),
+  ]
+  fakeCore({ ...withStore, [`PATCH ${storePath}`]: () => answers.shift()! })
+
+  renderApp(`/stores/${koramangala.id}`)
+  await replace('Latitude', '12.9352')
+  await replace('Longitude', '77.6245')
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(screen.getByLabelText('Longitude')).toHaveAccessibleDescription(/Enter a longitude from -180 to 180\./))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(screen.getByLabelText('Latitude')).toHaveAccessibleDescription(/Enter both latitude and longitude, or neither\./))
+  expect(screen.getByLabelText('Longitude')).not.toHaveAccessibleDescription(/Enter a longitude/)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })

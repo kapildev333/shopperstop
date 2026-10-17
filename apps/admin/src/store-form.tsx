@@ -7,7 +7,9 @@ import { api, type ApiError } from './api'
 import { storeQuery, toCents, toRupees, type AdminStore } from './stores'
 
 type StoreCreate = components['schemas']['StoreCreate']
-type Field = Exclude<keyof StoreCreate, 'location'>
+type StorePatch = components['schemas']['StorePatch']
+// Every field as typed; the location is two of them, `lat` and `lng`, and becomes `location` on submit.
+type Field = keyof Omit<StoreCreate, 'location'> | 'lat' | 'lng'
 type Values = Record<Field, string>
 
 const rupees = 'Enter 0 to 100000 rupees, at most two decimals.'
@@ -23,7 +25,12 @@ const messages: Record<Field, string> = {
   freeDeliveryAboveCents: rupees,
   minOrderCents: rupees,
   promisedMinutes: 'Enter 1 to 240 minutes.',
+  lat: 'Enter a latitude from -90 to 90.',
+  lng: 'Enter a longitude from -180 to 180.',
 }
+const pair = 'Enter both latitude and longitude, or neither.'
+// Core names a location's errors `location` (a half missing), `location.lat` or `location.lng` (out of range).
+const coreFields: Record<string, [Field, string]> = { location: ['lat', pair], 'location.lat': ['lat', messages.lat], 'location.lng': ['lng', messages.lng] }
 
 function initial(store?: AdminStore): Values {
   return {
@@ -36,11 +43,13 @@ function initial(store?: AdminStore): Values {
     freeDeliveryAboveCents: toRupees(store?.freeDeliveryAboveCents ?? 0),
     minOrderCents: toRupees(store?.minOrderCents ?? 0),
     promisedMinutes: store ? String(store.promisedMinutes) : '',
+    lat: store?.location ? String(store.location.lat) : '',
+    lng: store?.location ? String(store.location.lng) : '',
   }
 }
 
 // The request body for the values, and the fields that cannot be sent. Text goes as typed: core trims and checks it.
-function parse(values: Values): [StoreCreate, Partial<Values>] {
+function parse(values: Values, store?: AdminStore): [StoreCreate, Partial<Values>] {
   const errors: Partial<Values> = {}
   const cents = (field: 'deliveryFeeCents' | 'freeDeliveryAboveCents' | 'minOrderCents') => {
     const value = toCents(values[field])
@@ -49,6 +58,19 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
   }
   const minutes = /^\d{1,3}$/.test(values.promisedMinutes.trim()) ? Number(values.promisedMinutes) : undefined
   if (minutes === undefined) errors.promisedMinutes = messages.promisedMinutes
+  // Both coordinates, or no location; a store's location can be replaced, never removed (core has no way to clear it).
+  const coordinate = (field: 'lat' | 'lng', limit: number) => {
+    const text = values[field].trim()
+    const value = /^-?\d+(\.\d+)?$/.test(text) ? Number(text) : NaN
+    if (text && !(Math.abs(value) <= limit)) errors[field] = messages[field]
+    return text ? value : undefined
+  }
+  const lat = coordinate('lat', 90)
+  const lng = coordinate('lng', 180)
+  if (lat === undefined && lng !== undefined) errors.lat = pair
+  if (lng === undefined && lat !== undefined) errors.lng = pair
+  if (lat === undefined && lng === undefined && store?.location) errors.lat = 'A location can be changed but not removed.'
+  const location = lat !== undefined && lng !== undefined ? { lat, lng } : undefined
   const body: StoreCreate = {
     name: values.name,
     city: values.city,
@@ -59,13 +81,23 @@ function parse(values: Values): [StoreCreate, Partial<Values>] {
     freeDeliveryAboveCents: cents('freeDeliveryAboveCents'),
     minOrderCents: cents('minOrderCents'),
     promisedMinutes: minutes ?? 0,
+    ...(location && { location }),
   }
   return [body, errors]
 }
 
-// PATCH sends only what differs from the loaded store; never null.
-function changed(body: StoreCreate, store: AdminStore) {
-  return Object.fromEntries(Object.entries(body).filter(([key, value]) => (store[key as Field] ?? '') !== value))
+// PATCH sends only what differs from the loaded store; never null. The location goes whole when either coordinate moved.
+function changed({ location, ...body }: StoreCreate, store: AdminStore): StorePatch {
+  const patch: StorePatch = Object.fromEntries(Object.entries(body).filter(([key, value]) => (store[key as keyof typeof body] ?? '') !== value))
+  if (location && (location.lat !== store.location?.lat || location.lng !== store.location?.lng)) patch.location = location
+  return patch
+}
+
+// Where core's 400 goes on the form, and the form's own message for it.
+function fieldError(error?: ApiError): [Field, string] | undefined {
+  const field = error?.code === 'validation' ? error.field : undefined
+  if (!field) return undefined
+  return coreFields[field] ?? (field in messages ? [field as Field, messages[field as Field]] : undefined)
 }
 
 // Create when there is no store (then open it), change it otherwise.
@@ -96,15 +128,16 @@ export function StoreForm({ store }: { store?: AdminStore }) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    const [body, found] = parse(values)
+    const [body, found] = parse(values, store)
     setErrors(found)
     if (Object.keys(found).length === 0) save.mutate(body)
   }
 
   // A validation error naming a form field goes to that field; anything else to the banner.
   const apiError = save.error && 'code' in save.error ? (save.error as ApiError) : undefined
-  const serverField = apiError?.code === 'validation' && apiError.field && apiError.field in messages ? (apiError.field as Field) : undefined
-  const errorFor = (field: Field) => errors[field] ?? (serverField === field ? messages[field] : undefined)
+  const serverError = fieldError(apiError)
+  const serverField = serverError?.[0]
+  const errorFor = (field: Field) => errors[field] ?? (serverField === field ? serverError?.[1] : undefined)
   const text = (field: Field, label: string, props: { inputMode?: 'numeric' | 'decimal'; hint?: string } = {}) => (
     <FormField label={label} hint={props.hint} error={errorFor(field)}>
       <Input inputMode={props.inputMode} value={values[field]} onChange={(event) => set(field, event.target.value)} />
@@ -117,6 +150,8 @@ export function StoreForm({ store }: { store?: AdminStore }) {
       {text('name', 'Name')}
       {text('addressLine', 'Address')}
       {text('city', 'City', { hint: 'Optional.' })}
+      {text('lat', 'Latitude', { hint: 'Optional, with the longitude. Degrees, for example 12.9352.' })}
+      {text('lng', 'Longitude', { hint: 'Optional, with the latitude. Degrees, for example 77.6245.' })}
       {text('pincode', 'Pincode', { inputMode: 'numeric' })}
       {text('deliveryFeeCents', 'Delivery fee (₹)', { inputMode: 'decimal' })}
       {text('freeDeliveryAboveCents', 'Free delivery above (₹)', { inputMode: 'decimal', hint: '0 means delivery is always free.' })}
