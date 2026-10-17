@@ -36,3 +36,6 @@ Status: doing (commit 1 of 3 ready)
   - Expire guard removed: same failure at `offer.test.tsx:325`. The 30 s countdown closed the sheet.
   - Restored: `dispatch.tsx` byte-equal to d021746.
 - Red on the committed tree (baseline, no fix): `expect(element).toBeDisabled()` `offer.test.tsx:320`, Received element is not disabled. 17 of 18 green (tests 2 to 4 pass).
+
+### Commit 2 (fix) log
+- Decline `disabled={accepting}`; the `isPending` guards in `decline` and `expire` kept. offer.test.tsx 18/18 green. lint and typecheck clean.

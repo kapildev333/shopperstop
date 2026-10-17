@@ -100,7 +100,7 @@ function OfferBody({
       <Button size="lg" className="w-full" loading={accepting} onClick={onAccept}>
         Accept
       </Button>
-      <Button size="lg" variant="secondary" className="w-full" onClick={onDecline}>
+      <Button size="lg" variant="secondary" className="w-full" disabled={accepting} onClick={onDecline}>
         Decline
       </Button>
     </div>
