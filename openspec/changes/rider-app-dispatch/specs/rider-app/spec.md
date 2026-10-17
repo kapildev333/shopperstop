@@ -42,7 +42,7 @@ While the rider is online on any page, the app SHALL watch the device position (
 - **THEN** the position watch is cleared and no `PUT /me/location` is sent afterwards
 
 ### Requirement: Offers read while online
-While the rider is online the app SHALL read `GET /me/offer` at once and every 3 seconds, on any page; a 204 or a failed read SHALL show nothing. An offline rider SHALL send no `GET /me/offer`, and the ready list and "Pick up" SHALL work as before.
+While the rider is online the app SHALL read `GET /me/offer` at once and every 3 seconds, on any page; a 204 or a failed read SHALL show nothing. An offline rider SHALL send no `GET /me/offer`, and the ready list and "Pick up" SHALL work as before. Going offline SHALL drop any offer read before, so going online again shows none until a new read answers.
 
 #### Scenario: Offline sends no offer read
 - **WHEN** a rider whose `isOnline` is false stays on `/` for 10 seconds
@@ -52,8 +52,12 @@ While the rider is online the app SHALL read `GET /me/offer` at once and every 3
 - **WHEN** a rider whose `isOnline` is true stays on `/` and the service answers 204
 - **THEN** a `GET /me/offer` is sent at once and another 3 seconds later, and no dialog is open
 
+#### Scenario: Going online again shows no old offer
+- **WHEN** an online rider is shown an offer, goes offline because location is refused, and presses "Go online" while the next offer read has not answered
+- **THEN** no dialog is open
+
 ### Requirement: Offer sheet
-A 200 offer SHALL open a sheet "New order <number>" showing the item count, the pincode, the total in rupees, a neutral "Cash" badge for `cod`, the seconds left until `expiresAt` in `tabular-nums` outside any live region, and the buttons "Accept" and "Decline". When the seconds reach zero with no accept pending, the sheet SHALL close and the status message "Offer expired" SHALL show; that offer SHALL not open again.
+A 200 offer SHALL open a sheet "New order <number>" showing the item count, the pincode, the total in rupees, a neutral "Cash" badge for `cod`, the seconds left until `expiresAt` in `tabular-nums` outside any live region, and the buttons "Accept" and "Decline". When the seconds reach zero with no accept pending, the sheet SHALL close and the status message "Offer expired" SHALL show; that offer SHALL not open again. A status line SHALL clear when a new offer arrives or the rider goes offline.
 
 #### Scenario: Offer shown
 - **WHEN** the service answers a `cod` offer of `SS-AAAA0001` with 3 items, ₹339 and pincode `560034`, expiring in 30 seconds
@@ -62,6 +66,10 @@ A 200 offer SHALL open a sheet "New order <number>" showing the item count, the 
 #### Scenario: Offer expires
 - **WHEN** the offer is shown and 30 seconds pass with no answer while the service still answers it
 - **THEN** the dialog closes, the status message "Offer expired" shows and the dialog does not open again
+
+#### Scenario: A new offer clears the status
+- **WHEN** an offer expires, a new offer `SS-AAAA0002` opens, and the service then answers 204
+- **THEN** the dialog closes and "Offer expired" does not show again
 
 ### Requirement: Decline an offer
 "Decline", the sheet's "Close" and Escape SHALL close the sheet at once and send `POST /me/offers/{id}/decline` once, whatever it answers; that offer SHALL not open again. They SHALL do nothing while an accept is pending.
