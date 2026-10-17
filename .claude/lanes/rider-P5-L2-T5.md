@@ -1,5 +1,5 @@
 # rider-P5-L2-T5 - the offer seed (task 5 of rider-dispatch)
-Status: blocked at step 2 (feat not committed; see Blockers)
+Status: done (feat `1ff1c18`; collection blocker resolved by manager decision)
 
 ## Brief
 - LANE-ID: rider-P5-L2 (task T5). Area: `rider`.
@@ -40,5 +40,9 @@ Step 2 applied `T5-feat.diff` (uncommitted): `go vet ./...` clean; `GOFLAGS=-cou
 - `make gen postman` on the feat tree changes the rider collection: 6 offer request variables move from the literal `00000000-0000-4000-8000-000000000902` to `{{offerId}}` (the `ID_VARS` generator change from platform-P5-L2 503a2a8). The branch's committed collection was generated before that change, so it is stale; origin/main has no offer routes, so the drift is the lane's own T2 routes. The brief expects `make gen postman` to change nothing, and the stop rule names generated files outside scope. No tasks ticked.
 
 ## Blockers
-1. Stop per brief: `make gen postman` modifies `docs/postman/shopperstop-rider.postman_collection.json` (out of the listed scope). Left uncommitted in the worktree with the feat patch applied, for the manager's decision: commit the regenerated collection in the feat commit (it is the lane's own generated artifact and CI diffs it), or re-run it on a later step. Tasks 5.1 and 5.2 remain unticked.
-2. The `feat:` commit and `T6` were not started.
+1. RESOLVED by manager decision: the collection is in scope (D23); committed in `1ff1c18` with the note "collection picks up platform's offerId variable"; tasks 5.1 and 5.2 ticked in the same commit. Original stop: `make gen postman` modifies `docs/postman/shopperstop-rider.postman_collection.json` (out of the listed scope). Left uncommitted in the worktree with the feat patch applied, for the manager's decision: commit the regenerated collection in the feat commit (it is the lane's own generated artifact and CI diffs it), or re-run it on a later step. Tasks 5.1 and 5.2 remain unticked.
+2. Resolved: feat committed, T6 started.
+
+## Commits
+- `f09c470` test: seed holds an expired demo offer
+- `1ff1c18` feat: seed an expired offer for the delivered demo order (collection regenerated, tasks 5.1 and 5.2 ticked)
