@@ -1,6 +1,6 @@
 # Tasks
 
-Six worker tasks (task 6 from review R4), strictly in order, on branch `lane/rider-P5-L3-app-dispatch` in `.worktrees/rider-P5-L3`; then the manager's e2e and the team lead's acceptance. Each worker's brief is `.claude/lanes/rider-P5-L3-T<n>.md`; the worker writes its log there and ticks this file in its `feat:` commit (task 1 in its only commit).
+Seven worker tasks (task 6 from review R4, task 7 from review R5), strictly in order, on branch `lane/rider-P5-L3-app-dispatch` in `.worktrees/rider-P5-L3`; then the manager's e2e and the team lead's acceptance. Each worker's brief is `.claude/lanes/rider-P5-L3-T<n>.md`; the worker writes its log there and ticks this file in its `feat:` commit (task 1 in its only commit).
 
 Setup, from the worktree root: `export PATH=$HOME/.local/node-v22.23.3/bin:$PATH` (the default Node breaks Vitest); `test -d node_modules || npm ci`.
 Gates for every task, from the worktree root: `npm run lint --workspace apps/rider`, `npm run typecheck --workspace apps/rider`, `npm run test --workspace apps/rider -- --run`, `npm run build --workspace apps/rider`, `openspec validate --all --strict`. Task 5 also runs `make test-web`. Nobody but the area manager runs `make e2e`; no worker touches containers.
@@ -66,7 +66,18 @@ Commits: `test: no stale offer after going online again; status cleared offline 
 - [x] 6.1 The six tests; red check (the first three red); commit.
 - [ ] 6.2 `OfferSheet` mounts `OnlineOffer` only while online; a new offer id clears the status; gates plus `make test-web`; tick 6.1 and 6.2; commit.
 
-## 7. Landing checks (area manager, then team lead)
+## 7. Accept while pending, decline disabled, simpler error banner (review R5)
 
-- [ ] 7.1 Area manager: `make e2e` green with the slot taken (rider suite includes `online.spec.ts`; admin, mobile and web suites unchanged); phone walk at 390 px: banner with the toggle, the offer sheet, the status lines; evidence in the lane's status cell.
-- [ ] 7.2 Team lead: `/opsx:verify rider-app-dispatch`: every scenario mapped to a passing test, every task ticked, nothing outside scope.
+Scope: `apps/rider/src/dispatch.tsx`, `apps/rider/src/offer.test.tsx`, `apps/rider/src/ready.tsx` (export `readyKey`, `assignedKey`); this file. Runs after task 6's `fix:`.
+Scenarios: "Decline an offer" (nothing while an accept is pending), "Offer sheet" (no expiry while an accept is pending), "Accept an offer" (404, the 201 path).
+Starts from: `src/offer.test.tsx` `nothing answers while an accept is pending` (red on the disabled "Decline"), and the pins `someone else took it (404)`, `accept invalidates the ready and assigned lists`, `a new offer shows no old accept error`.
+Commits: `test: nothing answers while an accept is pending; 404 taken; caches invalidated; no old accept error on a new offer`, `fix: decline is disabled while an accept is pending`, `refactor: one error banner per offer; list keys from ready.tsx`.
+
+- [ ] 7.1 The four tests; red check; guard-deletion runs in the log; commit.
+- [ ] 7.2 "Decline" `disabled={accepting}`; gates; commit.
+- [ ] 7.3 Drop `resetAccept` and its effect, banner only for `accept.variables?.id === offer?.id`; export and reuse the list keys; gates plus `make test-web`; tick 7.1 to 7.3; commit.
+
+## 8. Landing checks (area manager, then team lead)
+
+- [ ] 8.1 Area manager: `make e2e` green with the slot taken (rider suite includes `online.spec.ts`; admin, mobile and web suites unchanged); phone walk at 390 px: banner with the toggle, the offer sheet, the status lines; evidence in the lane's status cell.
+- [ ] 8.2 Team lead: `/opsx:verify rider-app-dispatch`: every scenario mapped to a passing test, every task ticked, nothing outside scope.
