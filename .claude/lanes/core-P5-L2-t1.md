@@ -1,5 +1,5 @@
 # core-P5-L2-t1 - store location (task 1 of core-store-location)
-Status: ready
+Status: done
 ## Brief
 - LANE-ID: core-P5-L2 (task 1 of 1). Area: core. Role: worker.
 - Worktree: /Users/kapilsoni/KapilProjects/ShopperStop/.worktrees/core-P5-L2. Branch: lane/core-P5-L2-store-location. Commit there as kapildev333 <47056817+kapildev333@users.noreply.github.com>, no trailers; never push; never touch the root checkout or any container.
@@ -13,7 +13,6 @@ Status: ready
 - Never: `make e2e`, `make dev`, `make seed`, `core-admin migrate` or `seed-demo` against a real database, `check-wiring.sh`, `docker`.
 ## Doing
 2026-10-16: tasks 1.1 and 1.2 done; commits fe69af6 (test) and 4026192 (feat); ticks in a chore commit.
-2026-10-16: task 1.1 and 1.2 done; commits fe69af6 (test), 4026192 (feat). Gates below; ticks committed separately.
 ## Found
 - Five tests red before code: TestCreateStoreValidation (201 for lat 90.5), TestCreateStoreLocation (no location), TestPatchStoreLocation (no location), TestPublicStoreLocation (column "lat" does not exist), TestResetTwiceLeavesDemoStores (no location).
 - Gates green: gofmt empty, go vet clean, go test -race -count=1 ./... all 15 packages ok; make gen postman 27/27; openspec validate --all --strict 20 passed.
