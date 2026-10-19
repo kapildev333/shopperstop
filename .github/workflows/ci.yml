@@ -20,7 +20,7 @@ jobs:
     env:
       SHOPPERSTOP_CORE_TEST_DATABASE_URL: postgres://shopperstop_core:shopperstop_core@localhost:5432/shopperstop_core_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: hashFiles('services/core/go.mod') == ''
         run: 'echo "core: services/core absent, skipping"'
       - if: hashFiles('services/core/go.mod') != ''
@@ -62,7 +62,7 @@ jobs:
     env:
       SHOPPERSTOP_RIDER_TEST_DATABASE_URL: postgres://shopperstop_rider:shopperstop_rider@localhost:5432/shopperstop_rider_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: hashFiles('services/rider/go.mod') == ''
         run: 'echo "rider: services/rider absent, skipping"'
       - if: hashFiles('services/rider/go.mod') != ''
@@ -90,7 +90,7 @@ jobs:
     env:
       SHOPPERSTOP_PAYMENT_TEST_DATABASE_URL: postgres://shopperstop_payment:shopperstop_payment@localhost:5432/shopperstop_payment_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: hashFiles('services/payment/go.mod') == ''
         run: 'echo "payment: services/payment absent, skipping"'
       - if: hashFiles('services/payment/go.mod') != ''
@@ -108,7 +108,7 @@ jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: hashFiles('packages/ui/package.json') == ''
         run: 'echo "web: packages/ui absent, skipping"'
       - if: hashFiles('packages/ui/package.json') != ''
@@ -132,7 +132,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s --health-retries 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: hashFiles('services/core/go.mod') == '' || (hashFiles('apps/web/package.json') == '' && hashFiles('apps/admin/package.json') == '')
         run: 'echo "e2e: services/core, or both apps/web and apps/admin, absent, skipping"'
       - if: hashFiles('services/core/go.mod') != '' && (hashFiles('apps/web/package.json') != '' || hashFiles('apps/admin/package.json') != '')
@@ -155,7 +155,7 @@ jobs:
   spec:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
