@@ -3,7 +3,7 @@ module github.com/kapildev333/shopperstop/services/rider
 go 1.27
 
 require (
-	github.com/go-chi/chi/v5 v5.4.0
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/jackc/pgx/v5 v5.11.0
 	golang.org/x/crypto v0.58.0
 )
