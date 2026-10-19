@@ -24,7 +24,7 @@ jobs:
       - if: hashFiles('services/core/go.mod') == ''
         run: 'echo "core: services/core absent, skipping"'
       - if: hashFiles('services/core/go.mod') != ''
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/core/go.mod
           cache-dependency-path: services/core/go.sum
@@ -66,7 +66,7 @@ jobs:
       - if: hashFiles('services/rider/go.mod') == ''
         run: 'echo "rider: services/rider absent, skipping"'
       - if: hashFiles('services/rider/go.mod') != ''
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/rider/go.mod
           cache-dependency-path: services/rider/go.sum
@@ -94,7 +94,7 @@ jobs:
       - if: hashFiles('services/payment/go.mod') == ''
         run: 'echo "payment: services/payment absent, skipping"'
       - if: hashFiles('services/payment/go.mod') != ''
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/payment/go.mod
           cache-dependency-path: services/payment/go.sum
@@ -136,7 +136,7 @@ jobs:
       - if: hashFiles('services/core/go.mod') == '' || (hashFiles('apps/web/package.json') == '' && hashFiles('apps/admin/package.json') == '')
         run: 'echo "e2e: services/core, or both apps/web and apps/admin, absent, skipping"'
       - if: hashFiles('services/core/go.mod') != '' && (hashFiles('apps/web/package.json') != '' || hashFiles('apps/admin/package.json') != '')
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/core/go.mod
           cache-dependency-path: services/core/go.sum
